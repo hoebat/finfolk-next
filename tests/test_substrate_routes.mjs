@@ -11,6 +11,10 @@ for(const file of ['api','posts','trips','invitations','instagram-actions','inst
 }
 for(const match of (await readFile('backend/messaging-api.mjs','utf8')).matchAll(/app\.(get|post|put|delete)\("([^\"]+)"/g)){
  if(match[2].includes('/oauth/callback'))continue;
+ if(match[1]==='post' && ['/v1/me/instagram/claims','/v1/me/instagram/claims/:id/review-request','/v1/admin/messaging/claim-reviews/:id/decision'].includes(match[2])){
+  assert.throws(()=>restOperation(match[2].replace(':id','test'),'POST'),/Unknown/,'Retired mutations have no browser binding');
+  continue;
+ }
  assert.ok(restOperation(match[2].replace(':id','test'),match[1].toUpperCase()));
 }
 assert.throws(()=>restOperation('/v1/unknown'),/Unknown/);

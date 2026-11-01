@@ -21,11 +21,7 @@ export const commands = Object.freeze({
     description: "Get a code to connect your Instagram account to FinFolk.",
     claimed: false,
   },
-  claim: {
-    syntax: "/claim <CODE>",
-    description: "Verify your Instagram account.",
-    claimed: false,
-  },
+
   status: {
     syntax: "/status",
     description: "Check your connection.",
@@ -44,7 +40,7 @@ export const commands = Object.freeze({
 });
 // Public assistance never reads member data or needs a follower lookup.
 export const requiresFollower = (command) =>
-  !["help", "ping", "unknown", "prompt"].includes(command);
+  !["help", "ping", "unknown", "prompt", "claim_retired"].includes(command);
 export const hasPersonalCommands = (enabled = []) =>
   enabled.some(requiresFollower);
 const canonical = (value) =>
@@ -219,7 +215,7 @@ export function runtimeEnv(config, env) {
     ...env,
     INSTAGRAM_DM_ENABLED: enabled ? "true" : "false",
     INSTAGRAM_AUTO_CLAIM_ENABLED:
-      enabled && config.enabled_commands.includes("claim") ? "true" : "false",
+      "false",
     INSTAGRAM_ACCOUNT_ID: config.accountId,
     INSTAGRAM_GRAPH_VERSION: config.graphVersion,
     INSTAGRAM_ACCESS_TOKEN: enabled ? "managed-credential" : "",

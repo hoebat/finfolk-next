@@ -10,14 +10,6 @@
  "path" "/v1/admin/messaging/instagram/authorization"
  "transport" "rest"
  "write" true}
- "messagingClaimDecision" {"admin" true
- "auth" true
- "domain" "admin"
- "method" "POST"
- "name" "messagingClaimDecision"
- "path" "/v1/admin/messaging/claim-reviews/:id/decision"
- "transport" "rest"
- "write" true}
  "messagingClaimReviews" {"admin" true
  "auth" true
  "domain" "admin"

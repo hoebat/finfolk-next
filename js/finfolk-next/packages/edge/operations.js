@@ -177,14 +177,6 @@ export var operations = {
     "transport":"action",
     "write":true
   },
-  "instagramClaimReview":{
-    "admin":true,
-    "auth":true,
-    "domain":"instagram",
-    "name":"instagramClaimReview",
-    "transport":"action",
-    "write":true
-  },
   "profile":{
     "auth":true,
     "domain":"member",
@@ -281,22 +273,6 @@ export var operations = {
     "domain":"logbook",
     "name":"visibility",
     "transport":"action",
-    "write":true
-  },
-  "instagramClaimRequestReview":{
-    "auth":true,
-    "domain":"instagram",
-    "name":"instagramClaimRequestReview",
-    "transport":"action",
-    "write":true
-  },
-  "instagramClaimRequest":{
-    "auth":true,
-    "domain":"instagram",
-    "method":"POST",
-    "name":"instagramClaimRequest",
-    "path":"/v1/me/instagram/claims/:id/review-request",
-    "transport":"rest",
     "write":true
   },
   "messagingSettings":{
@@ -557,13 +533,6 @@ export var operations = {
     "transport":"action",
     "write":false
   },
-  "instagramClaimStart":{
-    "auth":true,
-    "domain":"instagram",
-    "name":"instagramClaimStart",
-    "transport":"action",
-    "write":true
-  },
   "publicPosts":{
     "auth":false,
     "domain":"posts",
@@ -581,14 +550,6 @@ export var operations = {
     "name":"messagingSettingsSave",
     "path":"/v1/admin/messaging/instagram",
     "transport":"rest",
-    "write":true
-  },
-  "instagramVerify":{
-    "admin":true,
-    "auth":true,
-    "domain":"instagram",
-    "name":"instagramVerify",
-    "transport":"action",
     "write":true
   },
   "tripList":{
@@ -631,13 +592,6 @@ export var operations = {
     "auth":true,
     "domain":"instagram",
     "name":"instagramCommandReview",
-    "transport":"action",
-    "write":true
-  },
-  "instagramConnect":{
-    "auth":true,
-    "domain":"instagram",
-    "name":"instagramConnect",
     "transport":"action",
     "write":true
   },
@@ -693,15 +647,6 @@ export var operations = {
     "path":"/v1/admin/messaging/claim-reviews",
     "transport":"rest",
     "write":false
-  },
-  "instagramClaimCreate":{
-    "auth":true,
-    "domain":"instagram",
-    "method":"POST",
-    "name":"instagramClaimCreate",
-    "path":"/v1/me/instagram/claims",
-    "transport":"rest",
-    "write":true
   },
   "tripReviewInbox":{
     "admin":true,
@@ -779,16 +724,6 @@ export var operations = {
     "domain":"member",
     "name":"preferences",
     "transport":"action",
-    "write":true
-  },
-  "messagingClaimDecision":{
-    "admin":true,
-    "auth":true,
-    "domain":"admin",
-    "method":"POST",
-    "name":"messagingClaimDecision",
-    "path":"/v1/admin/messaging/claim-reviews/:id/decision",
-    "transport":"rest",
     "write":true
   }
 };

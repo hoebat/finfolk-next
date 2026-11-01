@@ -36,13 +36,6 @@
  "name" "instagramChoosePostBeach"
  "transport" "action"
  "write" true}
- "instagramClaimCreate" {"auth" true
- "domain" "instagram"
- "method" "POST"
- "name" "instagramClaimCreate"
- "path" "/v1/me/instagram/claims"
- "transport" "rest"
- "write" true}
  "instagramClaimRead" {"auth" true
  "domain" "instagram"
  "method" "GET"
@@ -50,35 +43,12 @@
  "path" "/v1/me/instagram/claims/:id"
  "transport" "rest"
  "write" false}
- "instagramClaimRequest" {"auth" true
- "domain" "instagram"
- "method" "POST"
- "name" "instagramClaimRequest"
- "path" "/v1/me/instagram/claims/:id/review-request"
- "transport" "rest"
- "write" true}
- "instagramClaimRequestReview" {"auth" true
- "domain" "instagram"
- "name" "instagramClaimRequestReview"
- "transport" "action"
- "write" true}
- "instagramClaimReview" {"admin" true
- "auth" true
- "domain" "instagram"
- "name" "instagramClaimReview"
- "transport" "action"
- "write" true}
  "instagramClaimReviewInbox" {"admin" true
  "auth" true
  "domain" "instagram"
  "name" "instagramClaimReviewInbox"
  "transport" "action"
  "write" false}
- "instagramClaimStart" {"auth" true
- "domain" "instagram"
- "name" "instagramClaimStart"
- "transport" "action"
- "write" true}
  "instagramClaimStatus" {"auth" true
  "domain" "instagram"
  "name" "instagramClaimStatus"
@@ -121,11 +91,6 @@
  "instagramConfirm" {"auth" true
  "domain" "instagram"
  "name" "instagramConfirm"
- "transport" "action"
- "write" true}
- "instagramConnect" {"auth" true
- "domain" "instagram"
- "name" "instagramConnect"
  "transport" "action"
  "write" true}
  "instagramDisconnect" {"auth" true
@@ -233,12 +198,6 @@
  "name" "instagramUnlink"
  "path" "/v1/me/instagram"
  "transport" "rest"
- "write" true}
- "instagramVerify" {"admin" true
- "auth" true
- "domain" "instagram"
- "name" "instagramVerify"
- "transport" "action"
  "write" true}
  "publicInstagram" {"auth" false
  "domain" "instagram"

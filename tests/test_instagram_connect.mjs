@@ -43,7 +43,7 @@ try {
   await query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false),('unverified','Unverified',false,false),('carol','Carol',true,false),('dave','Dave',true,false)`);
   await query(`INSERT INTO finfolk.members(user_id) VALUES('alice'),('bob'),('unverified'),('carol'),('dave')`);
   await query("INSERT INTO finfolk.invitation_joins(invitee_id,inviter_id) VALUES('alice','carol')");
-  await query(`UPDATE finfolk.messaging_accounts SET account_id='900',mode='live',enabled_commands='["help","ping","connect","claim"]',checks='{"authorization":true,"subscription":true,"followLookup":true}',provider_scope=$1,credential_ciphertext=$2 WHERE id='instagram'`,[scope,seal({accessToken:'fixture'},env,scope)]);
+  await query(`UPDATE finfolk.messaging_accounts SET account_id='900',mode='live',enabled_commands='["help","ping","connect"]',checks='{"authorization":true,"subscription":true,"followLookup":true}',provider_scope=$1,credential_ciphertext=$2 WHERE id='instagram'`,[scope,seal({accessToken:'fixture'},env,scope)]);
   await pg.exec('SET ROLE finfolk_api');
   const app=createAPI({db,verify:async token=>({sub:token}),messagingFetch:fetcher});
   const request=async(uid,code,key=randomUUID(),extra={})=>{
@@ -78,7 +78,7 @@ try {
   follows=false;
   assert.equal((await request('alice',replaced.code)).status,409);
   const denied=await incoming('101');
-  assert.equal(denied.row.reply_kind,'connect_guidance'); assert.match(denied.row.body,/Follow/);
+  assert.match(denied.row.body,/Please follow/);
   assert.equal(denied.row.state,'provider_accepted'); assert.equal(denied.code,null);
   follows=true;
   providerFailure=true;
@@ -137,9 +137,23 @@ try {
   const status=await app.fetch(new Request('https://api.finfolk.test/v1/me/instagram',{headers:{Authorization:'Bearer alice'}}),env);
   assert.equal((await status.json()).data.capabilities.connect,true);
   const legacy=await app.fetch(new Request('https://api.finfolk.test/v1/me/instagram/claims',{method:'POST',headers:{Authorization:'Bearer bob','Content-Type':'application/json','Idempotency-Key':randomUUID()},body:'{}'}),env);
-  assert.equal(legacy.status,201);
-  await incoming('107',randomUUID(),(await legacy.json()).data.command);
-  assert.equal((await query("SELECT status FROM finfolk.instagram_connections WHERE user_id='bob'"))[0].status,'connected','Legacy /claim commands remain supported');
+  assert.equal(legacy.status,410);
+  assert.equal((await legacy.json()).error.code,'claim_retired');
+  const retired=await incoming('107',randomUUID(),'/claim '+ 'a'.repeat(24));
+  assert.match(retired.row.body,/retired.*\/connect/);
+  assert.equal(retired.code,null);
+  assert.equal((await query("SELECT count(*)::int AS n FROM finfolk.instagram_connections WHERE user_id='bob' AND status='connected'"))[0].n,0);
+  const review=await app.fetch(new Request('https://api.finfolk.test/v1/admin/messaging/claim-reviews/'+randomUUID()+'/decision',{method:'POST',headers:{Authorization:'Bearer alice','Content-Type':'application/json','Idempotency-Key':randomUUID()},body:JSON.stringify({decision:'approve'})}),env);
+  assert.equal(review.status,410,'Legacy manual approval cannot create a link');
+  await query("INSERT INTO finfolk.instagram_claims(user_id,code_hash,expires_at,state) VALUES('bob','legacy-unused',now()+interval '1 day','waiting') ON CONFLICT(user_id) DO UPDATE SET state='waiting',code_hash='legacy-unused'");
+  const beforeMigration=(await query("SELECT sender_id,identity_version,status FROM finfolk.instagram_connections WHERE user_id='alice'"))[0];
+  await query("INSERT INTO finfolk.instagram_connections(user_id,handle,status,challenge_hash,expires_at) VALUES('bob','legacybob','pending','legacy-hash',now()+interval '1 day') ON CONFLICT(user_id) DO UPDATE SET status='pending',challenge_hash='legacy-hash',expires_at=now()+interval '1 day'");
+  await pg.exec(await readFile('backend/migrations/0017_retire_instagram_claims.sql','utf8'));
+  await pg.exec(await readFile('backend/migrations/0018_retire_manual_instagram_challenges.sql','utf8'));
+  const retiredManual=(await query("SELECT status,challenge_hash,expires_at FROM finfolk.instagram_connections WHERE user_id='bob'"))[0];
+  assert.deepEqual(retiredManual,{status:'disconnected',challenge_hash:null,expires_at:null});
+  assert.deepEqual((await query("SELECT sender_id,identity_version,status FROM finfolk.instagram_connections WHERE user_id='alice'"))[0],beforeMigration);
+  assert.equal((await query("SELECT code_hash FROM finfolk.instagram_claims WHERE user_id='bob'"))[0].code_hash,null);
   for(let i=0;i<11;i++) {
     const response=await app.fetch(new Request('https://api.finfolk.test/v1/me/instagram/connect',{method:'POST',headers:{Authorization:'Bearer '+(i%2?'carol':'dave'),'Content-Type':'application/json','Idempotency-Key':randomUUID(),'CF-Connecting-IP':'192.0.2.1'},body:JSON.stringify({code:'ZZZZZZZZ'})}),{...env,HYPERDRIVE:{}});
     assert.equal(response.status,i<10?400:429,'Trusted IP limits span member identities');

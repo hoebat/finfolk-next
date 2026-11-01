@@ -23,7 +23,7 @@ assert.equal(dialog.querySelector('a').href,'https://www.instagram.com/finfolk.c
 let input=dialog.querySelector('input');assert.equal(input.autocomplete,'one-time-code');
 input.value='abcd efgh';input.dispatchEvent(new w.Event('input'));input.dispatchEvent(new w.Event('input'));await wait();
 assert.equal(calls.length,1);assert.equal(calls[0].options.body.code,'ABCDEFGH');assert.equal(calls[0].path,'/v1/me/instagram/connect');
-assert.ok(dialog.textContent.includes('Connected to @alice.dives'));assert.equal(dialog.querySelector('[role=status]').closest('form'),null,'Success status stays visible outside hidden form');assert.ok(host.textContent.includes('Instagram verified'));
+assert.ok(dialog.textContent.includes('Connected to @alice.dives'));assert.equal(dialog.querySelector('[role=status]').closest('form'),null,'Success status stays visible outside hidden form');assert.ok(host.textContent.includes('Instagram connected'));
 assert.equal(input.value,'');assert.equal(sessionStorage.length,0);
 [...dialog.querySelectorAll('button')].find(b=>b.textContent==='Done').click();assert.equal(document.querySelector('dialog'),null);
 await render();dialog=await open();input=dialog.querySelector('input');
