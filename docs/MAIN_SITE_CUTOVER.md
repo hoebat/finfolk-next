@@ -1,6 +1,6 @@
 # Main-site production ownership
 
-`hoebat/finfolk-next` owns the production frontend at `finfolk.com.au` and API at `api.finfolk.com.au`. The internal Next Worker/database names and immutable SQL release are retained. `www.finfolk.com.au` returns a 308 redirect preserving the path and query. The former preview hostname is removed, without a redirect.
+`hoebat/finfolk-next` owns the production frontend at `finfolk.com.au` and API at `api.finfolk.com.au`. The internal Next Worker/database names and immutable SQL release are retained. Plain HTTP on the main site and all `www.finfolk.com.au` requests return a 308 redirect to `https://finfolk.com.au`, preserving the path and query. The former preview hostname is removed, without a redirect.
 
 The frontend enables the Clojure-authored `xt.substrate` application backbone and SQLite/WASM workers. Production uses the existing Next Better Auth realm and database; legacy accounts and histories are not imported. Google sign-in remains enabled. Instagram keeps its two-account pilot and existing links; this change does not enable public rollout or TikTok messaging.
 

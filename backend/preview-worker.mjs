@@ -4,7 +4,7 @@ import {isBrowserAPIPath} from './browser-routes.mjs';
 export default {
   async fetch(request, env) {
     const route=new URL(request.url);
-    if(route.hostname==='www.finfolk.com.au'){
+    if(route.hostname==='www.finfolk.com.au' || (route.hostname==='finfolk.com.au' && route.protocol==='http:')){
       route.hostname='finfolk.com.au';route.protocol='https:';route.port='';
       return new Response(null,{status:308,headers:{Location:route.href}});
     }

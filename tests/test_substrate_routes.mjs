@@ -22,10 +22,12 @@ assert.throws(()=>restOperation('/v1/unknown'),/Unknown/);
 const config=JSON.parse(await readFile('wrangler.next.jsonc','utf8'));
 const forwarded=[];let assets=0;
 const env={NEXT_API:{async fetch(r){forwarded.push(r);return Response.json({api:true},{status:r.method==='OPTIONS'?200:403});}},ASSETS:{async fetch(){assets++;return new Response('static');}}};
-for(const method of ['GET','POST']){
- const response=await preview.fetch(new Request('https://www.finfolk.com.au/?view=account&tab=instagram',{method}),env);
- assert.equal(response.status,308);assert.equal(response.headers.get('Location'),'https://finfolk.com.au/?view=account&tab=instagram');
+for(const origin of ['http://finfolk.com.au','http://www.finfolk.com.au','https://www.finfolk.com.au'])for(const path of ['/?view=account&tab=instagram','/api?cursor=two'])for(const method of ['GET','HEAD','POST','OPTIONS']){
+ const response=await preview.fetch(new Request(origin+path,{method}),env);
+ assert.equal(response.status,308);assert.equal(response.headers.get('Location'),'https://finfolk.com.au'+path);
 }
+assert.equal(forwarded.length,0,'Insecure or noncanonical requests redirect before reaching the API');
+assert.equal(assets,0,'Insecure or noncanonical requests redirect before loading assets');
 assert.deepEqual(config.routes.map(r=>r.pattern),['finfolk.com.au','www.finfolk.com.au']);
 for(const spec of Object.values(operations).filter(o=>o.transport==='rest')){
  const path=spec.path.replace(':id','fixture')+'?cursor=two';
