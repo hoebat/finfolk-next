@@ -8,6 +8,7 @@
             [lang.core.library :as library]
             [lang.core.library-snapshot :as snapshot]
             [finfolkbuild.db.publication :as db]
+            [finfolkdb.fn.site.catalog :as sites]
             [finfolkdb.testing.catalog :as catalog]
             [finfolk-web.lib.operations]
             [finfolk-web.lib.backbone]
@@ -98,6 +99,7 @@
   (manifest! root (str EDGE "/package.json") {"name" "@finfolk/edge" "version" "0.1.0" "private" true "type" "module" "exports" {"." "./index.js" "./*.js" "./*.js"}
     "dependencies" {"@sqlite.org/sqlite-wasm" "3.54.1-build1" "@xtalk/net" "workspace:*" "@xtalk/lang" "workspace:*" "@xtalk/event" "workspace:*" "@xtalk/substrate" "workspace:*" "@xtalk/db" "workspace:*"}})
   (write! root "resources/finfolkdb/pilot.sql" (db/sql))
+  (write! root "resources/finfolkdb/site-schema.sql" (sites/schema-sql))
   (write! root "resources/finfolkdb/catalog.json" (str (json/write (catalog/declarations)) "\n"))
   (write! root (str WEB "/next-contracts.json") (db/contracts))
   (manifest! root "resources/generated-files.json" (sort (conj @GENERATED "resources/generated-files.json")))

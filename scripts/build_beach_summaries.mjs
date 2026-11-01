@@ -1,10 +1,13 @@
+import {canAutoMeasure} from '../js/finfolk-next/site/web-main/src/site-model.js';
 import {readFile,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 import {beachMeasurement} from '../js/finfolk-next/site/web-main/src/measure.js';
 const boundsCache=new WeakMap();
 function bounds(feature){if(boundsCache.has(feature))return boundsCache.get(feature);const lines=feature.geometry?.type==='LineString'?[feature.geometry.coordinates]:feature.geometry?.type==='MultiLineString'?feature.geometry.coordinates:[];let west=Infinity,south=Infinity,east=-Infinity,north=-Infinity;for(const line of lines)for(const point of line){west=Math.min(west,point[0]);south=Math.min(south,point[1]);east=Math.max(east,point[0]);north=Math.max(north,point[1]);}const value=[west,south,east,north];boundsCache.set(feature,value);return value;}
 function candidates(beach,features){const point=beach.entry?.verified?beach.entry.point:beach.point,latRange=10000/111320,lonRange=latRange/Math.max(.2,Math.cos(point[1]*Math.PI/180));return features.filter(feature=>[0,5,10,15,20].includes(feature.properties?.depth_m)&&(()=>{const b=bounds(feature);return b[2]>=point[0]-lonRange&&b[0]<=point[0]+lonRange&&b[3]>=point[1]-latRange&&b[1]<=point[1]+latRange;})());}
-export function summary(beach,region,features){
+export function summary(beach,region={},features=[]){
+  if(!canAutoMeasure(beach))return {id:beach.id,depths:{},datum:null,survey_date:null,measurement_kind:"not_applicable"};
+  region ||= {};
   const origin=beach.entry?.verified?{...beach,point:beach.entry.point,reference_label:beach.entry.label}:beach;
   const availableDepths=new Set(features.map(feature=>feature.properties?.depth_m).filter(Number.isFinite));
   features=candidates(origin,features);

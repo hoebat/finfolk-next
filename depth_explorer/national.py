@@ -54,12 +54,14 @@ def package_for(point, packages):
 
 def directory(seed,national,config,packages):
     states={s['id']:s['name'] for s in config['states']};reverse={v:k for k,v in states.items()}
-    areas=config['areas'];byid={a['id']:a for a in areas};beaches=[]
+    areas=[dict(a) for a in config['areas']];byid={a['id']:a for a in areas};beaches=[]
     legacy={'port-phillip':'vic-port-phillip','bondi':'nsw-sydney-east','jervis-bay':'nsw-jervis-bay','western-port':'vic-western-port'}
     for original in seed['beaches']:
-        b=dict(original);sid=reverse.get(b.get('state'),'EXT')
+        b=dict(original);sid=b.get('state_id') or reverse.get(b.get('state'),'EXT')
         if b['id'] in ['murrays-beach','cave-beach']:sid='JBT'
-        b.update(state_id=sid,jurisdiction_id=sid,state=states[sid],area_id='jbt-booderee' if sid=='JBT' else legacy.get(b['region']) or area_for(b['point'],sid,areas))
+        b.update(state_id=sid,jurisdiction_id=sid,state=states[sid],area_id='jbt-booderee' if sid=='JBT' else b.get('area_id') or legacy.get(b.get('region')) or area_for(b['point'],sid,areas))
+        b.setdefault('region',b['area_id'])
+        if not any(a['id']==b['area_id'] for a in areas):areas.append({'id':b['area_id'],'name':b.get('area_name',b['name']),'state_id':sid,'center':b['point'],'max_distance_km':50})
         beaches.append(b)
     for b in national.get('beaches',[]):
         b=dict(b)
@@ -87,6 +89,13 @@ def directory(seed,national,config,packages):
 def prepare(stage,write,catalog,store=None):
     seed=json.loads((ROOT/'js/finfolk-next/site/web-main/src/beaches.json').read_text());config=json.loads((ROOT/'config/areas.json').read_text());snapshot=ROOT/'.cache/national/snapshot.json'
     snapshot=snapshot if snapshot.exists() else ROOT/'resources/atlas/snapshot.json'
+    examples=ROOT/'config/site-examples.json'
+    if examples.is_file():
+        for b in json.loads(examples.read_text()):
+            b['area_id']=b.get('area_id') or b['state_id'].lower()+'-'+slug(b['area_name'])
+            b['region']=b['area_id'];b['source_id']='finfolk-reviewed-sites'
+            seed['beaches'].append(b)
+        seed['sources'].append({'id':'finfolk-reviewed-sites','publisher':'FinFolk reviewed sites','url':'https://next.finfolk.com.au/','attribution':'Sources and requirements are listed per site.'})
     national=json.loads(snapshot.read_text()) if snapshot.exists() else {}
     output=directory(seed,national,config,catalog['regions']);known={r['id'] for r in catalog['regions']}
     boundary_archive=ROOT/'.cache/area-boundaries/SAL_2021_AUST_GDA94_SHP.zip'
@@ -111,7 +120,7 @@ def prepare(stage,write,catalog,store=None):
     context_source=(store.load().get('context_contours',{}).get('ausbathy-2024-shallow-5m',{}) if store else {})
     for beach in output['beaches']:
         nearby=[distance(beach['point'],s['point']) for s in checked if distance(beach['point'],s['point'])<=25000]
-        beach['nearby_checked_stays']=len(nearby);beach['nearest_checked_stay_km']=round(min(nearby)/1000,1) if nearby else None
+        beach['nearby_checked_stays']=len(nearby);beach['nearest_checked_stay_km','waterbody','access_mode','features','access_points','depth_evidence','requirements','booking_url','activity_status','reviewed_at']=round(min(nearby)/1000,1) if nearby else None
     for a in output['areas']:
         members=[b for b in output['beaches'] if b['area_id']==a['id']]
         area_surveys=set(national.get('coverage_by_area',{}).get(a['id'],[]))
@@ -144,7 +153,7 @@ def finish(output,stage,write):
     for a in output['areas']:a['depth_count']=sum(b['id'] in mapped for b in output['beaches'] if b['area_id']==a['id'])
     light=[]
     for b in output['beaches']:
-        keep={k:b[k] for k in ['id','name','aliases','state','state_id','jurisdiction_id','area_id','area_name','region','region_name','point','source_id','source_url','reference_label','nearby_checked_stays','nearest_checked_stay_km'] if k in b}
+        keep={k:b[k] for k in ['id','name','aliases','state','state_id','jurisdiction_id','area_id','area_name','region','region_name','point','source_id','source_url','reference_label','nearby_checked_stays','nearest_checked_stay_km','waterbody','access_mode','features','access_points','depth_evidence','requirements','booking_url','activity_status','reviewed_at'] if k in b}
         keep.update(detail_file=next(a['detail_file'] for a in output['areas'] if a['id']==b['area_id']),entry_documented=bool(b.get('entry',{}).get('verified')),fact_count=len(b.get('facts',[])),has_access_facts=any(f['label'] in ['Access','Entry'] for f in b.get('facts',[])),fact_categories=[f['category'] for f in b.get('facts',[]) if f.get('category')],restricted_activities=[r['activity'] for r in b.get('restrictions',[]) if r.get('status') in ['restricted','closed']])
         light.append(keep)
     write('beaches.json',json.dumps({**output,'beaches':light},ensure_ascii=False,separators=(',',':')).encode())

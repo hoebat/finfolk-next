@@ -1,3 +1,5 @@
+import {readSiteDirectory,observeSiteDirectory} from './site-catalog.js';
+import {canAutoMeasure,isInland} from './site-model.js';
 import {applicationBackbone} from './app-backbone.js';
 import {installTripPage} from './trip-report.js';
 // Keep an invite through OAuth redirects without putting it in the identity provider callback.
@@ -74,7 +76,9 @@ async function chooseBeach(id,{writeURL=true,depth=Number($('measure-depth').val
   selectedBeachId=beach?.id||'';appBackbone?.state('atlas',{status:'ready',region:region?.id,site:selectedBeachId});$('log-session').hidden=!beach||!logbook.enabled;if([...$('measure-depth').options].some(o=>Number(o.value)===depth))$('measure-depth').value=depth;await discovery?.select(selectedBeachId);if(request!==selectionRequest)return;map.resize();map.selectedBeach=selectedBeachId;resetProfile();clearMeasurement();$('inspection').hidden=true;inspectionRequest++;notice('');
   if(beach){
     $('place-title').textContent=beach.name;document.title=`${beach.name} · FinFolk`;map.center=beach.point;map.zoom=15;map.marker=beach.point;map.draw();map.onview?.();
-    try{if([...$('measure-depth').options].some(o=>Number(o.value)===depth))$('measure-depth').value=depth;const result=beachMeasurement(map.contours,beach,depth);if(result.distance_m>3000)throw Error('No matching mapped contour within 3 km of this beach reference.');showMeasurement(result,result.start_label);}
+    map.siteAccessPoints=beach.access_points||[];map.draw();
+    if(!canAutoMeasure(beach)){ $('measure-result').textContent=beach.access_mode==='boat_only'?'Boat-access dive site':'Inland dive site';$('measure-reference').textContent='See the site details for entry points and sourced depth information. Shore-to-contour distances do not apply.';}
+    else try{if([...$('measure-depth').options].some(o=>Number(o.value)===depth))$('measure-depth').value=depth;const result=beachMeasurement(map.contours,beach,depth);if(result.distance_m>3000)throw Error('No matching mapped contour within 3 km of this beach reference.');showMeasurement(result,result.start_label);}
     catch(e){$('measure-result').textContent=`${beach.name}: automatic distance is unavailable.`;$('measure-reference').textContent='The selected beach location is shown on the map. Pick your exact entry point to measure against the available published contours.';notice(e.message);}
   }else{map.marker=null;map.center=region.center;map.zoom=region.zoom;map.draw();map.onview?.();$('place-title').textContent=region.name;document.title=`${region.name} · FinFolk`;}
   updateBeachPicker();if(writeURL){shell.setParams({site:beach?.id||null},{notify:false});}mapSearch?.setSelection(beach);return beach;
@@ -214,10 +218,11 @@ async function openArea(area){
 async function start(){
   try{beachCatalog=await data.json('beaches.json');const regionShapes=beachCatalog.area_regions_file?await data.json(beachCatalog.area_regions_file).catch(()=>null):null;map.areaZones=buildAreaZones(beachCatalog.areas,beachCatalog.beaches,regionShapes);$('area-attribution').hidden=!regionShapes?.features?.length;map.draw();}catch(e){notice(`Beach locations are unavailable: ${e.message}`);}
   const [summaries,guides,social]=await Promise.all([data.json('data/beach-summaries.json').catch(()=>({beaches:[]})),data.json('guides.json'),data.json('social.json').catch(()=>({posts:[]}))]);
-  catalog=await data.catalog();region=catalog.regions[0];
+  catalog=await data.catalog();beachCatalog=await readSiteDirectory({application:appBackbone,data,fallback:beachCatalog,atlas:catalog});region=catalog.regions[0];map.areaZones=buildAreaZones(beachCatalog.areas,beachCatalog.beaches);map.draw();
   const published=catalog.regions.filter(hasPublishedData);for(const state of [...new Set(published.map(r=>r.state))].sort((a,b)=>a.localeCompare(b))){const group=elem('optgroup');group.label=state;for(const r of published.filter(r=>r.state===state).sort((a,b)=>a.name.localeCompare(b.name))){const option=elem('option',r.name);option.value=r.id;group.append(option);}$('survey-select').append(group);}
   discovery=installDiscovery({catalog:beachCatalog,summaries,guides,social,getCommunityPosts:id=>logbook.publicInstagramPosts(id),navigation:shell,loadJSON:path=>data.json(path),onSelect:openBeach,onArea:openArea,onContext:(coastline,contextContours,contextSource)=>setAreaContext({coastline,context_contours:contextContours,context_source:contextSource}),onStays:stays=>{map.stays=stays;map.draw();}});
   mapSearch=installMapSearch({catalog:beachCatalog,onBeach:id=>openBeach(id),onArea:area=>{shell.navigate('maps',{params:{site:null}});openArea(area);},onAll:query=>discovery.showIndex(query),onTyping:()=>shell.closePanel()});
+  observeSiteDirectory({application:appBackbone,directory:beachCatalog,atlas:catalog,onChange(){discovery.updateCatalog();map.areaZones=buildAreaZones(beachCatalog.areas,beachCatalog.beaches);map.beaches=beachCatalog.beaches.filter(b=>activeAreaId?b.area_id===activeAreaId:b.region===region?.id);mapSearch.close();map.draw();if(selectedBeachId&&!beachCatalog.beaches.some(b=>b.id===selectedBeachId)){selectedBeachId='';map.selectedBeach='';map.siteAccessPoints=[];discovery.select('');notice('This site is no longer in the published directory.');}}});
   map.onArea=zone=>{const area=beachCatalog.areas.find(candidate=>candidate.id===zone.id);if(!area)return;shell.navigate('maps',{params:{site:null}});openArea(area);};
   map.onBeach=beach=>openBeach(beach.id);
   map.onStay=stay=>{$('inspection').hidden=false;$('inspection-kind').textContent='NEARBY STAY';$('inspection-value').textContent=stay.name;$('inspection-details').replaceChildren(elem('p',`${(stay.distance_m/1000).toFixed(1)} km straight-line from beach reference`),elem('p',stay.status),link(stay.operator_url?'Provider & bookings ↗':'Mapped listing ↗',stay.operator_url||stay.source_url));};

@@ -156,10 +156,13 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
         api_url = os.environ.get("NEON_API_URL", neon_config.get("apiUrl", ""))
         neon_config.update(authUrl=auth_url, apiUrl=api_url, enabled=bool(auth_url))
         web_files["neon-config.json"] = json.dumps(neon_config).encode()
+        site_snapshot = os.environ.get("SITE_SNAPSHOT_FILE")
+        if site_snapshot:
+            web_files["sites-snapshot.json"] = Path(site_snapshot).read_bytes()
         digest = hashlib.sha256(b"".join(name.encode() + b"\0" + data for name, data in sorted(web_files.items()))).hexdigest()[:12]
         assets = {name: (Path(name).parent / f"{Path(name).stem}.{digest}{Path(name).suffix}").as_posix()
                   for name in web_files
-                  if ("/" not in name and Path(name).suffix in (".js", ".css"))
+                  if ("/" not in name and (Path(name).suffix in (".js", ".css") or name == "sites-snapshot.json"))
                   or (name.startswith("workers/") and Path(name).name != "finfolk.sharedworker.js" and Path(name).suffix in (".js", ".wasm"))}
         for name, data in web_files.items():
             rendered = data

@@ -100,7 +100,7 @@ export async function createLogbookClient(config) {
     const headers={Authorization:'Bearer '+token};
     if(method!=='GET'){headers['Idempotency-Key']=idempotencyKey || crypto.randomUUID();if(method!=='DELETE')headers['Content-Type']='application/json';}
     const response=await fetch(new URL(path,config.apiUrl),{method,headers,signal,cache:'no-store',...(method!=='GET' && method!=='DELETE'?{body:JSON.stringify(body || {})}:{})});
-    const result=await response.json();if(response.status===401){clearBackbone();user=null;for(const fn of listeners)await fn(null);}if(!response.ok)throw Object.assign(Error(result.error?.message || 'Messaging request failed.'),{status:response.status,code:result.error?.code,requestId:result.requestId});
+    const result=await response.json();if(response.status===401){clearBackbone();user=null;for(const fn of listeners)await fn(null);}if(!response.ok)throw Object.assign(Error(result.error?.message || 'Messaging request failed.'),{status:response.status,code:result.error?.code,details:result.error?.details,requestId:result.requestId});
     return result.data;
   }
   async function authWork(kind,work){if(!config.backbone)return work();const {createApplicationBackbone}=await import('./next-backbone.js');application ||= createApplicationBackbone(config);return application.auth(kind,async()=>{const result=await work();if(result?.error)throw Error(result.error.message||'Sign-in failed.');return result;});}

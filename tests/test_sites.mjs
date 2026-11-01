@@ -1,0 +1,18 @@
+import assert from 'node:assert/strict';
+import {siteMatches,canAutoMeasure,hydrateSiteCatalog} from '../js/finfolk-next/site/web-main/src/site-model.js';
+import {searchBeaches,recommendationReasons,depthText} from '../js/finfolk-next/site/web-main/src/discovery.js';
+import {beachMeasurement} from '../js/finfolk-next/site/web-main/src/measure.js';
+import {summary} from '../scripts/build_beach_summaries.mjs';
+import {readSiteDirectory} from '../js/finfolk-next/site/web-main/src/site-catalog.js';
+const lake={id:'lake',name:'Inland Lake',area_id:'vic-inland',area_name:'Inland',state_id:'VIC',state:'Victoria',region:'marine',point:[145,-38],waterbody:'lake',access_mode:'shore',activity_status:'documented',source_url:'https://example.org/lake',depth_evidence:[{kind:'reported',depth_m:27,reference:'Below water surface'}]};
+const boat={...lake,id:'boat',name:'Offshore Reef',area_id:'vic-coast',waterbody:'ocean',access_mode:'boat_only',depth_evidence:[],access_points:[{mode:'departure',name:'Marina',point:[144,-37]}]};
+const shore={...lake,id:'shore',waterbody:'ocean',access_mode:'shore_or_boat',entry_documented:true};
+const catalog={beaches:[lake,boat,shore],areas:[],states:[{id:'VIC',name:'Victoria'}]};const summaries={beaches:[]};
+assert.equal(searchBeaches(catalog,summaries,{waterbody:'lake'}).length,1);assert.equal(searchBeaches(catalog,summaries,{access:'boat_only'})[0].id,'boat');assert.equal(siteMatches({}, {access:'unknown'}),true);
+assert.equal(canAutoMeasure(lake),false);assert.equal(canAutoMeasure(boat),false);assert.equal(canAutoMeasure(shore),true);
+assert.ok(recommendationReasons(lake,undefined).some(r=>r.includes('27 m')));assert.ok(recommendationReasons(boat,undefined).includes('Boat only'));assert.deepEqual(recommendationReasons(boat,undefined,'ocean-swimming'),[]);
+assert.deepEqual(recommendationReasons({...lake,restrictions:[{activity:'freediving',status:'closed'}]},undefined),[]);
+assert.throws(()=>beachMeasurement([],boat),/do not apply/);assert.equal(summary(lake,undefined,[]).measurement_kind,'not_applicable');assert.match(depthText(undefined,10,lake),/27 m reported/);assert.doesNotMatch(depthText(undefined,10,boat),/one way|return to/);
+const atlas={regions:[{id:'marine',rasters:[{id:'sea-only'}]}]};hydrateSiteCatalog(catalog,atlas);assert.equal(lake.region,'site-lake');assert.equal(atlas.regions.find(r=>r.id==='site-lake').rasters.length,0);assert.equal(boat.region,'marine');assert.deepEqual(boat.point,[145,-38],'a departure never replaces dive coordinates');
+const fallback={beaches:[],states:[],areas:[]},snapshot={...fallback,revision:2};const result=await readSiteDirectory({application:{public:{call:async()=>{throw Error('offline');}}},data:{json:async path=>{assert.equal(path,'sites-snapshot.json');return snapshot;}},fallback,atlas});assert.equal(result.revision,2);
+console.log('SITES_PASS: orthogonal filters, documented no-survey discovery, no boat/inland shore distances, closures, separate departures, empty inland maps and offline snapshots.');
