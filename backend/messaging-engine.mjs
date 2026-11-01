@@ -15,6 +15,7 @@ import {
 import {
   parseInstagramCommand,
   commandResult,
+  followRequiredReply,
 } from "./instagram-dm-commands.mjs";
 const terminal = ["completed", "ignored", "blocked", "paused"];
 const retryDelay = (attempt) =>
@@ -23,7 +24,7 @@ const expired = (event) =>
   Date.parse(event.message_at) < Date.now() - 86400000 ||
   Date.parse(event.message_at) > Date.now() + 300000;
 const commandName = (event) =>
-  ["unknown", "prompt", "claim_usage"].includes(event.command)
+  ["unknown", "prompt", "claim_usage", "claim_retired"].includes(event.command)
     ? event.command === "claim_usage"
       ? "claim"
       : "help"
@@ -140,6 +141,33 @@ async function markBlocked(q, event, code, identity) {
     );
   log("blocked", event, { code });
 }
+async function blockWithFollowReply(db, env, event, identity) {
+  await db.transaction(async (q) => {
+    await q(
+      "SELECT id FROM finfolk.messaging_accounts WHERE id='instagram' FOR SHARE",
+    );
+    const locked = (
+      await q(
+        "SELECT id FROM finfolk.instagram_dm_events WHERE id=$1 AND lease=$2 AND processing_state='processing' FOR UPDATE",
+        [event.id, event.lease],
+      )
+    )[0];
+    if (!locked) return;
+    if (!canRun(await messagingConfig(q, env), event))
+      return markBlocked(q, event, "rollout_restricted");
+    if (expired(event)) return markBlocked(q, event, "message_expired");
+    await markBlocked(q, event, "not_following", identity);
+    await q(
+      "INSERT INTO finfolk.messaging_outbox(event_id,body,correlation_id,deadline) VALUES($1,$2,$3,$4) ON CONFLICT(event_id) DO NOTHING",
+      [
+        event.id,
+        followRequiredReply,
+        event.correlation_id,
+        new Date(Date.parse(event.message_at) + 86400000),
+      ],
+    );
+  });
+}
 export async function processInstagramDM(
   id,
   env,
@@ -205,8 +233,11 @@ export async function processInstagramDM(
       await db.query(
         "UPDATE finfolk.messaging_accounts SET checks=checks || '{\"followLookup\":true}'::jsonb WHERE id='instagram'",
       );
-      if (!identity.follows && event.command !== "connect")
-        return await markBlocked(db.query, event, "not_following", identity);
+      if (!identity.follows) {
+        await blockWithFollowReply(db, env, event, identity);
+        await sendOutboxForEvent(id, env, db, { fetcher });
+        return;
+      }
     }
     await db.transaction(async (q) => {
       await q(
@@ -365,11 +396,21 @@ export async function sendOutbox(id, env, db, { fetcher = fetch } = {}) {
     )[0];
     if (!event) return set("cancelled", "event_removed");
     const config = await messagingConfig(db.query, env, { credentials: true });
+    // A denied feature may send only this fixed public instruction. Private
+    // results and every other blocked event retain the usual follower gate.
+    const followGuidance =
+      event.processing_state === "blocked" &&
+      event.error === "not_following" &&
+      requiresFollower(event.command) &&
+      row.body === followRequiredReply;
     if (new Date(row.deadline) <= new Date())
       return set("expired", "reply_window_expired");
-    if (!canRun(config, event) || event.processing_state !== "completed")
+    if (
+      !canRun(config, event) ||
+      (event.processing_state !== "completed" && !followGuidance)
+    )
       return set("cancelled", "rollout_changed");
-    if (event.owner_id && requiresFollower(event.command)) {
+    if (event.owner_id && requiresFollower(event.command) && !followGuidance) {
       const member = (
         await db.query("SELECT deleted FROM finfolk.members WHERE user_id=$1", [
           event.owner_id,
@@ -393,7 +434,7 @@ export async function sendOutbox(id, env, db, { fetcher = fetch } = {}) {
         new Date(config.token_expires_at) <= new Date())
     )
       return set("failed", "authorization_unavailable");
-    if (requiresFollower(event.command) && !(event.command === 'connect' && row.reply_kind === 'connect_guidance')) {
+    if (requiresFollower(event.command) && !followGuidance) {
       const identity = await provider.profile(event.sender_id);
       if (!identity.follows) return set("cancelled", "not_following");
     }
@@ -401,8 +442,8 @@ export async function sendOutbox(id, env, db, { fetcher = fetch } = {}) {
     const current = await messagingConfig(db.query, env);
     const active = (
       await db.query(
-        "SELECT 1 FROM finfolk.messaging_outbox o JOIN finfolk.instagram_dm_events e ON e.id=o.event_id WHERE o.id=$1 AND o.lease=$2 AND o.state='sending' AND e.processing_state='completed'",
-        [id, lease],
+        "SELECT 1 FROM finfolk.messaging_outbox o JOIN finfolk.instagram_dm_events e ON e.id=o.event_id WHERE o.id=$1 AND o.lease=$2 AND o.state='sending' AND (e.processing_state='completed' OR ($3::boolean AND e.processing_state='blocked' AND e.error='not_following'))",
+        [id, lease, followGuidance],
       )
     ).length;
     if (!active) return;
@@ -411,7 +452,7 @@ export async function sendOutbox(id, env, db, { fetcher = fetch } = {}) {
       return set("expired", "reply_window_expired");
     let text = row.body;
     if(row.reply_kind === 'connect_code') {
-      const activeCode=(await db.query(`SELECT 1 FROM finfolk.instagram_connect_codes WHERE id=$1 AND NOT invalidated AND consumed_by IS NULL AND expires_at>now() AND provider_scope=$2 AND generation=$3`,[row.connect_code_id,config.scope,config.generation])).length;
+      const activeCode=(await db.query('SELECT 1 FROM finfolk.instagram_connect_codes WHERE id=$1 AND NOT invalidated AND consumed_by IS NULL AND expires_at>now() AND provider_scope=$2 AND generation=$3',[row.connect_code_id,config.scope,config.generation])).length;
       if(!activeCode)return set('cancelled','connect_code_expired');
       text=unseal(row.body_ciphertext,env,'connect:'+event.id).body;
     }

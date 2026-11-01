@@ -21,7 +21,7 @@ export async function renderInstagramClaim({host,api,refresh=()=>{},initialState
     if(['claimed','expired','ready'].includes(stage))forget();
     root.replaceChildren(el('h2','Link Instagram'),message);message.textContent='';
     if(stage==='claimed'){
-      root.append(el('strong','Instagram verified','claim-state'),external('@'+state.handle,'https://www.instagram.com/'+encodeURIComponent(state.handle)+'/'),el('p','Your Instagram account is connected to FinFolk.'),button('Remove link',remove));
+      root.append(el('strong','Instagram connected','claim-state'),external('@'+state.handle,'https://www.instagram.com/'+encodeURIComponent(state.handle)+'/'),el('p','Your Instagram account is connected to FinFolk.'),button('Remove link',remove));
     }else if(!state?.capabilities?.connect){
       const handle=state?.profileUrl?instagramHandle(state.profileUrl):'';
       if(handle && !editing){
@@ -53,21 +53,5 @@ export async function renderInstagramClaim({host,api,refresh=()=>{},initialState
   try{if(!state)state=await api.call('instagramClaimStatus');draw();}catch(error){root.replaceChildren(el('h2','Link Instagram'),message);message.textContent=error.message;root.append(button('Retry',load));}
   return root;
 }
-export async function renderInstagramClaimReview({host,api}){
-  const root=el('details');root.append(el('summary','Requested Instagram claim reviews'));host.append(root);
-  root.addEventListener('toggle',async()=>{
-    if(!root.open || root.dataset.loaded)return;
-    const status=el('p');status.setAttribute('role','status');root.append(status);
-    try{
-      const claims=await api.call('instagramClaimReviewInbox');root.dataset.loaded='true';
-      if(!claims.length)root.append(el('p','No requested reviews.'));
-      for(const claim of claims){
-        const card=el('section',undefined,'buddy-card');card.append(el('h3','Instagram claim review'),el('p',`Message sender: ${claim.sender_id}`),el('p',claim.error || 'Automatic verification did not complete.'));
-        const field=(text,type='text')=>{const label=el('label',text),input=el('input');input.type=type;label.append(input);card.append(label);return input;};
-        const handle=field('Username checked against the actual Instagram message');handle.value=claim.handle || '';
-        const sender=field('I checked the actual message sender.','checkbox'),follow=field('I checked that this account follows @finfolk.com.au.','checkbox'),reason=field('Reason if rejecting this request');
-        for(const decision of ['approve','reject']){const button=el('button',decision==='approve'?'Approve claim':'Reject claim','secondary');button.type='button';button.onclick=async()=>{button.disabled=true;try{await api.call('instagramClaimReview',{userId:claim.user_id,decision,handle:handle.value,senderChecked:sender.checked,followChecked:follow.checked,reason:reason.value});card.replaceChildren(el('p',decision==='approve'?'Claim approved.':'Claim rejected.'));}catch(error){status.textContent=error.message;}finally{button.disabled=false;}};card.append(button);}root.append(card);
-      }
-    }catch(error){status.textContent=error.message;}
-  });
-}
+// Compatibility export for older page composition; linking is self-service via /connect.
+export async function renderInstagramClaimReview() {}

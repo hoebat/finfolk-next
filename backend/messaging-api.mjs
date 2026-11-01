@@ -117,7 +117,7 @@ export async function messagingMemberAction({
       claimId: claim?.claim_id || null,
       capabilities: {
         profileLink: true,
-        claims: data.enabled,
+        claims: false,
         connect: connectEnabled(config, env),
         messaging: effective.INSTAGRAM_DM_ENABLED === "true",
       },
@@ -304,12 +304,10 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
       data: await act(ctx, "instagramDisconnect"),
     })),
   );
-  app.post("/v1/me/instagram/claims", (c) =>
-    mutation(c, async (input, ctx) => {
-      only(input, []);
-      return { status: 201, data: await act(ctx, "instagramClaimStart") };
-    }),
-  );
+  app.post("/v1/me/instagram/claims", c => {
+    context(c);
+    fail("claim_retired", "Send /connect in Instagram, then enter the code on FinFolk.", 410);
+  });
   async function ownedClaim(c, ctx) {
     const id = c.req.param("id");
     if (!uuid(id)) fail("invalid_id", "Invalid claim ID.");
@@ -335,13 +333,10 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
   app.get("/v1/me/instagram/claims/:id", async (c) =>
     respond(c, await ownedClaim(c, context(c))),
   );
-  app.post("/v1/me/instagram/claims/:id/review-request", (c) =>
-    mutation(c, async (input, ctx) => {
-      only(input, []);
-      await ownedClaim(c, ctx);
-      return { data: await act(ctx, "instagramClaimRequestReview") };
-    }),
-  );
+  app.post("/v1/me/instagram/claims/:id/review-request", c => {
+    context(c);
+    fail("claim_retired", "Legacy claim review has been retired. Use /connect.", 410);
+  });
   app.get("/v1/admin/messaging/instagram", async (c) =>
     respond(c, await readiness(db.query, c.env || {})),
   );
@@ -562,6 +557,8 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
         "unknown",
         "prompt",
         "claim_usage",
+        "connect",
+        "claim_retired",
         "unsupported",
       ].includes(command)
     )
@@ -684,34 +681,10 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
     const claims = await act(context(c), "instagramClaimReviewInbox");
     return respond(c, claims);
   });
-  app.post("/v1/admin/messaging/claim-reviews/:id/decision", (c) =>
-    mutation(c, async (input, ctx) => {
-      only(input, [
-        "decision",
-        "handle",
-        "senderChecked",
-        "followChecked",
-        "reason",
-      ]);
-      if (!uuid(c.req.param("id"))) fail("invalid_id", "Invalid claim ID.");
-      await ctx.db.query(
-        "SELECT id FROM finfolk.messaging_accounts WHERE id='instagram' FOR SHARE",
-      );
-      const claim = (
-        await ctx.db.query(
-          "SELECT user_id FROM finfolk.instagram_claims WHERE claim_id=$1 FOR UPDATE",
-          [c.req.param("id")],
-        )
-      )[0];
-      if (!claim) fail("claim_not_found", "Claim unavailable.", 404);
-      return {
-        data: await act(ctx, "instagramClaimReview", {
-          ...input,
-          userId: claim.user_id,
-        }),
-      };
-    }),
-  );
+  app.post("/v1/admin/messaging/claim-reviews/:id/decision", c => {
+    context(c);
+    fail("claim_retired", "Legacy claim approval has been retired. Use /connect.", 410);
+  });
   app.post("/v1/admin/messaging/instagram/authorization", (c) =>
     mutation(c, async (input, ctx) => {
       only(input, []);

@@ -12,7 +12,7 @@
   => [true true "community" false true])
 ^{:id api-coverage}
 (fact "the extracted browser contract includes every deployed operation"
-  (count operations/DEFINITIONS) => 103)
+  (count operations/DEFINITIONS) => 95)
 ^{:id deployed-sql}
 (fact "the extraction preserves the existing database release"
   (format "%064x" (java.math.BigInteger. 1 (.digest (java.security.MessageDigest/getInstance "SHA-256")
