@@ -31,7 +31,7 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
     if(path==='/health')return Response.json({environment:'next',backbone:'Clojure/Postgres + xt.substrate + xt.db',ready:true,sqlSha:env.DB_SQL_SHA},{headers:{'Cache-Control':'no-store'}});
     let verify=verifiers.get(env.NEON_AUTH_BASE_URL);
     if(!verify){verify=managedVerifier(env);verifiers.set(env.NEON_AUTH_BASE_URL,verify);}
-    return apiFactory({db,verify,origins:['https://next.finfolk.com.au','https://finfolk.com.au','https://www.finfolk.com.au','http://localhost:8000','http://127.0.0.1:8000']}).fetch(request,env,ctx);
+    return apiFactory({db,verify,origins:['https://finfolk.com.au','https://www.finfolk.com.au','http://localhost:8000','http://127.0.0.1:8000']}).fetch(request,env,ctx);
    });}catch(error){
     console.error(JSON.stringify({service:'finfolk-next',code:error.code || 'next_backend_unavailable'}));
     return Response.json({error:'Next backend is not isolated and ready.'},{status:503,headers:{'Cache-Control':'no-store'}});

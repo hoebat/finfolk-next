@@ -19,9 +19,9 @@ try{
  for(let i=0;i<8;i++)assert.equal((await db.query('SELECT finfolk_rpc.actor_id() AS actor'))[0].actor,'');
  assert.deepEqual(await memberProfile(db,'bob'),{displayName:'Bob'});
  const env={DB_BACKBONE_ENABLED:'true',ENVIRONMENT:'next',COMMUNITY_POSTS_ENABLED:'true',INSTAGRAM_ADMIN_IDS:'alice'};
- const app=createAPI({db,verify:async sub=>({sub}),origins:['https://next.finfolk.com.au']});
+ const app=createAPI({db,verify:async sub=>({sub}),origins:['https://finfolk.com.au']});
  async function call(actor,action,values={}){
-  const r=await app.fetch(new Request('https://next.finfolk.com.au/api',{method:'POST',headers:{Authorization:'Bearer '+actor,'Content-Type':'application/json'},body:JSON.stringify({action,...values})}),env);
+  const r=await app.fetch(new Request('https://finfolk.com.au/api',{method:'POST',headers:{Authorization:'Bearer '+actor,'Content-Type':'application/json'},body:JSON.stringify({action,...values})}),env);
   return {status:r.status,body:await r.json()};
  }
  const connections=await Promise.all(Array.from({length:4},()=>call('alice','connection',{target:'bob',mode:'request'})));

@@ -10,7 +10,7 @@ try{
  const url=new URL(process.env.FINFOLK_TEST_DATABASE_URL);url.searchParams.set('options','-c role=finfolk_api');
  const sha=createHash('sha256').update(await readFile('resources/finfolkdb/pilot.sql')).digest('hex');
  const env={ENVIRONMENT:'next',HYPERDRIVE:{connectionString:url.toString()},NEON_AUTH_BASE_URL:'https://auth.fixture.test',DB_BACKBONE_ENABLED:'true',DB_SQL_SHA:sha};
- async function health(options=env){const closing=[];const r=await worker.fetch(new Request('https://next.finfolk.com.au/health'),options,{waitUntil:p=>closing.push(p)});await Promise.all(closing);return r;}
+ async function health(options=env){const closing=[];const r=await worker.fetch(new Request('https://finfolk.com.au/health'),options,{waitUntil:p=>closing.push(p)});await Promise.all(closing);return r;}
  assert.equal((await health({})).status,503);
  assert.equal((await health({...env,NEON_AUTH_BASE_URL:'https://ep-crimson-queen.invalid'})).status,503);
  assert.equal((await health()).status,503,'Missing release marker fails readiness without leaking SQL errors');
