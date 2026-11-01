@@ -245,6 +245,7 @@ export async function receive(ctx,message){
                 "name":error["name"],
                 "status":error["status"],
                 "code":error["code"],
+                "details":error["details"],
                 "requestId":error["requestId"]
               }
       });

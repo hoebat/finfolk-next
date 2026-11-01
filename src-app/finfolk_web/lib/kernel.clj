@@ -20,7 +20,7 @@
            "status" (. error ["status"]) "code" (. error ["code"]) "name" (. error ["name"])
            "mutationCommitted" (. error ["mutationCommitted"]) "result" (. error ["result"])
            "mutationOutcomeUnknown" (. error ["mutationOutcomeUnknown"])
-           "requestId" (. error ["requestId"])}))
+           "details" (. error ["details"]) "requestId" (. error ["requestId"])}))
 (defn.js ^{:- [:async]} boot [ephemeral]
   (when (not -/BOOT)
     (:= -/BOOT (new Promise (fn [resolve reject]

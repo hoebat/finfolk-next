@@ -10,11 +10,12 @@
 (def.js Uncertain (new Map))
 (defn.js send [client message]
   (try (. (. client ["port"]) (postMessage message)) (catch error nil)))
-(defn.js flag [scope domain type]
+(defn.js flag [scope domain type except]
   (:= -/Generation (+ -/Generation 1))
   (. -/Uncertain (set (+ scope "|" domain) -/Generation))
   (for:iter [target -/Clients]
-    (-/send target {"type" type "scope" scope "domain" domain})))
+    (when (not= target except)
+      (-/send target {"type" type "scope" scope "domain" domain}))))
 (defn.js attach [client]
   (var channel (new MessageChannel))
   (:= (. client ["kernel"]) (. channel ["port2"]))
@@ -24,7 +25,7 @@
     (when (== (. data ["type"]) "result")
       (var write (. (. client ["writes"]) (get (. data ["id"]))))
       (when (and write (. data ["error"]) (. data ["error"] ["mutationOutcomeUnknown"]))
-        (-/flag (. write ["scope"]) (. write ["domain"]) "uncertain"))
+        (-/flag (. write ["scope"]) (. write ["domain"]) "uncertain" client))
       (. (. client ["writes"]) (delete (. data ["id"]))))
     (-/send client (. event ["data"]))))
   (. (. channel ["port2"]) (start))

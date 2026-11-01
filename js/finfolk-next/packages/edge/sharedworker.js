@@ -20,11 +20,13 @@ export function send(client,message){
   }
 }
 
-export function flag(scope,domain,type){
+export function flag(scope,domain,type,except){
   Generation = (Generation + 1);
   Uncertain.set(scope + "|" + domain,Generation);
   for(let target of Clients){
-    send(target,{"type":type,"scope":scope,"domain":domain});
+    if(target != except){
+      send(target,{"type":type,"scope":scope,"domain":domain});
+    }
   };
 }
 
@@ -39,7 +41,7 @@ export function attach(client){
     if(data["type"] == "result"){
       let write = client["writes"].get(data["id"]);
       if(write && data["error"] && data["error"]["mutationOutcomeUnknown"]){
-        flag(write["scope"],write["domain"],"uncertain");
+        flag(write["scope"],write["domain"],"uncertain",client);
       }
       client["writes"].delete(data["id"]);
     }

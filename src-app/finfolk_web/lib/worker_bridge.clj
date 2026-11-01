@@ -107,7 +107,7 @@
       (-/post ctx {"type" "http-result" "id" (. message ["id"]) "result" result})
       (catch error (-/post ctx {"type" "http-result" "id" (. message ["id"])
         "error" {"message" (. error ["message"]) "name" (. error ["name"]) "status" (. error ["status"])
-                 "code" (. error ["code"]) "requestId" (. error ["requestId"])}}))
+                 "code" (. error ["code"]) "details" (. error ["details"]) "requestId" (. error ["requestId"])}}))
       (finally (. (. ctx ["http"]) (delete (. message ["id"])))))
     (return))
   (when (not facade) (return))
