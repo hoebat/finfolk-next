@@ -19,6 +19,17 @@ response=await worker.fetch(new Request('https://next.finfolk.test/health'),env,
 assert.equal((await response.json()).environment,'next');assert.equal(closed,opened);
 response=await worker.fetch(new Request('https://next.finfolk.test/v1/me/instagram'),env,{});
 assert.equal((await response.json()).next,true);
+const browserWorker=createNextWorker({openDatabase:()=>{opened++;return db;}});
+for(const origin of ['https://finfolk.com.au','https://www.finfolk.com.au','https://old.finfolk.com.au']){
+ response=await browserWorker.fetch(new Request('https://api.finfolk.test/profile',{method:'OPTIONS',headers:{Origin:origin,'Access-Control-Request-Method':'GET','Access-Control-Request-Headers':'Authorization'}}),env,{});
+ assert.equal(response.status,204);
+ assert.equal(response.headers.get('Access-Control-Allow-Origin'),origin);
+}
+for(const origin of ['https://next.finfolk.com.au','https://untrusted.test']){
+ response=await browserWorker.fetch(new Request('https://api.finfolk.test/profile',{method:'OPTIONS',headers:{Origin:origin}}),env,{});
+ assert.equal(response.status,403);
+ assert.equal(response.headers.get('Access-Control-Allow-Origin'),null);
+}
 databaseName='neondb';
 response=await worker.fetch(new Request('https://next.finfolk.test/v1/me/instagram'),env,{});
 assert.equal(response.status,503);
