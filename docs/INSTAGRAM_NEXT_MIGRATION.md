@@ -20,7 +20,7 @@ The operator-only `scripts/migrate_instagram_next.mjs` takes an ignored, mode-06
 2. `stage` records a private snapshot and imports only the verified brand grant into disabled Next settings.
 3. Deploy Next with ingress paused; verify health, webhook challenge, protected identity reads, Google sign-in and the required local suites.
 4. `pause-legacy` requires a drained outbox, disables legacy processing, invalidates unused legacy codes and records a handover timestamp.
-5. Set `INSTAGRAM_CUTOVER_AT` to that timestamp, enable Next ingress, activate the Next pilot and attach the API custom domain to Next. Verify the domain serves the Next release immediately.
+5. Activate the Next pilot, which persists `checks.cutoverAt` as the replay boundary, then attach the API custom domain to Next with `wrangler triggers deploy`. `INSTAGRAM_CUTOVER_AT` remains a fallback for isolated tests. Next ingress can be deployed beforehand while its managed mode remains disabled. Verify the domain serves the Next release immediately.
 6. Send new pilot `/ping`, `/help` and `/connect` messages. Check seen/typing display and link/unlink/relink from the verified Next account. Older provider retries are ignored rather than replayed into the new database.
 
 The `rollback` action refuses outstanding Next delivery and pauses Next. Restore routing before explicitly restoring legacy processing. Do not replay old messages, codes or uncertain sends. Historical member data remains in the legacy database.

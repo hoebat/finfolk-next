@@ -47,7 +47,7 @@ try {
   if(legacy.mode!=='disabled' || !input.cutoverAt)throw Error('Legacy must be paused first.');
   const active=await messagingConfig(next.query,input.nextEnv,{credentials:true});
   await new InstagramProvider(active).validate();
-  await next.query("UPDATE finfolk.messaging_accounts SET mode='pilot',generation=generation+1,updated_at=now() WHERE id='instagram' AND checks->>'authorization'='true' AND checks->>'subscription'='true'");
+  await next.query("UPDATE finfolk.messaging_accounts SET mode='pilot',checks=checks || $1::jsonb,generation=generation+1,updated_at=now() WHERE id='instagram' AND checks->>'authorization'='true' AND checks->>'subscription'='true'",[JSON.stringify({cutoverAt:input.cutoverAt})]);
   console.log('Next pilot activated. Live delivery acceptance must still be recorded from real Next events.');
  }
  if(action==='rollback'){

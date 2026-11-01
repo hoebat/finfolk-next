@@ -43,7 +43,7 @@
     "INSTAGRAM_MESSAGING_LOGIN_CONFIG_ID": "2606242293176301",
     "INSTAGRAM_MESSAGING_ACCOUNT_ID": "17841461601419539",
     "FINFOLK_PUBLIC_URL": "https://next.finfolk.com.au",
-    "INSTAGRAM_NEXT_INGRESS_ENABLED": "false",
+    "INSTAGRAM_NEXT_INGRESS_ENABLED": "true",
     "INSTAGRAM_ADMIN_IDS": "80f5d7fb-2d56-449d-884c-e1f5b501ec49"
   },
   "queues": {
@@ -67,5 +67,11 @@
       "* * * * *",
       "*/15 * * * *"
     ]
-  }
+  },
+  "routes": [
+    {
+      "pattern": "api.finfolk.com.au",
+      "custom_domain": true
+    }
+  ]
 }

@@ -70,8 +70,9 @@ export async function collectInstagramDM(
       ? parseInstagramCommand(event.message.text)
       : { command: "unsupported", args: "" };
   const timestamp = Number(event.timestamp);
-  if(env.INSTAGRAM_CUTOVER_AT){
-    const cutoff=Date.parse(env.INSTAGRAM_CUTOVER_AT);
+  const cutoverAt=config.checks?.cutoverAt || env.INSTAGRAM_CUTOVER_AT;
+  if(cutoverAt){
+    const cutoff=Date.parse(cutoverAt);
     if(!Number.isFinite(cutoff))throw Error('Invalid Instagram handover timestamp');
     if(timestamp<cutoff)return;
   }
