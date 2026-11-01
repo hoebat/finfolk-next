@@ -1,3 +1,4 @@
+import {canAutoMeasure} from './site-model.js';
 import {distance,validatePoint} from './data-client.js';
 const RAD=Math.PI/180,EARTH=6371008.8;
 function bearing(a,b){const p1=a[1]*RAD,p2=b[1]*RAD,dl=(b[0]-a[0])*RAD;return Math.atan2(Math.sin(dl)*Math.cos(p2),Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dl));}
@@ -16,6 +17,7 @@ export function nearestContour(start,features,depth){
 }
 export const EDITHVALE={name:'Edithvale Life Saving Club',point:[145.1068502,-38.0387296],source_url:'https://www.kingston.vic.gov.au/community/get-involved/community-groups/Edithvale-Life-Saving-Club'};
 export function beachMeasurement(features,beach,depth=10){
+  if(!canAutoMeasure(beach))throw Error('Shore-to-contour distances do not apply to this dive site.');
   if(beach.entry?.verified)beach={...beach,point:beach.entry.point,reference_label:beach.entry.label,source_url:beach.entry.source_url};
   validatePoint(beach.point);let shoreline=null;
   try{const candidate=nearestContour(beach.point,features,0);if(candidate.distance_m<=250)shoreline=candidate;}catch{}

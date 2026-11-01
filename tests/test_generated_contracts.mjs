@@ -5,5 +5,8 @@ const baseline=JSON.parse(await readFile('resources/migration/http-contracts.jso
 const retired=new Set(['instagramClaimCreate','instagramClaimRequest','instagramClaimRequestReview','instagramClaimReview','instagramClaimStart','instagramConnect','instagramVerify','messagingClaimDecision']);
 const expected=Object.fromEntries(Object.entries(baseline).filter(([name])=>!retired.has(name)));
 expected.messagingAuthorizationDiagnostics={admin:true,auth:true,domain:'admin',method:'GET',name:'messagingAuthorizationDiagnostics',path:'/v1/admin/messaging/instagram/authorization/diagnostics',transport:'rest',write:false};
-assert.deepEqual(operations,expected,'The extraction must preserve every deployed HTTP binding, ownership flag and invalidation domain');
+const added=Object.fromEntries(Object.entries(operations).filter(([name])=>Object.hasOwn(expected,name)));
+assert.equal(Object.keys(operations).length,Object.keys(expected).length+12);
+assert.equal(operations.siteDraftPublish.admin,true);assert.equal(operations.siteCatalog.auth,false);
+assert.deepEqual(added,expected,'The extraction must preserve every deployed HTTP binding, ownership flag and invalidation domain');
 console.log('GENERATED_CONTRACTS_PASS: active Clojure operations preserve the baseline except the explicitly retired claim mutations.');

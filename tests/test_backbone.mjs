@@ -9,6 +9,7 @@ try {
  await pg.exec('CREATE ROLE finfolk_api; CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);');
  await pg.exec(`INSERT INTO neon_auth."user"(id,"emailVerified",banned) VALUES('alice',true,false),('bob',false,false)`);
  await pg.exec(await readFile('backend/migrations/0001_community.sql','utf8'));
+ await pg.exec(await readFile('resources/finfolkdb/site-schema.sql','utf8'));
  await pg.exec(await readFile('resources/finfolkdb/pilot.sql','utf8'));
  await query("INSERT INTO finfolk.members(user_id,profile) VALUES('alice','{\"displayName\":\"Alice\"}'),('bob','{\"displayName\":\"Bob\"}')");
  assert.deepEqual(await memberProfile(db,'alice'),{displayName:'Alice'});

@@ -14,6 +14,8 @@
  [:with eligible :as
   [:select (--- [#{"id"} #{"timezone"}]) :from (. #{"finfolk"} #{"beaches"})
    :where (and (== #{"id"} i-beach-id)
+    (not [:exists [:select 1 :from (. #{"finfolk"} #{"site_profiles"})
+          :where (and (== #{"id"} i-beach-id) (== #{"status"} "archived"))]])
     [:exists [:select 1 :from (. #{"finfolk"} #{"members"})
      :where (and (== #{"user_id"} (auth/actor-id)) (== #{"deleted"} false) (auth/member-permitted true))]])]
   \, inserted :as

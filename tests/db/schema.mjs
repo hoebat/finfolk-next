@@ -40,6 +40,8 @@ try{
      else if(c.definition.includes('media_id'))changes={media_id:'not-a-media-id'};
      else if(c.definition.includes('length(reason)'))changes={reason:''};
      else if(c.definition.includes('length(body)'))changes={body:'x'.repeat(2001)};
+     else if(table==='site_catalog'&&c.definition.includes('id = 1'))changes={id:2};
+     else if(table==='site_catalog'&&c.definition.includes('revision'))changes={revision:-1};
      else if(c.definition.includes('expected_rows'))changes={expected_rows:0};
      else if(c.definition.includes('batch_index'))changes={batch_index:-1};
      else if(c.definition.includes('points'))changes={points:0};
@@ -73,7 +75,7 @@ try{
  assert.deepEqual(explicit,JSON.parse(await readFile('tests/db/indexes.json','utf8')),'index columns, uniqueness and partial predicates');
  for(const required of ['checkins_beach_recent','sessions_owner_beach','trips_owner','trips_public_beach','instagram_commands_recent','instagram_connect_sender'])assert.ok(indexes.some(i=>i.indexname===required),required);
  await db.query('ROLLBACK');
- assert.equal(new Set(covered.map(c=>c.table)).size,41);assert.equal(covered.filter(c=>c.constraint).length,constraints.length);
- await mkdir('.cache/test-results',{recursive:true});await writeFile('.cache/test-results/finfolkdb-coverage.json',JSON.stringify({tables:41,constraints:constraints.length,scenarios:covered},null,2));
- console.log(`FINFOLKDB_SCHEMA_PASS: 41 tables, ${constraints.length} constraints, defaults, identities, indexes and FK deletion behavior.`);
+ assert.equal(new Set(covered.map(c=>c.table)).size,Object.keys(schema).length);assert.equal(covered.filter(c=>c.constraint).length,constraints.length);
+ await mkdir('.cache/test-results',{recursive:true});await writeFile('.cache/test-results/finfolkdb-coverage.json',JSON.stringify({tables:Object.keys(schema).length,constraints:constraints.length,scenarios:covered},null,2));
+ console.log(`FINFOLKDB_SCHEMA_PASS: ${Object.keys(schema).length} tables, ${constraints.length} constraints, defaults, identities, indexes and FK deletion behavior.`);
 }finally{await db.end();}

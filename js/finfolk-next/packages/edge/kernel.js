@@ -31,13 +31,14 @@ export function send(client,message){
 export function errorData(error){
   return {
     "message":error["message"] || "Worker request failed.",
-    "status":error["status"],
-    "code":error["code"],
+    "requestId":error["requestId"],
     "name":error["name"],
+    "status":error["status"],
     "mutationCommitted":error["mutationCommitted"],
-    "result":error["result"],
+    "details":error["details"],
     "mutationOutcomeUnknown":error["mutationOutcomeUnknown"],
-    "requestId":error["requestId"]
+    "code":error["code"],
+    "result":error["result"]
   };
 }
 

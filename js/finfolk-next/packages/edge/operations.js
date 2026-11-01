@@ -7,6 +7,16 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "siteAdmin":{
+    "name":"siteAdmin",
+    "path":"/v1/admin/sites",
+    "method":"GET",
+    "transport":"rest",
+    "write":false,
+    "auth":true,
+    "domain":"siteAdmin",
+    "admin":true
+  },
   "tripPublish":{
     "auth":true,
     "domain":"trips",
@@ -124,6 +134,16 @@ export var operations = {
     "transport":"rest",
     "write":true
   },
+  "siteImportPublish":{
+    "name":"siteImportPublish",
+    "path":"/v1/admin/sites/imports/:id/publish",
+    "method":"POST",
+    "transport":"rest",
+    "write":true,
+    "auth":true,
+    "domain":"siteAdmin",
+    "admin":true
+  },
   "instagramAdminInbox":{
     "admin":true,
     "auth":true,
@@ -138,6 +158,16 @@ export var operations = {
     "name":"tripDelete",
     "transport":"action",
     "write":true
+  },
+  "siteImportStage":{
+    "name":"siteImportStage",
+    "path":"/v1/admin/sites/imports",
+    "method":"POST",
+    "transport":"rest",
+    "write":true,
+    "auth":true,
+    "domain":"siteAdmin",
+    "admin":true
   },
   "removeCheckin":{
     "auth":true,
@@ -154,6 +184,15 @@ export var operations = {
     "path":"/v1/me/instagram/connect",
     "transport":"rest",
     "write":true
+  },
+  "siteCatalog":{
+    "name":"siteCatalog",
+    "path":"/v1/sites/catalog",
+    "method":"GET",
+    "transport":"rest",
+    "write":false,
+    "auth":false,
+    "domain":"sites"
   },
   "instagramSuppressSource":{
     "admin":true,
@@ -258,6 +297,16 @@ export var operations = {
     "path":"/instagram/posts/:id/report",
     "transport":"rest",
     "write":true
+  },
+  "siteDraftSave":{
+    "name":"siteDraftSave",
+    "path":"/v1/admin/sites/drafts",
+    "method":"POST",
+    "transport":"rest",
+    "write":true,
+    "auth":true,
+    "domain":"siteAdmin",
+    "admin":true
   },
   "publicInstagram":{
     "auth":false,
@@ -366,6 +415,16 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "siteDraftReject":{
+    "name":"siteDraftReject",
+    "path":"/v1/admin/sites/drafts/:id/reject",
+    "method":"POST",
+    "transport":"rest",
+    "write":true,
+    "auth":true,
+    "domain":"siteAdmin",
+    "admin":true
+  },
   "tripReview":{
     "admin":true,
     "auth":true,
@@ -448,6 +507,25 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "mySiteSubmissions":{
+    "name":"mySiteSubmissions",
+    "path":"/v1/me/site-submissions",
+    "method":"GET",
+    "transport":"rest",
+    "write":false,
+    "auth":true,
+    "domain":"siteSubmissions"
+  },
+  "siteDraftPublish":{
+    "name":"siteDraftPublish",
+    "path":"/v1/admin/sites/drafts/:id/publish",
+    "method":"POST",
+    "transport":"rest",
+    "write":true,
+    "auth":true,
+    "domain":"siteAdmin",
+    "admin":true
+  },
   "community":{
     "auth":true,
     "domain":"community",
@@ -462,6 +540,15 @@ export var operations = {
     "name":"instagramCommandVerify",
     "transport":"action",
     "write":true
+  },
+  "siteSubmissionWithdraw":{
+    "name":"siteSubmissionWithdraw",
+    "path":"/v1/me/site-submissions/:id/withdraw",
+    "method":"POST",
+    "transport":"rest",
+    "write":true,
+    "auth":true,
+    "domain":"siteSubmissions"
   },
   "publicTrips":{
     "auth":false,
@@ -616,6 +703,25 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "siteImportDetail":{
+    "name":"siteImportDetail",
+    "path":"/v1/admin/sites/imports/:id",
+    "method":"GET",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":false,
+    "domain":"siteAdmin"
+  },
+  "siteDetail":{
+    "name":"siteDetail",
+    "path":"/v1/sites/:id",
+    "method":"GET",
+    "transport":"rest",
+    "write":false,
+    "auth":false,
+    "domain":"sites"
+  },
   "myPosts":{
     "auth":true,
     "domain":"posts",
@@ -647,6 +753,15 @@ export var operations = {
     "path":"/v1/admin/messaging/claim-reviews",
     "transport":"rest",
     "write":false
+  },
+  "siteSubmissionSave":{
+    "name":"siteSubmissionSave",
+    "path":"/v1/me/site-submissions",
+    "method":"POST",
+    "transport":"rest",
+    "write":true,
+    "auth":true,
+    "domain":"siteSubmissions"
   },
   "tripReviewInbox":{
     "admin":true,
@@ -760,6 +875,8 @@ export function restOperation(path,method){
 }
 
 export var RELATED = {
+  "siteAdmin":["sites","siteSubmissions"],
+  "siteSubmissions":["siteAdmin"],
   "member":["community","logbook","posts","trips"],
   "community":["member","logbook","posts","trips"],
   "logbook":["community","trips"],

@@ -39,7 +39,7 @@ test('main-origin shell upgrade preserves saved maps and preferences and bypasse
  expect(requests.statuses).toEqual([401,401]);expect(requests.b).toBe(requests.a+1);
  expect(await fresh.evaluate(async()=>!!await caches.match('/__upgrade/account'))).toBe(false);
 });
-for (const dedicated of [false,true]) test(`Instagram REST mutations retain their method across ${dedicated?'dedicated':'shared'} worker transport`,async({page})=>{
+for (const dedicated of [false,true]) test(`REST mutations and import errors retain their metadata across ${dedicated?'dedicated':'shared'} worker transport`,async({page})=>{
  if(dedicated)await page.addInitScript(()=>{window.SharedWorker=undefined;});
  const source=await readFile('js/finfolk-next/site/web-main/src/neon-client.js','utf8');
  const authFixture='data:text/javascript,'+encodeURIComponent('export const createAuthClient=()=>({getSession:async()=>({data:{user:{id:"rest-fixture",emailVerified:true},session:{token:"header.payload.signature"}}})});');
@@ -54,7 +54,7 @@ for (const dedicated of [false,true]) test(`Instagram REST mutations retain thei
  await page.evaluate(async()=>{
   const {createLogbookClient}=await import('/neon-client.js');
   const client=await createLogbookClient({authUrl:'https://rest-fixture.invalid',apiUrl:location.origin,backbone:true,cacheBackend:'sqlite'});
-  await client.refresh();
+  await client.refresh();window.restFixtureClient=client;
   await client.request('/v1/me/instagram/connect',{method:'POST',body:{code:'ABCDEFGH'},idempotencyKey:'connect-fixture'});
   await client.request('/v1/me/instagram/profile',{method:'PUT',body:{handle:'fixture'},idempotencyKey:'profile-fixture'});
   await client.request('/v1/me/instagram',{method:'DELETE',idempotencyKey:'unlink-fixture'});
@@ -64,6 +64,9 @@ for (const dedicated of [false,true]) test(`Instagram REST mutations retain thei
   {path:'/v1/me/instagram/profile',method:'PUT',body:{handle:'fixture'},key:'profile-fixture'},
   {path:'/v1/me/instagram',method:'DELETE',body:null,key:'unlink-fixture'},
  ]);
+ await page.route('**/v1/admin/sites/imports',route=>route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:{message:'Fix import rows.',details:[{row:2,message:'Coordinates need checking.'}]}})}));
+ const details=await page.evaluate(async()=>{try{await restFixtureClient.request('/v1/admin/sites/imports',{method:'POST',body:{format:'json',content:'[]'}});}catch(e){return e.details;}});
+ expect(details).toEqual([{row:2,message:'Coordinates need checking.'}]);
 });
 test('SQLite uses actual storage and excludes mutations and administrative responses',async({page})=>{
  const stats=await init(page);expect(['persistent','memory']).toContain(stats.mode);

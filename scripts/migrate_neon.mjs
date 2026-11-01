@@ -79,8 +79,10 @@ try {
       'Australia/Sydney';
     return { id: b.id, name: b.name, timezone: zone, area_name: b.area_name || '', state };
   });
+  const hasSites=(await client.query("SELECT to_regclass('finfolk.site_profiles') AS name")).rows[0].name;
+  const keepReviewed=hasSites?" WHERE NOT EXISTS(SELECT 1 FROM finfolk.site_profiles p WHERE p.id=excluded.id)":"";
   await client.query(
-    'INSERT INTO finfolk.beaches(id,name,timezone,area_name,state) SELECT id,name,timezone,area_name,state FROM jsonb_to_recordset($1::jsonb) AS b(id text,name text,timezone text,area_name text,state text) ON CONFLICT(id) DO UPDATE SET name=excluded.name,timezone=excluded.timezone,area_name=excluded.area_name,state=excluded.state',
+    'INSERT INTO finfolk.beaches(id,name,timezone,area_name,state) SELECT id,name,timezone,area_name,state FROM jsonb_to_recordset($1::jsonb) AS b(id text,name text,timezone text,area_name text,state text) ON CONFLICT(id) DO UPDATE SET name=excluded.name,timezone=excluded.timezone,area_name=excluded.area_name,state=excluded.state'+keepReviewed,
     [JSON.stringify(canonical)],
   );
   await client.query('COMMIT');

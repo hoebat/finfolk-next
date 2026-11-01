@@ -15,3 +15,7 @@ assert.ok(!html.includes('noindex')&&!html.includes('FinFolk Next ·'));
 assert.equal(config.apiUrl,'https://finfolk.com.au/');assert.equal(config.backbone,true);assert.equal(config.cacheBackend,'sqlite');assert.equal(config.googleEnabled,true);
 assert.ok(!(await readFile(root+'/robots.txt','utf8')).includes('Disallow: /'));
 console.log('WORKER_PUBLICATION_PASS: versioned kernel/WASM, stable coordinator and matching offline shell.');
+
+if(process.env.SITE_SNAPSHOT_FILE){const snapshot=files.find(f=>/^sites-snapshot\.[a-f0-9]{12}\.json$/.test(f));assert.ok(snapshot);assert.ok(sw.includes('./'+snapshot));const adapter=files.find(f=>/^site-catalog\.[a-f0-9]{12}\.js$/.test(f));assert.ok((await readFile(root+'/'+adapter,'utf8')).includes('./'+snapshot));assert.deepEqual(JSON.parse(await readFile(root+'/'+snapshot,'utf8')),JSON.parse(await readFile(process.env.SITE_SNAPSHOT_FILE,'utf8')));console.log('SITE_SNAPSHOT_PASS: public database snapshot is versioned and available in the offline shell.');}
+
+assert.ok(sw.includes('./workers/finfolk.sharedworker.js?protocol=2'),'cache the coordinator protocol URL for offline starts');

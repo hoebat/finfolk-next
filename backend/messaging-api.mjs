@@ -183,7 +183,7 @@ function eventView(row) {
       : null,
   };
 }
-export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
+export function registerMessagingAPI(app, { db, verify, fetcher = fetch, registerPrivate = () => {} }) {
   app.use("/v1/*", async (c, next) => {
     const requestId = c.get("requestId") || randomUUID();
     c.set("requestId", requestId);
@@ -243,6 +243,7 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
       fail("admin_required", "Verified administrator access required.", 403);
     await next();
   });
+  registerPrivate(app);
   const context = (c) => {
     const identity = c.get("messagingIdentity");
     return {
