@@ -76,10 +76,12 @@ export async function createLogbookClient(config) {
   async function actorBackbone(){
     const actor=user?.uid;if(!actor)throw Error('Sign in again.');
     if(!backbone || backbone.actor!==actor){
-      const {createApplicationBackbone}=await import('./next-backbone.js');
+      const {createApplicationBackbone,operations}=await import('./next-backbone.js');
       if(user?.uid!==actor)throw Error('Account changed. Sign in again.');
       application=createApplicationBackbone(config);
-      backbone=application.member(actor,(name,values,options)=>values.__rest ? transportRequest(values.path,{...options,body:values.body},actor) : transportCall(name,values,actor,options));
+      // Worker ports retain operation names and idempotency keys, not arbitrary
+      // fetch options. Resolve the HTTP verb from the owning operation registry.
+      backbone=application.member(actor,(name,values,options)=>values.__rest ? transportRequest(values.path,{...options,method:operations[name].method,body:values.body},actor) : transportCall(name,values,actor,options));
     }return backbone;
   }
   async function call(action, values = {}) {

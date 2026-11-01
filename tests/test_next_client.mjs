@@ -16,7 +16,7 @@ try {
   './auth-session.js':new URL('../js/finfolk-next/site/web-main/src/auth-session.js',import.meta.url).href,
   '@neondatabase/auth':moduleURL('export const createAuthClient=()=>globalThis.__nextClientTest.auth;'),
   './activity.js':moduleURL('export const activity={begin:()=>({finish(){}})};'),
-  './next-backbone.js':moduleURL(`import {createApplicationBackbone as create,restOperation} from ${JSON.stringify(new URL('../js/finfolk-next/site/web-main/src/next-backbone.js',import.meta.url).href)};export {restOperation};let instance;export function createApplicationBackbone(config){if(!instance){instance=create(config);const member=instance.member;let previous;instance.member=(actor,...args)=>{if(previous!==actor){globalThis.__nextClientTest.state.created++;previous=actor;}return member(actor,...args);};}return instance;}`),
+  './next-backbone.js':moduleURL(`import {createApplicationBackbone as create,restOperation,operations} from ${JSON.stringify(new URL('../js/finfolk-next/site/web-main/src/next-backbone.js',import.meta.url).href)};export {restOperation,operations};let instance;export function createApplicationBackbone(config){if(!instance){instance=create(config);const member=instance.member;let previous;instance.member=(actor,...args)=>{if(previous!==actor){globalThis.__nextClientTest.state.created++;previous=actor;}return member(actor,...args);};}return instance;}`),
  };
  for(const [from,to] of Object.entries(replacements))source=source.replaceAll("'"+from+"'",JSON.stringify(to));
  const {createLogbookClient}=await import(moduleURL(source));
@@ -31,7 +31,7 @@ try {
  assert.ok(!state.calls.includes('preferences'),'An old actor cannot write after token acquisition overlaps an account change');
  await client.call('me');assert.equal(state.created,2);
  const controller=new AbortController();await client.request('/v1/admin/messaging/events?limit=20&cursor=two',{signal:controller.signal});assert.equal(lastRequest.init.signal,controller.signal);
- await client.request('/v1/me/instagram/profile',{method:'PUT',body:{handle:'fixture'},idempotencyKey:'same-key'});assert.equal(lastRequest.init.headers['Idempotency-Key'],'same-key');assert.deepEqual(JSON.parse(lastRequest.init.body),{handle:'fixture'});
+ await client.request('/v1/me/instagram/profile',{method:'PUT',body:{handle:'fixture'},idempotencyKey:'same-key'});assert.equal(lastRequest.init.method,'PUT');assert.equal(lastRequest.init.headers['Idempotency-Key'],'same-key');assert.deepEqual(JSON.parse(lastRequest.init.body),{handle:'fixture'});
  await assert.rejects(()=>client.request('/v1/missing'),/Unknown/);await assert.rejects(()=>client.call('missing'),/Unknown/);
  await client.signOut();await assert.rejects(()=>client.call('me'),/Sign in/);
  console.log('NEXT_CLIENT_PASS: concurrent initialization, account change during token acquisition, and sign-out.');

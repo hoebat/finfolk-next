@@ -1,5 +1,5 @@
 import {test,expect,chromium,firefox,webkit} from '@playwright/test';
-import {mkdtemp,rm} from 'node:fs/promises';
+import {mkdtemp,rm,readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
 import {join} from 'node:path';
 async function init(page,{account='alice',offline=false,environment='test'}={}){
@@ -13,6 +13,32 @@ async function init(page,{account='alice',offline=false,environment='test'}={}){
   await window.member.ready;return window.app.storage?.stats();
  },{account,offline,environment});
 }
+for (const dedicated of [false,true]) test(`Instagram REST mutations retain their method across ${dedicated?'dedicated':'shared'} worker transport`,async({page})=>{
+ if(dedicated)await page.addInitScript(()=>{window.SharedWorker=undefined;});
+ const source=await readFile('js/finfolk-next/site/web-main/src/neon-client.js','utf8');
+ const authFixture='data:text/javascript,'+encodeURIComponent('export const createAuthClient=()=>({getSession:async()=>({data:{user:{id:"rest-fixture",emailVerified:true},session:{token:"header.payload.signature"}}})});');
+ await page.route('**/neon-client.js',route=>route.fulfill({contentType:'text/javascript',body:source.replace("'@neondatabase/auth'",JSON.stringify(authFixture))}));
+ const requests=[];
+ await page.route('**/v1/**',async route=>{
+  const request=route.request();
+  requests.push({path:new URL(request.url()).pathname,method:request.method(),body:request.postDataJSON(),key:request.headers()['idempotency-key']});
+  await route.fulfill({contentType:'application/json',body:JSON.stringify({data:{handle:'fixture'}})});
+ });
+ await page.goto('/__test');
+ await page.evaluate(async()=>{
+  const {createLogbookClient}=await import('/neon-client.js');
+  const client=await createLogbookClient({authUrl:'https://rest-fixture.invalid',apiUrl:location.origin,backbone:true,cacheBackend:'sqlite'});
+  await client.refresh();
+  await client.request('/v1/me/instagram/connect',{method:'POST',body:{code:'ABCDEFGH'},idempotencyKey:'connect-fixture'});
+  await client.request('/v1/me/instagram/profile',{method:'PUT',body:{handle:'fixture'},idempotencyKey:'profile-fixture'});
+  await client.request('/v1/me/instagram',{method:'DELETE',idempotencyKey:'unlink-fixture'});
+ });
+ expect(requests).toEqual([
+  {path:'/v1/me/instagram/connect',method:'POST',body:{code:'ABCDEFGH'},key:'connect-fixture'},
+  {path:'/v1/me/instagram/profile',method:'PUT',body:{handle:'fixture'},key:'profile-fixture'},
+  {path:'/v1/me/instagram',method:'DELETE',body:null,key:'unlink-fixture'},
+ ]);
+});
 test('SQLite uses actual storage and excludes mutations and administrative responses',async({page})=>{
  const stats=await init(page);expect(['persistent','memory']).toContain(stats.mode);
  await page.evaluate(async()=>{await member.call('me');await member.call('preferences',{profile:{secretFixture:'MUTATION_SECRET'}});await member.call('messagingSettings',{__rest:true,path:'/v1/admin/messaging/instagram'});});
