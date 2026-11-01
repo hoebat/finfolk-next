@@ -1,0 +1,3 @@
+[submodule "ref/foundation"]
+	path = ref/foundation
+	url = https://github.com/zcaudate-xyz/foundation-base.git

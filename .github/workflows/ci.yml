@@ -1,0 +1,49 @@
+name: Generate, test and build FinFolk Next
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: next-ci-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          submodules: recursive
+          lfs: true
+          persist-credentials: false
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '27'
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - uses: actions/setup-python@v6
+        with:
+          python-version: '3.12'
+      - uses: DeLaGuardo/setup-clojure@13.4
+        with:
+          lein: '2.12.0'
+      - uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository
+          key: foundation-${{ runner.os }}-${{ hashFiles('project.version', 'project.clj') }}
+      - run: corepack enable
+      - run: make bootstrap
+      - run: make check-generated
+      - run: make test
+      - run: make build
+      - run: corepack yarn deploy:next:api --dry-run --outdir .cache/api-check
+      - uses: actions/upload-artifact@v4
+        with:
+          name: finfolk-next-site
+          path: .cache/next-site
+          include-hidden-files: true

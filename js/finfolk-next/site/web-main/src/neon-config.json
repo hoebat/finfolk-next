@@ -1,0 +1,13 @@
+{
+  "enabled": true,
+  "authUrl": "https://ep-spring-recipe-a74ty1t5.neonauth.ap-southeast-2.aws.neon.tech/finfolk_next/auth",
+  "apiUrl": "https://next.finfolk.com.au/",
+  "googleEnabled": false,
+  "instagram": {
+    "enabled": false
+  },
+  "instagramHandle": "finfolk.com.au",
+  "backbone": true,
+  "environment": "next",
+  "sqlSha": "3e5358d7d01aad17b2eaa95344a9a6fa8701550e7c88ee83fe0db13887f32a0a"
+}

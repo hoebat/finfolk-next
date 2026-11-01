@@ -1,0 +1,817 @@
+{
+  "rasters": [],
+  "contours": {
+    "port-phillip": {
+      "file": "processed/port-phillip/contours-627623e89803.geojson",
+      "count": 1518,
+      "source_revision": 1,
+      "source_urls": [
+        "https://core-gis.mapshare.vic.gov.au/arcgis/rest/services/Mapshare/MarineCoastal/MapServer/25"
+      ],
+      "query_bbox": [
+        144.3,
+        -38.4,
+        145.18,
+        -37.8
+      ],
+      "downloaded_at": "2026-10-27T23:11:47.508033+00:00",
+      "sha256": "81399759d355944ba39ddb673bdfbd28654c50b3223325e020ba26e9c25a6ea2",
+      "source_url": "https://core-gis.mapshare.vic.gov.au/arcgis/rest/services/Mapshare/MarineCoastal/MapServer/25",
+      "datum": "Unverified \u2014 original DATUM code retained per feature",
+      "survey_date": "1971\u20132000 (catalogue temporal coverage)",
+      "licence": "CC BY 4.0",
+      "attribution": "\u00a9 State of Victoria, Department of Energy, Environment and Climate Action"
+    },
+    "bondi": {
+      "file": "processed/bondi/contours-0f01c510c703.geojson",
+      "count": 395,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        151.215,
+        -34.01,
+        151.34,
+        -33.815
+      ],
+      "downloaded_at": "2026-10-27T23:12:02.115716+00:00",
+      "sha256": "90050690d3fa7a01cf6e388705042faeb11d6982d2032b499a818545bdae780c",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "jervis-bay": {
+      "file": "processed/jervis-bay/contours-7614ee248440.geojson",
+      "count": 1562,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        150.6,
+        -35.2,
+        150.91,
+        -34.94
+      ],
+      "downloaded_at": "2026-10-27T23:13:26.895502+00:00",
+      "sha256": "4b2cf56b463f78cdcd5985cb5076a87457896b85c23314b2fa4cb71d2c66b399",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "western-port": {
+      "file": "processed/western-port/contours-32c088bc4401.geojson",
+      "count": 5598,
+      "source_revision": 1,
+      "source_urls": [
+        "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/17",
+        "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/18"
+      ],
+      "query_bbox": [
+        144.95,
+        -38.63,
+        145.62,
+        -38.15
+      ],
+      "downloaded_at": "2026-10-27T23:14:58.801368+00:00",
+      "sha256": "c09fec774c48991999f65d2d7e52b21700615c5f396255eea3b2fb067546664a",
+      "source_url": "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/17",
+      "datum": "Unverified \u2014 original DATUM code retained per feature",
+      "survey_date": "Not established in service metadata",
+      "licence": "CC BY 4.0",
+      "attribution": "\u00a9 State of Victoria, Department of Energy, Environment and Climate Action"
+    },
+    "nsw-southern-sydney": {
+      "file": "processed/nsw-southern-sydney/contours-718e8ac7bccd.geojson",
+      "count": 640,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        150.934503,
+        -34.281745,
+        151.251163,
+        -33.915076
+      ],
+      "downloaded_at": "2026-10-28T03:28:48.762595+00:00",
+      "sha256": "1515a679e90af930c5c2ec3bb47f84382fd0abc6ea9f7817bcbf00804c06bbef",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "nsw-northern-beaches": {
+      "file": "processed/nsw-northern-beaches/contours-ff94986429fe.geojson",
+      "count": 1118,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        151.184489,
+        -33.823408,
+        151.46782,
+        -33.465075
+      ],
+      "downloaded_at": "2026-10-28T03:28:56.468440+00:00",
+      "sha256": "f42d4c7a96f991853e325e5341738f23e078f762ea7c6ee56e09f79395f28db4",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "nsw-central-coast": {
+      "file": "processed/nsw-central-coast/contours-8f25500893e6.geojson",
+      "count": 2653,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        151.382541,
+        -33.540908,
+        151.728921,
+        -32.99285
+      ],
+      "downloaded_at": "2026-10-28T03:31:13.152541+00:00",
+      "sha256": "a48f39e8d43a7e30b5289be92a5cc4f01abd6fe98704ba025f91cd19b3b6f3ae",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "vic-corner-inlet": {
+      "file": "processed/vic-corner-inlet/contours-ae344de29b20.geojson",
+      "count": 712,
+      "source_revision": 1,
+      "source_urls": [
+        "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/7",
+        "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/8"
+      ],
+      "query_bbox": [
+        146.181507,
+        -38.882589,
+        146.919043,
+        -38.599939
+      ],
+      "downloaded_at": "2026-10-28T03:36:35.016882+00:00",
+      "sha256": "9d18cfc370ae4e2c46d02257bbcb081d2b59503fe90ec2c9a3eadf3f9801ebb8",
+      "source_url": "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/7",
+      "datum": "Unverified \u2014 original DATUM code retained per feature",
+      "survey_date": "Not established in service metadata",
+      "licence": "CC BY 4.0",
+      "attribution": "\u00a9 State of Victoria, Department of Energy, Environment and Climate Action"
+    },
+    "vic-mallacoota": {
+      "file": "processed/vic-mallacoota/contours-34b7405e9f68.geojson",
+      "count": 109,
+      "source_revision": 1,
+      "source_urls": [
+        "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/10",
+        "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/11"
+      ],
+      "query_bbox": [
+        149.693355,
+        -37.563784,
+        149.802769,
+        -37.48828
+      ],
+      "downloaded_at": "2026-10-28T03:36:40.105739+00:00",
+      "sha256": "531e350e6cb7a158a22ca882c0715948fc5afdbe52f5df6213314fc9225d36e8",
+      "source_url": "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/10",
+      "datum": "Unverified \u2014 original DATUM code retained per feature",
+      "survey_date": "Not established in service metadata",
+      "licence": "CC BY 4.0",
+      "attribution": "\u00a9 State of Victoria, Department of Energy, Environment and Climate Action"
+    },
+    "qld-southern-gold-coast": {
+      "file": "processed/qld-southern-gold-coast/contours-d688b968aff2.geojson",
+      "count": 23,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        153.35,
+        -28.18,
+        153.57,
+        -28.08
+      ],
+      "downloaded_at": "2026-10-28T03:37:00.586449+00:00",
+      "sha256": "94aab2365d35679c6cda6ac9324799683c1409821a4cbd9130dd34ddc90ff5e0",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "tas-southeast": {
+      "file": "processed/tas-southeast/contours-178df542b1c2.geojson",
+      "count": 1445,
+      "source_revision": 2,
+      "source_urls": [
+        "https://geoserver.imas.utas.edu.au/geoserver/imas/wfs"
+      ],
+      "query_bbox": [
+        143.5,
+        -43.8,
+        148.6,
+        -39.5
+      ],
+      "downloaded_at": "2026-10-29T08:58:45.748760+00:00",
+      "sha256": "963eca84717613470fa0da8075c672ea1b90843b29f53359aa05f9bffc111c52",
+      "source_url": "https://geoserver.imas.utas.edu.au/geoserver/imas/wfs",
+      "datum": "MSL (EPSG:5715)",
+      "survey_date": "SeaMap Tasmania compilation, published 2007; acquisition dates vary",
+      "licence": "CC BY 4.0",
+      "attribution": "Lucieer, V.L. (2007), SeaMap Tasmania Bathymetric Data. Tasmanian Aquaculture and Fisheries Institute, University of Tasmania. Accessed 28 October 2026."
+    },
+    "nsw-eurobodalla": {
+      "file": "processed/nsw-eurobodalla/contours-02ebc8ae1079.geojson",
+      "count": 3093,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        150.042879,
+        -36.398423,
+        150.451192,
+        -35.448418
+      ],
+      "downloaded_at": "2026-10-28T04:32:44.407511+00:00",
+      "sha256": "afc71cf2c6ea1c94bb0ded7da0fe41a7b402e20ec88ef1ba105a6a16ca6f3115",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "nsw-hunter": {
+      "file": "processed/nsw-hunter/contours-5acb29311374.geojson",
+      "count": 4571,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        151.667809,
+        -33.065072,
+        152.60112,
+        -32.006731
+      ],
+      "downloaded_at": "2026-10-28T04:32:48.923509+00:00",
+      "sha256": "9058997766344296396bb0af324c36a49f4c7b6efb507d4513621cf8f351b9c4",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "nsw-illawarra": {
+      "file": "processed/nsw-illawarra/contours-5520e26692de.geojson",
+      "count": 2214,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        150.78451,
+        -34.815081,
+        151.009503,
+        -34.223412
+      ],
+      "downloaded_at": "2026-10-28T04:32:51.335891+00:00",
+      "sha256": "52cbf573a95c3958b4112bf889a1d1ebe7f5fb833e3fb79344f1d09c0a22fb16",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "nsw-northern-rivers": {
+      "file": "processed/nsw-northern-rivers/contours-7e31f6a19d5f.geojson",
+      "count": 3443,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        153.384408,
+        -29.181731,
+        153.684401,
+        -28.115065
+      ],
+      "downloaded_at": "2026-10-28T04:32:54.711821+00:00",
+      "sha256": "c00ddff015a3b157d74a1fd759ffd27689baca855896c126262356801f61f0ef",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    },
+    "nsw-sapphire": {
+      "file": "processed/nsw-sapphire/contours-db4e4ea9d629.geojson",
+      "count": 2319,
+      "source_revision": 1,
+      "source_urls": [
+        "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0"
+      ],
+      "query_bbox": [
+        149.817897,
+        -37.481763,
+        150.134548,
+        -36.31509
+      ],
+      "downloaded_at": "2026-10-28T04:32:57.826856+00:00",
+      "sha256": "b43404f4b8edbfab64d4db47e6ca57ebce67762b4327dae036ad27d4acc4fb64",
+      "source_url": "https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer/0",
+      "datum": "AHD",
+      "survey_date": "July\u2013December 2018",
+      "licence": "Creative Commons Attribution \u2014 retain supplied licence version",
+      "attribution": "\u00a9 State Government of NSW and NSW Department of Climate Change, Energy, the Environment and Water"
+    }
+  },
+  "acquisitions": [
+    {
+      "region": "port-phillip",
+      "at": "2026-10-27T23:11:47.527385+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 1518
+    },
+    {
+      "region": "bondi",
+      "at": "2026-10-27T23:12:02.121056+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 395
+    },
+    {
+      "region": "jervis-bay",
+      "at": "2026-10-27T23:13:26.906958+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 1562
+    },
+    {
+      "region": "western-port",
+      "at": "2026-10-27T23:14:58.812583+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 5598
+    },
+    {
+      "region": "nsw-southern-sydney",
+      "at": "2026-10-28T03:28:48.768915+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 640
+    },
+    {
+      "region": "nsw-northern-beaches",
+      "at": "2026-10-28T03:28:56.477294+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 1118
+    },
+    {
+      "region": "nsw-central-coast",
+      "at": "2026-10-28T03:31:13.167964+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 2653
+    },
+    {
+      "region": "vic-corner-inlet",
+      "at": "2026-10-28T03:36:35.019397+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 712
+    },
+    {
+      "region": "vic-mallacoota",
+      "at": "2026-10-28T03:36:40.106928+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 109
+    },
+    {
+      "region": "qld-southern-gold-coast",
+      "at": "2026-10-28T03:37:00.586926+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 23
+    },
+    {
+      "region": "tas-southeast",
+      "at": "2026-10-28T03:39:26.204672+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 436
+    },
+    {
+      "region": "nsw-eurobodalla",
+      "at": "2026-10-28T04:32:44.430918+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 3093
+    },
+    {
+      "region": "nsw-hunter",
+      "at": "2026-10-28T04:32:48.953467+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 4571
+    },
+    {
+      "region": "nsw-illawarra",
+      "at": "2026-10-28T04:32:51.351870+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 2214
+    },
+    {
+      "region": "nsw-northern-rivers",
+      "at": "2026-10-28T04:32:54.734303+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 3443
+    },
+    {
+      "region": "nsw-sapphire",
+      "at": "2026-10-28T04:32:57.847249+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 2319
+    },
+    {
+      "region": "tas-southeast",
+      "at": "2026-10-29T08:58:45.908137+00:00",
+      "status": "complete",
+      "kind": "contours",
+      "count": 1445
+    }
+  ],
+  "updated_at": "2026-10-29T08:58:45.908155+00:00",
+  "context_contours": {
+    "ausbathy-2024-shallow-5m": {
+      "title": "AusBathyTopo Australia-wide 5 m shallow contours",
+      "source_url": "https://data.imas.utas.edu.au/attachments/8f007712-6a2b-4007-9529-9bd72dd37ca0/CONTOURS_shelf_AusBathyTopo2024_5m.zip",
+      "metadata_url": "https://metadata.imas.utas.edu.au/geonetwork/geonetwork/api/records/8f007712-6a2b-4007-9529-9bd72dd37ca0",
+      "citation": "Flukes, E. (2025). Depth contours at multiple intervals of the Australian 250m 2024 bathymetry grid (AusBathyTopo). IMAS. https://doi.org/10.25959/BWNC-BC86",
+      "licence": "CC BY 4.0",
+      "attribution": "IMAS \u00b7 AusBathyTopo 250 m 2024 \u00b7 CC BY 4.0",
+      "datum": "MSL depth (EPSG:5715)",
+      "source_resolution_m": 250,
+      "depth_interval_m": 5,
+      "max_depth_m": 30,
+      "area_radius_m": 10000,
+      "source_revision": 1,
+      "area_points_sha256": "c02d65521dcd6cfb245fb6c96a1b114425be968116d5705c55122f7e7748f6e6",
+      "prepared_at": "2026-10-29T08:55:49.593950+00:00",
+      "areas": {
+        "vic-port-phillip": {
+          "file": "processed/australia-context/vic-port-phillip.geojson",
+          "count": 43,
+          "sha256": "d803199a2b4dbfd296cea6497a9728b6efa57dfe2cac031e66a397f0978e41d8"
+        },
+        "vic-western-port": {
+          "file": "processed/australia-context/vic-western-port.geojson",
+          "count": 22,
+          "sha256": "7609ef23547b3a3ff941802946a178b2778990a0698f70ca88d6bb363c930749"
+        },
+        "vic-surf-coast": {
+          "file": "processed/australia-context/vic-surf-coast.geojson",
+          "count": 17,
+          "sha256": "8e399266d7b343d16c969ad1bbf39a918b7ce2a52b87ed5722f76e3fcb45d67e"
+        },
+        "vic-great-ocean-road": {
+          "file": "processed/australia-context/vic-great-ocean-road.geojson",
+          "count": 8,
+          "sha256": "4777acabaef45779de90182e3917410b6f930f542272ba75e0f69f1fe99d3634"
+        },
+        "vic-south-west-vic": {
+          "file": "processed/australia-context/vic-south-west-vic.geojson",
+          "count": 20,
+          "sha256": "32f102697e0969ede3adb9123fc2b6578db35f1d2c4aefc4853b311bb028321f"
+        },
+        "vic-prom-coast": {
+          "file": "processed/australia-context/vic-prom-coast.geojson",
+          "count": 64,
+          "sha256": "6d28a976a1e31b6b8a48ed7dcd691c1c5acef97741938d13c10989449d9d67f3"
+        },
+        "vic-gippsland": {
+          "file": "processed/australia-context/vic-gippsland.geojson",
+          "count": 26,
+          "sha256": "7cd29a8ad33c4f41b668389c070c8cfffee953102876c07575d0c247b58d60ef"
+        },
+        "vic-east-gippsland": {
+          "file": "processed/australia-context/vic-east-gippsland.geojson",
+          "count": 24,
+          "sha256": "b0ece6c05f718b0285569b7714c66adb0a503ef9cd0dfa09df3e9db3ba41e623"
+        },
+        "nsw-sydney-east": {
+          "file": "processed/australia-context/nsw-sydney-east.geojson",
+          "count": 16,
+          "sha256": "4b18bb31b9053d15f2c3e09b74393938fbb8609dbf7b1dd562df1ae8fcca19b6"
+        },
+        "nsw-sydney-north": {
+          "file": "processed/australia-context/nsw-sydney-north.geojson",
+          "count": 46,
+          "sha256": "8dc0d12d8bd18eae85d40752586d24047c487aac98334b9f23c97094ceedb00f"
+        },
+        "nsw-sydney-south": {
+          "file": "processed/australia-context/nsw-sydney-south.geojson",
+          "count": 12,
+          "sha256": "fe7baad55f80c26e85ce25401807e8145f395dbe0c4f448381b517deaea7e7f3"
+        },
+        "nsw-jervis-bay": {
+          "file": "processed/australia-context/nsw-jervis-bay.geojson",
+          "count": 9,
+          "sha256": "2d3c2cb61f1c429f9bb2b7a20b8f735705a3350a420822b9dc128c1b4c5d403c"
+        },
+        "nsw-illawarra": {
+          "file": "processed/australia-context/nsw-illawarra.geojson",
+          "count": 11,
+          "sha256": "bc2712d1048a4f404861ff4703b3b5d5d3802a61bc7ab29e101108fd052fe00c"
+        },
+        "nsw-eurobodalla": {
+          "file": "processed/australia-context/nsw-eurobodalla.geojson",
+          "count": 15,
+          "sha256": "e440b33d3543261feefdeaebab5b3830f0b3437ae6e5af9f105171ee01a6d286"
+        },
+        "nsw-sapphire": {
+          "file": "processed/australia-context/nsw-sapphire.geojson",
+          "count": 13,
+          "sha256": "e4455e89e37cb8f65c020407d917b253c81f8f9ac328b29ce854baa4c4e3f562"
+        },
+        "nsw-central-coast": {
+          "file": "processed/australia-context/nsw-central-coast.geojson",
+          "count": 19,
+          "sha256": "e87e8dbd484e828c2974bbf7b4e77ee31021e16a63aa5badbaddc245d97be770"
+        },
+        "nsw-hunter": {
+          "file": "processed/australia-context/nsw-hunter.geojson",
+          "count": 46,
+          "sha256": "af8ab965dacc6e166c82d8874d584892c5705ef957c7ce6e97d2346325cb009d"
+        },
+        "nsw-mid-north": {
+          "file": "processed/australia-context/nsw-mid-north.geojson",
+          "count": 17,
+          "sha256": "9c5adadb7bbd466ae8de2395320eaf46f45245e403d5ac00a966a40906fa0a79"
+        },
+        "nsw-north-coast": {
+          "file": "processed/australia-context/nsw-north-coast.geojson",
+          "count": 20,
+          "sha256": "0d75efbbc30b87605b38e10762b0a0449fd4a7fe0fb51c405c39a0b161a41077"
+        },
+        "nsw-northern-rivers": {
+          "file": "processed/australia-context/nsw-northern-rivers.geojson",
+          "count": 14,
+          "sha256": "7b7a3a0f2d06bbc3d9a81b67227e7bc39be0bebf1c397384672cc19e64b65c9d"
+        },
+        "qld-gold-coast": {
+          "file": "processed/australia-context/qld-gold-coast.geojson",
+          "count": 14,
+          "sha256": "62085b9f2c88d2f52d904122ab004781298659654349c43e8fdc416358895619"
+        },
+        "qld-moreton": {
+          "file": "processed/australia-context/qld-moreton.geojson",
+          "count": 78,
+          "sha256": "a54dbe987f159268ce3cfb255f744e987a442e5e2ef4e9d1d2b68c2581bb6780"
+        },
+        "qld-sunshine": {
+          "file": "processed/australia-context/qld-sunshine.geojson",
+          "count": 21,
+          "sha256": "ede2ce6675fac6365e70a14cb855f394b3c759d668e93dfbf33e38b37558d04f"
+        },
+        "qld-fraser": {
+          "file": "processed/australia-context/qld-fraser.geojson",
+          "count": 30,
+          "sha256": "a3d17ef25e5671effe1bc5411bf70c76f46499ad6e9d8d3881dadef2f9266f2b"
+        },
+        "qld-bundaberg": {
+          "file": "processed/australia-context/qld-bundaberg.geojson",
+          "count": 9,
+          "sha256": "525a31b2e0e8af309ceb7df5ce510a63e81de1aab6e781e2222a01a40cd1b1b1"
+        },
+        "qld-capricorn": {
+          "file": "processed/australia-context/qld-capricorn.geojson",
+          "count": 47,
+          "sha256": "1ced90aaa0b005b7c4472bede7ee49f3ac836de953756399741258224e856085"
+        },
+        "qld-mackay": {
+          "file": "processed/australia-context/qld-mackay.geojson",
+          "count": 146,
+          "sha256": "23af81aef9f92a8df81bb435b84813c8a294353d591b29af5fb998033094dd61"
+        },
+        "qld-townsville": {
+          "file": "processed/australia-context/qld-townsville.geojson",
+          "count": 26,
+          "sha256": "f07a6f0501de88a7774a8832b07ce63433d70b16a67fa1aec7845a0a7cc520bc"
+        },
+        "qld-cassowary": {
+          "file": "processed/australia-context/qld-cassowary.geojson",
+          "count": 35,
+          "sha256": "a0f0f4d7e34348c0ddb5b3e6f992a5450b62e78f83e7b53782bfa4207a4787ac"
+        },
+        "qld-cairns": {
+          "file": "processed/australia-context/qld-cairns.geojson",
+          "count": 47,
+          "sha256": "4eb87d8678a94330457529d2eb093791830dffac577bb5311bd70743aaf920dd"
+        },
+        "qld-cape-york": {
+          "file": "processed/australia-context/qld-cape-york.geojson",
+          "count": 41,
+          "sha256": "da5bd38634e808ebdd513ae767ea0155cfb870e2ef20022ca72fa4d7aa049ada"
+        },
+        "wa-perth": {
+          "file": "processed/australia-context/wa-perth.geojson",
+          "count": 87,
+          "sha256": "809ff59a98e83f6e764da8d6df3f2ebfb779b92e344e38968e251897c7dc6bec"
+        },
+        "wa-peel": {
+          "file": "processed/australia-context/wa-peel.geojson",
+          "count": 46,
+          "sha256": "5b8b584b1e33f5668bc15e1aaa0b4e6d7935e91a3f63dba6ea596981f87837be"
+        },
+        "wa-south-west-wa": {
+          "file": "processed/australia-context/wa-south-west-wa.geojson",
+          "count": 29,
+          "sha256": "a13d8ef7e328ade1a18110860b3c7275bdbda5317e03e0bb23075bd38fd55731"
+        },
+        "wa-great-southern": {
+          "file": "processed/australia-context/wa-great-southern.geojson",
+          "count": 76,
+          "sha256": "13fd17ba6816908d38f33205783c8edf46bd0da5ec2af624990888e0fa9617a0"
+        },
+        "wa-esperance": {
+          "file": "processed/australia-context/wa-esperance.geojson",
+          "count": 260,
+          "sha256": "bda43b8412492645c473dc3e325b2c2475f055a774df6ba858274d854639cdbe"
+        },
+        "wa-mid-west": {
+          "file": "processed/australia-context/wa-mid-west.geojson",
+          "count": 93,
+          "sha256": "a6040b19b6a69208405a4d1bc7afc4c5c2d1fbec2169f06538da2d9ce7b6991f"
+        },
+        "wa-shark-bay": {
+          "file": "processed/australia-context/wa-shark-bay.geojson",
+          "count": 56,
+          "sha256": "c8e5f06d434ab31693ed73a3e0463b52fb6f4322711507ca91b360b481fadc37"
+        },
+        "wa-ningaloo": {
+          "file": "processed/australia-context/wa-ningaloo.geojson",
+          "count": 33,
+          "sha256": "097d69d7719ea113d0f645272a604364dd30b5ab44b5d2c698eb0a5c48326a56"
+        },
+        "wa-pilbara": {
+          "file": "processed/australia-context/wa-pilbara.geojson",
+          "count": 35,
+          "sha256": "5bef80ea5606dd684583ff8f20e9557fc9420678b77315ecc0c09f4ce5e3e700"
+        },
+        "wa-broome": {
+          "file": "processed/australia-context/wa-broome.geojson",
+          "count": 143,
+          "sha256": "a09c95d022da55a429258350f8a0b826b110b243b7e8782d27018894d5272432"
+        },
+        "wa-kimberley": {
+          "file": "processed/australia-context/wa-kimberley.geojson",
+          "count": 67,
+          "sha256": "3bc7979606cf34341c5a98236b80175aabb5b33cc326b214d8deff8f924fd756"
+        },
+        "sa-adelaide": {
+          "file": "processed/australia-context/sa-adelaide.geojson",
+          "count": 49,
+          "sha256": "2a1a38c1cf478d4012eaa9f2eef40d3e906fc418d5610fc0d91edde0cfc88f76"
+        },
+        "sa-kangaroo-island": {
+          "file": "processed/australia-context/sa-kangaroo-island.geojson",
+          "count": 100,
+          "sha256": "6cebe9d720f80ee132db2b53ab5fc294948781a22781255661da18b293450c98"
+        },
+        "sa-yorke": {
+          "file": "processed/australia-context/sa-yorke.geojson",
+          "count": 44,
+          "sha256": "2c34833035091f98c44e424a0c0a7d3b8f810f2417df789257a3f7ddcab02db7"
+        },
+        "sa-eyre": {
+          "file": "processed/australia-context/sa-eyre.geojson",
+          "count": 147,
+          "sha256": "ee710ffbb3ee16d0e510809274b2fa23251d16fd92334fa820b4fa7938486163"
+        },
+        "sa-far-west-sa": {
+          "file": "processed/australia-context/sa-far-west-sa.geojson",
+          "count": 53,
+          "sha256": "229551b9666597ad8afe17949e025d9f9289415f5179c188ff7789eb217cc585"
+        },
+        "sa-limestone": {
+          "file": "processed/australia-context/sa-limestone.geojson",
+          "count": 48,
+          "sha256": "b82356af65c9c4ec8f2b8042b53211aab8530508f466ff027361d1127aa70ac5"
+        },
+        "sa-spencer": {
+          "file": "processed/australia-context/sa-spencer.geojson",
+          "count": 25,
+          "sha256": "7e785f07385d252640acab66d89a2e0235a8352dd8c483a25e947d003d588d91"
+        },
+        "tas-hobart": {
+          "file": "processed/australia-context/tas-hobart.geojson",
+          "count": 129,
+          "sha256": "463e7cf7514f3f53c4ba6a723061de00e1c053bb1898e9c95e01f4c8a25ba24a"
+        },
+        "tas-east-tas": {
+          "file": "processed/australia-context/tas-east-tas.geojson",
+          "count": 35,
+          "sha256": "501eb35829a409f471fbe29e995bdb0bd1325bfb7e3c650977729f35338858ec"
+        },
+        "tas-north-east-tas": {
+          "file": "processed/australia-context/tas-north-east-tas.geojson",
+          "count": 90,
+          "sha256": "697515d5415400ba778116c2eb1aa28ddd61bd2e4a3d421c7008bf866c010fb2"
+        },
+        "tas-north-tas": {
+          "file": "processed/australia-context/tas-north-tas.geojson",
+          "count": 38,
+          "sha256": "3d945e7a7eb975c7ca971a93bfb5658ad78bd146bc980e975765d23a71d81337"
+        },
+        "tas-north-west-tas": {
+          "file": "processed/australia-context/tas-north-west-tas.geojson",
+          "count": 103,
+          "sha256": "aab29a0cf48fe28e2cbf0899c4966fa9bb49fcba6928637dcc0dd326abed47eb"
+        },
+        "tas-west-tas": {
+          "file": "processed/australia-context/tas-west-tas.geojson",
+          "count": 46,
+          "sha256": "968986b0f32ff50e5f0736c1ea3718d8a251cd91de905fbfe84673136f3a569b"
+        },
+        "tas-south-west-tas": {
+          "file": "processed/australia-context/tas-south-west-tas.geojson",
+          "count": 64,
+          "sha256": "eecca8e47bbed5fc61e339073b67b95267876a8fdfd679c2ec581c5d6389f0b6"
+        },
+        "tas-bass-islands": {
+          "file": "processed/australia-context/tas-bass-islands.geojson",
+          "count": 132,
+          "sha256": "292ded0a766b15d6b59c70423015b3ab97711c0b21bd2c5734599198f87a4343"
+        },
+        "nt-darwin": {
+          "file": "processed/australia-context/nt-darwin.geojson",
+          "count": 63,
+          "sha256": "8bc1729551abf1fe2488205b030ab92b53bc8f4765d1c07f2b65dd93d8425c21"
+        },
+        "nt-tiwi": {
+          "file": "processed/australia-context/nt-tiwi.geojson",
+          "count": 59,
+          "sha256": "acfcf4106b0fd29ac7ef321cc2f3a32fbfdaaec3e63ec4f4430f106ac960c5f7"
+        },
+        "nt-west-arnhem": {
+          "file": "processed/australia-context/nt-west-arnhem.geojson",
+          "count": 14,
+          "sha256": "17205df57bb2825803875f5610fc5b0155a5c3c0ad04cda49a9df91672145439"
+        },
+        "nt-east-arnhem": {
+          "file": "processed/australia-context/nt-east-arnhem.geojson",
+          "count": 59,
+          "sha256": "a77171d6b09c0f26d298a7ef1b6cdc89ef8b0e7172e8471208984a238fbbdba1"
+        },
+        "nt-gulf-nt": {
+          "file": "processed/australia-context/nt-gulf-nt.geojson",
+          "count": 98,
+          "sha256": "f20e9b0111da3a49d0ae0e32b22fbe42a55827c620b8a6f46c16a16da82b5d14"
+        },
+        "jbt-booderee": {
+          "file": "processed/australia-context/jbt-booderee.geojson",
+          "count": 9,
+          "sha256": "93960b94f3fac89c01b863c2a32db5902b338994294c8d0ae7fa6abda154155f"
+        },
+        "wa-other-coast": {
+          "file": "processed/australia-context/wa-other-coast.geojson",
+          "count": 77,
+          "sha256": "e85d11a25c6afd848c0633d48753cd5bbc4acc1a14059c77909a989ec2107bcf"
+        },
+        "ext-other-coast": {
+          "file": "processed/australia-context/ext-other-coast.geojson",
+          "count": 17,
+          "sha256": "c8908a0d15a6e6bca92761771581ec1b388cb0a9f7da7e31d0d9bf086bddbbb4"
+        },
+        "nsw-lord-howe": {
+          "file": "processed/australia-context/nsw-lord-howe.geojson",
+          "count": 14,
+          "sha256": "b6cfe7fa5f14f2055b5a6f8e8023f0e3dbe3002f8871920bb8c7f35c0a202c49"
+        }
+      },
+      "limitation": "Generalised regional context from a 250 m grid, smoothed with 200 m tolerance. Not suitable for high-precision use or navigation; nearshore/land-sea positions can be inaccurate. Use a local survey where published."
+    }
+  }
+}

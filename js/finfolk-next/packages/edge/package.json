@@ -1,0 +1,16 @@
+{
+  "name": "@finfolk/edge",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./index.js",
+    "./*.js": "./*.js"
+  },
+  "dependencies": {
+    "@xtalk/db": "workspace:*",
+    "@xtalk/event": "workspace:*",
+    "@xtalk/lang": "workspace:*",
+    "@xtalk/substrate": "workspace:*"
+  }
+}

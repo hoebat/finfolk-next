@@ -1,0 +1,193 @@
+// Deployed smoke test: creates temporary, unverified users, never changes email-verification state.
+import assert from 'node:assert/strict';
+import { randomBytes } from 'node:crypto';
+import { database } from '../backend/db.mjs';
+const auth = process.env.NEON_AUTH_BASE_URL,
+  api = process.env.NEON_API_URL || 'https://api.finfolk.com.au/',
+  db = database(process.env.DATABASE_URL),
+  users = [];
+if (!auth || new URL(api).protocol !== 'https:')
+  throw Error('Production Auth and HTTPS API URLs are required.');
+async function authRequest(
+  path,
+  body,
+  cookie,
+  origin = 'https://finfolk.com.au',
+) {
+  const r = await fetch(auth + path, {
+    method: body ? 'POST' : 'GET',
+    headers: {
+      Origin: origin,
+      ...(body ? { 'Content-Type': 'application/json' } : {}),
+      ...(cookie ? { Cookie: cookie } : {}),
+    },
+    ...(body ? { body: JSON.stringify(body) } : {}),
+  });
+  const data = await r.json();
+  assert.equal(r.status, 200, JSON.stringify(data));
+  return {
+    data,
+    cookie: r.headers
+      .getSetCookie()
+      .map((v) => v.split(';')[0])
+      .join('; '),
+  };
+}
+async function register(label) {
+  const email = `finfolk-deploy-${label}-${randomBytes(5).toString('hex')}@example.com`,
+    password = randomBytes(18).toString('base64url'),
+    result = await authRequest('/sign-up/email', {
+      email,
+      password,
+      name: 'Deployment test',
+    }),
+    user = { id: result.data.user.id, email, password, cookie: result.cookie };
+  users.push(user);
+  user.token = (await authRequest('/token', null, user.cookie)).data.token;
+  return user;
+}
+async function call(
+  user,
+  action,
+  data = {},
+  status = 200,
+  origin = 'https://finfolk.com.au',
+) {
+  const r = await fetch(new URL('api', api), {
+      method: 'POST',
+      headers: {
+        Origin: origin,
+        'Content-Type': 'application/json',
+        ...(user ? { Authorization: 'Bearer ' + user.token } : {}),
+      },
+      body: JSON.stringify({ action, ...data }),
+    }),
+    body = await r.json();
+  assert.equal(r.status, status, JSON.stringify(body));
+  assert.equal(r.headers.get('access-control-allow-origin'), origin);
+  assert.match(r.headers.get('cache-control'), /no-store/);
+  return body.data;
+}
+async function messaging(user,method,path,body,status=200,key=randomBytes(16).toString('hex')) {
+  const response=await fetch(new URL(path,api),{method,headers:{Origin:'https://finfolk.com.au',Authorization:'Bearer '+user.token,'Content-Type':'application/json','Idempotency-Key':key},...(body?{body:JSON.stringify(body)}:{})});
+  const result=await response.json();assert.equal(response.status,status,JSON.stringify(result));assert.match(result.requestId,/^[a-f0-9-]{36}$/);assert.match(response.headers.get('cache-control'),/no-store/);return {result,response};
+}
+try {
+  const publicFeed=await fetch(new URL('instagram/posts?beachId=bondi',api),{headers:{Origin:'https://finfolk.com.au'}});
+  assert.equal(publicFeed.status,200);const feed=await publicFeed.json();assert.ok(Array.isArray(feed.posts));assert.equal(typeof feed.activity.collecting,'boolean');
+  const invalidCursor=await fetch(new URL('instagram/posts?beachId=bondi&cursor=invalid',api));assert.equal(invalidCursor.status,400);
+  console.log('Public Instagram feed and invalid-cursor rejection passed.');
+  for (const origin of [
+    'https://finfolk.com.au',
+    'https://www.finfolk.com.au',
+    'http://localhost:8000',
+    'http://127.0.0.1:8000',
+  ])
+    await call(null, 'me', {}, 401, origin);
+  console.log(
+    'Production and localhost: CORS passed; unauthenticated requests denied.',
+  );
+  const alice = await register('alice'),
+    bob = await register('bob');
+  await call(alice, 'me');
+  await call(bob, 'me');
+  await messaging(alice,'GET','/v1/me/instagram');
+  await messaging(alice,'GET','/v1/admin/messaging/instagram',null,403);
+  await messaging(alice,'POST','/v1/me/instagram/claims',{},403);
+  const replayKey=randomBytes(16).toString('hex');
+  const profile=await messaging(alice,'PUT','/v1/me/instagram/profile',{handle:'temporary_test'},200,replayKey);
+  const replay=await messaging(alice,'PUT','/v1/me/instagram/profile',{handle:'temporary_test'},200,replayKey);
+  assert.deepEqual(profile.result.data,replay.result.data);assert.equal(replay.response.headers.get('Idempotency-Replayed'),'true');
+  await messaging(alice,'PUT','/v1/me/instagram/profile',{handle:'changed_test'},409,replayKey);
+  await messaging(alice,'DELETE','/v1/me/instagram');
+  assert.equal((await messaging(alice,'GET','/v1/me/instagram')).result.data.profileUrl,'');
+  console.log('Messaging REST: real JWT, profile link/unlink, encrypted replay, conflict and member/admin verification boundaries passed.');
+
+  const trip=await call(alice,'tripSave',{draft:{title:'Temporary trip smoke test',authorName:'Test diver',beachId:'bondi',start:'2026-10-15',end:'2026-10-23',story:'Temporary private test',links:[],waterDays:{}}});
+  const upload=await call(alice,'tripImportBegin',{id:trip.id,count:1});
+  await call(alice,'tripImportBatch',{id:trip.id,importId:upload.id,index:0,rows:[{day:'2026-10-15',depthMetres:8,durationSeconds:60,original:{private:'SYNTHETIC'}}]});
+  await call(alice,'tripImportConfirm',{id:trip.id,importId:upload.id,revision:trip.revision});
+  const privateTrip=await call(alice,'tripGet',{id:trip.id});assert.equal(privateTrip.preview.summary.total.dives,1);
+  await call(bob,'tripGet',{id:trip.id},404);await call(alice,'tripReviewInbox',{},403);
+  await call(alice,'tripPublish',{id:trip.id,revision:privateTrip.revision,publicConsent:true,ownPosts:true},403);
+  const hiddenTrip=await fetch(new URL('trips/'+trip.id,api));assert.equal(hiddenTrip.status,404);
+  const tripFeed=await fetch(new URL('trips?beachId=bondi',api));assert.equal(tripFeed.status,200);assert.ok(!(await tripFeed.json()).trips.some(t=>t.id===trip.id));
+  await call(alice,'tripDelete',{id:trip.id});
+  console.log('Trip reports: private CSV-record import, owner-only reads, public exclusion, email verification and admin denial passed.');
+
+  const instagram = await call(alice, 'instagramStatus');
+  assert.equal(instagram.admin, false);
+  assert.equal(typeof instagram.enabled, 'boolean');
+  assert.deepEqual(await call(alice, 'instagramActions'), []);
+  await call(alice, 'instagramAdminInbox', {}, 403);
+  await call(alice, 'instagramConnect', {handle:'temporary_test'}, instagram.setupReady ? 403 : 503);
+  console.log('Instagram Actions: member status, private action list, admin denial and connection rollout gate passed.');
+  await call(alice, 'preferences', {
+    profile: {
+      displayName: 'Temporary deployment test',
+      open: false,
+      sharing: {},
+      beaches: ['bondi'],
+    },
+  });
+  assert.equal(
+    (await call(alice, 'me', {}, 200, 'http://localhost:8000')).profile
+      .displayName,
+    'Temporary deployment test',
+  );
+  const beforeRemoval=(await call(alice,'me')).profile;
+  await call(alice,'instagramProfileLink',{handle:'@temporary_test'});
+  await call(alice,'instagramDisconnect');
+  assert.equal((await call(alice,'me')).profile.instagram,'');
+  assert.equal((await call(alice,'me')).profile.displayName,beforeRemoval.displayName);
+  assert.equal((await call(alice,'instagramClaimStatus')).state,'ready');
+  await call(alice,'instagramProfileLink',{handle:'@temporary_relink'});
+  assert.equal((await call(alice,'me')).profile.instagram,'https://www.instagram.com/temporary_relink/');
+  console.log('Instagram profile removal and relinking passed on deployed API; automatic claims remain gated.');
+  const session = await call(alice, 'saveSession', {
+    values: {
+      date: new Date().toISOString().slice(0, 10),
+      locationName: 'Bondi',
+      beachId: 'bondi',
+      durationMinutes: 10,
+      maxDepthMetres: 5,
+      notes: 'Temporary smoke test',
+    },
+  });
+  assert.equal(
+    (await call(alice, 'session', { id: session.id })).notes,
+    'Temporary smoke test',
+  );
+  await call(bob, 'session', { id: session.id }, 404);
+  await call(alice, 'checkin', { beachId: 'bondi' }, 403);
+  console.log(
+    'Cloudflare → Hyperdrive → Neon: profile and private session round trips passed; cross-user reads and unverified check-ins denied.',
+  );
+  for (const origin of ['https://finfolk.com.au', 'http://localhost:8000']) {
+    const login = await authRequest(
+      '/sign-in/email',
+      { email: alice.email, password: alice.password },
+      null,
+      origin,
+    );
+    assert.equal(login.data.user.id, alice.id);
+    const restored = await authRequest(
+      '/get-session',
+      null,
+      login.cookie,
+      origin,
+    );
+    assert.equal(restored.data.user.id, alice.id);
+    await authRequest('/sign-out', {}, login.cookie, origin);
+  }
+  console.log(
+    'Neon Auth: signup, sign-in, session restoration and sign-out passed for production and localhost origins.',
+  );
+  console.log('DEPLOYED_FINFOLK_API_PASS');
+} finally {
+  for (const u of users) {
+    await db.query('DELETE FROM finfolk.members WHERE user_id=$1', [u.id]);
+    await db.query('DELETE FROM neon_auth."user" WHERE id::text=$1', [u.id]);
+  }
+  await db.pool.end();
+}

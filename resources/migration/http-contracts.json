@@ -1,0 +1,793 @@
+{
+  "block": {
+    "auth": true,
+    "domain": "community",
+    "name": "block",
+    "transport": "action",
+    "write": true
+  },
+  "blocks": {
+    "auth": true,
+    "domain": "community",
+    "name": "blocks",
+    "transport": "action",
+    "write": false
+  },
+  "checkin": {
+    "auth": true,
+    "domain": "community",
+    "name": "checkin",
+    "transport": "action",
+    "write": true
+  },
+  "community": {
+    "auth": true,
+    "domain": "community",
+    "name": "community",
+    "transport": "action",
+    "write": false
+  },
+  "communityMetrics": {
+    "admin": true,
+    "auth": true,
+    "domain": "posts",
+    "name": "communityMetrics",
+    "transport": "action",
+    "write": false
+  },
+  "connection": {
+    "auth": true,
+    "domain": "community",
+    "name": "connection",
+    "transport": "action",
+    "write": true
+  },
+  "connections": {
+    "auth": true,
+    "domain": "community",
+    "name": "connections",
+    "transport": "action",
+    "write": false
+  },
+  "deleteAccount": {
+    "auth": true,
+    "domain": "member",
+    "name": "deleteAccount",
+    "transport": "action",
+    "write": true
+  },
+  "deleteSession": {
+    "auth": true,
+    "domain": "logbook",
+    "name": "deleteSession",
+    "transport": "action",
+    "write": true
+  },
+  "followedPosts": {
+    "auth": true,
+    "domain": "posts",
+    "name": "followedPosts",
+    "transport": "action",
+    "write": false
+  },
+  "instagramAccount": {
+    "auth": true,
+    "domain": "instagram",
+    "method": "GET",
+    "name": "instagramAccount",
+    "path": "/v1/me/instagram",
+    "transport": "rest",
+    "write": false
+  },
+  "instagramActions": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramActions",
+    "transport": "action",
+    "write": false
+  },
+  "instagramAdminInbox": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramAdminInbox",
+    "transport": "action",
+    "write": false
+  },
+  "instagramBindMediaOwner": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramBindMediaOwner",
+    "transport": "action",
+    "write": true
+  },
+  "instagramCancel": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramCancel",
+    "transport": "action",
+    "write": true
+  },
+  "instagramChoosePostBeach": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramChoosePostBeach",
+    "transport": "action",
+    "write": true
+  },
+  "instagramClaimCreate": {
+    "auth": true,
+    "domain": "instagram",
+    "method": "POST",
+    "name": "instagramClaimCreate",
+    "path": "/v1/me/instagram/claims",
+    "transport": "rest",
+    "write": true
+  },
+  "instagramClaimRead": {
+    "auth": true,
+    "domain": "instagram",
+    "method": "GET",
+    "name": "instagramClaimRead",
+    "path": "/v1/me/instagram/claims/:id",
+    "transport": "rest",
+    "write": false
+  },
+  "instagramClaimRequest": {
+    "auth": true,
+    "domain": "instagram",
+    "method": "POST",
+    "name": "instagramClaimRequest",
+    "path": "/v1/me/instagram/claims/:id/review-request",
+    "transport": "rest",
+    "write": true
+  },
+  "instagramClaimRequestReview": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramClaimRequestReview",
+    "transport": "action",
+    "write": true
+  },
+  "instagramClaimReview": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramClaimReview",
+    "transport": "action",
+    "write": true
+  },
+  "instagramClaimReviewInbox": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramClaimReviewInbox",
+    "transport": "action",
+    "write": false
+  },
+  "instagramClaimStart": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramClaimStart",
+    "transport": "action",
+    "write": true
+  },
+  "instagramClaimStatus": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramClaimStatus",
+    "transport": "action",
+    "write": false
+  },
+  "instagramCodeConnect": {
+    "auth": true,
+    "domain": "instagram",
+    "method": "POST",
+    "name": "instagramCodeConnect",
+    "path": "/v1/me/instagram/connect",
+    "transport": "rest",
+    "write": true
+  },
+  "instagramCommandConfirm": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramCommandConfirm",
+    "transport": "action",
+    "write": true
+  },
+  "instagramCommandResolve": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramCommandResolve",
+    "transport": "action",
+    "write": true
+  },
+  "instagramCommandReview": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramCommandReview",
+    "transport": "action",
+    "write": true
+  },
+  "instagramCommandStatus": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramCommandStatus",
+    "transport": "action",
+    "write": false
+  },
+  "instagramCommandVerify": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramCommandVerify",
+    "transport": "action",
+    "write": true
+  },
+  "instagramConfirm": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramConfirm",
+    "transport": "action",
+    "write": true
+  },
+  "instagramConnect": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramConnect",
+    "transport": "action",
+    "write": true
+  },
+  "instagramDisconnect": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramDisconnect",
+    "transport": "action",
+    "write": true
+  },
+  "instagramDiscoveryInbox": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramDiscoveryInbox",
+    "transport": "action",
+    "write": false
+  },
+  "instagramDiscoveryRetry": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramDiscoveryRetry",
+    "transport": "action",
+    "write": true
+  },
+  "instagramDiscoveryStatus": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramDiscoveryStatus",
+    "transport": "action",
+    "write": false
+  },
+  "instagramHidePost": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramHidePost",
+    "transport": "action",
+    "write": true
+  },
+  "instagramMyPosts": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramMyPosts",
+    "transport": "action",
+    "write": false
+  },
+  "instagramPointsConsent": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramPointsConsent",
+    "transport": "action",
+    "write": true
+  },
+  "instagramProfile": {
+    "auth": true,
+    "domain": "instagram",
+    "method": "PUT",
+    "name": "instagramProfile",
+    "path": "/v1/me/instagram/profile",
+    "transport": "rest",
+    "write": true
+  },
+  "instagramProfileLink": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramProfileLink",
+    "transport": "action",
+    "write": true
+  },
+  "instagramReconcile": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramReconcile",
+    "transport": "action",
+    "write": true
+  },
+  "instagramRemoveAllPosts": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramRemoveAllPosts",
+    "transport": "action",
+    "write": true
+  },
+  "instagramRetryEvent": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramRetryEvent",
+    "transport": "action",
+    "write": true
+  },
+  "instagramReversePoints": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramReversePoints",
+    "transport": "action",
+    "write": true
+  },
+  "instagramReview": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramReview",
+    "transport": "action",
+    "write": true
+  },
+  "instagramReviewPost": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramReviewPost",
+    "transport": "action",
+    "write": true
+  },
+  "instagramSharing": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramSharing",
+    "transport": "action",
+    "write": true
+  },
+  "instagramStatus": {
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramStatus",
+    "transport": "action",
+    "write": false
+  },
+  "instagramSuppressSource": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramSuppressSource",
+    "transport": "action",
+    "write": true
+  },
+  "instagramUnlink": {
+    "auth": true,
+    "domain": "instagram",
+    "method": "DELETE",
+    "name": "instagramUnlink",
+    "path": "/v1/me/instagram",
+    "transport": "rest",
+    "write": true
+  },
+  "instagramVerify": {
+    "admin": true,
+    "auth": true,
+    "domain": "instagram",
+    "name": "instagramVerify",
+    "transport": "action",
+    "write": true
+  },
+  "invitationClaim": {
+    "auth": true,
+    "domain": "invitations",
+    "name": "invitationClaim",
+    "transport": "action",
+    "write": true
+  },
+  "invitationStatus": {
+    "auth": true,
+    "domain": "invitations",
+    "name": "invitationStatus",
+    "transport": "action",
+    "write": false
+  },
+  "me": {
+    "auth": true,
+    "domain": "member",
+    "name": "me",
+    "transport": "action",
+    "write": false
+  },
+  "messagingAuthorize": {
+    "admin": true,
+    "auth": true,
+    "domain": "admin",
+    "method": "POST",
+    "name": "messagingAuthorize",
+    "path": "/v1/admin/messaging/instagram/authorization",
+    "transport": "rest",
+    "write": true
+  },
+  "messagingClaimDecision": {
+    "admin": true,
+    "auth": true,
+    "domain": "admin",
+    "method": "POST",
+    "name": "messagingClaimDecision",
+    "path": "/v1/admin/messaging/claim-reviews/:id/decision",
+    "transport": "rest",
+    "write": true
+  },
+  "messagingClaimReviews": {
+    "admin": true,
+    "auth": true,
+    "domain": "admin",
+    "method": "GET",
+    "name": "messagingClaimReviews",
+    "path": "/v1/admin/messaging/claim-reviews",
+    "transport": "rest",
+    "write": false
+  },
+  "messagingEvent": {
+    "admin": true,
+    "auth": true,
+    "domain": "admin",
+    "method": "GET",
+    "name": "messagingEvent",
+    "path": "/v1/admin/messaging/events/:id",
+    "transport": "rest",
+    "write": false
+  },
+  "messagingEventRetry": {
+    "admin": true,
+    "auth": true,
+    "domain": "admin",
+    "method": "POST",
+    "name": "messagingEventRetry",
+    "path": "/v1/admin/messaging/events/:id/retry",
+    "transport": "rest",
+    "write": true
+  },
+  "messagingEvents": {
+    "admin": true,
+    "auth": true,
+    "domain": "admin",
+    "method": "GET",
+    "name": "messagingEvents",
+    "path": "/v1/admin/messaging/events",
+    "transport": "rest",
+    "write": false
+  },
+  "messagingSettings": {
+    "admin": true,
+    "auth": true,
+    "domain": "admin",
+    "method": "GET",
+    "name": "messagingSettings",
+    "path": "/v1/admin/messaging/instagram",
+    "transport": "rest",
+    "write": false
+  },
+  "messagingSettingsSave": {
+    "admin": true,
+    "auth": true,
+    "domain": "admin",
+    "method": "PUT",
+    "name": "messagingSettingsSave",
+    "path": "/v1/admin/messaging/instagram",
+    "transport": "rest",
+    "write": true
+  },
+  "myCheckins": {
+    "auth": true,
+    "domain": "member",
+    "name": "myCheckins",
+    "transport": "action",
+    "write": false
+  },
+  "myPosts": {
+    "auth": true,
+    "domain": "posts",
+    "name": "myPosts",
+    "transport": "action",
+    "write": false
+  },
+  "post": {
+    "auth": true,
+    "domain": "posts",
+    "name": "post",
+    "transport": "action",
+    "write": true
+  },
+  "postStatus": {
+    "auth": true,
+    "domain": "posts",
+    "name": "postStatus",
+    "transport": "action",
+    "write": false
+  },
+  "posts": {
+    "auth": true,
+    "domain": "posts",
+    "name": "posts",
+    "transport": "action",
+    "write": false
+  },
+  "preferences": {
+    "auth": true,
+    "domain": "member",
+    "name": "preferences",
+    "transport": "action",
+    "write": true
+  },
+  "profile": {
+    "auth": true,
+    "domain": "member",
+    "name": "profile",
+    "transport": "action",
+    "write": false
+  },
+  "publicInstagram": {
+    "auth": false,
+    "domain": "instagram",
+    "method": "GET",
+    "name": "publicInstagram",
+    "path": "/instagram/posts",
+    "transport": "rest",
+    "write": false
+  },
+  "publicInstagramReport": {
+    "auth": false,
+    "domain": "instagram",
+    "method": "POST",
+    "name": "publicInstagramReport",
+    "path": "/instagram/posts/:id/report",
+    "transport": "rest",
+    "write": true
+  },
+  "publicPosts": {
+    "auth": false,
+    "domain": "posts",
+    "method": "GET",
+    "name": "publicPosts",
+    "path": "/community/posts",
+    "transport": "rest",
+    "write": false
+  },
+  "publicReferral": {
+    "auth": false,
+    "domain": "posts",
+    "method": "POST",
+    "name": "publicReferral",
+    "path": "/community/referral",
+    "transport": "rest",
+    "write": true
+  },
+  "publicTrip": {
+    "auth": false,
+    "domain": "trips",
+    "method": "GET",
+    "name": "publicTrip",
+    "path": "/trips/:id",
+    "transport": "rest",
+    "write": false
+  },
+  "publicTrips": {
+    "auth": false,
+    "domain": "trips",
+    "method": "GET",
+    "name": "publicTrips",
+    "path": "/trips",
+    "transport": "rest",
+    "write": false
+  },
+  "removeCheckin": {
+    "auth": true,
+    "domain": "community",
+    "name": "removeCheckin",
+    "transport": "action",
+    "write": true
+  },
+  "removePost": {
+    "auth": true,
+    "domain": "posts",
+    "name": "removePost",
+    "transport": "action",
+    "write": true
+  },
+  "report": {
+    "auth": true,
+    "domain": "community",
+    "name": "report",
+    "transport": "action",
+    "write": true
+  },
+  "reportPost": {
+    "auth": true,
+    "domain": "posts",
+    "name": "reportPost",
+    "transport": "action",
+    "write": true
+  },
+  "resolvePostReport": {
+    "admin": true,
+    "auth": true,
+    "domain": "posts",
+    "name": "resolvePostReport",
+    "transport": "action",
+    "write": true
+  },
+  "reviewPost": {
+    "admin": true,
+    "auth": true,
+    "domain": "posts",
+    "name": "reviewPost",
+    "transport": "action",
+    "write": true
+  },
+  "reviewPosts": {
+    "admin": true,
+    "auth": true,
+    "domain": "posts",
+    "name": "reviewPosts",
+    "transport": "action",
+    "write": false
+  },
+  "saveSession": {
+    "auth": true,
+    "domain": "logbook",
+    "name": "saveSession",
+    "transport": "action",
+    "write": true
+  },
+  "session": {
+    "auth": true,
+    "domain": "logbook",
+    "name": "session",
+    "transport": "action",
+    "write": false
+  },
+  "sessions": {
+    "auth": true,
+    "domain": "logbook",
+    "name": "sessions",
+    "transport": "action",
+    "write": false
+  },
+  "stats": {
+    "auth": true,
+    "domain": "community",
+    "name": "stats",
+    "transport": "action",
+    "write": false
+  },
+  "tripDelete": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripDelete",
+    "transport": "action",
+    "write": true
+  },
+  "tripDives": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripDives",
+    "transport": "action",
+    "write": false
+  },
+  "tripGet": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripGet",
+    "transport": "action",
+    "write": false
+  },
+  "tripImportBatch": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripImportBatch",
+    "transport": "action",
+    "write": true
+  },
+  "tripImportBegin": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripImportBegin",
+    "transport": "action",
+    "write": true
+  },
+  "tripImportConfirm": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripImportConfirm",
+    "transport": "action",
+    "write": true
+  },
+  "tripList": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripList",
+    "transport": "action",
+    "write": false
+  },
+  "tripPreview": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripPreview",
+    "transport": "action",
+    "write": false
+  },
+  "tripPublish": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripPublish",
+    "transport": "action",
+    "write": true
+  },
+  "tripReport": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripReport",
+    "transport": "action",
+    "write": true
+  },
+  "tripReview": {
+    "admin": true,
+    "auth": true,
+    "domain": "trips",
+    "name": "tripReview",
+    "transport": "action",
+    "write": true
+  },
+  "tripReviewInbox": {
+    "admin": true,
+    "auth": true,
+    "domain": "trips",
+    "name": "tripReviewInbox",
+    "transport": "action",
+    "write": false
+  },
+  "tripSave": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripSave",
+    "transport": "action",
+    "write": true
+  },
+  "tripUnpublish": {
+    "auth": true,
+    "domain": "trips",
+    "name": "tripUnpublish",
+    "transport": "action",
+    "write": true
+  },
+  "unblock": {
+    "auth": true,
+    "domain": "community",
+    "name": "unblock",
+    "transport": "action",
+    "write": true
+  },
+  "visibility": {
+    "auth": true,
+    "domain": "logbook",
+    "name": "visibility",
+    "transport": "action",
+    "write": true
+  }
+}
