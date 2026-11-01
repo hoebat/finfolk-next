@@ -10,7 +10,7 @@ try{
  INSERT INTO finfolk.members(user_id,profile) VALUES('alice','{"displayName":"Alice"}'),('bob','{"displayName":"Bob"}'),('banned','{}');
  INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney'),('future','East','Pacific/Kiritimati'),('past','West','Etc/GMT+12');`);
  const functions=(await owner.query(`SELECT p.proname,p.prosecdef,p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' ORDER BY p.proname`)).rows;
- assert.deepEqual(functions.map(f=>f.proname),['actor_id','auth_identity','checkin_record','member_permitted','member_profile','profile_save']);
+ assert.deepEqual(functions.map(f=>f.proname),['actor_id','auth_identity','checkin_record','member_permitted','member_profile','profile_save','site_catalog_read','site_document_valid','site_draft_save','site_publish']);
  assert.deepEqual(await memberProfile(db,'alice'),{displayName:'Alice'});
  assert.deepEqual(await memberProfile(db,'bob'),{displayName:'Bob'});
  assert.equal(await memberProfile(db,'banned'),null);assert.equal(await memberProfile(db,'missing'),null);
@@ -39,10 +39,10 @@ try{
  assert.equal(await memberProfile(db,'alice'),null);await assert.rejects(saveMemberProfile(db,'alice',{}),e=>e.status===403);await assert.rejects(recordMemberCheckin(db,'alice','bondi'),e=>e.status===403);
  for(const name of ['member_permitted','auth_identity']){const f=functions.find(f=>f.proname===name);assert.equal(f.prosecdef,true);assert.ok(f.proconfig.includes('search_path=pg_catalog'));}
  await owner.query(`DO $$ BEGIN CREATE ROLE finfolk_untrusted NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;`);
- for(const name of ['actor_id()','auth_identity(text)','checkin_record(text)','member_permitted(boolean)','member_profile()','profile_save(jsonb)']){
+ for(const name of ['actor_id()','auth_identity(text)','checkin_record(text)','member_permitted(boolean)','member_profile()','profile_save(jsonb)','site_catalog_read()','site_document_valid(jsonb)','site_draft_save(text,boolean,jsonb,uuid,bigint,uuid)','site_publish(text,uuid,bigint)']){
   assert.equal((await owner.query(`SELECT has_function_privilege('finfolk_untrusted',$1,'EXECUTE') AS ok`,['finfolk_rpc.'+name])).rows[0].ok,false,name+' denied to PUBLIC');
   assert.equal((await owner.query(`SELECT has_function_privilege('finfolk_api',$1,'EXECUTE') AS ok`,['finfolk_rpc.'+name])).rows[0].ok,true,name+' internal API grant');
  }
  await owner.query('BEGIN');await savepoint(owner,async()=>{await owner.query('SET LOCAL ROLE finfolk_untrusted');await assert.rejects(owner.query('SELECT finfolk_rpc.member_profile()'),e=>e.code==='42501');});await owner.query('ROLLBACK');
- console.log('FINFOLKDB_FUNCTIONS_PASS: all six functions, identity/verification, JSON validation, timezone dates, deletion, actor cleanup and real role permissions.');
+ console.log('FINFOLKDB_FUNCTIONS_PASS: member functions and internal site function privileges, identity/verification, JSON validation, timezone dates, deletion, actor cleanup and real role permissions.');
 }finally{await pool.end();await owner.end();}

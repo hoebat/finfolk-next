@@ -1,3 +1,4 @@
+import {registerSitesPublic,registerSitesPrivate} from './sites.mjs';
 import {publicPage} from './public-pages.mjs';
 import { memberProfile, saveMemberProfile, recordMemberCheckin, lookupIdentity } from './backbone.mjs';
 import { registerMessagingAPI,messagingProblem,messagingMemberAction,isMessagingMemberAction } from './messaging-api.mjs';
@@ -94,7 +95,8 @@ export function createAPI({
   app.get('/trips/:id', async c=>c.json(await publicTrip(q,c.req.param('id'))));
   app.get('/instagram/webhook', c => instagramWebhook(c.req.raw, c.env || {}, q));
   app.post('/instagram/webhook', c => instagramWebhook(c.req.raw, c.env || {}, q));
-  registerMessagingAPI(app,{db,verify,fetcher:messagingFetch});
+  registerSitesPublic(app,{db});
+  registerMessagingAPI(app,{db,verify,fetcher:messagingFetch,registerPrivate:()=>registerSitesPrivate(app,{db})});
   app.get('/health', (c) =>
     c.json({ ok: true, service: 'FinFolk account API' }),
   );
@@ -560,6 +562,10 @@ export function createAPI({
         await tq('DELETE FROM finfolk.messaging_oauth_states WHERE user_id=$1',[uid]);
         await tq('DELETE FROM finfolk.instagram_dm_limits WHERE sender_id IN (SELECT sender_id FROM finfolk.instagram_connections WHERE user_id=$1)',[uid]);
         await tq('DELETE FROM finfolk.instagram_claims WHERE user_id=$1',[uid]);
+        await tq("DELETE FROM finfolk.site_revisions WHERE owner_id=$1 AND status<>'published'",[uid]);
+        await tq('UPDATE finfolk.site_revisions SET owner_id=NULL WHERE owner_id=$1',[uid]);
+        await tq('UPDATE finfolk.site_revisions SET reviewed_by=NULL WHERE reviewed_by=$1',[uid]);
+        await tq('UPDATE finfolk.site_imports SET owner_id=NULL WHERE owner_id=$1',[uid]);
         await tq('DELETE FROM finfolk.trips WHERE owner_id=$1',[uid]);
         await tq("UPDATE finfolk.instagram_discoveries SET state='hidden',owner_id=NULL,author_id=NULL,author=NULL,caption='',updated_at=now() WHERE owner_id=$1",[uid]);
         await tq('DELETE FROM finfolk.points_ledger WHERE user_id=$1',[uid]);

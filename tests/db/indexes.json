@@ -96,6 +96,18 @@
     "definition": "CREATE INDEX sessions_owner_beach ON finfolk.sessions USING btree (owner_id, beach_id)"
   },
   {
+    "name": "site_revisions_import_idx",
+    "definition": "CREATE INDEX site_revisions_import_idx ON finfolk.site_revisions USING btree (import_id)"
+  },
+  {
+    "name": "site_revisions_owner_idx",
+    "definition": "CREATE INDEX site_revisions_owner_idx ON finfolk.site_revisions USING btree (owner_id, updated_at)"
+  },
+  {
+    "name": "site_revisions_status_idx",
+    "definition": "CREATE INDEX site_revisions_status_idx ON finfolk.site_revisions USING btree (status, updated_at)"
+  },
+  {
     "name": "trip_dives_day",
     "definition": "CREATE INDEX trip_dives_day ON finfolk.trip_dives USING btree (import_id, day)"
   },

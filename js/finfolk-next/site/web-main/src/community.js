@@ -1,3 +1,4 @@
+import {renderSiteSubmissions,renderSiteAdmin} from './site-editor.js';
 import { renderMessagingSettings } from './messaging-settings.js';
 import {renderTripManager,renderTripAdmin} from './trips.js';
 import {tripCards} from './trip-report.js';
@@ -33,7 +34,7 @@ export function installCommunity({
   loadClient = () => import('./neon-client.js'),
 } = {}) {
   const root = document.getElementById('account-page');
-  const requestedAccountTab = () => { const tab = new URL(location.href).searchParams.get('tab'); return ['checkin', 'posts', 'instagram', 'profile', 'settings'].includes(tab) ? tab : 'checkin'; };
+  const requestedAccountTab = () => { const tab = new URL(location.href).searchParams.get('tab'); return ['checkin', 'posts', 'instagram', 'profile', 'settings', 'sites'].includes(tab) ? tab : 'checkin'; };
   let config,
     client,
     pending,
@@ -234,7 +235,7 @@ export function installCommunity({
         for (const [name, panel] of Object.entries(panels)) panel.hidden = name !== key;
       }
       updateAccountTab=selectTab;
-      for (const [key, label] of [['checkin', 'Check in'], ['posts', 'Your posts'], ['instagram','Instagram'], ['profile', 'Profile & buddies'], ['settings', 'Settings']]) {
+      for (const [key, label] of [['checkin', 'Check in'], ['posts', 'Your posts'], ['instagram','Instagram'], ['profile', 'Profile & buddies'], ['settings', 'Settings'], ['sites', 'Dive sites']]) {
         const panel = el('div');
         panel.id = 'account-' + key;
         panel.setAttribute('role', 'tabpanel');
@@ -320,7 +321,7 @@ export function installCommunity({
         ),
       );
       const choices = el('fieldset');
-      choices.append(el('legend', 'Beaches you follow (up to 20)'));
+      choices.append(el('legend', 'Dive sites you follow (up to 20)'));
       const search = field(
           choices,
           'Find a beach',
@@ -526,17 +527,17 @@ export function installCommunity({
       if (generation !== epoch) return;
       const checkin = el('section', undefined, 'account-card checkin-card');
       checkin.append(el('span', 'YOUR COASTAL ROUTINE', 'eyebrow'), el('h2', 'Where did you get in today?'),
-        el('p', 'Choose a beach to record today’s visit. Every day in the water counts.' ));
+        el('p', 'Choose a dive site to record today’s visit. Every day in the water counts.' ));
       const checkinForm = el('form'),
-        beachSearch = field(checkinForm, 'Find your beach', 'checkin-search', '', 'search'),
+        beachSearch = field(checkinForm, 'Find your dive site', 'checkin-search', '', 'search'),
         beachSelect = el('select');
       beachSearch.placeholder = 'Beach name or region';
-      beachSelect.setAttribute('aria-label', 'Beach to check in at');
+      beachSelect.setAttribute('aria-label', 'Dive site to check in at');
       beachSelect.required = true;
       function beachOptions() {
         const previous = beachSelect.value || getSelectedBeach()?.id;
         beachSelect.replaceChildren();
-        const placeholder = el('option', 'Choose a beach');
+        const placeholder = el('option', 'Choose a dive site');
         placeholder.value = '';
         beachSelect.append(placeholder);
         for (const beach of getBeaches().filter(b => `${b.name} ${b.area_name || ''} ${b.state || ''}`.toLowerCase().includes(beachSearch.value.trim().toLowerCase())).slice(0, 150)) {
@@ -643,6 +644,7 @@ export function installCommunity({
       for (const child of [...root.children].slice(profileStart)) panels.profile.append(child);
       await instagramReady;
       if (generation !== epoch) return;
+      await renderSiteSubmissions({host:panels.sites,api:a,sites:getBeaches(),refresh:account});
       await renderPostManager({host:panels.posts,api:a,beaches:getBeaches(),refresh:account});
       await renderTripManager({host:panels.posts,api:a,beaches:getBeaches(),refresh:account});
       const state = await a.call('postStatus');
@@ -656,6 +658,7 @@ export function installCommunity({
         tab.id = 'account-tab-admin'; tab.dataset.tab = 'admin';
         tab.setAttribute('role','tab'); tab.setAttribute('aria-controls',panel.id);
         tabs.append(tab); panels.admin = panel; root.append(panel);
+        await renderSiteAdmin({host:panel,api:a,sites:getBeaches(),refresh:account});
         await renderPostAdmin({host:panel,api:a});
         await renderTripAdmin({host:panel,api:a});
       }

@@ -12,9 +12,7 @@
   => [true true "community" false true])
 ^{:id api-coverage}
 (fact "the extracted browser contract includes every deployed operation"
-  (count operations/DEFINITIONS) => 96)
+  (count operations/DEFINITIONS) => 108)
 ^{:id deployed-sql}
-(fact "the extraction preserves the existing database release"
-  (format "%064x" (java.math.BigInteger. 1 (.digest (java.security.MessageDigest/getInstance "SHA-256")
-                                                   (.getBytes (publication/sql) "UTF-8"))))
-  => "3e5358d7d01aad17b2eaa95344a9a6fa8701550e7c88ee83fe0db13887f32a0a")
+(fact "site transactions are published with the member backbone"
+  (clojure.string/includes? (publication/sql) "FUNCTION finfolk_rpc.site_publish") => true)

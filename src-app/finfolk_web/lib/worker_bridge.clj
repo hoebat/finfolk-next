@@ -42,8 +42,12 @@
     (var result (await (-/request ctx {"type" "hello" "protocol" 1 "client" (. ctx ["client"]) "environment" (. ctx ["environment"])} nil)))
     (-/announce "finfolk:cache-status" result)
     (return result)))))))
-(defn.js reconnect [ctx]
+(defn.js reconnect [ctx coordinator-lost]
   (:= (. ctx ["connected"]) false)
+  (when coordinator-lost
+    (for:iter [facade (. (. ctx ["scopes"]) (values))]
+      (for:iter [spec (Object.values registry/operations)]
+        (when (. spec ["write"]) (. (. facade ["blocked"]) (add (. spec ["domain"])))))))
   (-/announce "finfolk:cache-status" {"message" "Reconnecting application cache."})
   (for:iter [task (. (. ctx ["pending"]) (values))]
     (var message (. task ["message"]))
@@ -76,7 +80,7 @@
   (when (== type "restarting") (-/reconnect ctx) (return))
   (when (== type "pong") (:= (. ctx ["lastPong"]) (Date.now)) (return))
   (when (== type "ready")
-    (when (and (. ctx ["connected"]) (not= (. ctx ["epoch"]) (. message ["epoch"]))) (-/reconnect ctx))
+    (when (and (. ctx ["connected"]) (not= (. ctx ["epoch"]) (. message ["epoch"]))) (-/reconnect ctx true))
     (:= (. ctx ["epoch"]) (. message ["epoch"]))
     (:= (. ctx ["connected"]) true) (:= (. ctx ["lastPong"]) (Date.now))
     (clearTimeout (. ctx ["timer"])) ((. ctx ["resolve"]) true) (return))
@@ -103,7 +107,7 @@
       (-/post ctx {"type" "http-result" "id" (. message ["id"]) "result" result})
       (catch error (-/post ctx {"type" "http-result" "id" (. message ["id"])
         "error" {"message" (. error ["message"]) "name" (. error ["name"]) "status" (. error ["status"])
-                 "code" (. error ["code"]) "requestId" (. error ["requestId"])}}))
+                 "code" (. error ["code"]) "details" (. error ["details"]) "requestId" (. error ["requestId"])}}))
       (finally (. (. ctx ["http"]) (delete (. message ["id"])))))
     (return))
   (when (not facade) (return))
@@ -216,7 +220,7 @@
   (var worker nil)
   (var shared (not= (typeof SharedWorker) "undefined"))
   (if shared
-    (do (:= worker (new SharedWorker (new URL "./workers/finfolk.sharedworker.js" (. import.meta ["url"])) {"type" "module" "name" "finfolk-next-sqlite-v1"}))
+    (do (:= worker (new SharedWorker (new URL "./workers/finfolk.sharedworker.js?protocol=2" (. import.meta ["url"])) {"type" "module" "name" "finfolk-next-sqlite-v2"}))
         (:= (. ctx ["port"]) (. worker ["port"])))
     (do (:= worker (new Worker (new URL "./workers/kernel.js" (. import.meta ["url"])) {"type" "module"}))
         (:= (. ctx ["port"]) (. channel ["port1"]))
@@ -234,9 +238,9 @@
         (when (and (. ctx ["connected"]) (> (- (Date.now) (. ctx ["lastPong"])) 8000))
           (:= (. ctx ["connected"]) false)
           (try (-/post ctx {"type" "detach"}) (. (. ctx ["port"]) (close)) (catch error nil))
-          (var replacement (new SharedWorker (new URL "./workers/finfolk.sharedworker.js" (. import.meta ["url"])) {"type" "module" "name" "finfolk-next-sqlite-v1"}))
+          (var replacement (new SharedWorker (new URL "./workers/finfolk.sharedworker.js?protocol=2" (. import.meta ["url"])) {"type" "module" "name" "finfolk-next-sqlite-v2"}))
           (:= (. ctx ["worker"]) replacement) (:= (. ctx ["port"]) (. replacement ["port"]))
-          (-/reconnect ctx)
+          (-/reconnect ctx true)
           (. (. ctx ["port"]) (addEventListener "message" (fn [event] (-/receive ctx (. event ["data"])))))
           (. (. ctx ["port"]) (start)))
         (-/post ctx {"type" "ping"})) 2000))

@@ -6,13 +6,27 @@
 (def.js Clients (new Set))
 (def.js Host nil)
 (def.js Kernel nil)
+(def.js Generation 0)
+(def.js Uncertain (new Map))
 (defn.js send [client message]
   (try (. (. client ["port"]) (postMessage message)) (catch error nil)))
+(defn.js flag [scope domain type except]
+  (:= -/Generation (+ -/Generation 1))
+  (. -/Uncertain (set (+ scope "|" domain) -/Generation))
+  (for:iter [target -/Clients]
+    (when (not= target except)
+      (-/send target {"type" type "scope" scope "domain" domain}))))
 (defn.js attach [client]
   (var channel (new MessageChannel))
   (:= (. client ["kernel"]) (. channel ["port2"]))
   (:= (. (. channel ["port2"]) ["onmessage"]) (fn [event]
-    (when (== (. event ["data"] ["type"]) "result") (. (. client ["writes"]) (delete (. event ["data"] ["id"]))))
+    (var data (. event ["data"]))
+    (when (== (. data ["type"]) "blocked") (-/flag (. data ["scope"]) (. data ["domain"]) "blocked"))
+    (when (== (. data ["type"]) "result")
+      (var write (. (. client ["writes"]) (get (. data ["id"]))))
+      (when (and write (. data ["error"]) (. data ["error"] ["mutationOutcomeUnknown"]))
+        (-/flag (. write ["scope"]) (. write ["domain"]) "uncertain" client))
+      (. (. client ["writes"]) (delete (. data ["id"]))))
     (-/send client (. event ["data"]))))
   (. (. channel ["port2"]) (start))
   (. -/Kernel (postMessage {"type" "connect"} [(. channel ["port1"])])))
@@ -22,8 +36,7 @@
     (when -/Host (-/send -/Host {"type" "spawn"}))))
 (defn.js uncertain [client]
   (for:iter [write (. (. client ["writes"]) (values))]
-    (for:iter [target -/Clients]
-      (-/send target {"type" "uncertain" "scope" (. write ["scope"]) "domain" (. write ["domain"])})))
+    (-/flag (. write ["scope"]) (. write ["domain"]) "uncertain"))
   (. (. client ["writes"]) (clear)))
 (defn.js restart []
   (when -/Kernel (. -/Kernel (postMessage {"type" "shutdown"})) (. -/Kernel (close)))
@@ -47,7 +60,7 @@
   (:= (. client ["seen"]) (Date.now))
   (cond
     (== (. data ["type"]) "coordinator")
-    (-/send client {"type" "result" "id" (. data ["id"]) "result" {"clients" (. -/Clients ["size"]) "kernel" (not (not -/Kernel)) "host" (not (not -/Host))}})
+    (-/send client {"type" "result" "id" (. data ["id"]) "result" {"generation" -/Generation "pendingWrites" (. (Array.from -/Clients) (reduce (fn [n c] (return (+ n (. c ["writes"] ["size"])))) 0)) "uncertainDomains" (. -/Uncertain ["size"]) "clients" (. -/Clients ["size"]) "kernel" (not (not -/Kernel)) "host" (not (not -/Host))}})
     (== (. data ["type"]) "ping")
     (do
       (-/send client {"type" "pong"})
@@ -74,11 +87,17 @@
         (var spec (. registry/operations [(. data ["name"])]))
         (when (and spec (. spec ["write"]))
           (. (. client ["writes"]) (set (. data ["id"]) {"scope" (. data ["scope"]) "domain" (. spec ["domain"])}))))
-      (. (. client ["kernel"]) (postMessage data)))))
+      (var spec (. registry/operations [(. data ["name"])]))
+      (var fence (. -/Uncertain (get (+ (. data ["scope"]) "|" (and spec (. spec ["domain"]))))))
+      (if (and spec (. spec ["write"]) fence (>= fence (. client ["born"])))
+        (do (. (. client ["writes"]) (delete (. data ["id"])))
+          (-/send client {"type" "result" "id" (. data ["id"]) "error" {"message" "Reload before making another change: confirm whether the previous change was saved." "mutationOutcomeUnknown" true}}))
+        (. (. client ["kernel"]) (postMessage data))))))
 (defn.js start []
   (:= (. globalThis ["onconnect"])
     (fn [event]
-      (var client {"port" (. event ["ports"] [0]) "seen" (Date.now) "active" true "writes" (new Map)})
+      (:= -/Generation (+ -/Generation 1))
+      (var client {"born" -/Generation "port" (. event ["ports"] [0]) "seen" (Date.now) "active" true "writes" (new Map)})
       (. -/Clients (add client))
       (:= (. (. client ["port"]) ["onmessage"]) (fn [event] (-/message client event)))
       (. (. client ["port"]) (start))

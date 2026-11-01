@@ -9,7 +9,7 @@
      (every? (fn [[_ {:keys [columns constraints]}]]
                (and (seq columns) (seq constraints)
                     (= (count columns) (count (set (map :name columns)))))) tables)])
-  => [41 true])
+  => [47 true])
 ^{:id rpc-input-contract}
 (fact "member RPC input and output contracts remain explicit"
   (mapv #(select-keys (get member/OPERATIONS %) [:input :return])

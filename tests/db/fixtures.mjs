@@ -1,6 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {quote,schema} from './harness.mjs';
 export const overrides={
+ site_profiles:{waterbody:'unknown',access_mode:'unknown',status:'published'},site_revisions:{status:'draft'},site_imports:{status:'draft'},site_access_points:{mode:'shore'},site_depth_evidence:{kind:'reported'},
  members:{user_id:'alice',profile:{displayName:'Alice',open:true}},beaches:{id:'bondi',timezone:'Australia/Sydney'},
  blocks:{owner_id:'alice',target_id:'bob'},connections:{a:'alice',b:'bob',requested_by:'alice',status:'pending'},
  invitation_joins:{invitee_id:'alice',inviter_id:'bob'},community_referrals:{platform:'instagram'},

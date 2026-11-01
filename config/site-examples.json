@@ -1,0 +1,94 @@
+[
+  {
+    "id": "kilsby-sinkhole",
+    "name": "Kilsby Sinkhole",
+    "state_id": "SA",
+    "area_name": "Limestone Coast inland waters",
+    "timezone": "Australia/Adelaide",
+    "point": [
+      140.67627,
+      -37.89238
+    ],
+    "waterbody": "sinkhole",
+    "access_mode": "shore",
+    "features": [
+      "training"
+    ],
+    "source_url": "https://kilsbysinkhole.com/about-the-sinkhole/",
+    "aliases": [
+      "Kilsbys Sinkhole"
+    ],
+    "activity_status": "documented",
+    "reviewed_at": "2026-11-01",
+    "reference_label": "Kilsby Sinkhole named site reference; confirm entry with the operator",
+    "requirements": "Private property. Freediving must be arranged through an approved freediving licensee; the operator states that freediving is not allowed during snorkel sessions.",
+    "booking_url": "https://kilsbysinkhole.com/about-the-sinkhole/",
+    "access_points": [],
+    "depth_evidence": [
+      {
+        "kind": "reported",
+        "depth_m": 27,
+        "reference": "Operator-described freediving depth below water surface; not a surveyed contour",
+        "source_url": "https://kilsbysinkhole.com/about-the-sinkhole/",
+        "reviewed_at": "2026-11-01"
+      }
+    ],
+    "facts": [
+      {
+        "label": "Location reference",
+        "text": "Named sinkhole reference coordinates, not a verified water entry point.",
+        "source_url": "https://en.wikipedia.org/wiki/Kilsby_sinkhole",
+        "reviewed_at": "2026-11-01"
+      }
+    ]
+  },
+  {
+    "id": "julian-rocks",
+    "name": "Julian Rocks / Nguthungulli",
+    "state_id": "NSW",
+    "area_name": "Byron Bay offshore",
+    "timezone": "Australia/Sydney",
+    "point": [
+      153.6297,
+      -28.6114
+    ],
+    "waterbody": "ocean",
+    "access_mode": "boat_only",
+    "features": [
+      "reef"
+    ],
+    "source_url": "https://wildbyron.com.au/snorkelling-tour-byron-bay/",
+    "aliases": [
+      "Nguthungulli",
+      "Julian Rocks"
+    ],
+    "activity_status": "documented",
+    "reviewed_at": "2026-11-01",
+    "reference_label": "Julian Rocks named reef reference; dive position chosen by the operator",
+    "requirements": "Boat access. Confirm the departure, conditions and activity arrangements with the operator; this record does not describe a shore swim route.",
+    "booking_url": "https://wildbyron.com.au/snorkelling-tour-byron-bay/",
+    "access_points": [
+      {
+        "name": "Brunswick Heads Boat Harbour — Wild Byron meeting location",
+        "mode": "departure",
+        "point": [
+          153.5446797,
+          -28.5354631
+        ],
+        "source_url": "https://wildbyron.com.au/snorkelling-tour-byron-bay/",
+        "booking_url": "https://wildbyron.com.au/snorkelling-tour-byron-bay/",
+        "notes": "Meeting location from the operator’s directions link; confirm the departure for your booking.",
+        "verified": false
+      }
+    ],
+    "depth_evidence": [],
+    "facts": [
+      {
+        "label": "Freediving access",
+        "text": "The operator describes a boat trip from Brunswick Heads Boat Harbour to Julian Rocks with snorkelling and freediving.",
+        "source_url": "https://wildbyron.com.au/snorkelling-tour-byron-bay/",
+        "reviewed_at": "2026-11-01"
+      }
+    ]
+  }
+]
