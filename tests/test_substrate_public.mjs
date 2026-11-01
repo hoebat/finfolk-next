@@ -1,9 +1,18 @@
 import assert from 'node:assert/strict';
-import {applicationBackbone,publicOperation} from '../js/finfolk-next/site/web-main/src/app-backbone.js';
+import {Configuration,appConfiguration,applicationBackbone,publicOperation} from '../js/finfolk-next/site/web-main/src/app-backbone.js';
 import {getInstagramFeed} from '../js/finfolk-next/site/web-main/src/instagram-discovery.js';
 const oldFetch=globalThis.fetch,requests=[];
 globalThis.fetch=async(url,options)=>{requests.push({url:new URL(url),options});return Response.json({posts:[]});};
 try {
+ // An older shell caches the stable config URL. A new module must bypass it online,
+ // while keeping that cached URL available when the device is offline.
+ globalThis.fetch=async url=>Response.json({backbone:true,cacheBackend:new URL(url).searchParams.has('v')?'sqlite':'memory'});
+ assert.equal((await appConfiguration()).cacheBackend,'sqlite');
+ Configuration.promise=null;
+ globalThis.fetch=async url=>{if(new URL(url).searchParams.has('v'))throw new TypeError('offline');return Response.json({backbone:true,cacheBackend:'sqlite'});};
+ assert.equal((await appConfiguration()).cacheBackend,'sqlite');
+ Configuration.promise=null;
+ globalThis.fetch=async(url,options)=>{requests.push({url:new URL(url),options});return Response.json({posts:[]});};
  const app=await applicationBackbone({backbone:true,apiUrl:'https://next.public.test/',authUrl:'https://auth.public.test'});
  await publicOperation('publicTrips',{beachId:'bondi',ownerId:'fixture'},'https://next.public.test/',()=>assert.fail('Next cannot bypass substrate'));
  assert.equal(requests[0].url.pathname,'/trips');assert.equal(requests[0].url.searchParams.get('beachId'),'bondi');assert.equal(app.public.read('publicTrips',{ownerId:'fixture',beachId:'bondi'}).posts.length,0);

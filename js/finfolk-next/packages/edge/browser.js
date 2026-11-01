@@ -3,10 +3,14 @@ export var Configuration = {"promise":null};
 
 export async function appConfiguration(){
   if(!Configuration["promise"]){
-    Configuration["promise"] = fetch(
-      new URL("./neon-config.json",import.meta["url"]),
-      {"cache":"no-cache","signal":AbortSignal.timeout(5000)}
-    ).then(function (response){
+    let url = new URL("./neon-config.json",import.meta["url"]);
+    url["searchParams"].set("v",import.meta["url"]);
+    Configuration["promise"] = fetch(url,{"cache":"no-cache","signal":AbortSignal.timeout(5000)}).catch(function (_){
+      return fetch(
+        new URL("./neon-config.json",import.meta["url"]),
+        {"cache":"no-cache","signal":AbortSignal.timeout(5000)}
+      );
+    }).then(function (response){
       if(!response["ok"]){
         throw new Error("Account configuration unavailable.");
       }
