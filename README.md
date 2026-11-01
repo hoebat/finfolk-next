@@ -7,7 +7,7 @@ The Clojure-authored database and substrate backbone for [next.finfolk.com.au](h
 | Authored source | Generated output |
 | --- | --- |
 | `src/finfolkdb` | `resources/finfolkdb/pilot.sql` and browser RPC contracts |
-| `src-app/finfolk_web/groups` | The 103-operation browser registry, including HTTP bindings and invalidation domains |
+| `src-app/finfolk_web/groups` | The active browser operation registry, including HTTP bindings and invalidation domains |
 | `src-app/finfolk_web/lib` | `js/finfolk-next/packages/edge`: actor lifecycle, substrate models, xt.db cache, application state and public HTTP adapter |
 | Pinned `ref/foundation/src-lang` | Required `@xtalk/*` workspace packages under `js/finfolk-next/packages/libs` |
 | Existing JavaScript in `js/finfolk-next/site/web-main/src` | The DOM/map site and versioned browser bundles |
