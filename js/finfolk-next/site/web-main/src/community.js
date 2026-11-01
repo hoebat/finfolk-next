@@ -4,6 +4,7 @@ import {renderTripManager,renderTripAdmin} from './trips.js';
 import {tripCards} from './trip-report.js';
 import { renderPostManager, renderPostFeed, renderPostAdmin } from './posts.js';
 import { applySavedTheme, themeSettings } from './theme.js';
+import { createWordmark } from './identity.js';
 applySavedTheme();
 import { renderActions } from './actions.js';
 import { showMemberTour } from './member-tour.js';
@@ -137,9 +138,7 @@ export function installCommunity({
         root.classList.add('account-page-guest');
         const box = el('section', undefined, 'account-card signin-card'),
           form = el('form', undefined, 'signin-form');
-        const mark = el('img', undefined, 'signin-mark');
-        mark.src = new URL('./finfolk-icon.svg', import.meta.url).href;
-        mark.alt = '';
+        const mark = createWordmark({width:360,print:true});
         box.append(mark, el('span', 'YOUR OCEAN COMMUNITY', 'signin-eyebrow'));
         box.append(
           el('h2', 'Find your people in the water.'),
@@ -202,7 +201,7 @@ export function installCommunity({
         const instagram = link('Follow @finfolk.com.au on Instagram ↗', 'https://www.instagram.com/finfolk.com.au/');
         instagram.className = 'finfolk-social-link';
         box.append(instagram);
-        root.append(box);
+        root.append(box, themeSettings());
         const token = new URL(location.href).searchParams.get('token');
         if (token) {
           const reset = el('section', undefined, 'account-card'),

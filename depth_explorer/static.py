@@ -160,13 +160,14 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
         if site_snapshot:
             web_files["sites-snapshot.json"] = Path(site_snapshot).read_bytes()
         digest = hashlib.sha256(b"".join(name.encode() + b"\0" + data for name, data in sorted(web_files.items()))).hexdigest()[:12]
+        brand_assets = {"finfolk-mark.svg", "finfolk-wordmark.svg", "finfolk-icon.svg", "finfolk-touch.png", "animal-octopus-v1.webp", "animal-octopus-hyper-v1.webp"}
         assets = {name: (Path(name).parent / f"{Path(name).stem}.{digest}{Path(name).suffix}").as_posix()
                   for name in web_files
-                  if ("/" not in name and (Path(name).suffix in (".js", ".css") or name == "sites-snapshot.json"))
+                  if name in brand_assets or ("/" not in name and (Path(name).suffix in (".js", ".css") or name == "sites-snapshot.json"))
                   or (name.startswith("workers/") and Path(name).name != "finfolk.sharedworker.js" and Path(name).suffix in (".js", ".wasm"))}
         for name, data in web_files.items():
             rendered = data
-            if Path(name).suffix in (".js", ".html"):
+            if Path(name).suffix in (".js", ".html", ".css"):
                 text = data.decode()
                 for original, versioned in assets.items():
                     text = text.replace("./" + original, "./" + versioned)
@@ -253,7 +254,7 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
             packages[region["id"]] = {"name": region["name"], "files": paths, "bytes": sum(files[path]["bytes"] for path in paths)}
         revision = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
         write("data/downloads.json", json.dumps({"version": 1, "revision": revision, "files": files, "regions": packages}, separators=(",", ":")).encode())
-        shell = ["./", "./index.html"] + ["./" + name for name in assets.values()] + ["./" + name for name in ("finfolk-logo.jpeg", "finfolk-icon.svg", "neon-config.json") if (stage / name).exists()]
+        shell = ["./", "./index.html"] + ["./" + name for name in assets.values()] + ["./" + name for name in ("neon-config.json",) if (stage / name).exists()]
         shell += ["./" + name for name in web_files if name.startswith("workers/") and name not in assets]
         shell.append("./workers/finfolk.sharedworker.js?protocol=2")
         worker = (PROJECT / "js/finfolk-next/site/web-main/src/sw-template.js").read_text().replace("__SHELL__", json.dumps(shell)).replace("__VERSION__", digest)

@@ -1,0 +1,31 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import {Window} from 'happy-dom';
+import {installDiscovery} from '../js/finfolk-next/site/web-main/src/discovery.js';
+const window=new Window({url:'https://finfolk.test/?view=discover&q=Lake&state=VIC&waterbody=lake&access=shore&suggest_state=VIC&suggest_access=boat_only&depth=15'});
+window.document.write(await readFile(new URL('../js/finfolk-next/site/web-main/src/index.html',import.meta.url),'utf8'));
+for(const key of ['document','location','history'])Object.defineProperty(globalThis,key,{value:window[key],configurable:true});
+const $=id=>document.getElementById(id);
+const lake={id:'lake',name:'Fixture Lake',state_id:'VIC',state:'Victoria',area_id:'vic-inland',area_name:'Inland',waterbody:'lake',access_mode:'shore',activity_status:'documented',source_url:'https://example.org/lake',depth_evidence:[]};
+let onRoute;
+try{
+ installDiscovery({catalog:{states:[{id:'VIC',name:'Victoria'}],areas:[{id:'vic-inland',state_id:'VIC',name:'Inland'}],beaches:[lake,{...lake,id:'reef',name:'Fixture Reef',waterbody:'ocean',access_mode:'boat_only'}]},summaries:{beaches:[]},guides:{},social:{posts:[]},loadJSON:async()=>({}),onSelect(){},navigation:{route:{view:'discover'},subscribe(listener){onRoute=listener;}}});
+ assert.equal($('index-advanced').open,false);assert.equal($('suggest-advanced').open,false);
+ assert.equal($('index-advanced-count').textContent,'2');assert.equal($('suggest-advanced-count').textContent,'2');
+ assert.equal($('beach-count').textContent,'1 locations');
+ for(const id of ['region-filter','index-waterbody','index-access'])assert.ok($('index-advanced').contains($(id)));
+ for(const id of ['suggest-area','target-filter','distance-filter','sort-filter','camping-filter','recommendation-focus','suggest-waterbody','suggest-access'])assert.ok($('suggest-advanced').contains($(id)));
+ $('index-advanced-reset').click();
+ assert.equal($('beach-search').value,'Lake');assert.equal($('state-filter').value,'VIC');assert.equal($('index-waterbody').value,'');assert.equal($('index-access').value,'');
+ assert.equal($('index-advanced-count').hidden,true);assert.equal($('suggest-advanced-count').textContent,'2');
+ assert.equal(new URL(location.href).searchParams.has('access'),false);
+ const change=(id,value)=>{$(id).value=value;$(id).dispatchEvent(new window.Event('change'));};
+ change('distance-filter','500');assert.equal($('suggest-advanced-count').textContent,'3');
+ change('activity-filter','ocean-swimming');assert.equal($('target-filter').disabled,true);assert.equal($('suggest-advanced-count').textContent,'1','Irrelevant depth filters are excluded from the badge');
+ change('recommendation-focus','camping');assert.equal($('suggest-advanced-count').textContent,'2');
+ $('suggest-advanced-reset').click();
+ assert.equal($('recommendation-focus').value,'activity');assert.equal($('activity-filter').value,'ocean-swimming');assert.equal($('suggest-state').value,'VIC');assert.equal($('target-filter').value,'10');assert.equal($('distance-filter').value,'');assert.equal($('suggest-advanced-count').hidden,true);
+ history.replaceState(null,'','?view=discover&waterbody=river&access=boat_only');onRoute({reason:'popstate'});
+ assert.equal($('index-waterbody').value,'river');assert.equal($('index-advanced-count').textContent,'2');assert.equal($('index-advanced').open,false);
+ console.log('Advanced filters passed: closed defaults, URL restoration, relevant counts, independent reset and preserved primary filters.');
+}finally{await window.happyDOM.close();}

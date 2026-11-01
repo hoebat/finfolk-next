@@ -57,6 +57,12 @@ Database coverage includes domain-organized Clojure facts, all 47 table declarat
 
 ## Production deployment
 
+The product uses the Slow melt identity with four device-local appearance choices: Yellow (default), Cobalt, Muted light and Muted dark. Account settings and the signed-out account screen offer the same choices. Existing Coastal/Sand preferences migrate to Muted light; Night swim migrates to Muted dark. Appearance initializes before styles load, and branding assets are fingerprinted and included in the offline shell. Map and depth rendering retain their existing colours.
+
+Discover keeps the main search/activity and state controls visible. Region, waterbody, access and recommendation refinements live in closed Advanced filters panels with active counts and independent clearing. Existing filter URLs and history restoration are preserved.
+
+The frontend owns its SVG masters and muted/hyper octopus artwork; it does not require the local Atelier server. Run `make dev` for the production application preview (`WEB_PORT` selects another local port).
+
 ```sh
 make deploy
 ```
