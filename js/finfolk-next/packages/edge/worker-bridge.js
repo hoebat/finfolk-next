@@ -497,10 +497,10 @@ export function createWorkerBridge(config){
   let worker = null;
   let shared = (typeof SharedWorker) != "undefined";
   if(shared){
-    worker = new SharedWorker(
-      new URL("./workers/finfolk.sharedworker.js",import.meta["url"]),
-      {"type":"module","name":"finfolk-next-sqlite-v1"}
-    );
+    worker = new SharedWorker(new URL(
+      "./workers/finfolk.sharedworker.js?protocol=2",
+      import.meta["url"]
+    ),{"type":"module","name":"finfolk-next-sqlite-v2"});
     ctx["port"] = worker["port"];
   }
   else{
@@ -536,10 +536,10 @@ export function createWorkerBridge(config){
           catch(error){
             null;
           }
-          let replacement = new SharedWorker(
-            new URL("./workers/finfolk.sharedworker.js",import.meta["url"]),
-            {"type":"module","name":"finfolk-next-sqlite-v1"}
-          );
+          let replacement = new SharedWorker(new URL(
+            "./workers/finfolk.sharedworker.js?protocol=2",
+            import.meta["url"]
+          ),{"type":"module","name":"finfolk-next-sqlite-v2"});
           ctx["worker"] = replacement;
           ctx["port"] = replacement["port"];
           reconnect(ctx);

@@ -216,7 +216,7 @@
   (var worker nil)
   (var shared (not= (typeof SharedWorker) "undefined"))
   (if shared
-    (do (:= worker (new SharedWorker (new URL "./workers/finfolk.sharedworker.js" (. import.meta ["url"])) {"type" "module" "name" "finfolk-next-sqlite-v1"}))
+    (do (:= worker (new SharedWorker (new URL "./workers/finfolk.sharedworker.js?protocol=2" (. import.meta ["url"])) {"type" "module" "name" "finfolk-next-sqlite-v2"}))
         (:= (. ctx ["port"]) (. worker ["port"])))
     (do (:= worker (new Worker (new URL "./workers/kernel.js" (. import.meta ["url"])) {"type" "module"}))
         (:= (. ctx ["port"]) (. channel ["port1"]))
@@ -234,7 +234,7 @@
         (when (and (. ctx ["connected"]) (> (- (Date.now) (. ctx ["lastPong"])) 8000))
           (:= (. ctx ["connected"]) false)
           (try (-/post ctx {"type" "detach"}) (. (. ctx ["port"]) (close)) (catch error nil))
-          (var replacement (new SharedWorker (new URL "./workers/finfolk.sharedworker.js" (. import.meta ["url"])) {"type" "module" "name" "finfolk-next-sqlite-v1"}))
+          (var replacement (new SharedWorker (new URL "./workers/finfolk.sharedworker.js?protocol=2" (. import.meta ["url"])) {"type" "module" "name" "finfolk-next-sqlite-v2"}))
           (:= (. ctx ["worker"]) replacement) (:= (. ctx ["port"]) (. replacement ["port"]))
           (-/reconnect ctx)
           (. (. ctx ["port"]) (addEventListener "message" (fn [event] (-/receive ctx (. event ["data"])))))

@@ -7,7 +7,8 @@ import {siteDocument} from '../backend/sites.mjs';
 const mode=process.argv[2];if(!['rehearse','seed','snapshot'].includes(mode))throw Error('Use rehearse, seed, or snapshot.');
 const environment=JSON.parse(await readFile('next.environment.json','utf8'));
 const rehearsal=mode==='rehearse',file=rehearsal?'.cache/site-rehearsal-url':'.cache/site-next-url';
-const connectionString=(await readFile(file,'utf8')).trim().replace(/^'|'$/g,'');const target=new URL(connectionString);
+let connectionString=(await readFile(file,'utf8')).trim().replace(/^'|'$/g,'');const target=new URL(connectionString);
+if(target.searchParams.get('sslmode')==='require'){target.searchParams.set('sslmode','verify-full');connectionString=target.href;}
 const expected=new URL(environment.authUrl).hostname.split('.')[0]+'.ap-southeast-2.aws.neon.tech';
 if(target.pathname!=='/finfolk_next'||target.hostname.includes('-pooler')||environment.environment!=='next')throw Error('Refusing non-Next catalog release.');
 if(rehearsal){const info=JSON.parse(await readFile('.cache/site-neon-branch.json','utf8'));if(info.branch?.parent_id!=='br-sparkling-sun-a7dpot05'||!info.endpoints?.some(e=>target.hostname.startsWith(e.host||e.id+'.')))throw Error('Rehearsal endpoint does not match the temporary branch.');}
@@ -28,11 +29,18 @@ try{
   const metadata={...catalog};delete metadata.beaches;delete metadata.revision;metadata.sources=[...(metadata.sources||[]),{id:'finfolk-reviewed-sites',publisher:'FinFolk reviewed location records',url:'https://next.finfolk.com.au/',attribution:'Sources and access requirements are listed on each site record.'}];
   await db.query('BEGIN');try{
    await db.query("SELECT pg_advisory_xact_lock(hashtext('finfolk:site-catalog'))");let count=0;
-   for(const doc of rows.values()){
-    await db.query('INSERT INTO finfolk.beaches(id,name,timezone,area_name,state) VALUES($1,$2,$3,$4,$5) ON CONFLICT(id) DO NOTHING',[doc.id,doc.name,doc.timezone,doc.area_name,doc.state_id]);
-    const inserted=await db.query("INSERT INTO finfolk.site_profiles(id,revision,waterbody,access_mode,status,payload) VALUES($1,1,$2,$3,'published',$4::jsonb) ON CONFLICT(id) DO NOTHING RETURNING id",[doc.id,doc.waterbody,doc.access_mode,JSON.stringify(doc)]);
-    if(inserted.rowCount){const revision=(await db.query("INSERT INTO finfolk.site_revisions(site_id,base_revision,status,payload,reason) VALUES($1,0,'published',$2::jsonb,'Initial sourced catalog import') RETURNING id",[doc.id,JSON.stringify(doc)])).rows[0].id;for(const a of doc.access_points)await db.query('INSERT INTO finfolk.site_access_points(revision_id,mode,payload) VALUES($1,$2,$3::jsonb)',[revision,a.mode,JSON.stringify(a)]);for(const d of doc.depth_evidence)await db.query('INSERT INTO finfolk.site_depth_evidence(revision_id,kind,payload) VALUES($1,$2,$3::jsonb)',[revision,d.kind,JSON.stringify(d)]);count++;}
-   }
+   const documents=JSON.stringify([...rows.values()]);
+   await db.query(`INSERT INTO finfolk.beaches(id,name,timezone,area_name,state)
+     SELECT d->>'id',d->>'name',d->>'timezone',d->>'area_name',d->>'state_id' FROM jsonb_array_elements($1::jsonb) d ON CONFLICT(id) DO NOTHING`,[documents]);
+   const inserted=await db.query(`INSERT INTO finfolk.site_profiles(id,revision,waterbody,access_mode,status,payload)
+     SELECT d->>'id',1,d->>'waterbody',d->>'access_mode','published',d FROM jsonb_array_elements($1::jsonb) d ON CONFLICT(id) DO NOTHING RETURNING id`,[documents]);
+   const ids=inserted.rows.map(r=>r.id);count=ids.length;
+   await db.query(`INSERT INTO finfolk.site_revisions(site_id,base_revision,status,payload,reason)
+     SELECT id,0,'published',payload,'Initial sourced catalog import' FROM finfolk.site_profiles WHERE id=ANY($1::text[])`,[ids]);
+   await db.query(`INSERT INTO finfolk.site_access_points(revision_id,mode,payload)
+     SELECT r.id,d->>'mode',d FROM finfolk.site_revisions r CROSS JOIN LATERAL jsonb_array_elements(r.payload->'access_points') d WHERE r.site_id=ANY($1::text[])`,[ids]);
+   await db.query(`INSERT INTO finfolk.site_depth_evidence(revision_id,kind,payload)
+     SELECT r.id,d->>'kind',d FROM finfolk.site_revisions r CROSS JOIN LATERAL jsonb_array_elements(r.payload->'depth_evidence') d WHERE r.site_id=ANY($1::text[])`,[ids]);
    await db.query("UPDATE finfolk.site_catalog SET metadata=CASE WHEN metadata ? 'states' THEN metadata ELSE $1::jsonb END,revision=revision+$2 WHERE id=1",[JSON.stringify(metadata),count>0?1:0]);
    await db.query('COMMIT');console.log('Catalog seeded:',count,'new sites;',rows.size,'input records. Reviewed records preserved.');
   }catch(e){await db.query('ROLLBACK');throw e;}

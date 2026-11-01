@@ -18,7 +18,7 @@ export function hydrateSiteCatalog(directory,atlas){
   site.state=states.get(site.state_id)||site.state||site.state_id;site.region_name=site.area_name;
   // Inland locations never inherit a coastal package from their nearest region.
   if(isInland(site)||!atlas.regions.some(r=>r.id===site.region))site.region='site-'+site.id;
-  if(!atlas.regions.some(r=>r.id===site.region))atlas.regions.push({id:site.region,name:site.name,state:site.state,center:site.point,bbox:[site.point[0]-.03,site.point[1]-.03,site.point[0]+.03,site.point[1]+.03],zoom:14,rasters:[],tiles:{},contours:null,contour_file:null,status:'empty',notes:'No surveyed depth data is published for this dive site.',attribution:'See the site source records.',licence:'See source records'});
+  if(!atlas.regions.some(r=>r.id===site.region))atlas.regions.push({id:site.region,name:site.name,state:site.state,center:site.point,bbox:[site.point[0]-.03,site.point[1]-.03,site.point[0]+.03,site.point[1]+.03],zoom:14,rasters:[],tiles:{},contours:null,contour_file:null,status:'empty',site_only:true,map_attribution:'OpenStreetMap contributors · site sources listed in details',notes:'No surveyed depth data is published for this dive site.',attribution:'See the site source records.',licence:'See source records'});
  }
  for(const area of areas.values()){
   const sites=directory.beaches.filter(s=>s.area_id===area.id);if(!sites.length)continue;

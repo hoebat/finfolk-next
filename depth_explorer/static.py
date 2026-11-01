@@ -255,6 +255,7 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
         write("data/downloads.json", json.dumps({"version": 1, "revision": revision, "files": files, "regions": packages}, separators=(",", ":")).encode())
         shell = ["./", "./index.html"] + ["./" + name for name in assets.values()] + ["./" + name for name in ("finfolk-logo.jpeg", "finfolk-icon.svg", "neon-config.json") if (stage / name).exists()]
         shell += ["./" + name for name in web_files if name.startswith("workers/") and name not in assets]
+        shell.append("./workers/finfolk.sharedworker.js?protocol=2")
         worker = (PROJECT / "js/finfolk-next/site/web-main/src/sw-template.js").read_text().replace("__SHELL__", json.dumps(shell)).replace("__VERSION__", digest)
         write("sw.js", worker.encode())
         report = {"bytes": total, "assets": assets, "regions": {r["id"]: {"rasters": len(r["rasters"]), "tiles": len(r["tiles"]), "status": r["status"]} for r in catalog["regions"]}, "built_at": catalog["built_at"]}

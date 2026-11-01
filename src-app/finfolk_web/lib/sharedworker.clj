@@ -6,6 +6,8 @@
 (def.js Clients (new Set))
 (def.js Host nil)
 (def.js Kernel nil)
+(def.js Generation 0)
+(def.js Uncertain (new Map))
 (defn.js send [client message]
   (try (. (. client ["port"]) (postMessage message)) (catch error nil)))
 (defn.js attach [client]
@@ -22,6 +24,8 @@
     (when -/Host (-/send -/Host {"type" "spawn"}))))
 (defn.js uncertain [client]
   (for:iter [write (. (. client ["writes"]) (values))]
+    (:= -/Generation (+ -/Generation 1))
+    (. -/Uncertain (set (+ (. write ["scope"]) "|" (. write ["domain"])) -/Generation))
     (for:iter [target -/Clients]
       (-/send target {"type" "uncertain" "scope" (. write ["scope"]) "domain" (. write ["domain"])})))
   (. (. client ["writes"]) (clear)))
@@ -74,11 +78,17 @@
         (var spec (. registry/operations [(. data ["name"])]))
         (when (and spec (. spec ["write"]))
           (. (. client ["writes"]) (set (. data ["id"]) {"scope" (. data ["scope"]) "domain" (. spec ["domain"])}))))
-      (. (. client ["kernel"]) (postMessage data)))))
+      (var spec (. registry/operations [(. data ["name"])]))
+      (var fence (. -/Uncertain (get (+ (. data ["scope"]) "|" (and spec (. spec ["domain"]))))))
+      (if (and spec (. spec ["write"]) fence (>= fence (. client ["born"])))
+        (do (. (. client ["writes"]) (delete (. data ["id"])))
+          (-/send client {"type" "result" "id" (. data ["id"]) "error" {"message" "Reload before making another change: confirm whether the previous change was saved." "mutationOutcomeUnknown" true}}))
+        (. (. client ["kernel"]) (postMessage data))))))
 (defn.js start []
   (:= (. globalThis ["onconnect"])
     (fn [event]
-      (var client {"port" (. event ["ports"] [0]) "seen" (Date.now) "active" true "writes" (new Map)})
+      (:= -/Generation (+ -/Generation 1))
+      (var client {"born" -/Generation "port" (. event ["ports"] [0]) "seen" (Date.now) "active" true "writes" (new Map)})
       (. -/Clients (add client))
       (:= (. (. client ["port"]) ["onmessage"]) (fn [event] (-/message client event)))
       (. (. client ["port"]) (start))

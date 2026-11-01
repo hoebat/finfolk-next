@@ -48,7 +48,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".checkin_record(
   i_beach_id TEXT
 ) RETURNS JSONB AS $$
 
-  WITH eligible AS (SELECT "id","timezone" FROM "finfolk"."beaches" WHERE ("id" = i_beach_id) AND EXISTS (SELECT 1 FROM "finfolk"."members" WHERE ("user_id" = "finfolk_rpc".actor_id()) AND ("deleted" = false) AND "finfolk_rpc".member_permitted(true))), inserted AS (  
+  WITH eligible AS (SELECT "id","timezone" FROM "finfolk"."beaches" WHERE ("id" = i_beach_id) AND NOT EXISTS (SELECT 1 FROM "finfolk"."site_profiles" WHERE ("id" = i_beach_id) AND ("status" = 'archived')) AND EXISTS (SELECT 1 FROM "finfolk"."members" WHERE ("user_id" = "finfolk_rpc".actor_id()) AND ("deleted" = false) AND "finfolk_rpc".member_permitted(true))), inserted AS (  
     INSERT INTO "finfolk"."checkins" ("user_id","beach_id","visit_day") SELECT
       "finfolk_rpc".actor_id(),
       "id",

@@ -120,7 +120,7 @@ def prepare(stage,write,catalog,store=None):
     context_source=(store.load().get('context_contours',{}).get('ausbathy-2024-shallow-5m',{}) if store else {})
     for beach in output['beaches']:
         nearby=[distance(beach['point'],s['point']) for s in checked if distance(beach['point'],s['point'])<=25000]
-        beach['nearby_checked_stays']=len(nearby);beach['nearest_checked_stay_km','waterbody','access_mode','features','access_points','depth_evidence','requirements','booking_url','activity_status','reviewed_at']=round(min(nearby)/1000,1) if nearby else None
+        beach['nearby_checked_stays']=len(nearby);beach['nearest_checked_stay_km']=round(min(nearby)/1000,1) if nearby else None
     for a in output['areas']:
         members=[b for b in output['beaches'] if b['area_id']==a['id']]
         area_surveys=set(national.get('coverage_by_area',{}).get(a['id'],[]))

@@ -7,6 +7,10 @@ export var Host = null;
 
 export var Kernel = null;
 
+export var Generation = 0;
+
+export var Uncertain = new Map();
+
 export function send(client,message){
   try{
     client["port"].postMessage(message);
@@ -42,6 +46,8 @@ export function elect(){
 
 export function uncertain(client){
   for(let write of client["writes"].values()){
+    Generation = (Generation + 1);
+    Uncertain.set(write["scope"] + "|" + write["domain"],Generation);
     for(let target of Clients){
       send(target,{
         "type":"uncertain",
@@ -152,14 +158,31 @@ export function message(client,event){
           client["writes"].set(data["id"],{"scope":data["scope"],"domain":spec["domain"]});
         }
       }
-      client["kernel"].postMessage(data);
+      let spec = registry.operations[data["name"]];
+      let fence = Uncertain.get(data["scope"] + "|" + (spec && spec["domain"]));
+      if(spec && spec["write"] && fence && (fence >= client["born"])){
+        client["writes"].delete(data["id"]);
+        send(client,{
+          "type":"result",
+          "id":data["id"],
+          "error":{
+                    "message":"Reload before making another change: confirm whether the previous change was saved.",
+                    "mutationOutcomeUnknown":true
+                  }
+        });
+      }
+      else{
+        client["kernel"].postMessage(data);
+      }
     }
   }
 }
 
 export function start(){
   globalThis["onconnect"] = (function (event){
+    Generation = (Generation + 1);
     let client = {
+      "born":Generation,
       "port":event["ports"][0],
       "seen":Date.now(),
       "active":true,

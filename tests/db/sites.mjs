@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import pg from 'pg';
 import {connect,migrate,apiDatabase} from './harness.mjs';
 import {createAPI} from '../../backend/api.mjs';
+import {recordMemberCheckin} from '../../backend/backbone.mjs';
 import {siteDocument,parseSiteImport} from '../../backend/sites.mjs';
 const owner=await connect(),pool=new pg.Pool({connectionString:process.env.FINFOLK_TEST_DATABASE_URL,max:8,options:'-c role=finfolk_api'}),db=apiDatabase(pool);
 const env={ENVIRONMENT:'next',DB_BACKBONE_ENABLED:'true',INSTAGRAM_ADMIN_IDS:'alice'};
@@ -46,7 +47,7 @@ try{
  const failed=await raw('/v1/admin/sites/imports/'+batch.id+'/publish',{actor:'alice',body:{confirmed:true,versions}});assert.equal(failed.status,409);assert.equal((await raw('/v1/sites/import-boat')).status,404,'import rolls back earlier publications on later conflict');
  const boat=await draft(doc('boat',{waterbody:'ocean',access_mode:'boat_only',access_points:[{name:'Departure',mode:'departure',point:[145.1,-38.1],source_url:'https://example.org/departure'}]}));await publish(boat);assert.equal((await request('/v1/sites/boat')).entry_documented,false);
  const history=await owner.query("INSERT INTO finfolk.checkins(user_id,beach_id,visit_day) VALUES('bob','lake','2026-11-01') RETURNING beach_id");assert.equal(history.rows.length,1);
- await publish(await draft(doc('lake',{archived:true})));assert.equal((await raw('/v1/sites/lake')).status,404);assert.equal((await owner.query("SELECT count(*)::int AS n FROM finfolk.checkins WHERE beach_id='lake'")).rows[0].n,1);
+ await publish(await draft(doc('lake',{archived:true})));assert.equal((await raw('/v1/sites/lake')).status,404);await assert.rejects(()=>recordMemberCheckin(db,'bob','lake'),e=>e.status===403);assert.equal((await owner.query("SELECT count(*)::int AS n FROM finfolk.checkins WHERE beach_id='lake'")).rows[0].n,1);
  assert.throws(()=>siteDocument(doc('badboat',{access_mode:'boat_only',access_points:[{mode:'shore',name:'Invalid',point:[145,-38],source_url:'https://example.org'}]})),/boat-only/);
  assert.throws(()=>siteDocument(doc('badurl',{source_url:'javascript:alert(1)'})),/HTTPS/);
  const csv='id,name,state_id,area_name,timezone,longitude,latitude,waterbody,access_mode,source_url\nquoted,"Lake, with a comma",VIC,Region,Australia/Melbourne,145,-38,lake,shore,https://example.org/quoted';assert.equal(parseSiteImport(csv,'csv')[0].name,'Lake, with a comma');

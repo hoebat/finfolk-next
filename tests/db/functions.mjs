@@ -44,5 +44,5 @@ try{
   assert.equal((await owner.query(`SELECT has_function_privilege('finfolk_api',$1,'EXECUTE') AS ok`,['finfolk_rpc.'+name])).rows[0].ok,true,name+' internal API grant');
  }
  await owner.query('BEGIN');await savepoint(owner,async()=>{await owner.query('SET LOCAL ROLE finfolk_untrusted');await assert.rejects(owner.query('SELECT finfolk_rpc.member_profile()'),e=>e.code==='42501');});await owner.query('ROLLBACK');
- console.log('FINFOLKDB_FUNCTIONS_PASS: all six functions, identity/verification, JSON validation, timezone dates, deletion, actor cleanup and real role permissions.');
+ console.log('FINFOLKDB_FUNCTIONS_PASS: member functions and internal site function privileges, identity/verification, JSON validation, timezone dates, deletion, actor cleanup and real role permissions.');
 }finally{await pool.end();await owner.end();}
