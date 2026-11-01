@@ -1,3 +1,4 @@
+import {publicPage} from './public-pages.mjs';
 import { memberProfile, saveMemberProfile, recordMemberCheckin, lookupIdentity } from './backbone.mjs';
 import { registerMessagingAPI,messagingProblem,messagingMemberAction,isMessagingMemberAction } from './messaging-api.mjs';
 import { randomUUID } from 'node:crypto';
@@ -58,6 +59,7 @@ export function createAPI({
 }) {
   const app = new Hono();
   const q = db.query;
+  for(const path of ['/privacy','/data-deletion','/v1/integrations/tiktok/oauth/callback'])app.get(path,c=>publicPage(c.req.path));
   app.use('*', async (c, next) => {
     if(c.req.path.startsWith('/v1/')){const requestId=randomUUID();c.set('requestId',requestId);c.header('X-Request-Id',requestId);}
     const origin = c.req.header('Origin');
@@ -248,13 +250,13 @@ export function createAPI({
     let result;
     if (typeof action === 'string' && action.startsWith('invitation')) return c.json({data:await invitationAction({action,v,uid,q,verified})});
     if (tripActions.has(action)) return c.json({data:await tripAction({action,v,uid,q,env:c.env||{},verified})});
-    if (discoveryActions.has(action)) return c.json({data:await discoveryAction({action,v,uid,env:c.env||{},q})});
+    if (discoveryActions.has(action)) return c.json({data:await discoveryAction({action,v,uid,env:c.env||{},q,fetcher:messagingFetch})});
     if (typeof action === 'string' && action.startsWith('instagram')) {
-      const result = isMessagingMemberAction(action) ? await messagingMemberAction({action,v,uid,env:c.env || {},db,verified}) : await instagramAction({action,v,uid,env:c.env || {},q,db,verified});
+      const result = isMessagingMemberAction(action) ? await messagingMemberAction({action,v,uid,env:c.env || {},db,verified}) : await instagramAction({action,v,uid,env:c.env || {},q,db,verified,fetcher:messagingFetch});
       return c.json({data:result});
     }
     if (['postStatus','followedPosts','post','posts','myPosts','removePost','reportPost','reviewPosts','reviewPost','resolvePostReport','communityMetrics'].includes(action))
-      return c.json({data:await postAction({action,v,uid,env:c.env || {},q,verified,beach})});
+      return c.json({data:await postAction({action,v,uid,env:c.env || {},q,verified,beach,fetcher:messagingFetch})});
     switch (action) {
       case 'profile': {
         const target = await member(v.target);

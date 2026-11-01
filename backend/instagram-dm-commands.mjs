@@ -1,3 +1,4 @@
+import {instagramAccountURL,instagramLinks} from './instagram-urls.mjs';
 import { issueConnectCode } from './instagram-connect.mjs';
 import { commands } from "./messaging-config.mjs";
 import { windowFor } from "./community-core.mjs";
@@ -34,13 +35,14 @@ const beachLabel = (b) =>
 async function claimedMember(q, sender, scope) {
   return (
     await q(
-      `SELECT c.user_id,c.handle,m.profile FROM finfolk.instagram_connections c JOIN finfolk.members m ON m.user_id=c.user_id JOIN neon_auth."user" u ON u.id::text=m.user_id
+      `SELECT c.user_id,c.handle,m.profile FROM finfolk.instagram_connections c JOIN finfolk.members m ON m.user_id=c.user_id JOIN LATERAL (SELECT (finfolk_rpc.auth_identity(m.user_id)->>'verified')::boolean AS "emailVerified",false AS banned) u ON true
     WHERE c.sender_id=$1 AND c.provider_scope=$2 AND c.status='connected' AND NOT m.deleted AND u."emailVerified" AND coalesce(u.banned,false)=false FOR UPDATE OF m`,
       [sender, scope],
     )
   )[0];
 }
 export async function commandResult(q, event, env, identity, identityError) {
+  const accountURL=instagramAccountURL(env);
   if (event.command === "ping")
     return "Pong. Reference: " + event.correlation_id;
   if (event.command === "prompt") {
@@ -54,9 +56,9 @@ export async function commandResult(q, event, env, identity, identityError) {
   }
   if (["help", "unknown"].includes(event.command))
     return event.command === "help"
-      ? helpText(env.MESSAGING_ENABLED_COMMANDS)
+      ? instagramLinks(helpText(env.MESSAGING_ENABLED_COMMANDS),env)
       : "I don’t recognise that command.\n\n" +
-          helpText(env.MESSAGING_ENABLED_COMMANDS);
+          instagramLinks(helpText(env.MESSAGING_ENABLED_COMMANDS),env);
   if (event.command === "claim_retired") return "/claim has been retired. Follow @finfolk.com.au and send /connect to receive a code, then enter it on FinFolk: " + accountURL;
   if (event.command === "connect") return issueConnectCode(q, event, env, identity);
   const owner = await claimedMember(

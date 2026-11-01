@@ -1,3 +1,4 @@
+import {instagramLinks} from './instagram-urls.mjs';
 import {
   instagramFollowerProof,
   proofMatches,
@@ -8,6 +9,7 @@ import {
   ingestInstagramMedia,
 } from "./instagram-discovery.mjs";
 import { windowFor } from "./community-core.mjs";
+import { instagramContentClient } from "./instagram-content.mjs";
 const account = "https://finfolk.com.au/?view=account";
 const hash = (s) => createHash("sha256").update(s).digest("hex");
 const numeric = (s) => /^\d{1,40}$/.test(String(s || ""));
@@ -80,7 +82,7 @@ async function member(q, actor, ns) {
     await q(
       `SELECT c.user_id,c.handle,c.media_owner_id,c.share_posts,c.sender_id,c.provider_scope,c.identity_version,m.profile FROM finfolk.instagram_comment_identities i
     JOIN finfolk.instagram_connections c ON c.user_id=i.user_id AND c.sender_id=i.sender_id AND c.handle=i.handle AND c.provider_scope=i.connection_scope AND c.identity_version=i.connection_version AND c.status='connected'
-    JOIN finfolk.members m ON m.user_id=c.user_id JOIN neon_auth."user" u ON u.id::text=m.user_id
+    JOIN finfolk.members m ON m.user_id=c.user_id JOIN LATERAL (SELECT (finfolk_rpc.auth_identity(m.user_id)->>'verified')::boolean AS "emailVerified",false AS banned) u ON true
     WHERE i.actor_id=$1 AND i.namespace=$2 AND NOT m.deleted AND u."emailVerified" AND NOT coalesce(u.banned,false) FOR UPDATE OF m`,
       [actor, ns],
     )
@@ -291,9 +293,9 @@ export async function processCommentCommand(
       // Code possession plus provider-fetched handle and existing DM claim, never a handle-only match.
       await q(
         `UPDATE finfolk.instagram_comment_identities i SET actor_id=$1,challenge_hash=null,expires_at=null,updated_at=now()
-        FROM finfolk.instagram_connections c,finfolk.members m,neon_auth."user" u
+        FROM finfolk.instagram_connections c,finfolk.members m
         WHERE i.challenge_hash=$2 AND i.expires_at>now() AND i.namespace=$3 AND c.user_id=i.user_id AND c.status='connected'
-        AND c.sender_id=i.sender_id AND c.provider_scope=i.connection_scope AND c.identity_version=i.connection_version AND c.handle=i.handle AND lower(i.handle)=lower($4) AND m.user_id=i.user_id AND NOT m.deleted AND u.id::text=m.user_id AND u."emailVerified" AND NOT coalesce(u.banned,false)`,
+        AND c.sender_id=i.sender_id AND c.provider_scope=i.connection_scope AND c.identity_version=i.connection_version AND c.handle=i.handle AND lower(i.handle)=lower($4) AND m.user_id=i.user_id AND NOT m.deleted AND (finfolk_rpc.auth_identity(m.user_id)->>'verified')::boolean`,
         [
           actor,
           parsed.args.challengeHash,
@@ -330,13 +332,13 @@ export async function processCommentCommand(
       ],
     );
   });
+  await db.query("UPDATE finfolk.instagram_commands SET reply=replace(reply,'https://finfolk.com.au',$2) WHERE id=$1 AND reply IS NOT NULL AND send_state='pending'",[id,instagramLinks('https://finfolk.com.au',env)]);
   await sendCommandReply(id, env, db, fetcher);
   return true;
 }
 export async function sendCommandReply(id, env, db, fetcher = fetch) {
   if (
-    env.INSTAGRAM_COMMAND_REPLIES_ENABLED !== "true" ||
-    !env.INSTAGRAM_ACCESS_TOKEN
+    env.INSTAGRAM_COMMAND_REPLIES_ENABLED !== "true"
   )
     return;
   const candidate = (
@@ -345,6 +347,10 @@ export async function sendCommandReply(id, env, db, fetcher = fetch) {
       [id],
     )
   )[0];
+  if (!candidate) return;
+  // Resolve authorization before claiming a send. Missing permissions or a
+  // provider outage must leave pending replies recoverable, not uncertain.
+  const client = await instagramContentClient(env, db.query, { capability: "comments", fetcher });
   const personal = candidate && !["help", "status"].includes(candidate.command);
   const proof =
     personal && candidate.owner_id
@@ -361,6 +367,7 @@ export async function sendCommandReply(id, env, db, fetcher = fetch) {
     return;
   const row = await db.transaction(async (q) => {
     await q("SELECT pg_advisory_xact_lock(76425385)");
+    if (!(await client.current(q))) return null;
     const pending = (
       await q(
         "SELECT * FROM finfolk.instagram_commands WHERE id=$1 AND send_state='pending' AND reply IS NOT NULL FOR UPDATE",
@@ -368,6 +375,10 @@ export async function sendCommandReply(id, env, db, fetcher = fetch) {
       )
     )[0];
     if (!pending) return null;
+    if (pending.namespace !== 'facebook-comments:' + client.appId + ':' + client.accountId) {
+      await q("UPDATE finfolk.instagram_commands SET send_state='skipped',updated_at=now() WHERE id=$1", [id]);
+      return null;
+    }
     const limits = (
       await q(
         `SELECT count(*)::int AS brand,
@@ -406,28 +417,14 @@ export async function sendCommandReply(id, env, db, fetcher = fetch) {
   if (!row) return;
   let replyId = null;
   try {
-    if (
-      !/^v\d+\.0$/.test(env.INSTAGRAM_GRAPH_VERSION || "") ||
-      !numeric(env.INSTAGRAM_ACCOUNT_ID)
-    )
-      throw Error("Invalid configuration");
     const path =
       row.context === "owned"
         ? row.id + "/replies"
-        : env.INSTAGRAM_ACCOUNT_ID + "/mentions";
+        : client.accountId + "/mentions";
     const body = new URLSearchParams({ message: row.reply });
     if (row.context === "mention") body.set("comment_id", row.id);
-    const response = await fetcher(
-      `https://graph.facebook.com/${env.INSTAGRAM_GRAPH_VERSION}/${path}`,
-      {
-        method: "POST",
-        headers: { Authorization: "Bearer " + env.INSTAGRAM_ACCESS_TOKEN },
-        body,
-        signal: AbortSignal.timeout(15000),
-      },
-    );
-    const output = await response.json();
-    if (response.ok && numeric(output.id)) replyId = String(output.id);
+    const output = await client.request(path, {}, { method: "POST", body });
+    if (numeric(output.id)) replyId = String(output.id);
   } catch {}
   // Any non-confirmed POST is ambiguous. Admin reconciles; automatic retries never resend.
   await db.query(
