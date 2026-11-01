@@ -2,7 +2,8 @@
   "Browser bindings for admin; HTTP permissions remain server-owned.")
 
 (def OPERATIONS
- {"messagingAuthorize" {"admin" true
+ {"messagingAuthorizationDiagnostics" {"admin" true "auth" true "domain" "admin" "method" "GET" "name" "messagingAuthorizationDiagnostics" "path" "/v1/admin/messaging/instagram/authorization/diagnostics" "transport" "rest" "write" false}
+ "messagingAuthorize" {"admin" true
  "auth" true
  "domain" "admin"
  "method" "POST"

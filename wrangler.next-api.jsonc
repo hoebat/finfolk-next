@@ -19,6 +19,53 @@
     "NEON_AUTH_JWKS_URL": "https://ep-spring-recipe-a74ty1t5.neonauth.ap-southeast-2.aws.neon.tech/finfolk_next/auth/.well-known/jwks.json",
     "DB_BACKBONE_ENABLED": "true",
     "DB_SQL_SHA": "3e5358d7d01aad17b2eaa95344a9a6fa8701550e7c88ee83fe0db13887f32a0a",
-    "ENVIRONMENT": "next"
+    "ENVIRONMENT": "next",
+    "INSTAGRAM_ENABLED": "false",
+    "INSTAGRAM_COMMAND_REPLIES_ENABLED": "false",
+    "INSTAGRAM_COMMAND_CHECKINS_ENABLED": "false",
+    "INSTAGRAM_COMMAND_PUBLICATION_ENABLED": "false",
+    "INSTAGRAM_DM_ENABLED": "false",
+    "INSTAGRAM_DM_FEEDBACK_ENABLED": "true",
+    "INSTAGRAM_AUTO_CLAIM_ENABLED": "false",
+    "COMMUNITY_POSTS_ENABLED": "false",
+    "COMMUNITY_PILOT_BEACHES": "",
+    "INSTAGRAM_APP_ID": "1667613151655339",
+    "INSTAGRAM_GRAPH_VERSION": "v26.0",
+    "INSTAGRAM_DISCOVERY_ENABLED": "false",
+    "INSTAGRAM_PUBLICATION_ENABLED": "false",
+    "INSTAGRAM_HASHTAGS_ENABLED": "false",
+    "INSTAGRAM_ACCOUNT_ID": "17841461601419539",
+    "INSTAGRAM_MESSAGING_GRAPH_VERSION": "v26.0",
+    "INSTAGRAM_MESSAGING_REDIRECT_URI": "https://api.finfolk.com.au/v1/integrations/instagram/oauth/callback",
+    "INSTAGRAM_MESSAGING_PROVIDER": "instagram-facebook",
+    "INSTAGRAM_MESSAGING_PAGE_ID": "1387107281155901",
+    "INSTAGRAM_MESSAGING_META_APP_ID": "1667613151655339",
+    "INSTAGRAM_MESSAGING_LOGIN_CONFIG_ID": "2606242293176301",
+    "INSTAGRAM_MESSAGING_ACCOUNT_ID": "17841461601419539",
+    "FINFOLK_PUBLIC_URL": "https://next.finfolk.com.au",
+    "INSTAGRAM_NEXT_INGRESS_ENABLED": "false",
+    "INSTAGRAM_ADMIN_IDS": "80f5d7fb-2d56-449d-884c-e1f5b501ec49"
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "INSTAGRAM_QUEUE",
+        "queue": "finfolk-next-instagram"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "finfolk-next-instagram",
+        "max_batch_size": 5,
+        "max_retries": 5,
+        "dead_letter_queue": "finfolk-next-instagram-dead-letter"
+      }
+    ]
+  },
+  "triggers": {
+    "crons": [
+      "* * * * *",
+      "*/15 * * * *"
+    ]
   }
 }

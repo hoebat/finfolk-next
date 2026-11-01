@@ -1,3 +1,4 @@
+import {instagramAccountURL} from './instagram-urls.mjs';
 import { randomBytes } from 'node:crypto';
 import { digest, messagingConfig, messagingError, runtimeEnv, modeAllows } from './messaging-config.mjs';
 import { InstagramProvider } from './instagram-provider.mjs';
@@ -23,7 +24,7 @@ export async function issueConnectCode(q, event, env, identity) {
   const scope = env.MESSAGING_PROVIDER_SCOPE;
   await q('SELECT pg_advisory_xact_lock(hashtextextended($1,0))', ['connect:'+scope+':'+event.sender_id]);
   if ((await q("SELECT 1 FROM finfolk.instagram_connections WHERE provider_scope=$1 AND sender_id=$2 AND status='connected'", [scope,event.sender_id])).length)
-    return guidance('Your Instagram account is already connected to FinFolk. Manage it at https://finfolk.com.au/?view=account&tab=instagram');
+    return guidance('Your Instagram account is already connected to FinFolk. Manage it at '+instagramAccountURL(env));
   if (await connectLimit(q, 'issue:'+digest(scope+':'+event.sender_id), 10) > 3)
     return guidance('Too many connection codes requested. Wait 10 minutes, then send /connect again.');
   await q('UPDATE finfolk.instagram_connect_codes SET invalidated=true WHERE provider_scope=$1 AND sender_id=$2 AND consumed_by IS NULL', [scope,event.sender_id]);
@@ -33,7 +34,7 @@ export async function issueConnectCode(q, event, env, identity) {
     row = (await q(`INSERT INTO finfolk.instagram_connect_codes(code_hash,sender_id,handle,provider_scope,generation,event_id)
       VALUES($1,$2,$3,$4,$5,$6) ON CONFLICT(code_hash) DO NOTHING RETURNING id`,[digest(code),event.sender_id,identity.handle,scope,event.generation,event.id]))[0];
   } while (!row);
-  return { kind:'connect_code', id:row.id, body:`Your FinFolk code: ${code.slice(0,4)} ${code.slice(4)}\nEnter it at https://finfolk.com.au/?view=account&tab=instagram\nExpires in 10 minutes. Only enter this code on FinFolk; don’t share it with anyone.` };
+  return { kind:'connect_code', id:row.id, body:`Your FinFolk code: ${code.slice(0,4)} ${code.slice(4)}\nEnter it at ${instagramAccountURL(env)}\nExpires in 10 minutes. Only enter this code on FinFolk; don’t share it with anyone.` };
 }
 export async function prepareConnect({db,uid,env,code,clientIP,verified,fetcher=fetch}) {
   verified();
@@ -65,7 +66,7 @@ export async function redeemConnect(q,{uid,env,proof}) {
     throw messagingError('connect_unavailable','Connection settings changed. Send /connect again.',409);
   // Match legacy /claim and disconnect ordering before taking the member lock.
   await q('SELECT user_id FROM finfolk.instagram_claims WHERE user_id=$1 FOR UPDATE',[uid]);
-  const member=(await q(`SELECT m.user_id FROM finfolk.members m JOIN neon_auth."user" u ON u.id::text=m.user_id
+  const member=(await q(`SELECT m.user_id FROM finfolk.members m JOIN LATERAL (SELECT (finfolk_rpc.auth_identity(m.user_id)->>'verified')::boolean AS "emailVerified",false AS banned) u ON true
     WHERE m.user_id=$1 AND NOT m.deleted AND u."emailVerified" AND NOT coalesce(u.banned,false) FOR UPDATE OF m`,[uid]))[0];
   if (!member) throw messagingError('email_verification_required','Verify your FinFolk email and sign in again.',403);
   await q('SELECT pg_advisory_xact_lock(hashtextextended($1,0))',['connect:'+proof.config.scope+':'+proof.challenge.sender_id]);

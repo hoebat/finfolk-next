@@ -117,10 +117,10 @@ export async function renderMessagingSettings({ host, api }) {
       ["Personal-command follower verification", state.checks.followLookup],
       ["Real-account acceptance", state.checks.liveDelivery],
       [
-        state.provider === "instagram-unified"
-          ? "Business authorization"
+        ["instagram-unified","instagram-facebook"].includes(state.provider)
+          ? "Meta authorization"
           : "Token refresh",
-        state.provider === "instagram-unified"
+        ["instagram-unified","instagram-facebook"].includes(state.provider)
           ? state.checks.authorization
           : state.checks.tokenRefresh !== false,
       ],

@@ -36,7 +36,7 @@ async function compress(directory) {
 await compress(root);
 const config=JSON.parse(await readFile(resolve(root,'neon-config.json'),'utf8'));
 if(!config.enabled || config.authUrl!==environment.authUrl || config.apiUrl!=='https://next.finfolk.com.au/')throw Error('Preview isolation verification failed.');
-config.backbone=true;config.googleEnabled=false;config.environment='next';config.sqlSha=environment.sqlSha;
+config.instagram={...config.instagram,enabled:true};config.backbone=true;config.googleEnabled=true;config.environment='next';config.sqlSha=environment.sqlSha;
 config.cacheBackend=process.env.NEXT_CACHE_BACKEND==='memory'?'memory':'sqlite';
 await writeFile(resolve(root,'neon-config.json'),JSON.stringify(config));
 console.log('FinFolk Next built with isolated account access and substrate models.');

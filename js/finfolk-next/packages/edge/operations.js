@@ -656,6 +656,16 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "messagingAuthorizationDiagnostics":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"GET",
+    "name":"messagingAuthorizationDiagnostics",
+    "path":"/v1/admin/messaging/instagram/authorization/diagnostics",
+    "transport":"rest",
+    "write":false
+  },
   "instagramStatus":{
     "auth":true,
     "domain":"instagram",

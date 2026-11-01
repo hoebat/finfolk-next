@@ -1,10 +1,11 @@
 import {lookupIdentity} from './backbone.mjs';
-export const messagingReturnURL=env=>(env.ENVIRONMENT==='next'?'https://next.finfolk.com.au':'https://finfolk.com.au')+'/?view=account&tab=settings&messaging=connected';
+export const messagingReturnURL=env=>new URL('/?view=account&tab=settings&messaging=connected',env.FINFOLK_PUBLIC_URL || (env.ENVIRONMENT==='next'?'https://next.finfolk.com.au':'https://finfolk.com.au')).href;
 import { connectEnabled, prepareConnect, redeemConnect } from './instagram-connect.mjs';
 import {
   stageMessagingAuthorization,
   completeMessagingAuthorization,
 } from "./messaging-authorization.mjs";
+import { authorizationDiagnostics } from "./messaging-diagnostics.mjs";
 import { readLimited } from "./messaging-http.mjs";
 import { randomBytes, randomUUID } from "node:crypto";
 import { preferences } from "./community-core.mjs";
@@ -340,6 +341,11 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
   app.get("/v1/admin/messaging/instagram", async (c) =>
     respond(c, await readiness(db.query, c.env || {})),
   );
+  app.get(
+    "/v1/admin/messaging/instagram/authorization/diagnostics",
+    async (c) =>
+      respond(c, await authorizationDiagnostics(db, c.env || {}, fetcher)),
+  );
   app.put("/v1/admin/messaging/instagram", (c) =>
     mutation(c, async (input, ctx) => {
       only(input, ["mode", "enabledCommands", "pilotSenderIds", "acceptance"]);
@@ -389,7 +395,7 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
           );
         const evidence = await ctx.db.query(
           `SELECT e.command,e.sender_id FROM finfolk.instagram_dm_events e JOIN finfolk.messaging_outbox o ON o.event_id=e.id
-    WHERE e.event_id IN ($1::uuid,$2::uuid) AND e.provider_scope=$3 AND e.processing_state='completed' AND o.state='provider_accepted' AND e.created_at>now()-interval '24 hours'`,
+    WHERE e.event_id IN ($1::uuid,$2::uuid) AND e.provider_scope=$3 AND e.processing_state='completed' AND coalesce(e.error,'')='' AND o.state='provider_accepted' AND e.created_at>now()-interval '24 hours'`,
           [
             input.acceptance.pingEventId,
             input.acceptance.helpEventId,
@@ -419,7 +425,7 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
           const publicEvidence = await ctx.db.query(
             `SELECT 1 FROM finfolk.instagram_dm_events e JOIN finfolk.messaging_outbox o ON o.event_id=e.id
              WHERE e.event_id=$1::uuid AND e.provider_scope=$2 AND e.command='help' AND e.owner_id IS NULL
-             AND e.sender_id<>$3 AND e.processing_state='completed' AND o.state='provider_accepted'
+             AND e.sender_id<>$3 AND e.processing_state='completed' AND coalesce(e.error,'')='' AND o.state='provider_accepted'
              AND e.created_at>now()-interval '24 hours'`,
             [
               input.acceptance.nonFollowerHelpEventId,
@@ -707,7 +713,7 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
         [digest(state), ctx.uid, oauthFlowKey(ctx.env)],
       );
       const url = new URL(
-        settings.provider === "instagram-unified"
+        settings.provider !== "instagram-login"
           ? "https://www.facebook.com/dialog/oauth"
           : "https://www.instagram.com/oauth/authorize",
       );
@@ -716,8 +722,21 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
       url.searchParams.set("response_type", "code");
       if (settings.provider === "instagram-unified") {
         url.searchParams.set("config_id", settings.loginConfigId);
+        url.searchParams.set("override_default_response_type", "true");
         url.searchParams.set("display", "popup");
         url.searchParams.set("prompt", "login");
+      } else if (settings.provider === "instagram-facebook") {
+        if (!/^\d{1,40}$/.test(settings.pageId))
+          fail(
+            "oauth_not_configured",
+            "Configure the FinFolk Facebook Page first.",
+            503,
+          );
+        url.searchParams.set(
+          "scope",
+          "instagram_basic,instagram_manage_messages,pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging",
+        );
+        url.searchParams.set("auth_type", "rerequest");
       } else
         url.searchParams.set(
           "scope",
@@ -752,9 +771,7 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch }) {
       fail("invalid_oauth_state", "Authorization state is invalid or expired.");
     const active = (
       await db.query(
-        env.DB_BACKBONE_ENABLED==='true'
-          ? "SELECT 1 FROM finfolk.members m WHERE m.user_id=$1 AND NOT m.deleted AND (finfolk_rpc.auth_identity($1)->>'verified')::boolean"
-          : 'SELECT 1 FROM neon_auth."user" u JOIN finfolk.members m ON m.user_id=u.id::text WHERE m.user_id=$1 AND u."emailVerified" AND NOT coalesce(u.banned,false) AND NOT m.deleted',
+        env.DB_BACKBONE_ENABLED==='true' ? "SELECT 1 FROM finfolk.members m WHERE m.user_id=$1 AND NOT m.deleted AND (finfolk_rpc.auth_identity($1)->>'verified')::boolean" : 'SELECT 1 FROM neon_auth."user" u JOIN finfolk.members m ON m.user_id=u.id::text WHERE m.user_id=$1 AND u."emailVerified" AND NOT coalesce(u.banned,false) AND NOT m.deleted',
         [intent.user_id],
       )
     ).length;

@@ -19,7 +19,7 @@ export async function claimStatus(q,uid,env) {
 // disconnects and command writes for the same FinFolk identity.
 export async function completeInstagramClaim(q,{uid,senderId,handle,actor,codeHash,scope='facebook-login:legacy'}) {
   if(codeHash)throw Object.assign(Error('Use /connect to connect Instagram.'),{status:410,code:'claim_retired'});
-  const identity=(await q(`SELECT m.user_id FROM finfolk.members m JOIN neon_auth."user" u ON u.id::text=m.user_id WHERE m.user_id=$1 AND NOT m.deleted AND u."emailVerified" AND coalesce(u.banned,false)=false FOR UPDATE OF m`,[uid]))[0];
+  const identity=(await q(`SELECT m.user_id FROM finfolk.members m JOIN LATERAL (SELECT (finfolk_rpc.auth_identity(m.user_id)->>'verified')::boolean AS "emailVerified",false AS banned) u ON true WHERE m.user_id=$1 AND NOT m.deleted AND u."emailVerified" AND coalesce(u.banned,false)=false FOR UPDATE OF m`,[uid]))[0];
   if(!identity)fail('Verify your FinFolk email and sign in again before connecting.');
   const current=(await q('SELECT sender_id,status,provider_scope,handle FROM finfolk.instagram_connections WHERE user_id=$1',[uid]))[0];
   if(current?.status==='connected' && (current.provider_scope===scope?current.sender_id!==senderId:current.handle?.toLowerCase()!==handle?.toLowerCase()))fail('Disconnect your current Instagram account in FinFolk before connecting another.');

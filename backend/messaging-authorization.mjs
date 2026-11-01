@@ -101,7 +101,7 @@ export async function completeMessagingAuthorization(
     )[0];
     const active = (
       await q(
-        'SELECT 1 FROM neon_auth."user" u JOIN finfolk.members m ON m.user_id=u.id::text WHERE m.user_id=$1 AND u."emailVerified" AND NOT coalesce(u.banned,false) AND NOT m.deleted FOR SHARE OF m',
+        "SELECT 1 FROM finfolk.members m WHERE m.user_id=$1 AND NOT m.deleted AND (finfolk_rpc.auth_identity(m.user_id)->>'verified')::boolean FOR SHARE OF m",
         [actor],
       )
     ).length;

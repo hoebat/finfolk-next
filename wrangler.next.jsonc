@@ -21,6 +21,7 @@
       "/trips",
       "/trips/*",
       "/community/*",
+      "/instagram/webhook",
       "/instagram/posts",
       "/instagram/posts/*",
       "/shop/checkout",

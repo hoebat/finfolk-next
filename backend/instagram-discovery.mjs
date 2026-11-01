@@ -2,6 +2,9 @@ import {
   instagramFollowerProof,
   proofMatches,
 } from "./instagram-eligibility.mjs";
+import { instagramPublicationProof, instagramPublicationSQL } from "./instagram-publication.mjs";
+import { instagramGraph } from "./instagram-content.mjs";
+export { instagramGraph } from "./instagram-content.mjs";
 import places from "./instagram-places.json" with { type: "json" };
 import { isInstagramAdmin } from "./instagram-actions.mjs";
 import { socialPostURL } from "../js/finfolk-next/site/web-main/src/social-url.js";
@@ -128,12 +131,8 @@ export async function ingestInstagramMedia(
   const auto = !!eligibleForAuto && proofMatches(proof, member);
   const rows = await q(
     `WITH eligibility AS (
-      SELECT $10::boolean AND EXISTS(
-        SELECT 1 FROM finfolk.instagram_connections c JOIN finfolk.members m ON m.user_id=c.user_id
-        JOIN neon_auth."user" u ON u.id::text=m.user_id WHERE c.user_id=$5 AND c.status='connected' AND c.share_posts
-        AND c.provider_scope=$12 AND c.sender_id=$13 AND c.identity_version=$14::uuid
-        AND NOT m.deleted AND u."emailVerified" AND NOT coalesce(u.banned,false)
-      ) AS automatic
+      SELECT $10::boolean AND $5=($12::jsonb)->>'userId' AND $3=($12::jsonb)->>'mediaOwnerId'
+        AND ${instagramPublicationSQL(12, { sharing: true, mediaOwner: true })} AS automatic
     )
     INSERT INTO finfolk.instagram_discoveries(media_id,url,author_id,author,owner_id,caption,posted_at,candidates,beach_id,state,automatic,sources,checked_at)
     SELECT $1,$2,$3,$4,$5,$6,$7,$8::jsonb,$9,CASE WHEN automatic THEN 'published' ELSE 'pending' END,automatic,$11::jsonb,now() FROM eligibility
@@ -151,9 +150,7 @@ export async function ingestInstagramMedia(
       candidates.length === 1 ? candidates[0].id : null,
       auto,
       JSON.stringify([item.source]),
-      proof?.scope || null,
-      proof?.senderId || null,
-      proof?.version || null,
+      JSON.stringify(proof),
     ],
   );
   if (rows[0]) return rows[0];
@@ -162,40 +159,6 @@ export async function ingestInstagramMedia(
     [item.mediaId, item.url, JSON.stringify([item.source])],
   );
   return existing[0];
-}
-export async function instagramGraph(path, env, params = {}, fetcher = fetch) {
-  if (
-    !env.INSTAGRAM_ACCESS_TOKEN ||
-    !/^v\d+\.0$/.test(env.INSTAGRAM_GRAPH_VERSION || "")
-  )
-    fail("Instagram connection is not configured.", 503);
-  if (!/^[A-Za-z0-9_/-]+$/.test(path)) fail("Invalid provider path.");
-  const u = new URL(
-    `https://graph.facebook.com/${env.INSTAGRAM_GRAPH_VERSION}/${path}`,
-  );
-  for (const [k, v] of Object.entries(params))
-    if (v !== null && v !== undefined) u.searchParams.set(k, String(v));
-  const response = await fetcher(u, {
-    headers: { Authorization: `Bearer ${env.INSTAGRAM_ACCESS_TOKEN}` },
-    signal: AbortSignal.timeout(15000),
-  });
-  let body;
-  try {
-    body = await response.json();
-  } catch {
-    fail("Instagram returned an invalid response.", 503);
-  }
-  if (!response.ok || body.error) {
-    const error = Object.assign(Error("Instagram source could not be read."), {
-      status: 503,
-      providerCode: Number(body.error?.code) || 0,
-      providerSubcode: Number(body.error?.error_subcode) || 0,
-      transient: body.error?.is_transient === true,
-      retryAfter: Number(response.headers.get("retry-after")) || 0,
-    });
-    throw error;
-  }
-  return body;
 }
 export async function publicInstagramFeed(q, beachId, cursor) {
   if (!key(beachId)) fail("Choose a valid beach.");
@@ -221,8 +184,8 @@ export async function publicInstagramFeed(q, beachId, cursor) {
     `SELECT d.id,d.url,d.author,d.posted_at,d.created_at,d.created_at::text AS cursor_time,b.name AS beach_name FROM finfolk.instagram_discoveries d JOIN finfolk.beaches b ON b.id=d.beach_id
  WHERE d.beach_id=$1 AND d.state='published' AND (d.created_at,d.id)<($2::timestamptz,$3::uuid)
  AND NOT EXISTS(SELECT 1 FROM finfolk.instagram_suppressed_sources s WHERE s.author_id=d.author_id)
- AND (d.owner_id IS NULL OR EXISTS(SELECT 1 FROM finfolk.members m WHERE m.user_id=d.owner_id AND m.deleted=false))
- AND (NOT d.automatic OR EXISTS(SELECT 1 FROM finfolk.instagram_connections c WHERE c.user_id=d.owner_id AND c.status='connected' AND c.media_owner_id=d.author_id))
+ AND EXISTS(SELECT 1 FROM finfolk.members m JOIN finfolk.instagram_connections c ON c.user_id=m.user_id
+   WHERE m.user_id=d.owner_id AND NOT m.deleted AND c.status='connected' AND c.share_posts AND c.media_owner_id=d.author_id)
  ORDER BY d.created_at DESC,d.id DESC LIMIT 21`,
     [beachId, after, afterId],
   );
@@ -251,7 +214,7 @@ const audit = (q, id, uid, event) =>
     "INSERT INTO finfolk.instagram_discovery_audit(discovery_id,actor,event) VALUES($1,$2,$3)",
     [id, uid, event],
   );
-export async function discoveryAction({ action, v, uid, env, q }) {
+export async function discoveryAction({ action, v, uid, env, q, fetcher = fetch }) {
   const admin = isInstagramAdmin(uid, env);
   if (action === "instagramDiscoveryStatus")
     return {
@@ -326,7 +289,7 @@ export async function discoveryAction({ action, v, uid, env, q }) {
       );
     const media = await instagramGraph(String(v.mediaId), env, {
       fields: "id,owner,username,permalink",
-    });
+    }, fetcher, q);
     if (
       !numeric(media.owner?.id) ||
       String(media.username || "").toLowerCase() !== c.handle.toLowerCase()
@@ -417,45 +380,26 @@ export async function discoveryAction({ action, v, uid, env, q }) {
             .length !== 1
         )
           fail("Choose a beach from the directory.");
-        if (!admin && !["pending", "published"].includes(row.state))
+        if (!["pending", "published"].includes(row.state))
           fail("Only pending or published posts can be placed.");
-        let proof = null;
-        if (!admin) {
-          const c = (
-            await q(
-              "SELECT * FROM finfolk.instagram_connections WHERE user_id=$1 AND status='connected'",
-              [uid],
-            )
-          )[0];
-          if (!c?.share_posts) fail("Enable public sharing first.");
-          proof = await instagramFollowerProof(uid, env, q);
-          if (
-            !proofMatches(proof, c) ||
-            !row.author_id ||
-            c.media_owner_id !== row.author_id
-          )
-            fail(
-              "Verify your current Instagram connection, follow status and post ownership before publishing.",
-            );
-          if (env.INSTAGRAM_PUBLICATION_ENABLED !== "true")
-            fail("Publication is paused.", 503);
-        }
         if (env.INSTAGRAM_PUBLICATION_ENABLED !== "true")
           fail("Publication is paused.", 503);
+        // An administrator reviews the content; the actual owner must still
+        // have a current connected follower identity and sharing consent.
+        const proof = await instagramPublicationProof(row.owner_id, env, q, {
+          authorId: row.author_id, sharing: true, fetcher,
+        });
         const changed = await q(
           `UPDATE finfolk.instagram_discoveries SET beach_id=$2,state='published',automatic=$3,updated_at=now() WHERE id=$1
-          AND ($4::boolean OR EXISTS(SELECT 1 FROM finfolk.instagram_connections c JOIN finfolk.members m ON m.user_id=c.user_id JOIN neon_auth."user" u ON u.id::text=m.user_id
-            WHERE c.user_id=$5 AND c.status='connected' AND c.share_posts AND c.media_owner_id=instagram_discoveries.author_id
-            AND c.provider_scope=$6 AND c.sender_id=$7 AND c.identity_version=$8::uuid AND NOT m.deleted AND u."emailVerified" AND NOT coalesce(u.banned,false))) RETURNING id`,
+          AND state IN ('pending','published') AND owner_id=($4::jsonb)->>'userId'
+          AND author_id=($4::jsonb)->>'mediaOwnerId'
+          AND NOT EXISTS(SELECT 1 FROM finfolk.instagram_suppressed_sources s WHERE s.author_id=instagram_discoveries.author_id)
+          AND ${instagramPublicationSQL(4, { sharing: true, mediaOwner: true })} RETURNING id`,
           [
             row.id,
             v.beachId,
             !admin,
-            admin,
-            uid,
-            proof?.scope || null,
-            proof?.senderId || null,
-            proof?.version || null,
+            JSON.stringify(proof),
           ],
         );
         if (!changed.length)

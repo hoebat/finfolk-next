@@ -27,7 +27,7 @@ try {
  const session=await alice.call('saveSession',{values:{date:'2026-11-01',locationName:'Bondi',beachId:'bondi',notes:'Synthetic private session'}});
  assert.equal((await alice.call('session',{id:session.id})).visibility,'private');await assert.rejects(()=>bob.call('session',{id:session.id}),e=>e.status===404);
  await alice.call('visibility',{id:session.id,visibility:'public'});assert.equal((await bob.call('session',{id:session.id})).notes,'Synthetic private session');await alice.call('deleteSession',{id:session.id});
- const post=await alice.call('post',{beachId:'bondi',url:'https://www.instagram.com/p/FIXTURE/',creatorHandle:'fixture',ownPost:true,tagged:true,publicConsent:true});
+ const post=await alice.call('post',{beachId:'bondi',url:'https://www.tiktok.com/@fixture/video/123456',creatorHandle:'fixture',ownPost:true,tagged:true,publicConsent:true});
  await assert.rejects(()=>bob.call('reviewPosts'),e=>e.status===403);await alice.call('reviewPost',{id:post.id,decision:'approved',ownershipChecked:true,tagChecked:true,beachChecked:true});
  const publicPosts=await app.fetch(new Request('https://next.finfolk.com.au/community/posts?beachId=bondi'),env);assert.equal((await publicPosts.json()).posts.length,1);await alice.call('removePost',{id:post.id});
  const trip=await alice.call('tripSave',{draft:{title:'Fixture trip',authorName:'Alice',beachId:'bondi',start:'2026-11-01',end:'2026-11-01',story:'Synthetic',links:[]}});assert.equal((await alice.call('tripGet',{id:trip.id})).draft.title,'Fixture trip');await assert.rejects(()=>bob.call('tripGet',{id:trip.id}),e=>e.status===404);await alice.call('tripDelete',{id:trip.id});
