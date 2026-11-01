@@ -22,6 +22,14 @@ import_rasters(store,'bondi',[source],metadata(resolution_m=20))
 build(store,root/'site',max_zoom=5)
 `;
   execFileSync(process.env.PYTHON||'python3',['-c',code,temp],{cwd:new URL('..',import.meta.url),stdio:'pipe'});
+  const publication=JSON.parse(await readFile(join(temp,'site/build-report.json'),'utf8'));
+  const cached=await readFile(join(temp,'site/sw.js'),'utf8');
+  for(const asset of ['finfolk-mark.svg','finfolk-wordmark.svg','finfolk-icon.svg','finfolk-touch.png','animal-octopus-v1.webp','animal-octopus-hyper-v1.webp']){
+    assert.ok(publication.assets[asset],asset+' must be fingerprinted');
+    assert.ok(cached.includes(publication.assets[asset]),asset+' must be available offline');
+  }
+  const identityCSS=await readFile(join(temp,'site',publication.assets['identity.css']),'utf8');
+  assert.ok(identityCSS.includes(publication.assets['finfolk-wordmark.svg']),'CSS points to the same versioned artwork as the cache');
   let requests=0;const urls=[];
   const base=new URL('https://example.test/shore-depth-explorer/');
   const fetcher=async function(url){
