@@ -26,7 +26,7 @@ await assert.rejects(worker.queue({messages:[]},env),/release mismatch/);
 await assert.rejects(worker.scheduled({cron:'* * * * *'},env),/release mismatch/);
 assert.equal(closed,opened,'All HTTP and background database connections close');
 assert.ok(isBrowserAPIPath('/instagram/webhook'));
-assert.equal(instagramAccountURL({ENVIRONMENT:'next'}),'https://next.finfolk.com.au/?view=account&tab=instagram');
+assert.equal(instagramAccountURL({ENVIRONMENT:'next'}),'https://finfolk.com.au/?view=account&tab=instagram');
 const config=JSON.parse(await readFile('wrangler.next-api.jsonc','utf8'));
 assert.equal(config.queues.producers[0].queue,'finfolk-next-instagram');
 assert.equal(config.queues.consumers[0].dead_letter_queue,'finfolk-next-instagram-dead-letter');

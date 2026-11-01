@@ -13,6 +13,32 @@ async function init(page,{account='alice',offline=false,environment='test'}={}){
   await window.member.ready;return window.app.storage?.stats();
  },{account,offline,environment});
 }
+test('main-origin shell upgrade preserves saved maps and preferences and bypasses account caching',async({page,context})=>{
+ await page.goto('/__upgrade/index.html?version=legacy');
+ await page.evaluate(async()=>{
+  const {AtlasStore}=await import('/offline-store.js');const store=new AtlasStore();
+  await store.put({key:'saved-upgrade',bytes:3,used:1,data:new Uint8Array([1,2,3]).buffer});
+  await store.meta('saved',[{id:'upgrade',complete:true,keys:['saved-upgrade']}]);
+  localStorage.setItem('finfolk-theme','sand');
+  await navigator.serviceWorker.register('/__upgrade/sw.js?version=legacy',{scope:'/__upgrade/'});
+  await navigator.serviceWorker.ready;
+ });
+ await page.reload();
+ await page.evaluate(async()=>{await navigator.serviceWorker.register('/__upgrade/sw.js?version=substrate',{scope:'/__upgrade/'});});
+ await expect.poll(()=>page.evaluate(async()=>!!(await navigator.serviceWorker.getRegistration('/__upgrade/')).waiting)).toBe(true);
+ await page.goto('/__upgrade/index.html?version=substrate');
+ await expect(page.locator('h1')).toHaveText('substrate');
+ // Closing old controlled clients lets the new shell activate without forcing
+ // a running tab to mix its modules with another release.
+ await page.close();const fresh=await context.newPage();
+ await fresh.goto('/__upgrade/index.html?version=substrate');
+ await expect.poll(()=>fresh.evaluate(()=>navigator.serviceWorker.controller?.scriptURL)).toContain('version=substrate');
+ const saved=await fresh.evaluate(async()=>{const {AtlasStore}=await import('/offline-store.js');const store=new AtlasStore();return {map:!!await store.get('saved-upgrade'),saved:await store.meta('saved'),theme:localStorage.getItem('finfolk-theme')};});
+ expect(saved).toEqual({map:true,saved:[{id:'upgrade',complete:true,keys:['saved-upgrade']}],theme:'sand'});
+ const requests=await fresh.evaluate(async()=>{const a=await fetch('/__upgrade/account'),b=await fetch('/__upgrade/account');return {statuses:[a.status,b.status],a:(await a.json()).request,b:(await b.json()).request};});
+ expect(requests.statuses).toEqual([401,401]);expect(requests.b).toBe(requests.a+1);
+ expect(await fresh.evaluate(async()=>!!await caches.match('/__upgrade/account'))).toBe(false);
+});
 for (const dedicated of [false,true]) test(`Instagram REST mutations retain their method across ${dedicated?'dedicated':'shared'} worker transport`,async({page})=>{
  if(dedicated)await page.addInitScript(()=>{window.SharedWorker=undefined;});
  const source=await readFile('js/finfolk-next/site/web-main/src/neon-client.js','utf8');

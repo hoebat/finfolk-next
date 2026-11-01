@@ -11,14 +11,14 @@ const apiConfig=JSON.parse(await readFile('wrangler.next-api.jsonc','utf8'));
 if(sqlSha!==environment.sqlSha || apiConfig.vars.DB_SQL_SHA!==sqlSha)throw Error('Next release hashes do not match the generated SQL.');
 execFileSync(process.execPath,['scripts/bundle_backbone.mjs'],{stdio:'inherit'});
 const root=resolve('.cache/next-site');
-execFileSync(process.env.PYTHON || '.venv/bin/python',['-m','depth_explorer','build-static','--output',root],{stdio:'inherit',env:{...process.env,NEON_AUTH_BASE_URL:environment.authUrl,NEON_API_URL:'https://next.finfolk.com.au/'}});
-await writeFile(resolve(root,'CNAME'),'next.finfolk.com.au\n');
-await writeFile(resolve(root,'robots.txt'),'User-agent: *\nDisallow: /\n');
-await writeFile(resolve(root,'_headers'),'/*\n  X-Robots-Tag: noindex, nofollow\n');
+execFileSync(process.env.PYTHON || '.venv/bin/python',['-m','depth_explorer','build-static','--output',root],{stdio:'inherit',env:{...process.env,NEON_AUTH_BASE_URL:environment.authUrl,NEON_API_URL:'https://finfolk.com.au/'}});
+await writeFile(resolve(root,'CNAME'),'finfolk.com.au\n');
+await writeFile(resolve(root,'robots.txt'),'User-agent: *\nAllow: /\nSitemap: https://finfolk.com.au/sitemap.xml\n');
+await writeFile(resolve(root,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://finfolk.com.au/</loc></url></urlset>');
+await writeFile(resolve(root,'_headers'),'/sw.js\n  Cache-Control: no-cache\n/neon-config.json\n  Cache-Control: no-store\n/workers/finfolk.sharedworker.js\n  Cache-Control: no-cache\n');
 const index=resolve(root,'index.html');
 let html=await readFile(index,'utf8');
-html=html.replace('<title>FinFolk</title>','<title>FinFolk Next · Preview</title>').replace('</head>','<meta name="robots" content="noindex,nofollow"></head>');
-html=html.replace('</body>','<aside style="position:fixed;bottom:85px;right:12px;z-index:1000;background:#173e48;color:#fff;padding:8px 12px;border-radius:10px;font:12px system-ui;pointer-events:none">FinFolk Next · DSL / Substrate</aside></body>');
+html=html.replace('</head>','<link rel="canonical" href="https://finfolk.com.au/"></head>');
 await writeFile(index,html);
 async function compress(directory) {
  for(const entry of await readdir(directory,{withFileTypes:true})) {
@@ -35,8 +35,8 @@ async function compress(directory) {
 }
 await compress(root);
 const config=JSON.parse(await readFile(resolve(root,'neon-config.json'),'utf8'));
-if(!config.enabled || config.authUrl!==environment.authUrl || config.apiUrl!=='https://next.finfolk.com.au/')throw Error('Preview isolation verification failed.');
+if(!config.enabled || config.authUrl!==environment.authUrl || config.apiUrl!=='https://finfolk.com.au/')throw Error('Production binding verification failed.');
 config.instagram={...config.instagram,enabled:true};config.backbone=true;config.googleEnabled=true;config.environment='next';config.sqlSha=environment.sqlSha;
 config.cacheBackend=process.env.NEXT_CACHE_BACKEND==='memory'?'memory':'sqlite';
 await writeFile(resolve(root,'neon-config.json'),JSON.stringify(config));
-console.log('FinFolk Next built with isolated account access and substrate models.');
+console.log('FinFolk production built with isolated account access and substrate models.');

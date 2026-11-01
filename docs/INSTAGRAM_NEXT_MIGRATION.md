@@ -6,7 +6,7 @@ The API Worker runs HTTP, queue processing and recovery schedules behind the sam
 
 ## Addresses and authorization
 
-`api.finfolk.com.au` moves to `finfolk-next-api`. This preserves Meta's existing `/instagram/webhook` and `/v1/integrations/instagram/oauth/callback` addresses. Next also forwards its same-origin webhook path. Private connect/help links use `FINFOLK_PUBLIC_URL=https://next.finfolk.com.au`.
+`api.finfolk.com.au` moves to `finfolk-next-api`. This preserves Meta's existing `/instagram/webhook` and `/v1/integrations/instagram/oauth/callback` addresses. The main-site Worker also forwards its same-origin webhook path. Private connect/help links use `FINFOLK_PUBLIC_URL=https://finfolk.com.au`.
 
 The existing brand Page grant is verified and encrypted again with a fresh Next key, held in Worker secrets. Only brand authorization and pilot settings are transferred. Direct messages retain the existing pilot audience and commands; comments, discovery and publishing stay disabled. New live acceptance must be recorded from Next events.
 

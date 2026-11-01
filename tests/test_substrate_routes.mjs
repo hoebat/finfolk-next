@@ -22,15 +22,20 @@ assert.throws(()=>restOperation('/v1/unknown'),/Unknown/);
 const config=JSON.parse(await readFile('wrangler.next.jsonc','utf8'));
 const forwarded=[];let assets=0;
 const env={NEXT_API:{async fetch(r){forwarded.push(r);return Response.json({api:true},{status:r.method==='OPTIONS'?200:403});}},ASSETS:{async fetch(){assets++;return new Response('static');}}};
+for(const method of ['GET','POST']){
+ const response=await preview.fetch(new Request('https://www.finfolk.com.au/?view=account&tab=instagram',{method}),env);
+ assert.equal(response.status,308);assert.equal(response.headers.get('Location'),'https://finfolk.com.au/?view=account&tab=instagram');
+}
+assert.deepEqual(config.routes.map(r=>r.pattern),['finfolk.com.au','www.finfolk.com.au']);
 for(const spec of Object.values(operations).filter(o=>o.transport==='rest')){
  const path=spec.path.replace(':id','fixture')+'?cursor=two';
  assert.ok(config.assets.run_worker_first.some(pattern=>pattern.endsWith('*')?path.split('?')[0].startsWith(pattern.slice(0,-1)):path.split('?')[0]===pattern),path+' must run Worker first');
- const req=new Request('https://next.finfolk.com.au'+path,{method:spec.method,headers:{Authorization:'Bearer fixture','Idempotency-Key':'fixture'},...(spec.write?{body:'{"fixture":true}'}:{})});
+ const req=new Request('https://finfolk.com.au'+path,{method:spec.method,headers:{Authorization:'Bearer fixture','Idempotency-Key':'fixture'},...(spec.write?{body:'{"fixture":true}'}:{})});
  const response=await preview.fetch(req,env);assert.equal(response.status,403);assert.equal(forwarded.at(-1).url,req.url);assert.equal(forwarded.at(-1).headers.get('Authorization'),'Bearer fixture');if(spec.write)assert.equal(await forwarded.at(-1).text(),'{"fixture":true}');
 }
-await preview.fetch(new Request('https://next.finfolk.com.au/trips',{method:'OPTIONS'}),env);assert.equal(assets,0);
-await preview.fetch(new Request('https://next.finfolk.com.au/app.js'),env);assert.equal(assets,1);
-assert.equal(new URL(messagingReturnURL({ENVIRONMENT:'next'})).origin,'https://next.finfolk.com.au');assert.equal(new URL(messagingReturnURL({})).origin,'https://finfolk.com.au');
+await preview.fetch(new Request('https://finfolk.com.au/trips',{method:'OPTIONS'}),env);assert.equal(assets,0);
+await preview.fetch(new Request('https://finfolk.com.au/app.js'),env);assert.equal(assets,1);
+assert.equal(new URL(messagingReturnURL({ENVIRONMENT:'next'})).origin,'https://finfolk.com.au');assert.equal(new URL(messagingReturnURL({})).origin,'https://finfolk.com.au');
 // Actual runtime: different inputs retain separate outputs and duplicate reads coalesce.
 let release;const requests=[];const gate=new Promise(resolve=>{release=resolve;});
 const b=createBackbone('route-fixture',async(name,input)=>{requests.push({name,input});if(name==='session'&&input.id==='held')await gate;return {name,input};});

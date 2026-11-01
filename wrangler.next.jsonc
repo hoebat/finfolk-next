@@ -4,10 +4,14 @@
   "main": "backend/preview-worker.mjs",
   "compatibility_date": "2026-10-30",
   "account_id": "b048221dbe18365ea667373f6fda1f73",
-  "workers_dev": true,
+  "workers_dev": false,
   "routes": [
     {
-      "pattern": "next.finfolk.com.au",
+      "pattern": "finfolk.com.au",
+      "custom_domain": true
+    },
+    {
+      "pattern": "www.finfolk.com.au",
       "custom_domain": true
     }
   ],
@@ -15,20 +19,7 @@
     "directory": ".cache/next-site",
     "binding": "ASSETS",
     "run_worker_first": [
-      "/data/*",
-      "/api",
-      "/health",
-      "/trips",
-      "/trips/*",
-      "/community/*",
-      "/privacy",
-      "/data-deletion",
-      "/instagram/webhook",
-      "/instagram/posts",
-      "/instagram/posts/*",
-      "/shop/checkout",
-      "/v1/*",
-      "/_next/*"
+      "/*"
     ]
   },
   "services": [

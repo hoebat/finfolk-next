@@ -1,5 +1,5 @@
 import {lookupIdentity} from './backbone.mjs';
-export const messagingReturnURL=env=>new URL('/?view=account&tab=settings&messaging=connected',env.FINFOLK_PUBLIC_URL || (env.ENVIRONMENT==='next'?'https://next.finfolk.com.au':'https://finfolk.com.au')).href;
+export const messagingReturnURL=env=>new URL('/?view=account&tab=settings&messaging=connected',env.FINFOLK_PUBLIC_URL || 'https://finfolk.com.au').href;
 import { connectEnabled, prepareConnect, redeemConnect } from './instagram-connect.mjs';
 import {
   stageMessagingAuthorization,

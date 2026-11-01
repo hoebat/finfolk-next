@@ -1,6 +1,6 @@
 # FinFolk Next
 
-The Clojure-authored database and substrate backbone for [next.finfolk.com.au](https://next.finfolk.com.au). This is the source of truth for Next development. The `hoebat/finfolk-app` implementation remains a frozen legacy copy; it is not a build dependency.
+The Clojure-authored database and substrate backbone for [finfolk.com.au](https://finfolk.com.au). This is the source of truth for FinFolk production development. The `hoebat/finfolk-app` implementation remains a frozen legacy copy; it is not a build dependency.
 
 ## Source and output
 
@@ -55,15 +55,15 @@ Database coverage includes domain-organized Clojure facts, all 41 table declarat
 
 `make test-browser` runs Chromium, Firefox and WebKit against real SQLite/WASM and IndexedDB, including browser restarts, multiple tabs, writer handoff, offline reads, account erasure and saved-map preservation. CI installs the browsers and OS dependencies and publishes test reports/traces. These tests use synthetic identities; they do not sign in to the deployed site.
 
-## Preview deployment
+## Production deployment
 
 ```sh
 make deploy
 ```
 
-This builds and deploys only `finfolk-next-api` and `finfolk-next-site`, retaining the existing `next.finfolk.com.au` domain, isolated Neon branch/database/Auth service and Hyperdrive binding. The current machine's Wrangler login can be reused. GitHub Actions runs generation checks, tests and builds; it does not deploy automatically or need Cloudflare credentials.
+This builds and deploys `finfolk-next-api` and `finfolk-next-site` on `api.finfolk.com.au` and `finfolk.com.au`, retaining the existing isolated Neon branch/database/Auth service and Hyperdrive binding. The current machine's Wrangler login can be reused. GitHub Actions runs generation checks, tests and builds; it does not deploy automatically or need Cloudflare credentials.
 
-After deployment check [preview health](https://next.finfolk.com.au/_next/health), public routes, account/profile/check-in behavior and sign-out. Rollback uses the preceding Next Worker versions. The production FinFolk site/API are not deployed by this repository.
+After deployment check [production health](https://finfolk.com.au/_next/health), public routes, account/profile/check-in behavior and sign-out. Rollback uses the preceding Next Worker versions. The legacy repository must not publish to the production hostname. See [the cutover runbook](docs/MAIN_SITE_CUTOVER.md).
 
 No SQL installation is performed by generation or ordinary site deployment. For an intentional database release, create a new immutable migration, update release hashes together, and use `make db-release` with ignored `.env.next.local`. That command refuses another database or endpoint. Copy `.env.example` only as a starting point; never commit real credentials. Provider secrets remain in Cloudflare bindings/secrets.
 
