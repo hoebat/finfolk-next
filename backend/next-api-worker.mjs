@@ -1,3 +1,4 @@
+import {publicPage} from './public-pages.mjs';
 import {createAPI,managedVerifier} from './api.mjs';
 import {database} from './db.mjs';
 import {instagramWebhook,processInstagramEvent,reconcileInstagram} from './instagram-webhook.mjs';
@@ -21,6 +22,7 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
  return {
   async fetch(request,env,ctx){
    const path=new URL(request.url).pathname;
+   if(['GET','HEAD'].includes(request.method)){const publication=publicPage(path);if(publication)return request.method==='HEAD'?new Response(null,{status:publication.status,headers:publication.headers}):publication;}
    if(path==='/instagram/webhook' && request.method==='GET' && env.ENVIRONMENT==='next')
     return instagramWebhook(request,env,()=>{throw Error('Verification must be database independent');});
    if(path==='/instagram/webhook' && env.INSTAGRAM_NEXT_INGRESS_ENABLED!=='true')

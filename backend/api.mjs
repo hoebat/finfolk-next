@@ -1,3 +1,4 @@
+import {publicPage} from './public-pages.mjs';
 import { memberProfile, saveMemberProfile, recordMemberCheckin, lookupIdentity } from './backbone.mjs';
 import { registerMessagingAPI,messagingProblem,messagingMemberAction,isMessagingMemberAction } from './messaging-api.mjs';
 import { randomUUID } from 'node:crypto';
@@ -58,6 +59,7 @@ export function createAPI({
 }) {
   const app = new Hono();
   const q = db.query;
+  for(const path of ['/privacy','/data-deletion','/v1/integrations/tiktok/oauth/callback'])app.get(path,c=>publicPage(c.req.path));
   app.use('*', async (c, next) => {
     if(c.req.path.startsWith('/v1/')){const requestId=randomUUID();c.set('requestId',requestId);c.header('X-Request-Id',requestId);}
     const origin = c.req.header('Origin');

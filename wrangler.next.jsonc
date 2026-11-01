@@ -21,6 +21,8 @@
       "/trips",
       "/trips/*",
       "/community/*",
+      "/privacy",
+      "/data-deletion",
       "/instagram/webhook",
       "/instagram/posts",
       "/instagram/posts/*",
