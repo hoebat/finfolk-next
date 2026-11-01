@@ -141,6 +141,11 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
             path.parent.mkdir(parents=True, exist_ok=True)
             path.write_bytes(data)
         web_files = {p.name: p.read_bytes() for p in (PROJECT / "js/finfolk-next/site/web-main/src").iterdir() if p.is_file() and p.name not in ("sw-template.js", "firebase-client.js", "firebase-config.json")}
+        worker_dir = PROJECT / "js/finfolk-next/site/web-main/src/workers"
+        if worker_dir.is_dir():
+            for worker_file in worker_dir.rglob("*"):
+                if worker_file.is_file():
+                    web_files["workers/" + worker_file.relative_to(worker_dir).as_posix()] = worker_file.read_bytes()
         custom_domain = PROJECT / "CNAME"
         if custom_domain.is_file():
             web_files["CNAME"] = custom_domain.read_bytes()
@@ -152,13 +157,18 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
         neon_config.update(authUrl=auth_url, apiUrl=api_url, enabled=bool(auth_url))
         web_files["neon-config.json"] = json.dumps(neon_config).encode()
         digest = hashlib.sha256(b"".join(name.encode() + b"\0" + data for name, data in sorted(web_files.items()))).hexdigest()[:12]
-        assets = {name: f"{Path(name).stem}.{digest}{Path(name).suffix}" for name in web_files if Path(name).suffix in (".js", ".css")}
+        assets = {name: (Path(name).parent / f"{Path(name).stem}.{digest}{Path(name).suffix}").as_posix()
+                  for name in web_files
+                  if ("/" not in name and Path(name).suffix in (".js", ".css"))
+                  or (name.startswith("workers/") and Path(name).name != "finfolk.sharedworker.js" and Path(name).suffix in (".js", ".wasm"))}
         for name, data in web_files.items():
             rendered = data
             if Path(name).suffix in (".js", ".html"):
                 text = data.decode()
                 for original, versioned in assets.items():
                     text = text.replace("./" + original, "./" + versioned)
+                    if name.startswith("workers/") and original.startswith("workers/"):
+                        text = text.replace("./" + Path(original).name, "./" + Path(versioned).name)
                 rendered = text.encode()
             # Keep source URLs for compatibility, but the page loads a versioned module graph.
             write(name, rendered if name == "index.html" else data)
@@ -241,6 +251,7 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
         revision = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
         write("data/downloads.json", json.dumps({"version": 1, "revision": revision, "files": files, "regions": packages}, separators=(",", ":")).encode())
         shell = ["./", "./index.html"] + ["./" + name for name in assets.values()] + ["./" + name for name in ("finfolk-logo.jpeg", "finfolk-icon.svg", "neon-config.json") if (stage / name).exists()]
+        shell += ["./" + name for name in web_files if name.startswith("workers/") and name not in assets]
         worker = (PROJECT / "js/finfolk-next/site/web-main/src/sw-template.js").read_text().replace("__SHELL__", json.dumps(shell)).replace("__VERSION__", digest)
         write("sw.js", worker.encode())
         report = {"bytes": total, "assets": assets, "regions": {r["id"]: {"rasters": len(r["rasters"]), "tiles": len(r["tiles"]), "status": r["status"]} for r in catalog["regions"]}, "built_at": catalog["built_at"]}

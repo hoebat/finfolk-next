@@ -5,6 +5,7 @@
 (defproject hoebat/finfolk-next "0.1.0"
   :description "FinFolk Clojure-authored database and substrate backbone"
   :dependencies [[org.clojure/clojure "1.11.1"]
+                 [org.postgresql/postgresql "42.7.2"]
                  [xyz.zcaudate/lang ~FOUNDATION_VERSION]
                  [xyz.zcaudate/postgres ~FOUNDATION_VERSION]
                  [xyz.zcaudate/js.core ~FOUNDATION_VERSION]

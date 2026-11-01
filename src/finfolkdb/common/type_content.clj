@@ -27,7 +27,7 @@
 ;; Physical table: finfolk.post_reviews
 (deftype.pg ^{:finfolk/constraints ["NOT NULL actor" "NOT NULL created_at" "NOT NULL decision" "NOT NULL id" "PRIMARY KEY (id)" "FOREIGN KEY (post_id) REFERENCES finfolk.posts(id) ON DELETE CASCADE" "NOT NULL post_id" "NOT NULL reason"]}
   post_reviews
-  [:id {:type :bigint :required true :primary true}
+  [:id {:type :bigint :required true :primary true :finfolk/identity "a"}
    :post-id {:type :uuid :required true}
    :actor {:type :text :required true}
    :decision {:type :text :required true}

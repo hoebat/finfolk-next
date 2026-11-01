@@ -1,0 +1,34 @@
+import assert from 'node:assert/strict';
+import {execFile} from 'node:child_process';
+import {promisify} from 'node:util';
+import {readFile,readdir,mkdtemp,cp,writeFile,rm} from 'node:fs/promises';
+import {resolve} from 'node:path';
+import {createHash} from 'node:crypto';
+import {connect} from './harness.mjs';
+const exec=promisify(execFile),db=await connect();
+const env={...process.env,DATABASE_URL_UNPOOLED:process.env.FINFOLK_TEST_DATABASE_URL};
+const migrate=extra=>exec(process.execPath,['scripts/migrate_neon.mjs'],{env:{...env,...extra},maxBuffer:2**20});
+let directory;
+try{
+ await db.query(`DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);`);
+ await migrate({MIGRATIONS_THROUGH:'0016_instagram_connect.sql'});
+ assert.equal((await db.query(`SELECT count(*)::int AS n FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc'`)).rows[0].n,0);
+ await migrate();
+ const before=(await db.query('SELECT * FROM public.finfolk_migrations ORDER BY name')).rows;
+ const files=(await readdir('backend/migrations')).filter(f=>f.endsWith('.sql')).sort();assert.equal(before.length,files.length);
+ await migrate();assert.deepEqual((await db.query('SELECT * FROM public.finfolk_migrations ORDER BY name')).rows,before);
+ const latest=files.filter(n=>/backbone_/.test(n)).at(-1),sha=b=>createHash('sha256').update(b).digest('hex');
+ assert.equal(sha(await readFile('resources/finfolkdb/pilot.sql')),sha(await readFile('backend/migrations/'+latest)));
+ const contracts=JSON.parse(await readFile('js/finfolk-next/site/web-main/src/next-contracts.json','utf8'));assert.equal(Object.keys(contracts).length,3);
+ directory=await mkdtemp(resolve('.cache/migration-fixture-'));await cp('backend/migrations',directory,{recursive:true});
+ await writeFile(directory+'/'+files[0],(await readFile(directory+'/'+files[0],'utf8'))+'\n-- modified fixture\n');
+ await assert.rejects(migrate({FINFOLK_TEST_MIGRATIONS_DIR:directory}),e=>e.stderr.includes('Previously applied migration changed'));
+ assert.deepEqual((await db.query('SELECT * FROM public.finfolk_migrations ORDER BY name')).rows,before);
+ await cp('backend/migrations/'+files[0],directory+'/'+files[0]);
+ await writeFile(directory+'/9999_failure.sql','CREATE TABLE public.should_rollback(id int); SELECT nonexistent_fixture_function();');
+ await assert.rejects(migrate({FINFOLK_TEST_MIGRATIONS_DIR:directory}));
+ assert.equal((await db.query("SELECT to_regclass('public.should_rollback') AS t")).rows[0].t,null);
+ assert.deepEqual((await db.query('SELECT * FROM public.finfolk_migrations ORDER BY name')).rows,before);
+ await assert.rejects(exec(process.execPath,['scripts/release_next_db.mjs'],{env}),e=>e.stderr.includes('Refusing a database outside'));
+ console.log('FINFOLKDB_MIGRATIONS_PASS: ordered upgrades, immutable ledger, reruns, failure rollback, release hash and preview-target guard.');
+}finally{await db.end();if(directory)await rm(directory,{recursive:true,force:true});}

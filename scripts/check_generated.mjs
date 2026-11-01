@@ -7,6 +7,7 @@ try {
  execFileSync(process.execPath,['scripts/bundle_backbone.mjs',root],{stdio:'inherit'});
  const files=JSON.parse(await readFile(root+'/resources/generated-files.json','utf8'));
  files.push('js/finfolk-next/site/web-main/src/next-backbone.js','js/finfolk-next/site/web-main/src/app-backbone.js');
+ files.push(...['kernel.js','finfolk.sharedworker.js','sqlite3.wasm'].map(f=>'js/finfolk-next/site/web-main/src/workers/'+f));
  for(const file of files){const expected=await readFile(root+'/'+file);let actual;try{actual=await readFile(file);}catch{throw Error('Missing generated file: '+file);}if(!expected.equals(actual))throw Error('Stale generated file: '+file+'; run make generate.');}
  console.log('Generated SQL, contracts, workspace modules and browser bundles match Clojure sources.');
 } finally {await rm(root,{recursive:true,force:true});}

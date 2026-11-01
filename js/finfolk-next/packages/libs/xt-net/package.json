@@ -1,0 +1,12 @@
+{
+  "name": "@xtalk/net",
+  "version": "0.1.0",
+  "private": true,
+  "license": "MIT",
+  "exports": {
+    "./*.js": "./*.js"
+  },
+  "dependencies": {
+    "@xtalk/lang": "workspace:*"
+  }
+}

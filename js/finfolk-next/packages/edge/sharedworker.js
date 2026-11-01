@@ -1,0 +1,189 @@
+// Generated from finfolk-web.lib.sharedworker; do not edit.
+import * as registry from '@finfolk/edge/operations.js'
+
+export var Clients = new Set();
+
+export var Host = null;
+
+export var Kernel = null;
+
+export function send(client,message){
+  try{
+    client["port"].postMessage(message);
+  }
+  catch(error){
+    null;
+  }
+}
+
+export function attach(client){
+  let channel = new MessageChannel();
+  client["kernel"] = channel["port2"];
+  channel["port2"]["onmessage"] = (function (event){
+    if(event["data"]["type"] == "result"){
+      client["writes"].delete(event["data"]["id"]);
+    }
+    send(client,event["data"]);
+  });
+  channel["port2"].start();
+  Kernel.postMessage({"type":"connect"},[channel["port1"]]);
+}
+
+export function elect(){
+  if(!Host){
+    Host = Array.from(Clients).find(function (client){
+      return client["active"];
+    });
+    if(Host){
+      send(Host,{"type":"spawn"});
+    }
+  }
+}
+
+export function uncertain(client){
+  for(let write of client["writes"].values()){
+    for(let target of Clients){
+      send(target,{
+        "type":"uncertain",
+        "scope":write["scope"],
+        "domain":write["domain"]
+      });
+    };
+  };
+  client["writes"].clear();
+}
+
+export function restart(){
+  if(Kernel){
+    Kernel.postMessage({"type":"shutdown"});
+    Kernel.close();
+  }
+  if(Host){
+    send(Host,{"type":"stop-kernel"});
+  }
+  Kernel = null;
+  Host = null;
+  for(let client of Clients){
+    uncertain(client);
+    if(client["kernel"]){
+      client["kernel"].close();
+    }
+    client["kernel"] = null;
+    send(client,{"type":"restarting"});
+  };
+  elect();
+}
+
+export function detach(client){
+  uncertain(client);
+  Clients.delete(client);
+  if(client["kernel"]){
+    client["kernel"].postMessage({"type":"detach"});
+    client["kernel"].close();
+  }
+  client["kernel"] = null;
+  if(client == Host){
+    restart();
+  }
+  else{
+    if(!Host){
+      elect();
+    }
+  }
+}
+
+export function message(client,event){
+  let data = event["data"];
+  client["seen"] = Date.now();
+  if(data["type"] == "coordinator"){
+    send(client,{
+      "type":"result",
+      "id":data["id"],
+      "result":{"clients":Clients["size"],"kernel":!!Kernel,"host":!!Host}
+    });
+  }
+  else if(data["type"] == "ping"){
+    send(client,{"type":"pong"});
+    client["active"] = true;
+    if(!Clients.has(client)){
+      Clients.add(client);
+      send(client,{"type":"restarting"});
+      if(Kernel){
+        attach(client);
+      }
+    }
+    if(!Host){
+      elect();
+    }
+  }
+  else if(data["type"] == "yield"){
+    client["active"] = false;
+    if(client == Host){
+      restart();
+    }
+  }
+  else if(data["type"] == "detach"){
+    detach(client);
+  }
+  else if(data["type"] == "kernel"){
+    if((client == Host) && !Kernel){
+      Kernel = event["ports"][0];
+      Kernel.start();
+      for(let target of Clients){
+        attach(target);
+      };
+    }
+  }
+  else if(data["type"] == "kernel-failed"){
+    if(client == Host){
+      for(let target of Clients){
+        send(target,{
+          "type":"fatal",
+          "error":{"message":"SQLite worker could not start."}
+        });
+      };
+    }
+  }
+  else{
+    if(client["kernel"]){
+      if(data["type"] == "call"){
+        let spec = registry.operations[data["name"]];
+        if(spec && spec["write"]){
+          client["writes"].set(data["id"],{"scope":data["scope"],"domain":spec["domain"]});
+        }
+      }
+      client["kernel"].postMessage(data);
+    }
+  }
+}
+
+export function start(){
+  globalThis["onconnect"] = (function (event){
+    let client = {
+      "port":event["ports"][0],
+      "seen":Date.now(),
+      "active":true,
+      "writes":new Map()
+    };
+    Clients.add(client);
+    client["port"]["onmessage"] = (function (event){
+      message(client,event);
+    });
+    client["port"].start();
+    if(Kernel){
+      attach(client);
+    }
+    else{
+      elect();
+    }
+  });
+  setInterval(function (){
+    for(let client of Clients){
+      if((Date.now() - client["seen"]) > 8000){
+        detach(client);
+      }
+    };
+  },2000);
+}
+
+export var Started = start();

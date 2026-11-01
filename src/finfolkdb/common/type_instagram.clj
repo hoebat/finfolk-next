@@ -23,7 +23,7 @@
 ;; Physical table: finfolk.instagram_audit
 (deftype.pg ^{:finfolk/constraints ["FOREIGN KEY (action_id) REFERENCES finfolk.instagram_actions(id) ON DELETE CASCADE" "NOT NULL actor" "NOT NULL created_at" "NOT NULL event" "NOT NULL id" "PRIMARY KEY (id)"]}
   instagram_audit
-  [:id {:type :bigint :required true :primary true}
+  [:id {:type :bigint :required true :primary true :finfolk/identity "a"}
    :action-id {:type :uuid}
    :actor {:type :text :required true}
    :event {:type :text :required true}
@@ -148,7 +148,7 @@
 ;; Physical table: finfolk.instagram_discovery_audit
 (deftype.pg ^{:finfolk/constraints ["NOT NULL actor" "NOT NULL created_at" "FOREIGN KEY (discovery_id) REFERENCES finfolk.instagram_discoveries(id) ON DELETE CASCADE" "NOT NULL event" "NOT NULL id" "PRIMARY KEY (id)"]}
   instagram_discovery_audit
-  [:id {:type :bigint :required true :primary true}
+  [:id {:type :bigint :required true :primary true :finfolk/identity "a"}
    :discovery-id {:type :uuid}
    :actor {:type :text :required true}
    :event {:type :text :required true}
@@ -205,7 +205,7 @@
 ;; Physical table: finfolk.instagram_post_reports
 (deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "NOT NULL day" "FOREIGN KEY (discovery_id) REFERENCES finfolk.instagram_discoveries(id) ON DELETE CASCADE" "NOT NULL discovery_id" "UNIQUE (discovery_id reason day)" "NOT NULL id" "PRIMARY KEY (id)" "CHECK ((reason = ANY (ARRAY['wrong_location'::text 'inappropriate'::text 'removed'::text 'other'::text])))" "NOT NULL reason"]}
   instagram_post_reports
-  [:id {:type :bigint :required true :primary true}
+  [:id {:type :bigint :required true :primary true :finfolk/identity "a"}
    :discovery-id {:type :uuid :required true}
    :reason {:type :text :required true}
    :day {:type :date :required true :finfolk/default-sql "CURRENT_DATE"}

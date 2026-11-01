@@ -3,6 +3,7 @@ node_modules/
 .cache/
 _site/
 target/
+.lang/
 .lein-*
 *.log
 __pycache__/

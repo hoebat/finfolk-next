@@ -12,7 +12,13 @@ The Clojure-authored database and substrate backbone for [next.finfolk.com.au](h
 | Pinned `ref/foundation/src-lang` | Required `@xtalk/*` workspace packages under `js/finfolk-next/packages/libs` |
 | Existing JavaScript in `js/finfolk-next/site/web-main/src` | The DOM/map site and versioned browser bundles |
 
-The backbone implementations are written as genuine `l/script :js` Clojure declarations. Emitted JavaScript is not handwritten or loaded from an old JavaScript implementation. `next-backbone.js` and `app-backbone.js` are esbuild bundles of that emitted code. The shared runtime remains in memory; this migration does not introduce SharedWorker/SQLite or convert the DOM UI to React.
+The backbone implementations are written as genuine `l/script :js` Clojure declarations. `next-backbone.js`, `app-backbone.js` and the worker scripts are esbuild bundles of that emitted code. The DOM/map UI remains authored JavaScript.
+
+Next uses a SharedWorker coordinator and one dedicated worker running xt.substrate models and an xt.db SQLite cache. The coordinator elects a page to host that worker because Chromium does not support spawning it inside a SharedWorker. Ports share reads, mutation ordering and invalidation; navigation remains specific to each tab. A writer lock and kernel epochs fence restarts. An interrupted write is never replayed automatically; an uncertain outcome blocks further writes in that domain until reload.
+
+SQLite WASM 3.54.1 uses OPFS `opfs-sahpool`, with no cross-origin isolation headers. Ordinary public/member reads survive visits. Member data opens only after the existing SDK validates sign-in and is erased on sign-out, authentication rejection or account deletion. Administrative responses, credentials and mutation payloads stay out of persistent storage. Saved results start stale and revalidate online; cached reads can continue during a network outage. Writes require the server.
+
+Large depth files and saved regions stay in IndexedDB. The device-storage panel reports both stores and applies a combined recent-cache budget, preserving pinned regions. Persistence is requested explicitly and remains subject to browser support and available storage. Without SharedWorker or OPFS, SQLite uses an in-memory dedicated/shared worker; a startup failure falls back to the existing memory runtime. Set `cacheBackend` to `memory` in configuration (or build with `NEXT_CACHE_BACKEND=memory`) to roll back the swap.
 
 The table declarations retain the StatsDB-style domain layout. The deployed SQL slice contains profile/check-in and identity functions. Table default/constraint metadata remains an inventory, not a replacement for the full migration history. All existing migrations and the SQL release hash are preserved. The SQL header retains its historical generator label to preserve those exact bytes.
 
@@ -26,6 +32,9 @@ cd finfolk-next
 make bootstrap
 make check-generated
 make test
+make test-db
+corepack yarn playwright install chromium firefox webkit
+make test-browser
 make build
 make dev
 ```
@@ -39,6 +48,12 @@ make dev
 Public survey sources are stored in Git LFS. The frozen national directory and coastline inputs are under `resources/atlas`; a fresh clone can reproduce the public site without a developer's cache. Existing publisher attribution, metadata and survey limitations are retained. To refresh upstream sources deliberately, use the acquisition scripts; normal builds do not refresh them automatically.
 
 `make test` runs Clojure contract/release checks, Python atlas tests, and the existing generated-runtime, SQL/API and desktop/mobile UI tests. Tests cover cache keys, concurrency, invalidation, committed-write refresh failures, authentication changes, navigation/history, public forwarding, member actions and admin restrictions. External Meta messaging remains governed by its existing feature switches.
+
+`make test-db` requires a running Docker engine and owns a disposable PostgreSQL 18 container/database for every run. It never uses cloud credentials. CI uses the same pinned image. `FINFOLK_TEST_POSTGRES_URL` may point to a local test server; cloud hosts are rejected and each suite creates/removes a distinct `finfolk_test_*` database. The test fixture reproduces Next's provisioned API schema grant and a minimal synthetic Neon Auth table. Provider calls remain simulated.
+
+Database coverage includes domain-organized Clojure facts, all 41 table declarations, 373 constraints, identity/default metadata, 28 explicit indexes, all six generated SQL functions, real role permissions, pooled actor isolation, concurrent operations, ownership and migration/release guards. The separate deployment-readiness marker is tested through the actual Next API Worker. The Instagram connection/queue suite also runs with independent PostgreSQL pool connections to exercise competing redemptions and transaction locks. A coverage manifest is written to `.cache/test-results/finfolkdb-coverage.json`; new tables and constraints require matching fixtures and assertions. Applied migrations and the published SQL hash remain immutable.
+
+`make test-browser` runs Chromium, Firefox and WebKit against real SQLite/WASM and IndexedDB, including browser restarts, multiple tabs, writer handoff, offline reads, account erasure and saved-map preservation. CI installs the browsers and OS dependencies and publishes test reports/traces. These tests use synthetic identities; they do not sign in to the deployed site.
 
 ## Preview deployment
 

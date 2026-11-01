@@ -1,8 +1,11 @@
 import { formatBytes } from './activity.js';
+import {deviceStorage} from './device-storage.js';
 export function installOfflineUI(
   downloads,
   { region = () => null, onOpen = () => {} } = {},
 ) {
+  const device=deviceStorage(downloads.store);
+  downloads.store.maintenance=()=>device.enforce();
   const el = (tag, text) => {
       const n = document.createElement(tag);
       if (text !== undefined) n.textContent = text;
@@ -38,28 +41,21 @@ export function installOfflineUI(
     o.value = mb * 1024 ** 2;
     limit.append(o);
   }
-  limit.setAttribute('aria-label', 'Recent dataset cache limit');
+  limit.setAttribute('aria-label', 'Recent cache limit');
   limit.value = 250 * 1024 ** 2;
   limit.onchange = async () => {
     await downloads.store.meta('limit', Number(limit.value));
+    await device.enforce();
     await draw();
   };
   section.append(
     limit,
     button('Clear recent cache', async () => {
-      const pinned = new Set(
-        ((await downloads.store.meta('saved')) || []).flatMap((p) => [
-          ...p.keys,
-          ...(p.pendingKeys || []),
-        ]),
-      );
-      await downloads.store.remove(
-        (await downloads.store.all())
-          .filter((row) => !pinned.has(row.key))
-          .map((row) => row.key),
-      );
+      await device.clearRecent();
       await draw();
     }),
+    button('Clear account cache', async()=>{await device.clearAccount();status.textContent='Saved account reads cleared. Saved maps remain available.';await draw();}),
+    button('Keep downloaded data on this device', async()=>{status.textContent=await device.keep()?'Browser persistence granted for maps and application data.':'The browser may remove saved data when storage is needed.';await draw();}),
     button('Load without saving', () => {
       downloads.bypass = !downloads.bypass;
       status.textContent = downloads.bypass
@@ -114,10 +110,12 @@ export function installOfflineUI(
     if (drawing) return;
     drawing = true;
     try {
+      const application=await device.stats();
       const rows = await downloads.store.all(),
         saved = (await downloads.store.meta('saved')) || [],
         estimate = await navigator.storage?.estimate?.().catch(() => null);
-      size.textContent = `${formatBytes(rows.reduce((n, r) => n + r.bytes, 0))} atlas data${estimate ? ' · browser uses ' + formatBytes(estimate.usage) + ' of approximately ' + formatBytes(estimate.quota) : ''}`;
+      size.textContent = `${formatBytes(rows.reduce((n, r) => n + r.bytes, 0))} atlas data · ${formatBytes(application.bytes)} application cache (${application.mode})${estimate ? ' · browser uses ' + formatBytes(estimate.usage) + ' of approximately ' + formatBytes(estimate.quota) : ''}`;
+      if(application.message)status.textContent=application.message;
       const persistent = await navigator.storage
         ?.persisted?.()
         .catch(() => false);
@@ -155,6 +153,19 @@ export function installOfflineUI(
     draw();
   });
   downloads.store.subscribe(() => draw());
+  globalThis.addEventListener?.('finfolk:cache-changed',()=>{device.enforce().then(draw).catch(()=>{});});
+  globalThis.addEventListener?.('finfolk:cache-status',event=>{
+    if(event.detail?.cached){
+      status.textContent=`Offline · showing saved application data from ${new Date(event.detail.savedAt).toLocaleString()}.`;
+      let notice=document.getElementById('application-cache-notice');
+      if(!notice){notice=el('p');notice.id='application-cache-notice';notice.setAttribute('role','status');document.getElementById('app-main')?.prepend(notice);}
+      notice.textContent=status.textContent;
+    }
+    else if(event.detail?.message)status.textContent=event.detail.message;
+    draw();
+  });
+  globalThis.addEventListener?.('online',()=>document.getElementById('application-cache-notice')?.remove());
+  globalThis.addEventListener?.('finfolk:member-cleared',()=>document.getElementById('application-cache-notice')?.remove());
   draw();
   if (
     'serviceWorker' in navigator &&

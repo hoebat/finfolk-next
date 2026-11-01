@@ -9,5 +9,6 @@
   "instagramHandle": "finfolk.com.au",
   "backbone": true,
   "environment": "next",
-  "sqlSha": "3e5358d7d01aad17b2eaa95344a9a6fa8701550e7c88ee83fe0db13887f32a0a"
+  "sqlSha": "3e5358d7d01aad17b2eaa95344a9a6fa8701550e7c88ee83fe0db13887f32a0a",
+  "cacheBackend": "sqlite"
 }

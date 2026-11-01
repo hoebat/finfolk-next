@@ -33,7 +33,7 @@
 ;; Physical table: finfolk.trip_reviews
 (deftype.pg ^{:finfolk/constraints ["NOT NULL actor" "NOT NULL created_at" "NOT NULL decision" "NOT NULL id" "PRIMARY KEY (id)" "FOREIGN KEY (trip_id) REFERENCES finfolk.trips(id) ON DELETE CASCADE" "NOT NULL trip_id"]}
   trip_reviews
-  [:id {:type :bigint :required true :primary true}
+  [:id {:type :bigint :required true :primary true :finfolk/identity "a"}
    :trip-id {:type :uuid :required true}
    :actor {:type :text :required true}
    :decision {:type :text :required true}

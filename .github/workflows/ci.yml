@@ -40,8 +40,19 @@ jobs:
       - run: make bootstrap
       - run: make check-generated
       - run: make test
+      - run: make test-db
+      - run: corepack yarn playwright install --with-deps chromium firefox webkit
+      - run: make test-browser
       - run: make build
       - run: corepack yarn deploy:next:api --dry-run --outdir .cache/api-check
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: finfolk-next-test-results
+          path: |
+            .cache/test-results
+            .cache/browser-results
+          include-hidden-files: true
       - uses: actions/upload-artifact@v4
         with:
           name: finfolk-next-site

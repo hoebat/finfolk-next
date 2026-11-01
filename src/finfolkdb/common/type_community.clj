@@ -40,7 +40,7 @@
 ;; Physical table: finfolk.reports
 (deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "NOT NULL id" "FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL owner_id" "PRIMARY KEY (id)" "NOT NULL reason" "NOT NULL target_id"]}
   reports
-  [:id {:type :bigint :required true :primary true}
+  [:id {:type :bigint :required true :primary true :finfolk/identity "a"}
    :owner-id {:type :text :required true}
    :target-id {:type :text :required true}
    :reason {:type :text :required true}

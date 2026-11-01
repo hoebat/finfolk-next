@@ -8,7 +8,10 @@ export async function createLogbookClient(config) {
   const auth = createAuthClient(config.authUrl),
     listeners = new Set();
   let user = null, backbone = null, application = null;
-  function clearBackbone(){if(application)application.clearMember();else backbone?.close();backbone=null;}
+  function clearBackbone(){const closing=application?application.clearMember():backbone?.close();backbone=null;return closing;}
+  globalThis.addEventListener?.('finfolk:member-cleared',event=>{
+    if(user?.uid===event.detail?.actor){clearBackbone();user=null;clearInstagramClaimStorage();for(const fn of listeners)Promise.resolve(fn(null)).catch(()=>{});}
+  });
   const unwrap = (result) => {
     if (result?.error) throw Error(result.error.message || 'Sign-in failed.');
     return result?.data;
@@ -29,7 +32,7 @@ export async function createLogbookClient(config) {
     for (const fn of listeners) await fn(user);
     return user;
   }
-  async function transportCall(action, values = {}, expectedActor = null) {
+  async function transportCall(action, values = {}, expectedActor = null, options = {}) {
     if (!config.apiUrl) throw Error('The account API is not configured yet.');
     const task = activity.begin({
       label: 'Account: ' + action,
@@ -55,6 +58,7 @@ export async function createLogbookClient(config) {
             'Content-Type': 'application/json',
           },
           cache: 'no-store',
+          signal: options.signal,
           body: JSON.stringify({ action, ...values }),
         },
       );
@@ -75,7 +79,7 @@ export async function createLogbookClient(config) {
       const {createApplicationBackbone}=await import('./next-backbone.js');
       if(user?.uid!==actor)throw Error('Account changed. Sign in again.');
       application=createApplicationBackbone(config);
-      backbone=application.member(actor,(name,values,options)=>values.__rest ? transportRequest(values.path,{...options,body:values.body},actor) : transportCall(name,values,actor));
+      backbone=application.member(actor,(name,values,options)=>values.__rest ? transportRequest(values.path,{...options,body:values.body},actor) : transportCall(name,values,actor,options));
     }return backbone;
   }
   async function call(action, values = {}) {
@@ -133,7 +137,7 @@ export async function createLogbookClient(config) {
     },
     async signOut() {
       unwrap(await authWork('sign-out',()=>auth.signOut()));
-      clearBackbone();
+      await clearBackbone();
       clearInstagramClaimStorage();
       user = null;
       for (const fn of listeners) await fn(null);

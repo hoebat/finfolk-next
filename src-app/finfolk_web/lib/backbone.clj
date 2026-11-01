@@ -1,5 +1,5 @@
 (ns finfolk-web.lib.backbone
-  "Actor-scoped substrate models and xt.db memory cache. This is authored source."
+  "Actor-scoped substrate models with an injectable xt.db cache. This is authored source."
   (:require [lang.core :as l]))
 (l/script :js
   {:require [[xt.substrate :as substrate]
@@ -21,6 +21,8 @@
 
 (defn.js publish [ctx entry state]
   (:= (. entry ["state"]) (Object.assign {} (. entry ["state"]) state))
+  (when (and (not (. entry ["spec"] ["write"])) (== (. entry ["state"] ["status"]) "ready"))
+    ((. ctx ["onPublish"]) (. entry ["key"]) (. entry ["state"])))
   (events/set-output (. entry ["model"]) (. entry ["state"]) (not (not (. entry ["state"] ["error"]))) nil nil nil))
 
 (defn.js ensureOpen [ctx]
@@ -39,7 +41,7 @@
                                             (not (. (. ctx ["pending"]) (has (. e ["key"]))))))))))
       (when old
         (. entries (delete (. old ["key"])))
-        (memory/record-delete (. ctx ["cache"]) "Result" [(. old ["key"])])
+        ((. ctx ["storage"] ["remove"]) (. old ["key"]))
         (page/model-remove (. ctx ["node"]) (. ctx ["space"]) (. old ["group"]) (. old ["id"]))
         (delete (. (page/group-get (. ctx ["node"]) (. ctx ["space"]) (. old ["group"])) ["specs"] [(. old ["id"])]))))
     (:= (. ctx ["sequence"]) (+ 1 (. ctx ["sequence"])))
@@ -47,6 +49,9 @@
     (var group (:? (. spec ["admin"]) "admin" (. spec ["domain"])))
     (:= entry {"key" key "name" name "values" (:? (. spec ["write"]) {} values)
                "spec" spec "id" id "group" group "listeners" (new Set) "state" {"status" "idle"} "revision" 0})
+    (when (not (. spec ["write"]))
+      (var saved ((. ctx ["storage"] ["get"]) key))
+      (when saved (:= (. entry ["state"]) {"status" "stale" "data" (. saved ["data"]) "cached" true "savedAt" (. saved ["savedAt"])})))
     (. entries (set key entry))
     (var definition {"defaults" {"args" [{}] "output" nil}
                     "handler" (fn [_context input]
@@ -64,8 +69,9 @@
 
 (defn.js invalidateEntry [ctx entry]
   (:= (. entry ["revision"]) (+ 1 (. entry ["revision"])))
-  (memory/record-delete (. ctx ["cache"]) "Result" [(. entry ["key"])])
-  (-/publish ctx entry {"status" "stale"}))
+  ((. ctx ["storage"] ["remove"]) (. entry ["key"]))
+  ((. ctx ["onInvalidate"]) (. entry ["key"]))
+  (-/publish ctx entry {"status" "stale" "cached" false}))
 
 (defn.js ^{:- [:async]} refreshEntry [ctx entry]
   (var inflight (. (. ctx ["pending"]) (get (. entry ["key"]))))
@@ -89,11 +95,12 @@
     (when (. acc ["error"]) (throw (or output (new Error "Request failed."))))
     (:= result output)
     (when (and (not (. spec ["write"])) (== revision (. entry ["revision"])))
-      (memory/record-add (. ctx ["cache"]) "Result" [{"id" (. entry ["key"]) "value" result}])
-      (-/publish ctx entry {"status" "ready" "data" result "error" nil}))
+      ((. ctx ["storage"] ["put"]) (. entry ["key"]) result spec)
+      (-/publish ctx entry {"status" "ready" "data" result "error" nil "cached" false "savedAt" (Date.now)}))
     (when (. spec ["write"])
       (-/publish ctx entry {"status" "ready" "data" undefined "error" nil})
       (var domains (registry/affectedDomains spec))
+      (when (. ctx ["storage"] ["invalidate"]) ((. ctx ["storage"] ["invalidate"]) domains))
       (var refresh (. (Array.from (. (. ctx ["entries"]) (values)))
                       (filter (fn [e] (return (and (not (. e ["spec"] ["write"])) (. domains (includes (. e ["spec"] ["domain"])))))))))
       (for:array [e refresh] (-/invalidateEntry ctx e))
@@ -111,10 +118,23 @@
           (. (map (fn [e] (return (-/refreshEntry ctx e))))))))
         (catch error
           (. (. ctx ["blocked"]) (add (. spec ["domain"])))
+          ((. ctx ["onBlocked"]) (. spec ["domain"]))
           (throw (Object.assign (new Error "Saved, but refreshing the account failed. Reload before making another change.")
                                 {"mutationCommitted" true "result" result "cause" error})))))
     (return result)
     (catch error
+      (when (and (. spec ["write"]) (not (. error ["status"])) (not (. ctx ["closed"])))
+        (. (. ctx ["blocked"]) (add (. spec ["domain"])))
+        ((. ctx ["onBlocked"]) (. spec ["domain"]))
+        (when (not (. error ["mutationCommitted"])) (:= (. error ["mutationOutcomeUnknown"]) true)))
+      (when (and (not (. ctx ["closed"])) (not (. spec ["write"])) (. ctx ["offlineReads"]) (not (. error ["status"])) (not= (. error ["name"]) "AbortError"))
+        (var saved ((. ctx ["storage"] ["get"]) (. entry ["key"])))
+        (when saved
+          ((. ctx ["onCached"]) saved)
+          (-/publish ctx entry {"status" "ready" "data" (. saved ["data"]) "cached" true "savedAt" (. saved ["savedAt"]) "error" nil})
+          (return (. saved ["data"]))))
+      (when (and (not (. spec ["write"])) (. error ["status"])) ((. ctx ["storage"] ["remove"]) (. entry ["key"])))
+      (when (and (not (. spec ["write"])) (. error ["status"])) ((. ctx ["onInvalidate"]) (. entry ["key"])))
       (when (not (. ctx ["closed"])) (-/publish ctx entry {"status" "error" "error" error "data" (:? (. spec ["write"]) undefined (. entry ["state"] ["data"]))}))
       (throw error))
     (finally
@@ -142,6 +162,7 @@
   (return task))
 
 (defn.js ^{:- [:async]} invalidate [ctx domains]
+  (when (. ctx ["storage"] ["invalidate"]) ((. ctx ["storage"] ["invalidate"]) domains))
   (var refresh [])
   (for:iter [entry (. (. ctx ["entries"]) (values))]
     (when (and (not (. entry ["spec"] ["write"])) (. domains (includes (. entry ["spec"] ["domain"]))))
@@ -151,7 +172,7 @@
 
 (defn.js close [ctx]
   (:= (. ctx ["closed"]) true)
-  (memory/clear-db (. ctx ["cache"]))
+  ((. ctx ["storage"] ["clear"]))
   (for:iter [entry (. (. ctx ["entries"]) (values))]
     (. (. entry ["listeners"]) (clear))
     (:= (. entry ["state"]) {"status" "closed"})
@@ -166,8 +187,20 @@
   (var space (or (. opts ["space"]) (+ "member:" actor)))
   (var schema {"Result" {"id" {"ident" "id" "type" "text" "primary" true "order" 0}
                          "value" {"ident" "value" "type" "jsonb" "order" 1}}})
+  (var cache (memory/impl-memory schema {"Result" {"position" 0}}))
+  (var storage (or (. opts ["storage"])
+    {"get" (fn [key]
+      (var found (cache-util/get-entry (. cache ["rows"]) "Result" key))
+      (return (:? found {"data" (. found ["record"] ["data"] ["value"])} nil)))
+     "put" (fn [key value _spec] (memory/record-add cache "Result" [{"id" key "value" value}]))
+     "remove" (fn [key] (memory/record-delete cache "Result" [key]))
+     "clear" (fn [] (memory/clear-db cache))}))
   (var ctx {"actor" actor "transport" transport "node" node "space" space
-            "cache" (memory/impl-memory schema {"Result" {"position" 0}})
+            "cache" cache "storage" storage "offlineReads" (. opts ["offlineReads"])
+            "onCached" (or (. opts ["onCached"]) (fn [_saved]))
+            "onPublish" (or (. opts ["onPublish"]) (fn [_key _state]))
+            "onBlocked" (or (. opts ["onBlocked"]) (fn [_domain]))
+            "onInvalidate" (or (. opts ["onInvalidate"]) (fn [_key]))
             "entries" (new Map) "pending" (new Map) "queues" (new Map) "blocked" (new Set)
             "closed" false "sequence" 0 "onMutation" (or (. opts ["onMutation"]) (fn []))})
   (:= (. ctx ["call"]) (fn [name values options] (return (-/call ctx name values options))))
@@ -175,11 +208,30 @@
            "supports" (fn [name] (return (not (not (. registry/operations [name])))))
            "call" (. ctx ["call"])
            "read" (fn [name values]
-                    (var entry (cache-util/get-entry (. ctx ["cache"] ["rows"]) "Result" (+ name ":" (-/stableKey (or values {})))))
-                    (return (:? entry (. entry ["record"] ["data"] ["value"]) undefined)))
+                    (var entry ((. storage ["get"]) (+ name ":" (-/stableKey (or values {})))))
+                    (return (:? entry (. entry ["data"]) undefined)))
            "subscribe" (fn [name values callback]
                          (var entry (-/ensureModel ctx name (or values {})))
                          (. (. entry ["listeners"]) (add callback)) (callback (. entry ["state"]))
                          (return (fn [] (. (. entry ["listeners"]) (delete callback)))))
+           "clearCache" (fn [] ((. storage ["clear"]))
+             (for:iter [entry (. (. ctx ["entries"]) (values))]
+               (:= (. entry ["revision"]) (+ 1 (. entry ["revision"])))
+               (-/publish ctx entry {"status" "idle" "data" undefined "cached" false})))
+           "recover" (async (fn []
+             (var domains (Array.from (. ctx ["blocked"])))
+             (when (== (. domains ["length"]) 0) (return true))
+             (var reads (. (Array.from (. (. ctx ["entries"]) (values)))
+               (filter (fn [entry] (return (and (not (. entry ["spec"] ["write"])) (. domains (includes (. entry ["spec"] ["domain"])))))))))
+             (when (== (. reads ["length"]) 0) (return false))
+             (try
+               (await ((. ctx ["onMutation"]) domains))
+               (await (Promise.all (. reads (map (fn [entry] (return (-/refreshEntry ctx entry)))))))
+               (. (. ctx ["blocked"]) (clear)) (return true)
+               (catch error (return false)))))
+           "forget" (fn []
+             (for:iter [entry (. (. ctx ["entries"]) (values))]
+               (:= (. entry ["revision"]) (+ 1 (. entry ["revision"])))
+               (-/publish ctx entry {"status" "idle" "data" undefined "cached" false})))
            "invalidate" (fn [domains] (return (-/invalidate ctx domains)))
            "close" (fn [] (-/close ctx))}))

@@ -8,7 +8,12 @@ if (!url)
   );
 if (new URL(url).hostname.includes('-pooler'))
   throw Error('Use the direct connection for migrations.');
-const migrationNames = (await readdir(new URL('../backend/migrations/', import.meta.url))).filter(n => n.endsWith('.sql')).sort();
+const migrationDirectory=process.env.FINFOLK_TEST_MIGRATIONS_DIR
+  ? new URL('file://'+process.env.FINFOLK_TEST_MIGRATIONS_DIR.replace(/\/$/,'')+'/')
+  : new URL('../backend/migrations/', import.meta.url);
+if(process.env.FINFOLK_TEST_MIGRATIONS_DIR &&
+  (url!==process.env.FINFOLK_TEST_DATABASE_URL || !['127.0.0.1','localhost','postgres'].includes(new URL(url).hostname) || !/^\/finfolk_test_/.test(new URL(url).pathname)))throw Error('Migration fixture overrides require a disposable local test database.');
+const migrationNames = (await readdir(migrationDirectory)).filter(n => n.endsWith('.sql')).sort();
 const through = process.env.MIGRATIONS_THROUGH;
 if (through && !migrationNames.includes(through)) throw Error('Unknown migration boundary.');
 const client = new pg.Client({ connectionString: url });
@@ -22,7 +27,7 @@ try {
   for (const name of migrationNames) {
     if (through && name > through) break;
     const body = await readFile(
-        new URL('../backend/migrations/' + name, import.meta.url),
+        new URL(name, migrationDirectory),
         'utf8',
       ),
       hash = createHash('sha256').update(body).digest('hex'),

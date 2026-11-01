@@ -118,7 +118,7 @@ export class AtlasStore {
       rows
         .filter((r) => !pinned.has(r.key) && r.key !== entry.key)
         .reduce((n, r) => n + r.bytes, 0) + entry.bytes;
-    for (const row of rows
+    for (const row of (this.maintenance ? [] : rows)
       .filter((r) => !pinned.has(r.key) && r.key !== entry.key)
       .sort((a, b) => a.used - b.used)) {
       if (total <= limit) break;
@@ -128,6 +128,7 @@ export class AtlasStore {
     if (entry.bytes > limit && !pinned.has(entry.key)) return false;
     try {
       await this.run('files', 'readwrite', (s) => s.put(entry));
+      await this.maintenance?.();
       this.emit();
       return true;
     } catch (error) {

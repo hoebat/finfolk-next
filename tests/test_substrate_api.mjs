@@ -3,7 +3,7 @@ import {readFile,readdir} from 'node:fs/promises';
 import {PGlite} from '@electric-sql/pglite';
 import {createAPI} from '../backend/api.mjs';
 import {createBackbone,operations} from '../js/finfolk-next/site/web-main/src/next-backbone.js';
-const pg=new PGlite();const query=async(sql,args=[]) => (await pg.query(sql,args)).rows;
+const pg=process.env.FINFOLK_TEST_DATABASE_URL ? await (await import('./db/harness.mjs')).compatDatabase() : new PGlite();const query=async(sql,args=[]) => (await pg.query(sql,args)).rows;
 const db={query,transaction:fn=>pg.transaction(tx=>fn(async(sql,args=[]) => (await tx.query(sql,args)).rows))};
 const env={DB_BACKBONE_ENABLED:'true',ENVIRONMENT:'next',COMMUNITY_POSTS_ENABLED:'true',INSTAGRAM_ADMIN_IDS:'alice'};
 let app;
@@ -13,7 +13,7 @@ const member=uid=>createBackbone(uid,async(name,value,options)=>{
  const body=await response.json();if(!response.ok)throw Object.assign(Error(body.error?.message||body.error),{status:response.status});return body.data;
 });
 try {
- await pg.exec('CREATE ROLE finfolk_api; CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);');
+ await pg.exec('DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);');
  for(const name of (await readdir('backend/migrations')).filter(n=>n.endsWith('.sql')).sort())await pg.exec(await readFile('backend/migrations/'+name,'utf8'));
  await query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false)`);
  await query("INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney')");

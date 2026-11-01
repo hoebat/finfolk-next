@@ -30,6 +30,9 @@ export function stableKey(value){
 
 export function publish(ctx,entry,state){
   entry["state"] = Object.assign({},entry["state"],state);
+  if(!entry["spec"]["write"] && (entry["state"]["status"] == "ready")){
+    ctx["onPublish"](entry["key"],entry["state"]);
+  }
   events.set_output(
     entry["model"],
     entry["state"],
@@ -61,7 +64,7 @@ export function ensureModel(ctx,name,values){
       });
       if(old){
         entries.delete(old["key"]);
-        memory.record_delete(ctx["cache"],"Result",[old["key"]]);
+        ctx["storage"]["remove"](old["key"]);
         page.model_remove(ctx["node"],ctx["space"],old["group"],old["id"]);
         delete(
           page.group_get(ctx["node"],ctx["space"],old["group"])["specs"][old["id"]]
@@ -82,6 +85,17 @@ export function ensureModel(ctx,name,values){
       "state":{"status":"idle"},
       "listeners":new Set()
     };
+    if(!spec["write"]){
+      let saved = ctx["storage"]["get"](key);
+      if(saved){
+        entry["state"] = {
+          "status":"stale",
+          "data":saved["data"],
+          "cached":true,
+          "savedAt":saved["savedAt"]
+        };
+      }
+    }
     entries.set(key,entry);
     let definition = {
       "defaults":{"args":[{}],"output":null},
@@ -112,8 +126,9 @@ export function ensureModel(ctx,name,values){
 
 export function invalidateEntry(ctx,entry){
   entry["revision"] = (1 + entry["revision"]);
-  memory.record_delete(ctx["cache"],"Result",[entry["key"]]);
-  publish(ctx,entry,{"status":"stale"});
+  ctx["storage"]["remove"](entry["key"]);
+  ctx["onInvalidate"](entry["key"]);
+  publish(ctx,entry,{"status":"stale","cached":false});
 }
 
 export async function refreshEntry(ctx,entry){
@@ -149,12 +164,21 @@ export async function run(ctx,name,values,options){
     }
     result = output;
     if(!spec["write"] && (revision == entry["revision"])){
-      memory.record_add(ctx["cache"],"Result",[{"id":entry["key"],"value":result}]);
-      publish(ctx,entry,{"status":"ready","data":result,"error":null});
+      ctx["storage"]["put"](entry["key"],result,spec);
+      publish(ctx,entry,{
+        "status":"ready",
+        "data":result,
+        "error":null,
+        "cached":false,
+        "savedAt":Date.now()
+      });
     }
     if(spec["write"]){
       publish(ctx,entry,{"status":"ready","data":undefined,"error":null});
       let domains = registry.affectedDomains(spec);
+      if(ctx["storage"]["invalidate"]){
+        ctx["storage"]["invalidate"](domains);
+      }
       let refresh = Array.from(ctx["entries"].values()).filter(function (e){
         return !e["spec"]["write"] && domains.includes(e["spec"]["domain"]);
       });
@@ -181,6 +205,7 @@ export async function run(ctx,name,values,options){
       }
       catch(error){
         ctx["blocked"].add(spec["domain"]);
+        ctx["onBlocked"](spec["domain"]);
         throw Object.assign(new Error(
           "Saved, but refreshing the account failed. Reload before making another change."
         ),{"mutationCommitted":true,"result":result,"cause":error});
@@ -189,6 +214,33 @@ export async function run(ctx,name,values,options){
     return result;
   }
   catch(error){
+    if(spec["write"] && !error["status"] && !ctx["closed"]){
+      ctx["blocked"].add(spec["domain"]);
+      ctx["onBlocked"](spec["domain"]);
+      if(!error["mutationCommitted"]){
+        error["mutationOutcomeUnknown"] = true;
+      }
+    }
+    if(!ctx["closed"] && !spec["write"] && ctx["offlineReads"] && !error["status"] && (error["name"] != "AbortError")){
+      let saved = ctx["storage"]["get"](entry["key"]);
+      if(saved){
+        ctx["onCached"](saved);
+        publish(ctx,entry,{
+          "status":"ready",
+          "data":saved["data"],
+          "cached":true,
+          "savedAt":saved["savedAt"],
+          "error":null
+        });
+        return saved["data"];
+      }
+    }
+    if(!spec["write"] && error["status"]){
+      ctx["storage"]["remove"](entry["key"]);
+    }
+    if(!spec["write"] && error["status"]){
+      ctx["onInvalidate"](entry["key"]);
+    }
     if(!ctx["closed"]){
       publish(ctx,entry,{
         "status":"error",
@@ -243,6 +295,9 @@ export function call(ctx,name,values,options){
 }
 
 export async function invalidate(ctx,domains){
+  if(ctx["storage"]["invalidate"]){
+    ctx["storage"]["invalidate"](domains);
+  }
   let refresh = [];
   for(let entry of ctx["entries"].values()){
     if(!entry["spec"]["write"] && domains.includes(entry["spec"]["domain"])){
@@ -259,7 +314,7 @@ export async function invalidate(ctx,domains){
 
 export function close(ctx){
   ctx["closed"] = true;
-  memory.clear_db(ctx["cache"]);
+  ctx["storage"]["clear"]();
   for(let entry of ctx["entries"].values()){
     entry["listeners"].clear();
     entry["state"] = {"status":"closed"};
@@ -280,12 +335,42 @@ export function createBackbone(actor,transport,opts){
         "value":{"ident":"value","type":"jsonb","order":1}
       }
   };
+  let cache = memory.impl_memory(schema,{"Result":{"position":0}});
+  let storage = opts["storage"] || {
+    "get":function (key){
+        let found = cache_util.get_entry(cache["rows"],"Result",key);
+        return found ? {"data":found["record"]["data"]["value"]} : null;
+      },
+    "put":function (key,value,_spec){
+        memory.record_add(cache,"Result",[{"id":key,"value":value}]);
+      },
+    "remove":function (key){
+        memory.record_delete(cache,"Result",[key]);
+      },
+    "clear":function (){
+        memory.clear_db(cache);
+      }
+  };
   let ctx = {
     "queues":new Map(),
+    "offlineReads":opts["offlineReads"],
     "transport":transport,
     "space":space,
-    "cache":memory.impl_memory(schema,{"Result":{"position":0}}),
+    "onBlocked":opts["onBlocked"] || (function (_domain){
+
+      }),
+    "onCached":opts["onCached"] || (function (_saved){
+
+      }),
+    "onInvalidate":opts["onInvalidate"] || (function (_key){
+
+      }),
+    "storage":storage,
+    "cache":cache,
     "closed":false,
+    "onPublish":opts["onPublish"] || (function (_key,_state){
+
+      }),
     "sequence":0,
     "entries":new Map(),
     "blocked":new Set(),
@@ -300,17 +385,49 @@ export function createBackbone(actor,transport,opts){
     return call(ctx,name,values,options);
   });
   return {
+    "recover":async function (){
+        let domains = Array.from(ctx["blocked"]);
+        if(domains["length"] == 0){
+          return true;
+        }
+        let reads = Array.from(ctx["entries"].values()).filter(function (entry){
+          return !entry["spec"]["write"] && domains.includes(entry["spec"]["domain"]);
+        });
+        if(reads["length"] == 0){
+          return false;
+        }
+        try{
+          await ctx["onMutation"](domains);
+          await Promise.all(reads.map(function (entry){
+            return refreshEntry(ctx,entry);
+          }));
+          ctx["blocked"].clear();
+          return true;
+        }
+        catch(error){
+          return false;
+        }
+      },
+    "forget":function (){
+        for(let entry of ctx["entries"].values()){
+          entry["revision"] = (1 + entry["revision"]);
+          publish(ctx,entry,{"status":"idle","data":undefined,"cached":false});
+        };
+      },
     "space":space,
     "call":ctx["call"],
     "read":function (name,values){
-        let entry = cache_util.get_entry(
-          ctx["cache"]["rows"],
-          "Result",
-          name + ":" + stableKey(values || {})
-        );
-        return entry ? entry["record"]["data"]["value"] : undefined;
+        let entry = storage["get"](name + ":" + stableKey(values || {}));
+        return entry ? entry["data"] : undefined;
       },
     "cache":ctx["cache"],
+    "clearCache":function (){
+        storage["clear"]();
+        for(let entry of ctx["entries"].values()){
+          entry["revision"] = (1 + entry["revision"]);
+          publish(ctx,entry,{"status":"idle","data":undefined,"cached":false});
+        };
+      },
     "invalidate":function (domains){
         return invalidate(ctx,domains);
       },

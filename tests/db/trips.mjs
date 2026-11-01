@@ -1,0 +1,32 @@
+import assert from 'node:assert/strict';
+import pg from 'pg';
+import {connect,migrate,apiDatabase} from './harness.mjs';
+import {tripAction,publicTrip} from '../../backend/trips.mjs';
+const owner=await connect(),pool=new pg.Pool({connectionString:process.env.FINFOLK_TEST_DATABASE_URL,max:4,options:'-c role=finfolk_api'}),db=apiDatabase(pool);
+const call=(uid,action,v)=>db.transaction(q=>tripAction({action,v,uid,q,env:{INSTAGRAM_ADMIN_IDS:'alice'},verified:()=>{}}));
+try{
+ await migrate(owner);await owner.query(`INSERT INTO finfolk.members(user_id) VALUES('alice'),('bob');INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney');`);
+ const draft={title:'Fixture trip',authorName:'Alice',beachId:'bondi',start:'2026-11-01',end:'2026-11-02',story:'Synthetic',links:[]};
+ const trip=await call('alice','tripSave',{draft});
+ await assert.rejects(call('bob','tripGet',{id:trip.id}),e=>e.status===404);
+ const competing=await Promise.allSettled([call('alice','tripSave',{id:trip.id,revision:trip.revision,draft:{...draft,title:'First'}}),call('alice','tripSave',{id:trip.id,revision:trip.revision,draft:{...draft,title:'Second'}})]);
+ assert.equal(competing.filter(r=>r.status==='fulfilled').length,1);assert.equal(competing.find(r=>r.status==='rejected').reason.status,409);
+ const current=await call('alice','tripGet',{id:trip.id});
+ const imported=await call('alice','tripImportBegin',{id:trip.id,count:2});
+ const rows=[{day:'2026-11-01',depthMetres:10,durationSeconds:60,sourceId:'raw-secret-1'},{day:'2026-11-02',depthMetres:20,durationSeconds:90,sourceId:'raw-secret-2'}];
+ const batch={id:trip.id,importId:imported.id,index:0,rows:[rows[0]]};
+ await call('alice','tripImportBatch',batch);await call('alice','tripImportBatch',batch);
+ await assert.rejects(call('alice','tripImportBatch',{...batch,rows:[rows[1]]}),e=>e.status===409);
+ await assert.rejects(call('alice','tripImportConfirm',{id:trip.id,importId:imported.id,revision:current.revision}));
+ assert.equal((await db.query('SELECT count(*)::int AS n FROM finfolk.trip_dives'))[0].n,0);
+ assert.equal((await db.query('SELECT state FROM finfolk.trip_imports WHERE id=$1',[imported.id]))[0].state,'uploading');
+ await call('alice','tripImportBatch',{...batch,index:1,rows:[rows[1]]});
+ const confirmed=await call('alice','tripImportConfirm',{id:trip.id,importId:imported.id,revision:current.revision});assert.equal(confirmed.rows,2);
+ assert.equal((await call('alice','tripImportConfirm',{id:trip.id,importId:imported.id,revision:confirmed.revision})).unchanged,true);
+ assert.equal((await call('alice','tripDives',{id:trip.id})).rows.length,2);
+ const published=await call('alice','tripPublish',{id:trip.id,revision:confirmed.revision,publicConsent:true,ownPosts:true});assert.equal(published.status,'published');
+ const report=await publicTrip(db.query,trip.id);assert.equal(report.summary.total.dives,2);assert.equal(report.summary.total.maxDepthMetres,20);assert.ok(!JSON.stringify(report).includes('raw-secret'));
+ await call('alice','tripUnpublish',{id:trip.id});await assert.rejects(publicTrip(db.query,trip.id),e=>e.status===404);
+ await call('alice','tripDelete',{id:trip.id});for(const table of ['trips','trip_imports','trip_import_batches','trip_dives'])assert.equal((await db.query('SELECT count(*)::int AS n FROM finfolk.'+table))[0].n,0,table+' cascade');
+ console.log('FINFOLKDB_TRIPS_PASS: concurrent revisions, private imports, batch retries/conflicts, atomic confirmation, publication privacy and cascade cleanup.');
+}finally{await pool.end();await owner.end();}

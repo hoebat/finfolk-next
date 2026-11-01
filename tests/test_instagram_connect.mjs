@@ -8,7 +8,7 @@ import { collectInstagramDM, processInstagramDM, sendOutbox } from '../backend/m
 import { digest, seal, unseal } from '../backend/messaging-config.mjs';
 import { generateConnectCode, normalizeConnectCode, validConnectCode } from '../backend/instagram-connect.mjs';
 
-const pg = new PGlite();
+const pg = process.env.FINFOLK_TEST_DATABASE_URL ? await (await import('./db/harness.mjs')).compatDatabase(true) : new PGlite();
 const query = async (sql, values=[]) => (await pg.query(sql,values)).rows;
 const db = {query, transaction: fn => pg.transaction(tx=>fn(async(sql,values=[]) => (await tx.query(sql,values)).rows))};
 const env = {
@@ -36,7 +36,7 @@ const fetcher=async(url,options={})=>{
   return {ok:true,json:async()=>({id:sender,username:'diver'+sender,is_user_follow_business:follows})};
 };
 try {
-  await pg.exec('CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user" (id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api; GRANT USAGE ON SCHEMA neon_auth TO finfolk_api; GRANT SELECT ON neon_auth."user" TO finfolk_api;');
+  await pg.exec('CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user" (id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; GRANT USAGE ON SCHEMA neon_auth TO finfolk_api; GRANT SELECT ON neon_auth."user" TO finfolk_api;');
   for(const name of (await readdir('backend/migrations')).filter(n=>n.endsWith('.sql')).sort())
     await pg.exec(await readFile('backend/migrations/'+name,'utf8'));
   await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api');

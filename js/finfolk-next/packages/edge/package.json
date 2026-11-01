@@ -8,9 +8,11 @@
     "./*.js": "./*.js"
   },
   "dependencies": {
+    "@sqlite.org/sqlite-wasm": "3.54.1-build1",
     "@xtalk/db": "workspace:*",
     "@xtalk/event": "workspace:*",
     "@xtalk/lang": "workspace:*",
+    "@xtalk/net": "workspace:*",
     "@xtalk/substrate": "workspace:*"
   }
 }

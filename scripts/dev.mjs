@@ -6,7 +6,7 @@ import {resolve,extname} from 'node:path';
 if(!process.env.JAVA_HOME && existsSync('/opt/homebrew/opt/openjdk@27/libexec/openjdk.jdk/Contents/Home'))process.env.JAVA_HOME='/opt/homebrew/opt/openjdk@27/libexec/openjdk.jdk/Contents/Home';
 const source=resolve('js/finfolk-next/site/web-main/src'),built=resolve('.cache/next-site');
 if(!existsSync(built+'/data/catalog.json'))execFileSync(process.execPath,['scripts/build_next.mjs'],{stdio:'inherit'});
-const types={'.html':'text/html','.js':'text/javascript','.css':'text/css','.json':'application/json','.geojson':'application/geo+json','.svg':'image/svg+xml','.jpeg':'image/jpeg','.png':'image/png'};
+const types={'.html':'text/html','.js':'text/javascript','.wasm':'application/wasm','.css':'text/css','.json':'application/json','.geojson':'application/geo+json','.svg':'image/svg+xml','.jpeg':'image/jpeg','.png':'image/png'};
 const server=createServer(async(req,res)=>{
  try {
   const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname),name=path==='/'?'/index.html':path;
