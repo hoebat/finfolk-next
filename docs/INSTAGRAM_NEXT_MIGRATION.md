@@ -10,6 +10,8 @@ The API Worker runs HTTP, queue processing and recovery schedules behind the sam
 
 The existing brand Page grant is verified and encrypted again with a fresh Next key, held in Worker secrets. Only brand authorization and pilot settings are transferred. Direct messages retain the existing pilot audience and commands; comments, discovery and publishing stay disabled. New live acceptance must be recorded from Next events.
 
+For Facebook Page authorization, seen/typing actions target the Page's `/messages` edge with the incoming Instagram sender ID; text replies retain the Instagram account edge. Each best-effort action has a three-second request limit. An indicator failure never suppresses the reply or retries a message with uncertain delivery.
+
 The API also preserves the existing public privacy/deletion pages and the disabled TikTok registration callback. The callback still does not exchange authorization codes or enable TikTok messaging.
 
 Google uses the existing managed Better Auth provider through the Neon SDK. Its button is enabled in the source and build configuration; the Next and FinFolk domains are trusted callback origins. Never put OAuth secrets in browser configuration.
