@@ -3,7 +3,7 @@ export async function readSiteDirectory({application,data,fallback,atlas}){
  if(!application)return hydrateSiteCatalog(fallback,atlas);
  const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),5000);
  try{const directory=await application.public.call('siteCatalog',{}, {signal:controller.signal});if(!Array.isArray(directory?.beaches)||!Array.isArray(directory?.states))throw Error('Invalid site catalog.');return hydrateSiteCatalog(directory,atlas);}
- catch{try{const directory=await data.json('sites-snapshot.json');if(!Array.isArray(directory?.beaches)||!Array.isArray(directory.states))throw Error();return hydrateSiteCatalog(directory,atlas);}catch{return hydrateSiteCatalog(fallback,atlas);}}
+ catch{try{const directory=await data.json('./sites-snapshot.json');if(!Array.isArray(directory?.beaches)||!Array.isArray(directory.states))throw Error();return hydrateSiteCatalog(directory,atlas);}catch{return hydrateSiteCatalog(fallback,atlas);}}
  finally{clearTimeout(timer);}
 }
 export function observeSiteDirectory({application,directory,atlas,onChange}){

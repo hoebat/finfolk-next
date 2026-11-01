@@ -92,8 +92,17 @@ export function connectionReady(ctx){
   });
 }
 
-export function reconnect(ctx){
+export function reconnect(ctx,coordinator_lost){
   ctx["connected"] = false;
+  if(coordinator_lost){
+    for(let facade of ctx["scopes"].values()){
+      for(let spec of Object.values(registry.operations)){
+        if(spec["write"]){
+          facade["blocked"].add(spec["domain"]);
+        }
+      };
+    };
+  }
   announce(
     "finfolk:cache-status",
     {"message":"Reconnecting application cache."}
@@ -166,7 +175,7 @@ export async function receive(ctx,message){
   }
   if(type == "ready"){
     if(ctx["connected"] && (ctx["epoch"] != message["epoch"])){
-      reconnect(ctx);
+      reconnect(ctx,true);
     }
     ctx["epoch"] = message["epoch"];
     ctx["connected"] = true;
@@ -542,7 +551,7 @@ export function createWorkerBridge(config){
           ),{"type":"module","name":"finfolk-next-sqlite-v2"});
           ctx["worker"] = replacement;
           ctx["port"] = replacement["port"];
-          reconnect(ctx);
+          reconnect(ctx,true);
           ctx["port"].addEventListener("message",function (event){
             receive(ctx,event["data"]);
           });

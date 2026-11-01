@@ -20,12 +20,28 @@ export function send(client,message){
   }
 }
 
+export function flag(scope,domain,type){
+  Generation = (Generation + 1);
+  Uncertain.set(scope + "|" + domain,Generation);
+  for(let target of Clients){
+    send(target,{"type":type,"scope":scope,"domain":domain});
+  };
+}
+
 export function attach(client){
   let channel = new MessageChannel();
   client["kernel"] = channel["port2"];
   channel["port2"]["onmessage"] = (function (event){
-    if(event["data"]["type"] == "result"){
-      client["writes"].delete(event["data"]["id"]);
+    let data = event["data"];
+    if(data["type"] == "blocked"){
+      flag(data["scope"],data["domain"],"blocked");
+    }
+    if(data["type"] == "result"){
+      let write = client["writes"].get(data["id"]);
+      if(write && data["error"] && data["error"]["mutationOutcomeUnknown"]){
+        flag(write["scope"],write["domain"],"uncertain");
+      }
+      client["writes"].delete(data["id"]);
     }
     send(client,event["data"]);
   });
@@ -46,15 +62,7 @@ export function elect(){
 
 export function uncertain(client){
   for(let write of client["writes"].values()){
-    Generation = (Generation + 1);
-    Uncertain.set(write["scope"] + "|" + write["domain"],Generation);
-    for(let target of Clients){
-      send(target,{
-        "type":"uncertain",
-        "scope":write["scope"],
-        "domain":write["domain"]
-      });
-    };
+    flag(write["scope"],write["domain"],"uncertain");
   };
   client["writes"].clear();
 }
@@ -105,7 +113,16 @@ export function message(client,event){
     send(client,{
       "type":"result",
       "id":data["id"],
-      "result":{"clients":Clients["size"],"kernel":!!Kernel,"host":!!Host}
+      "result":{
+            "generation":Generation,
+            "pendingWrites":Array.from(Clients).reduce(function (n,c){
+                  return n + c["writes"]["size"];
+                },0),
+            "uncertainDomains":Uncertain["size"],
+            "clients":Clients["size"],
+            "kernel":!!Kernel,
+            "host":!!Host
+          }
     });
   }
   else if(data["type"] == "ping"){
