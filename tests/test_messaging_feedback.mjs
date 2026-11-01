@@ -31,11 +31,13 @@ const fetcher = async (input, options = {}) => {
     const body = JSON.parse(options.body);
     assert.equal(body.recipient.id, '100');
     if (body.sender_action) {
+      assert.equal(url.pathname, '/v26.0/555/messages', 'Page-authorized actions target the Page, retaining the Instagram sender');
       assert.deepEqual(Object.keys(body).sort(), ['recipient','sender_action']);
       calls.push(body.sender_action);
       if (actionFailure) throw Error('fixture-secret must not be logged');
       return Response.json({ recipient_id: '100' });
     }
+    assert.equal(url.pathname, '/v26.0/900/messages', 'Text replies retain the Instagram account endpoint');
     posts++;
     calls.push(body.message.text);
     if (messageFailure) throw new DOMException('Uncertain message POST', 'TimeoutError');

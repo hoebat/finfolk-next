@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { setTimeout as delay } from 'node:timers/promises';
 import { oauthSettings, oauthFlowKey } from "../backend/messaging-config.mjs";
 import {
   InstagramProvider,
@@ -152,6 +153,18 @@ await refreshAuthorization(
   },
 );
 assert.equal(refreshed, false);
+const actions = new InstagramProvider(p.config, async (input, options) => {
+  assert.equal(new URL(input).pathname, '/v26.0/222/messages');
+  assert.deepEqual(JSON.parse(options.body), { recipient: { id: '444' }, sender_action: 'mark_seen' });
+  // A real Meta Page action took 1.6 seconds: the former one-second cutoff
+  // aborted valid responses before they could be confirmed.
+  await delay(1100, undefined, { signal: options.signal });
+  return Response.json({ recipient_id: '444' });
+});
+await actions.senderAction('444', 'mark_seen');
+await assert.rejects(() => new InstagramProvider({ ...p.config, pageId: '' }, () => {
+  throw Error('An unbound Page must not issue a request');
+}).senderAction('444', 'mark_seen'), { code: 'sender_action_account_missing' });
 console.log(
   "Facebook Page provider: configured Page/brand identity, app-bound Page token, long-lived exchange, expiry, subscription readback and rejection boundaries passed.",
 );

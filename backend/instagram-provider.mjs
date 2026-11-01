@@ -316,8 +316,13 @@ export class InstagramProvider {
   async senderAction(sender, action) {
     if (!/^\d{1,40}$/.test(sender) || !['mark_seen', 'typing_on', 'typing_off'].includes(action))
       throw messagingError('sender_action_invalid', 'Invalid Instagram sender action.');
-    const data = await this.request('/' + this.config.accountId + '/messages', {
-      method: 'POST', timeoutMs: 1000,
+    // Page-authorized sender actions use the Page edge even though text replies
+    // use the linked Instagram account edge. The recipient remains the IGSID.
+    const account = this.config.provider === 'instagram-facebook' ? this.config.pageId : this.config.accountId;
+    if (!/^\d{1,40}$/.test(account || ''))
+      throw messagingError('sender_action_account_missing', 'Reconnect the FinFolk messaging account.', 503);
+    const data = await this.request('/' + account + '/messages', {
+      method: 'POST', timeoutMs: 3000,
       body: { recipient: { id: sender }, sender_action: this.config.provider === 'instagram-login' ? action.toUpperCase() : action },
     });
     if (String(data.recipient_id) !== sender && data.success !== true)
