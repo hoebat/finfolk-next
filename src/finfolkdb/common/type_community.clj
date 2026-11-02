@@ -21,12 +21,14 @@
    :target-id {:type :text :required true :primary "default"}])
 
 ;; Physical table: finfolk.checkins
-(deftype.pg ^{:finfolk/constraints ["FOREIGN KEY (beach_id) REFERENCES finfolk.beaches(id)" "NOT NULL beach_id" "NOT NULL created_at" "PRIMARY KEY (user_id, beach_id, visit_day)" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id" "NOT NULL visit_day"]}
+(deftype.pg ^{:finfolk/constraints ["FOREIGN KEY (beach_id) REFERENCES finfolk.beaches(id)" "NOT NULL beach_id" "NOT NULL created_at" "PRIMARY KEY (user_id, beach_id, visit_day)" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id" "NOT NULL visit_day" "CHECK (((checked_out_at IS NULL) OR ((checked_in_at IS NOT NULL) AND (checked_out_at >= checked_in_at))))"]}
   checkins
   [:user-id {:type :text :required true :primary "default"}
    :beach-id {:type :text :required true :primary "default"}
    :visit-day {:type :date :required true :primary "default"}
-   :created-at {:type :timestamptz :required true :finfolk/default-sql "now()"}])
+   :created-at {:type :timestamptz :required true :finfolk/default-sql "now()"}
+   :checked-in-at {:type :timestamptz}
+   :checked-out-at {:type :timestamptz}])
 
 ;; Physical table: finfolk.connections
 (deftype.pg ^{:finfolk/constraints ["FOREIGN KEY (a) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL a" "FOREIGN KEY (b) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL b" "CHECK ((a < b))" "CHECK (((requested_by = a) OR (requested_by = b)))" "PRIMARY KEY (a, b)" "NOT NULL requested_by" "CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'removed'::text])))" "NOT NULL status" "NOT NULL updated_at"]}

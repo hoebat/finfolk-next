@@ -1,5 +1,6 @@
 (ns finfolkdb.schema.indexes)
-(def INDEXES [{:name "checkins_beach_recent" :definition "CREATE INDEX checkins_beach_recent ON finfolk.checkins USING btree (beach_id, visit_day, user_id)"}
+(def INDEXES [{:name "checkins_active_member" :definition "CREATE UNIQUE INDEX checkins_active_member ON finfolk.checkins USING btree (user_id) WHERE ((checked_in_at IS NOT NULL) AND (checked_out_at IS NULL))"}
+{:name "checkins_beach_recent" :definition "CREATE INDEX checkins_beach_recent ON finfolk.checkins USING btree (beach_id, visit_day, user_id)"}
 {:name "directory_owner" :definition "CREATE INDEX directory_owner ON finfolk.directory_listings USING btree (owner_id)"}
 {:name "directory_pending_claim" :definition "CREATE UNIQUE INDEX directory_pending_claim ON finfolk.directory_claims USING btree (listing_id, user_id) WHERE (state = 'pending'::text)"}
 {:name "directory_public" :definition "CREATE INDEX directory_public ON finfolk.directory_listings USING btree (status, lower((document ->> 'name'::text)), id)"}

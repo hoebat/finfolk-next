@@ -15,7 +15,7 @@ try {
  for(let i=0;i<60;i++){try{admin=new pg.Client({connectionString:base});await admin.connect();break;}catch(e){await admin?.end().catch(()=>{});admin=null;await new Promise(r=>setTimeout(r,500));}}
  if(!admin)throw Error('Test PostgreSQL did not become ready. Start Docker Desktop or provide FINFOLK_TEST_POSTGRES_URL.');
  try {
-  for(const [i,file] of ['tests/db/clojure.mjs','tests/db/schema.mjs','tests/db/fresh_schema.mjs','tests/db/functions.mjs','tests/db/directory.mjs','tests/db/events.mjs','tests/db/sites.mjs','tests/db/transactions.mjs','tests/db/trips.mjs','tests/db/migrations.mjs','tests/db/readiness.mjs','tests/test_media_imports.mjs','tests/test_substrate_api.mjs','tests/test_instagram_connect.mjs'].entries()){
+  for(const [i,file] of ['tests/db/clojure.mjs','tests/db/schema.mjs','tests/db/fresh_schema.mjs','tests/db/functions.mjs','tests/db/directory.mjs','tests/db/events.mjs','tests/db/sites.mjs','tests/db/transactions.mjs','tests/db/trips.mjs','tests/db/migrations.mjs','tests/db/readiness.mjs','tests/test_media_imports.mjs','tests/test_substrate_api.mjs','tests/test_instagram_connect.mjs','tests/test_instagram_visits.mjs'].entries()){
    const name=`finfolk_test_${suffix}_${i}`;await admin.query(`CREATE DATABASE "${name}"`);
    const url=new URL(base);url.pathname='/'+name;
    try{await new Promise((resolve,reject)=>{const p=spawn(process.execPath,[file],{stdio:'inherit',env:{...process.env,FINFOLK_TEST_DATABASE_URL:url.toString()}});p.on('error',reject);p.on('exit',code=>code===0?resolve():reject(Error(file+' failed ('+code+')')));});}

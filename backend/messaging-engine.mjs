@@ -26,6 +26,7 @@ const expired = (event) =>
   Date.parse(event.message_at) < Date.now() - 86400000 ||
   Date.parse(event.message_at) > Date.now() + 300000;
 const commandName = (event) =>
+  event.command === "checkin" ? "in" :
   ["unknown", "prompt", "claim_usage", "claim_retired"].includes(event.command)
     ? event.command === "claim_usage"
       ? "claim"

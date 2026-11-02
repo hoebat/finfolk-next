@@ -26,7 +26,8 @@ Self-provided profile links remain available when messaging connection is unavai
 | `/help` | Currently enabled commands and connection instructions. |
 | `/connect` | A private, ten-minute connection code after a current follower check. |
 | `/status` | Current connection or instructions to connect. |
-| `/checkin <beach>` | Today's self-reported visit using the beach's local date and existing privacy rules. |
+| `/in <location>` | Record arrival using the location’s local date and existing privacy rules. |
+| `/out` | Record departure from the active location. The visit day stays recorded; dive sessions remain separate. |
 | `/points` | Participation and referral totals. |
 
 Followers and nonfollowers can use public help and ping within the configured rollout. Connecting and personal features require following. A confirmed nonfollower receives **“Please follow @finfolk.com.au to use this feature.”** with retry instructions; no personal result or feature effect is produced. Missing or failed follower verification fails closed.
@@ -48,3 +49,5 @@ Apply additive migration `0016_instagram_connect.sql` before deploying the backe
 Enable `connect` through Settings in the existing pilot first, retaining its allowlisted signed senders and diagnostic commands. Do not widen public access or claim production acceptance merely because deployment succeeds. Pause messaging to roll back delivery; retain established connections and never reactivate `/claim`.
 
 Run the repository test/build checks, `tests/test_instagram_connect.mjs` and the isolated real-SQL messaging integration. Coverage includes encryption, duplicate delivery, expired/replaced codes, failed follower lookup, email/ownership gates, replay, competing redemption, persistent limits and disconnect/reconnect. Confirm visible replies and the signed-in code dialog with consenting real accounts separately.
+
+Arrival/departure migration `0028_instagram_visit_times.sql` adds nullable private timestamps to existing visit-day records. Historical visit days and Regular counts are retained. Repeated arrivals do not add another day; switching locations requires `/out` first. Late or out-of-order messages cannot overwrite a newer visit update. The old `/checkin` spelling remains a DM compatibility alias for `/in`; help and the website present `/in` and `/out`. Migration updates the enabled command names while preserving the existing mode, pilot audience and rollout generation.

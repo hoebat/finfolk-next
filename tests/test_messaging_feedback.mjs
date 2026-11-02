@@ -55,7 +55,7 @@ const reset = async () => {
   await q('DELETE FROM finfolk.instagram_connect_codes');
   await q('DELETE FROM finfolk.instagram_connect_limits');
   await q('DELETE FROM finfolk.instagram_dm_limits');
-  await q(`UPDATE finfolk.messaging_accounts SET mode='live',generation=1,enabled_commands='["ping","help","connect","checkin","status"]',
+  await q(`UPDATE finfolk.messaging_accounts SET mode='live',generation=1,enabled_commands='["ping","help","connect","in","out","status"]',
     pilot_sender_ids='[]',backoff_until=null,checks='{"authorization":true,"subscription":true,"liveDelivery":true}'`);
 };
 const incoming = async (text = '/ping', mid = randomUUID()) => {

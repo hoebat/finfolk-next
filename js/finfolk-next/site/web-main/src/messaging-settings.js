@@ -14,7 +14,7 @@ export async function renderMessagingSettings({ host, api }) {
     busy = false;
   const feedback = el("p");
   feedback.setAttribute("role", "status");
-  const commandNames = ["ping", "help", "connect", "connect", "status", "checkin", "points"];
+  const commandNames = ["ping", "help", "connect", "status", "in", "out", "points"];
   const button = (text, fn) => {
     const b = el("button", text);
     b.type = "button";

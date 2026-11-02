@@ -5,7 +5,7 @@ CREATE SCHEMA IF NOT EXISTS finfolk;
 CREATE SCHEMA IF NOT EXISTS finfolk_rpc;
 CREATE TABLE finfolk.beaches (id text NOT NULL, name text NOT NULL, timezone text NOT NULL, area_name text NOT NULL DEFAULT ''::text, state text NOT NULL DEFAULT ''::text, PRIMARY KEY (id));
 CREATE TABLE finfolk.blocks (owner_id text NOT NULL, target_id text NOT NULL, CHECK ((owner_id <> target_id)), PRIMARY KEY (owner_id, target_id));
-CREATE TABLE finfolk.checkins (user_id text NOT NULL, beach_id text NOT NULL, visit_day date NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (user_id, beach_id, visit_day));
+CREATE TABLE finfolk.checkins (user_id text NOT NULL, beach_id text NOT NULL, visit_day date NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), checked_in_at timestamptz, checked_out_at timestamptz, PRIMARY KEY (user_id, beach_id, visit_day), CHECK (((checked_out_at IS NULL) OR ((checked_in_at IS NOT NULL) AND (checked_out_at >= checked_in_at)))));
 CREATE TABLE finfolk.community_referrals (day date NOT NULL DEFAULT ((now() AT TIME ZONE 'Australia/Sydney'::text))::date, platform text NOT NULL, clicks bigint NOT NULL DEFAULT 0, PRIMARY KEY (day, platform), CHECK ((platform = ANY (ARRAY['instagram'::text, 'tiktok'::text]))));
 CREATE TABLE finfolk.connections (a text NOT NULL, b text NOT NULL, requested_by text NOT NULL, status text NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), CHECK ((a < b)), CHECK (((requested_by = a) OR (requested_by = b))), PRIMARY KEY (a, b), CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'removed'::text]))));
 CREATE TABLE finfolk.directory_audit (id uuid NOT NULL DEFAULT gen_random_uuid(), listing_id uuid, actor text, event text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id));
@@ -138,6 +138,7 @@ ALTER TABLE finfolk.trip_imports ADD FOREIGN KEY (trip_id) REFERENCES finfolk.tr
 ALTER TABLE finfolk.trip_reviews ADD FOREIGN KEY (trip_id) REFERENCES finfolk.trips(id) ON DELETE CASCADE;
 ALTER TABLE finfolk.trips ADD FOREIGN KEY (active_import) REFERENCES finfolk.trip_imports(id) ON DELETE SET NULL;
 ALTER TABLE finfolk.trips ADD FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE;
+CREATE UNIQUE INDEX checkins_active_member ON finfolk.checkins USING btree (user_id) WHERE ((checked_in_at IS NOT NULL) AND (checked_out_at IS NULL));
 CREATE INDEX checkins_beach_recent ON finfolk.checkins USING btree (beach_id, visit_day, user_id);
 CREATE INDEX directory_owner ON finfolk.directory_listings USING btree (owner_id);
 CREATE UNIQUE INDEX directory_pending_claim ON finfolk.directory_claims USING btree (listing_id, user_id) WHERE (state = 'pending'::text);
