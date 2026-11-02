@@ -1,9 +1,9 @@
 import {AUSTRALIAN_SCENES,landingSceneURL} from './australian-scenes.js';
 const inkPaletteId=theme=>({yellow:'acid-light',cobalt:'acid-dark','navy-light':'muted-light',navy:'muted-dark'})[theme]||'acid-light';
-// Alternate small illustration crops through the short sections. Long demos stay plain.
+// Selected Australian underwater scenes frame the hero and shorter sections.
 export function installLandingAccents(doc=document){
  const win=doc.defaultView,entries=[];
- for(const [selector,slug,side]of [['.landing-regulars-section','port-phillip','right'],['.landing-conditions','bicheno','left'],['.landing-last','point-lowly','right']]){
+ for(const [selector,slug,side]of [['.landing-hero','ningaloo','right'],['.landing-regulars-section','port-phillip','right'],['.landing-conditions','bicheno','left'],['.landing-last','point-lowly','right']]){
   const host=doc.querySelector(selector);if(!host||host.querySelector('.landing-illustration'))continue;
   const scene=AUSTRALIAN_SCENES.find(scene=>scene.slug===slug),accent=doc.createElement('span');
   accent.className='landing-illustration';accent.dataset.side=side;accent.dataset.scene=slug;accent.setAttribute('aria-hidden','true');host.classList.add('landing-illustrated');host.append(accent);entries.push({accent,scene,loaded:false});
