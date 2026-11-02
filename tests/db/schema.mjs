@@ -37,6 +37,7 @@ try{
     else if(c.type==='c'){
      let changes;
      if(c.definition.includes('ANY (ARRAY[')){changes={[c.columns[0]]:'invalid-enum'};}
+     else if(table==='checkins'&&c.definition.includes('checked_out_at'))changes={checked_in_at:null,checked_out_at:'2026-11-02T10:00:00Z'};
      else if(table==='events'&&c.definition.includes('capacity'))changes={capacity:0};
      else if(table==='events'&&c.definition.includes('ends_at'))changes={ends_at:'2026-01-01T00:00:00Z'};
      else if(c.definition.includes('media_id'))changes={media_id:'not-a-media-id'};

@@ -26,9 +26,14 @@ export const commands = Object.freeze({
     description: "Check your connection.",
     claimed: false,
   },
-  checkin: {
-    syntax: "/checkin <beach>",
-    description: "Record today’s beach visit.",
+  in: {
+    syntax: "/in <location>",
+    description: "Record your arrival at a location.",
+    claimed: true,
+  },
+  out: {
+    syntax: "/out",
+    description: "Record your departure.",
     claimed: true,
   },
   points: {
