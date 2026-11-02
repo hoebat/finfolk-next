@@ -8,7 +8,7 @@ export function installLandingAccents(doc=document){
   const scene=AUSTRALIAN_SCENES.find(scene=>scene.slug===slug),accent=doc.createElement('span');
   accent.className='landing-illustration';accent.dataset.side=side;accent.dataset.scene=slug;accent.setAttribute('aria-hidden','true');host.classList.add('landing-illustrated');host.append(accent);entries.push({accent,scene,loaded:false});
  }
- const load=entry=>{entry.loaded=true;entry.accent.style.setProperty('--landing-illustration',`url("${landingSceneURL(entry.scene,inkPaletteId(doc.documentElement.dataset.theme||'yellow'),win.innerWidth<=600)}")`);};
+ const load=entry=>{entry.loaded=true;const theme=doc.documentElement.dataset.theme||'yellow',slug=({yellow:'ningaloo',cobalt:'julian-rocks','navy-light':'bicheno',navy:'port-phillip'})[theme]||'ningaloo',scene=entry.accent.closest('.landing-hero')?AUSTRALIAN_SCENES.find(item=>item.slug===slug):entry.scene;entry.accent.dataset.scene=scene.slug;entry.accent.style.setProperty('--landing-illustration',`url("${landingSceneURL(scene,inkPaletteId(doc.documentElement.dataset.theme||'yellow'),win.innerWidth<=600)}")`);};
  const refresh=()=>{for(const entry of entries)if(entry.loaded)load(entry);};
  const observer=win.IntersectionObserver?new win.IntersectionObserver(items=>{for(const item of items)if(item.isIntersecting){const entry=entries.find(entry=>entry.accent===item.target);if(entry){load(entry);observer.unobserve(item.target);}}},{rootMargin:'250px'}):null;
  for(const entry of entries)if(observer)observer.observe(entry.accent);else load(entry);
