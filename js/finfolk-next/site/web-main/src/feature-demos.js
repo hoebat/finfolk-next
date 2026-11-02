@@ -1,6 +1,7 @@
+import {PROFILE_AVATARS} from './profile-avatars.js';
 import {beachThumbnail} from './beach-thumbnail.js';
 const BEACH={id:'bondi',name:'Bondi Beach',state_id:'NSW',state:'New South Wales',point:[151.278267,-33.891157]};
-const PORTRAITS={alex:new URL('./demo-alex.webp',import.meta.url).href,maya:new URL('./demo-maya.webp',import.meta.url).href,kai:new URL('./demo-kai.webp',import.meta.url).href};
+const PORTRAITS=Object.fromEntries(PROFILE_AVATARS.map(avatar=>[avatar.id,avatar.url]));
 const portrait=name=>`<img src="${PORTRAITS[name.toLowerCase()]}" alt="" loading="lazy" width="900" height="1125">`;
 const pill=text=>`<span class="demo-pill">${text}</span>`;
 const field=(label,value,cls='')=>`<div class="demo-field ${cls}"><small>${label}</small><span>${value}</span></div>`;
@@ -31,7 +32,7 @@ const platformIcon=platform=>platform==='FinFolk'?brandMark:'<span class="demo-p
 const thread=content=>'<div class="demo-thread-title">'+brandMark+'<div><strong>finfolk.com.au</strong><small>Instagram · Example conversation</small></div></div>'+content;
 const message=(text,sent=false)=>'<div class="demo-message '+(sent?'is-sent':'')+'">'+text+'</div>';
 const typed=text=>'<span data-demo-type="'+text+'">'+text+'</span>';
-const video=()=>'<div class="demo-post-media"><img src="'+new URL('./demo-shore.webp',import.meta.url).href+'" alt="" loading="lazy" width="1000" height="667"><span>▶</span><small>Bondi Beach · Freediving</small></div>';
+const video=(pose='gliding')=>'<div class="demo-post-media demo-session-art" data-pose="'+pose+'"><span class="demo-session-diver" aria-hidden="true"></span><span class="demo-session-play" aria-hidden="true">▶</span><small>Bondi Beach · Freediving</small></div>';
 function instagramConnectPages(){return [
  page(0,'<p class="demo-overline">INSTAGRAM</p><div class="demo-instagram-profile">'+brandMark+'<h4>finfolk.com.au</h4><p>Freediving locations, logs and community.</p></div>'+action('Follow @finfolk.com.au','demo-tap-target')+'<p class="demo-hint">Follow FinFolk to connect and use member commands.</p>'),
  page(1,thread(message(typed('/connect'),true)+'<div class="demo-connect-reply">'+message('Your FinFolk code: <b>•••• ••••</b><br>Enter it on FinFolk within 10 minutes.')+'</div>')+'<div class="demo-compose">Message… <span>↑</span></div>'),
@@ -41,8 +42,8 @@ function instagramConnectPages(){return [
  page(5,'<p class="demo-overline">MY ACCOUNT / VISITS</p>'+ownProfile()+'<div class="demo-confirmation">'+check+' Visit recorded</div><div class="demo-visit"><strong>Bondi Beach</strong><span>Today · Self-reported visit</span>'+pill('1 visit day')+'</div><p class="demo-hint">Become a Regular after visits on three separate days within 30 days. Your profile is still Closed.</p>')
 ].join('');}
 function importPages(platform='Instagram'){const tiktok=platform==='TikTok';return [
- page(0,'<p class="demo-overline">'+(tiktok?'TIKTOK / VIDEO':'INSTAGRAM / PHOTO OR REEL')+'</p><h4>Share your dive</h4>'+video()+'<div class="demo-post-caption"><strong>@alex.dives</strong><p>Shore session at Bondi Beach.<br><span class="demo-mention">'+typed('@finfolk.com.au')+'</span></p></div>'+action('Post','demo-tap-target')),
- page(1,'<p class="demo-overline">FINFOLK / TAGGED MEDIA</p><h4>New in your log</h4><div class="demo-confirmation">'+check+' '+(tiktok?'Tagged video imported':'Tagged photo or video imported')+'</div><div class="demo-review-card">'+video()+pill('Not in a session yet')+'<strong>Bondi Beach</strong><span>29 October 2026 · '+platform+'</span></div><p class="demo-hint">The post’s day and matched location come with it.</p>'),
+ page(0,'<p class="demo-overline">'+(tiktok?'TIKTOK / VIDEO':'INSTAGRAM / PHOTO OR REEL')+'</p><h4>Share your session</h4>'+video(tiktok?'ascending':'gliding')+'<div class="demo-post-caption"><strong>@alex.dives</strong><p>Shore session at Bondi Beach.<br><span class="demo-mention">'+typed('@finfolk.com.au')+'</span></p></div>'+action('Post','demo-tap-target')),
+ page(1,'<p class="demo-overline">FINFOLK / TAGGED MEDIA</p><h4>New in your log</h4><div class="demo-confirmation">'+check+' '+(tiktok?'Tagged video imported':'Tagged photo or video imported')+'</div><div class="demo-review-card">'+video(tiktok?'ascending':'gliding')+pill('Not in a session yet')+'<strong>Bondi Beach</strong><span>29 October 2026 · '+platform+'</span></div><p class="demo-hint">The post’s day and matched location come with it.</p>'),
  page(2,'<p class="demo-overline">REVIEW IMPORT</p><h4>Day and location</h4>'+field('Day','29 October 2026')+field('Detected location','Bondi Beach')+field('Additional information',typed('Shore session with my buddy.'),'demo-notes')+'<p class="demo-hint">Check the day and confirm or change the location.</p>'+action('Sort into a session','demo-tap-target')),
  page(3,'<p class="demo-overline">SORT INTO A SESSION</p><h4>Choose a session</h4><div class="demo-saved-session">'+pill('Private')+'<p>29 October 2026</p><h4>Bondi Beach</h4><p>Shore session with my buddy.</p></div>'+action('Add to this session','demo-tap-target')+'<p class="demo-hint">Or create a new session. Add dive details when you’re ready.</p>'),
  page(4,'<p class="demo-overline">LOGBOOK / BONDI BEACH</p><h4>Your session</h4><div class="demo-confirmation">'+check+' Photo or video added</div><div class="demo-saved-session">'+pill('Private')+'<p>29 October 2026</p><h4>Bondi Beach</h4><p>Shore session with my buddy.</p><div class="demo-imported-media">'+(tiktok?'TikTok video linked':'Instagram photo / video linked')+'</div></div><p class="demo-hint">Add more information or publish the session later. The original media stays on '+platform+'.</p>')

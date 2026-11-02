@@ -59,7 +59,7 @@ test('profile editor saves portraits and selected public content and preserves f
  await page.evaluate(()=>{window.failSave=false;});await page.getByRole('button',{name:'Save profile',exact:true}).click();await expect(page.locator('.member-hero h1')).toHaveText('Alice Diver');
  await expect(page.locator('.member-hero img')).toHaveAttribute('src',/^data:image\/(?:webp|jpeg);base64,/);await expect(page.locator('[data-public-log]')).toHaveCount(1);
  const saved=await page.evaluate(()=>window.profileCalls.filter(call=>call.action==='preferences').at(-1).profile);expect(saved.featuredLogs).toEqual(['public-one']);expect(saved.featuredPosts).toEqual(['post-one']);expect(saved.open).toBe(true);
- await page.getByRole('link',{name:'Edit profile',exact:true}).first().click();await page.getByRole('button',{name:'Remove portrait',exact:true}).click();await page.getByRole('button',{name:'Save profile',exact:true}).click();await expect(page.locator('.member-hero img')).toHaveCount(0);
+ await page.getByRole('link',{name:'Edit profile',exact:true}).first().click();await page.getByRole('button',{name:'Use standard illustration',exact:true}).click();await page.getByRole('button',{name:'Save profile',exact:true}).click();await expect(page.locator('.member-hero img')).toHaveAttribute('data-default-portrait',/alex|maya|kai/);
 });
 
 test('guest profiles and five-item navigation fit mobile and retain one responsive logo',async({page})=>{
@@ -83,4 +83,12 @@ test('People offers a fresh global mix with optional filters and spot-led browsi
  await page.getByLabel('Code from your Instagram DM').fill('abcd efgh');await expect(page.getByRole('dialog')).toContainText('Connected to @alice.dives');
  await page.getByRole('button',{name:'Done',exact:true}).click();await expect(page.getByRole('dialog')).toHaveCount(0);await expect(page.locator('#instagram-claim')).toContainText('Instagram connected');
  await page.locator('[data-nav=people]').click();await page.getByRole('link',{name:'View profile ↗',exact:true}).click();await expect(page.locator('#instagram-claim')).toHaveCount(0);
+});
+
+test('illustrated avatars are stable defaults and replace an unavailable uploaded photo',async({page})=>{
+ await mount(page,{location:''});const person=page.locator('[data-person=maya] .person-portrait img');await expect(person).toHaveAttribute('data-default-portrait',/alex|maya|kai/);const original=await person.getAttribute('src');
+ await page.getByRole('link',{name:'View profile ↗',exact:true}).click();await expect(page.locator('.member-hero img')).toHaveAttribute('src',original);
+ await page.locator('[data-nav=me]').click();const own=await page.locator('.member-hero img').getAttribute('src');await page.getByRole('link',{name:'Edit profile',exact:true}).first().click();await expect(page.locator('.profile-editor-preview .person-portrait img')).toHaveAttribute('src',own);
+ await page.getByLabel('Display name',{exact:true}).fill('Another display name');await expect(page.locator('.profile-editor-preview .person-portrait img')).toHaveAttribute('src',own);
+ await page.evaluate(()=>{window.profileState.portrait='data:image/webp;base64,AAAA';return window.profiles.navigate('me');});await page.locator('.member-hero img').scrollIntoViewIfNeeded();await expect(page.locator('.member-hero img')).toHaveAttribute('src',own);await expect.poll(()=>page.locator('.member-hero img').evaluate(img=>img.naturalWidth)).toBeGreaterThan(0);
 });

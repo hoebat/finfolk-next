@@ -20,7 +20,7 @@ assert.ok(sw.includes('"./profiles"'),'profile navigation keeps its own offline 
 const profiles=await readFile(root+'/profiles.html','utf8');assert.ok(profiles.includes('id="profile-main"')&&/profiles-page\.[a-f0-9]{12}\.js/.test(profiles));
 assert.ok(html.includes('data-feature-demo="people"'),'landing includes the new People walkthrough');
 assert.ok(!html.includes('<iframe'),'landing walkthroughs are focused examples');
-for(const name of ['demo-alex','demo-maya','demo-kai','demo-shore'])assert.ok(sw.includes(name+'.'),'offline shell includes walkthrough artwork');
+for(const name of ['demo-alex','demo-maya','demo-kai','freediver-ascending-v1','freediver-gliding-v1'])assert.ok(sw.includes(name+'.'),'offline shell includes walkthrough artwork');
 for(const scene of ['ningaloo','great-barrier','julian-rocks','port-phillip','bicheno','point-lowly'])for(const palette of ['acid-light','acid-dark','muted-light','muted-dark'])for(const mobile of ['', '-mobile'])assert.ok(files.includes(`scene-${scene}-${palette}${mobile}-v1.webp`),'publish all illustrated coastal palettes');
 assert.equal(config.apiUrl,'https://finfolk.com.au/');assert.equal(config.backbone,true);assert.equal(config.cacheBackend,'sqlite');assert.equal(config.googleEnabled,true);
 assert.ok(!(await readFile(root+'/robots.txt','utf8')).includes('Disallow: /'));

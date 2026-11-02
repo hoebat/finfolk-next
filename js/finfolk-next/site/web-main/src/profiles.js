@@ -1,3 +1,4 @@
+import {standardAvatar} from './profile-avatars.js';
 import {renderInstagramClaim} from './instagram-claim.js';
 import {closeInstagramConnectDialogs} from './instagram-connect.js';
 import {installNavigation,navigationURL} from './navigation.js';
@@ -48,11 +49,12 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
  };
  doc.addEventListener('click',onLink);
  function portrait(member){
-  const wrap=node('div',undefined,'person-portrait');
-  const placeholder=()=>{const mark=node('span',undefined,'brand-f');mark.setAttribute('role','img');mark.setAttribute('aria-label','No portrait selected');return mark;};
-  if(typeof member.portrait==='string'&&/^data:image\/(?:webp|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(member.portrait)&&member.portrait.length<=65_558){const image=node('img');image.src=member.portrait;image.alt='Profile portrait for '+member.displayName;image.loading='lazy';image.onerror=()=>wrap.replaceChildren(placeholder());wrap.append(image);}
-  else wrap.append(placeholder());
-  return wrap;
+  const wrap=node('div',undefined,'person-portrait'),image=node('img'),choice=standardAvatar(member.id||api.user?.uid||member.displayName||'');
+  const useStandard=()=>{image.src=choice.url;image.alt='Default illustrated profile avatar';image.dataset.defaultPortrait=choice.id;};
+  image.loading='lazy';image.width=900;image.height=1125;
+  if(typeof member.portrait==='string'&&/^data:image\/(?:webp|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(member.portrait)&&member.portrait.length<=65_558){image.src=member.portrait;image.alt='Profile portrait for '+member.displayName;image.onerror=()=>{image.onerror=null;useStandard();};}
+  else useStandard();
+  wrap.append(image);return wrap;
  }
  function socials(member){
   const row=node('div',undefined,'profile-socials');for(const platform of ['instagram','tiktok']){
@@ -187,7 +189,8 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   function updatePreview(){preview.replaceChildren(node('p','PROFILE PREVIEW','profile-eyebrow'),portrait(draft()),node('h2',draft().displayName||'Your name'),node('p',draft().bio||'Add a little about yourself.'));}
   const identity=group('Profile'),name=field(identity,'displayName','Display name','text',profile.displayName||''),bio=field(identity,'bio','About you','textarea',profile.bio||'');name.required=true;name.maxLength=80;bio.maxLength=500;name.oninput=bio.oninput=updatePreview;
   const picture=group('Portrait'),upload=field(picture,'portrait','JPEG, PNG or WebP · up to 2 MiB','file');upload.accept='image/jpeg,image/png,image/webp';upload.onchange=async()=>{if(!upload.files[0])return;uploadPending=true;save.disabled=true;try{portraitValue=await portraitDataURL(upload.files[0],win);if(generation!==epoch)return;error.textContent='Portrait ready. Save profile to keep it.';updatePreview();}catch(e){error.textContent=e.message;}finally{uploadPending=false;save.disabled=false;upload.value='';}};
-  picture.append(button('Remove portrait',()=>{portraitValue='';upload.value='';updatePreview();}));
+  picture.append(node('p','Illustrated diver avatars are standard. Upload your own photo, or return to your illustration.','profile-small'));
+  picture.append(button('Use standard illustration',()=>{portraitValue='';upload.value='';updatePreview();}));
   const places=group('Locations & availability'),search=field(places,'locationSearch','Find a location','search'),placeList=node('div',undefined,'profile-directory-list');places.append(placeList);
   function showSites(){placeList.replaceChildren();const query=search.value.trim().toLowerCase();for(const site of sites.filter(site=>site.name.toLowerCase().includes(query)||selectedSites.has(site.id))){const input=check(placeList,'beaches',site.name+' · '+(site.state_id||site.state||''),selectedSites.has(site.id));input.value=site.id;input.onchange=()=>{if(input.checked&&selectedSites.size>=20){input.checked=false;error.textContent='Choose up to 20 locations.';return;}input.checked?selectedSites.add(site.id):selectedSites.delete(site.id);};}}
   search.oninput=showSites;showSites();
