@@ -85,3 +85,4 @@ html,body{height:100%;overflow:hidden}body{display:grid;grid-template-columns:cl
 
 #layers-callout[hidden],.data-tabs[hidden]{display:none!important}
 .map-settings .layer-section{display:block;padding:12px 0}.map-settings .toggle{display:flex;align-items:center;justify-content:space-between;gap:16px;min-height:48px}.map-settings .toggle span{display:grid;gap:4px}.map-settings small{font-size:12px}.map-settings .source-actions,.map-settings .map-view-controls{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0}
+@media(max-width:900px){.map-toolbar{right:172px}.map-toolbar #map-search-form{width:100%}}
