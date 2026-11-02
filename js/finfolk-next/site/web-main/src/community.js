@@ -201,7 +201,7 @@ export function installCommunity({
         const instagram = link('Follow @finfolk.com.au on Instagram ↗', 'https://www.instagram.com/finfolk.com.au/');
         instagram.className = 'finfolk-social-link';
         box.append(instagram);
-        root.append(box, themeSettings());
+        root.append(box);
         const token = new URL(location.href).searchParams.get('token');
         if (token) {
           const reset = el('section', undefined, 'account-card'),
