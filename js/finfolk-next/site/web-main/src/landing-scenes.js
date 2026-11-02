@@ -1,12 +1,17 @@
 import {AUSTRALIAN_SCENES,landingSceneURL} from './australian-scenes.js';
 const inkPaletteId=theme=>({yellow:'acid-light',cobalt:'acid-dark','navy-light':'muted-light',navy:'muted-dark'})[theme]||'acid-light';
-export function installLandingScenes(){
- const doc=document,sections=[];let palette=inkPaletteId(doc.documentElement.dataset.theme||'yellow');
- const mobile=()=>doc.defaultView.innerWidth<=600;
- const load=entry=>{entry.loaded=true;entry.node.style.setProperty('--landing-scene',`url("${landingSceneURL(entry.scene,palette,mobile())}")`);};
- for(const scene of AUSTRALIAN_SCENES){const node=doc.querySelector(scene.section);if(!node)continue;node.classList.add('landing-scene');node.dataset.scene=scene.slug;node.style.setProperty('--scene-position',mobile()?scene.mobileFocus:scene.focus);const caption=doc.createElement('span');caption.className='landing-scene-caption';caption.textContent=scene.caption+' · illustrated';node.append(caption);sections.push({node,scene,loaded:false});}
- function refresh(){palette=inkPaletteId(doc.documentElement.dataset.theme||'yellow');for(const entry of sections){entry.node.dataset.palette=palette;entry.node.style.setProperty('--scene-position',mobile()?entry.scene.mobileFocus:entry.scene.focus);if(entry.loaded)load(entry);}}
- const Observer=doc.defaultView.IntersectionObserver;
- if(Observer){const observer=new Observer(entries=>{for(const e of entries)if(e.isIntersecting){load(sections.find(s=>s.node===e.target));observer.unobserve(e.target);}},{rootMargin:'300px'});for(const entry of sections)observer.observe(entry.node);}else sections.forEach(load);
- doc.addEventListener('finfolk:appearance',refresh);doc.defaultView.addEventListener('resize',refresh);refresh();
+// Alternate small illustration crops through the short sections. Long demos stay plain.
+export function installLandingAccents(doc=document){
+ const win=doc.defaultView,entries=[];
+ for(const [selector,slug,side]of [['.landing-regulars-section','port-phillip','right'],['.landing-conditions','bicheno','left'],['.landing-last','point-lowly','right']]){
+  const host=doc.querySelector(selector);if(!host||host.querySelector('.landing-illustration'))continue;
+  const scene=AUSTRALIAN_SCENES.find(scene=>scene.slug===slug),accent=doc.createElement('span');
+  accent.className='landing-illustration';accent.dataset.side=side;accent.dataset.scene=slug;accent.setAttribute('aria-hidden','true');host.classList.add('landing-illustrated');host.append(accent);entries.push({accent,scene,loaded:false});
+ }
+ const load=entry=>{entry.loaded=true;entry.accent.style.setProperty('--landing-illustration',`url("${landingSceneURL(entry.scene,inkPaletteId(doc.documentElement.dataset.theme||'yellow'),win.innerWidth<=600)}")`);};
+ const refresh=()=>{for(const entry of entries)if(entry.loaded)load(entry);};
+ const observer=win.IntersectionObserver?new win.IntersectionObserver(items=>{for(const item of items)if(item.isIntersecting){const entry=entries.find(entry=>entry.accent===item.target);if(entry){load(entry);observer.unobserve(item.target);}}},{rootMargin:'250px'}):null;
+ for(const entry of entries)if(observer)observer.observe(entry.accent);else load(entry);
+ doc.addEventListener('finfolk:appearance',refresh);win.addEventListener('resize',refresh);
+ return {destroy(){observer?.disconnect();doc.removeEventListener('finfolk:appearance',refresh);win.removeEventListener('resize',refresh);}};
 }
