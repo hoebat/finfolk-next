@@ -1,5 +1,16 @@
+import {Buffer} from 'node:buffer';
 export const SHARING = ['visits', 'months', 'dives', 'time', 'depth'];
 export const ACTIVITIES = ['freediving', 'ocean-swimming', 'spearfishing'];
+export const AVAILABILITY = ['weekday mornings','weekday afternoons','weekend mornings','weekend afternoons'];
+export const EXPERIENCES = ['new','comfortable','experienced'];
+export function profilePortrait(value){
+  if(value==='')return '';
+  if(typeof value!=='string'||value.length>65_558||!/^data:image\/(?:webp|jpeg);base64,[A-Za-z0-9+/]+={0,2}$/.test(value))throw Error('Choose a valid JPEG or WebP profile portrait.');
+  const bytes=Buffer.from(value.slice(23),'base64');
+  const matches=value.startsWith('data:image/webp;')?bytes.length>=20&&bytes.toString('ascii',0,4)==='RIFF'&&bytes.toString('ascii',8,12)==='WEBP'&&bytes.readUInt32LE(4)===bytes.length-8&&['VP8 ','VP8L','VP8X'].includes(bytes.toString('ascii',12,16)):bytes.length>=20&&bytes[0]===255&&bytes[1]===216&&bytes[2]===255&&bytes.at(-2)===255&&bytes.at(-1)===217;
+  if(bytes.length>49_152||!matches)throw Error('Choose a valid JPEG or WebP profile portrait.');
+  return value;
+}
 export function localDay(now, zone) {
   const parts = new Intl.DateTimeFormat('en-CA', {
     timeZone: zone,
@@ -89,6 +100,8 @@ export function preferences(value = {}) {
   };
   return {
     displayName: text(value.displayName, 80) || 'Diver',
+    ...(Object.hasOwn(value,'portrait')?{portrait:profilePortrait(value.portrait)}:{}),
+    ...Object.fromEntries(['featuredLogs','featuredPosts'].filter(key=>Object.hasOwn(value,key)).map(key=>[key,Array.isArray(value[key])?[...new Set(value[key])].filter(id=>typeof id==='string'&&/^[A-Za-z0-9_-]{1,128}$/.test(id)).slice(0,12):[]])),
     bio: text(value.bio, 500),
     instagram: link(value.instagram, 'instagram'),
     tiktok: link(value.tiktok, 'tiktok'),
@@ -102,13 +115,8 @@ export function preferences(value = {}) {
           .slice(0, 20)
       : [],
     activities: list(value.activities, ACTIVITIES),
-    availability: list(value.availability, [
-      'weekday mornings',
-      'weekday afternoons',
-      'weekend mornings',
-      'weekend afternoons',
-    ]),
-    experience: ['new', 'comfortable', 'experienced'].includes(value.experience)
+    availability: list(value.availability, AVAILABILITY),
+    experience: EXPERIENCES.includes(value.experience)
       ? value.experience
       : '',
     depthGoal:

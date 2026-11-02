@@ -16,6 +16,9 @@ assert.ok(html.includes('id="landing-main"')&&html.includes('id="landing-preview
 assert.ok(/landing\.[a-f0-9]{12}\.js/.test(html),'homepage loads the fingerprinted landing module');
 assert.ok(app.includes('<title>FinFolk</title>')&&app.includes('id="app-main"'),'keep a separate application shell');
 assert.ok(sw.includes('"./app"'),'offline app shell is separate from the homepage');
+assert.ok(sw.includes('"./profiles"'),'profile navigation keeps its own offline document');
+const profiles=await readFile(root+'/profiles.html','utf8');assert.ok(profiles.includes('id="profile-main"')&&/profiles-page\.[a-f0-9]{12}\.js/.test(profiles));
+assert.ok(html.includes('./profiles?screen=people'),'landing community preview opens People');
 for(const scene of ['ningaloo','great-barrier','julian-rocks','port-phillip','bicheno','point-lowly'])for(const palette of ['acid-light','acid-dark','muted-light','muted-dark'])for(const mobile of ['', '-mobile'])assert.ok(files.includes(`scene-${scene}-${palette}${mobile}-v1.webp`),'publish all illustrated coastal palettes');
 assert.equal(config.apiUrl,'https://finfolk.com.au/');assert.equal(config.backbone,true);assert.equal(config.cacheBackend,'sqlite');assert.equal(config.googleEnabled,true);
 assert.ok(!(await readFile(root+'/robots.txt','utf8')).includes('Disallow: /'));

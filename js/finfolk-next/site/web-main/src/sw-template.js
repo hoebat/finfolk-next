@@ -19,7 +19,8 @@ self.addEventListener('fetch', (event) => {
           return await fetch(request, { signal: AbortSignal.timeout(5000) });
         } catch {
           const application=url.pathname.endsWith('/app')||url.pathname.endsWith('/app.html')||[...url.searchParams.keys()].some(key=>!/^utm_/i.test(key)&&!['fbclid','gclid','msclkid'].includes(key));
-          const shell=application&&SHELL.includes('./app')?'./app':'./index.html';
+          const profilePage=/\/profiles(?:\.html)?$/.test(url.pathname)&&SHELL.includes('./profiles');
+          const shell=profilePage?'./profiles':application&&SHELL.includes('./app')?'./app':'./index.html';
           const cached = await (await caches.open(CACHE)).match(shell);
           if (!cached) return new Response('FinFolk is offline. Reconnect to load the app.', {status:503});
           // Static hosts redirect index.html to /. Navigation requests cannot

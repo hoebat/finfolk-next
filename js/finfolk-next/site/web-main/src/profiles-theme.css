@@ -1,0 +1,15 @@
+:root[data-theme]{--account-bg:var(--theme-bg);--account-surface:var(--theme-surface);--account-ink:var(--theme-ink);--account-accent:var(--theme-accent);--account-muted:var(--theme-muted);--account-line:var(--theme-line)}
+.profile-demo .navigation-logo{color:var(--account-ink)}
+.person-portrait>.brand-f{width:96px;height:116px;margin:auto;color:var(--account-ink)}
+.person-portrait{display:flex;align-items:center;justify-content:center}
+.profile-status:empty{display:none}
+.profile-post-link{display:grid;gap:12px;padding:24px;text-decoration:none;border:1px solid var(--account-line);background:var(--account-surface);border-radius:20px;min-height:160px}
+.profile-post-link strong{font:400 28px Georgia,serif}
+.profile-post-link small{color:var(--account-muted)}
+.profile-directory-list{max-height:240px;overflow:auto;padding-right:8px}
+.profile-guest{padding:28px;border:1px solid var(--account-line);background:var(--account-surface);border-radius:22px}
+.profile-guest h2{margin-top:20px}
+.profile-connection-row{display:flex;align-items:center;flex-wrap:wrap;gap:12px;margin-block:18px}
+.profile-connection-row>a{margin-right:auto}
+.profile-editor :is(input,select,textarea):disabled{opacity:.6}
+.profile-demo [hidden]{display:none!important}

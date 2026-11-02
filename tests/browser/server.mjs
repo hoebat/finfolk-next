@@ -12,10 +12,10 @@ createServer(async(req,res)=>{
     // Firefox's automation offline setting can leave service-worker fetches
     // connected. Explicitly fail the network inside this isolated fixture.
     const networkFixture="let forcedOffline=false;const networkFetch=self.fetch.bind(self);self.fetch=(...args)=>forcedOffline?Promise.reject(new TypeError('Fixture offline')):networkFetch(...args);self.addEventListener('message',event=>{if(event.data==='offline'){forcedOffline=true;event.ports[0].postMessage('offline');}});\n";
-    res.setHeader('Content-Type','text/javascript');res.end(networkFixture+(await readFile(root+'/sw-template.js','utf8')).replaceAll('__VERSION__','landing-test').replace('__SHELL__',JSON.stringify(['./index.html','./app'])));return;
+    res.setHeader('Content-Type','text/javascript');res.end(networkFixture+(await readFile(root+'/sw-template.js','utf8')).replaceAll('__VERSION__','landing-test').replace('__SHELL__',JSON.stringify(['./index.html','./app','./profiles'])));return;
    }
    if(path.endsWith('/index.html')){res.writeHead(302,{Location:'/__landing/'});res.end();return;}
-   res.setHeader('Content-Type','text/html');res.end('<!doctype html><h1>'+ (path.endsWith('/app')?'FinFolk app':'FinFolk landing')+'</h1>');return;
+   res.setHeader('Content-Type','text/html');res.end('<!doctype html><h1>'+ (path.endsWith('/app')?'FinFolk app':path.endsWith('/profiles')?'FinFolk profiles':'FinFolk landing')+'</h1>');return;
   }
   if(path.startsWith('/__redirect/')){
    res.setHeader('Cache-Control','no-store');
@@ -39,7 +39,7 @@ createServer(async(req,res)=>{
    res.setHeader('Content-Type','text/html');res.end('<!doctype html><h1>'+version+'</h1>');return;
   }
   if(path==='/__test'){res.setHeader('Content-Type','text/html');res.end('<!doctype html><title>FinFolk worker tests</title>');return;}
-  const file=resolve(root,'.'+path);if(!file.startsWith(root+'/')||!(await stat(file)).isFile())throw Error();
+  const file=resolve(root,'.'+(path==='/profiles'?'/profiles.html':path));if(!file.startsWith(root+'/')||!(await stat(file)).isFile())throw Error();
   res.setHeader('Content-Type',({'.js':'text/javascript','.wasm':'application/wasm','.json':'application/json','.html':'text/html','.css':'text/css','.svg':'image/svg+xml','.webp':'image/webp','.png':'image/png'})[extname(file)]||'application/octet-stream');
   res.setHeader('Cache-Control','no-store');res.end(await readFile(file));
  }catch{res.writeHead(404);res.end();}

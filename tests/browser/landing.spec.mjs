@@ -12,11 +12,13 @@ test('offline navigation keeps the landing page separate from app and deep links
  for(const path of ['/__landing/?view=discover','/__landing/?site=bondi','/__landing/app']){
   await page.goto(path);await expect(page.locator('h1')).toHaveText('FinFolk app');
  }
+ await page.goto('/__landing/profiles?screen=people');await expect(page.locator('h1')).toHaveText('FinFolk profiles');
 });
 
 test('landing previews, palette synchronisation and forecast recovery work on desktop and mobile',async({page})=>{
  // Isolate the landing interactions from account services and app startup.
  await page.route(/\/\?view=/,route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>FinFolk app preview</title><p>App preview</p>'}));
+ await page.route(/\/profiles\?/,route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>FinFolk People</title><p>People</p>'}));
  await page.goto('/landing.html');
  await expect(page.locator('#landing-signature [role=img]')).toHaveAttribute('aria-label','FinFolk');
  await expect(page.locator('.landing-hero')).toHaveCSS('--landing-scene',/ningaloo-acid-light-v1.webp/);
@@ -27,6 +29,9 @@ test('landing previews, palette synchronisation and forecast recovery work on de
  await page.keyboard.press('Escape');
  await expect(page.locator('#landing-demo')).not.toBeVisible();
  await expect(log).toBeFocused();
+ await page.locator('.landing-chapter-copy [data-demo-route=people]').click();
+ await expect(page.locator('#landing-demo-frame')).toHaveAttribute('src','./profiles?screen=people&location=bondi');
+ await page.keyboard.press('Escape');
  const preview=page.frames().find(frame=>frame.url().includes('?view=discover'));
  await preview.evaluate(async()=>{const {setTheme}=await import('/theme.js');setTheme('navy');});
  await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
