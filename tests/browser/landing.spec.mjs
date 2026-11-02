@@ -20,7 +20,8 @@ test('landing walkthroughs, themes and forecasts work on desktop and mobile',asy
  await expect(page.locator('html')).toHaveAttribute('data-theme','yellow');
  await expect(page.locator('#landing-theme')).toHaveValue('yellow');
  await expect(page.locator('#landing-signature [role=img]')).toHaveAttribute('aria-label','FinFolk');
- await expect(page.locator('[data-feature-demo]')).toHaveCount(7);
+ await expect(page.locator('[data-feature-demo]')).toHaveCount(8);
+ await expect(page.locator('.landing-regulars-section [data-feature-demo=regulars] .demo-page')).toHaveCount(4);
  await expect(page.locator('iframe')).toHaveCount(0);
  await expect(page.locator('figcaption')).not.toContainText(['Animated example','Fictional members','Sample data']);
  await expect(page.locator('[data-feature-demo=planning]')).toContainText('Portsea Beach');
@@ -30,7 +31,7 @@ test('landing walkthroughs, themes and forecasts work on desktop and mobile',asy
  await expect(page.locator('.landing-illustration')).toHaveCount(4);
  await expect(page.locator('.landing-story .landing-illustration,.landing-social-feature .landing-illustration')).toHaveCount(0);
  await page.getByRole('button',{name:'Pause animations'}).click();
- await expect(page.locator('[data-feature-demo][data-motion=paused]')).toHaveCount(7);
+ await expect(page.locator('[data-feature-demo][data-motion=paused]')).toHaveCount(8);
  await page.locator('#landing-theme').selectOption('navy');
  await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
  await page.evaluate(()=>scrollTo(0,0));
@@ -46,5 +47,9 @@ test('landing walkthroughs, themes and forecasts work on desktop and mobile',asy
  await expect(page.locator('.conditions-status')).toContainText('Forecast unavailable');
  await expect(page.getByRole('button',{name:'Refresh forecast'})).toBeEnabled();
  await page.emulateMedia({reducedMotion:'reduce'});
- await expect(page.locator('[data-feature-demo][data-motion=paused]')).toHaveCount(7);
+ await expect(page.locator('[data-feature-demo][data-motion=paused]')).toHaveCount(8);
+ await page.locator('[data-feature-demo=regulars]').scrollIntoViewIfNeeded();
+ await page.locator('[data-feature-demo=regulars]').screenshot({path:'.cache/landing-regulars-'+browserName+'-mobile.png'});
+ await page.setViewportSize({width:1280,height:900});
+ await page.locator('.landing-regulars-section').screenshot({path:'.cache/landing-regulars-'+browserName+'-desktop.png'});
 });

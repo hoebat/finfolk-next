@@ -1,5 +1,14 @@
 // Public example locations and coordinates from the published FinFolk catalog.
 export const DEMO_LOCATIONS=Object.freeze({
+  "regulars": {
+    "id": "bondi",
+    "name": "Bondi Beach",
+    "state_id": "NSW",
+    "state": "New South Wales",
+    "point": [151.278267, -33.891157],
+    "query": "Bondi",
+    "region": "Sydney Eastern Beaches"
+  },
   "planning": {
     "id": "portsea",
     "name": "Portsea Beach",
