@@ -28,11 +28,11 @@ test('landing walkthroughs, themes and forecasts work on desktop and mobile',asy
  await expect(page.locator('[data-feature-demo=locations] .beach-thumbnail').first()).toHaveAttribute('aria-label','The Basin Beach location in Western Australia');
  await expect(page.locator('[data-feature-demo=logs]')).toContainText('Waubs Beach');
  await expect(page.locator('[data-feature-demo=tiktok-post]')).toContainText('Aldinga Beach');
- await expect(page.locator('.landing-illustration')).toHaveCount(4);
+ await expect(page.locator('.landing-illustration')).toHaveCount(1);
  await expect(page.locator('.landing-story .landing-illustration,.landing-social-feature .landing-illustration')).toHaveCount(0);
  await page.getByRole('button',{name:'Pause animations'}).click();
  await expect(page.locator('[data-feature-demo][data-motion=paused]')).toHaveCount(8);
- const backdrops=new Set();for(const [theme,scene]of [['yellow','ningaloo'],['cobalt','julian-rocks'],['navy-light','bicheno'],['navy','port-phillip']]){await page.locator('#landing-theme').selectOption(theme);await expect(page.locator('.landing-hero .landing-illustration')).toHaveAttribute('data-scene',scene);backdrops.add(await page.evaluate(()=>getComputedStyle(document.body,'::before').backgroundImage));}expect(backdrops.size).toBe(4);
+ const backdrops=new Set();for(const [theme,scene]of [['yellow','ningaloo'],['cobalt','julian-rocks'],['navy-light','bicheno'],['navy','port-phillip']]){await page.locator('#landing-theme').selectOption(theme);await expect(page.locator('.landing-hero .landing-illustration')).toHaveAttribute('data-scene',scene);backdrops.add(await page.locator('.landing-hero .landing-illustration').evaluate(node=>node.style.getPropertyValue('--landing-illustration')));await expect(page.locator('body')).toHaveCSS('background-image','none');expect(await page.evaluate(()=>getComputedStyle(document.body,'::before').content)).toBe('none');}expect(backdrops.size).toBe(4);
  await page.locator('#landing-theme').selectOption('navy');
  await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
  await page.evaluate(()=>scrollTo(0,0));
