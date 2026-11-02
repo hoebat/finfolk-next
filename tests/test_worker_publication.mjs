@@ -12,13 +12,16 @@ assert.deepEqual(await readFile(root+'/workers/'+wasm),await readFile('node_modu
 const html=await readFile(root+'/index.html','utf8'),app=await readFile(root+'/app.html','utf8'),config=JSON.parse(await readFile(root+'/neon-config.json','utf8'));
 assert.ok(html.includes('<title>FinFolk - Discover Freediving</title>'));assert.ok(html.includes('rel="canonical" href="https://finfolk.com.au/"'));
 assert.ok(!html.includes('noindex')&&!html.includes('FinFolk Next ·'));
-assert.ok(html.includes('id="landing-main"')&&html.includes('id="landing-preview"'));
+assert.ok(html.includes('id="landing-main"')&&html.includes('data-feature-demo="planning"'));
+assert.equal((html.match(/data-feature-demo=/g)||[]).length,7);
+assert.ok(!html.includes('<iframe'),'walkthroughs do not embed the application');
+for(const name of ['feature-demos.js','feature-demos.css','demo-alex.webp','demo-maya.webp','demo-kai.webp','demo-shore.webp']){const [stem,extension]=name.split('.');const file=files.find(f=>f.startsWith(stem+'.')&&f.endsWith('.'+extension));assert.ok(file,'publish '+name);assert.ok(sw.includes('./'+file),'offline shell includes '+file);}
 assert.ok(/landing\.[a-f0-9]{12}\.js/.test(html),'homepage loads the fingerprinted landing module');
 assert.ok(app.includes('<title>FinFolk</title>')&&app.includes('id="app-main"'),'keep a separate application shell');
 assert.ok(sw.includes('"./app"'),'offline app shell is separate from the homepage');
 assert.ok(sw.includes('"./profiles"'),'profile navigation keeps its own offline document');
 const profiles=await readFile(root+'/profiles.html','utf8');assert.ok(profiles.includes('id="profile-main"')&&/profiles-page\.[a-f0-9]{12}\.js/.test(profiles));
-assert.ok(html.includes('./profiles?screen=people'),'landing community preview opens People');
+assert.ok(html.includes('data-feature-demo="people"'),'landing demonstrates the community profile flow');
 for(const scene of ['ningaloo','great-barrier','julian-rocks','port-phillip','bicheno','point-lowly'])for(const palette of ['acid-light','acid-dark','muted-light','muted-dark'])for(const mobile of ['', '-mobile'])assert.ok(files.includes(`scene-${scene}-${palette}${mobile}-v1.webp`),'publish all illustrated coastal palettes');
 assert.equal(config.apiUrl,'https://finfolk.com.au/');assert.equal(config.backbone,true);assert.equal(config.cacheBackend,'sqlite');assert.equal(config.googleEnabled,true);
 assert.ok(!(await readFile(root+'/robots.txt','utf8')).includes('Disallow: /'));
