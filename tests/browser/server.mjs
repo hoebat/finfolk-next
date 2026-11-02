@@ -9,7 +9,10 @@ createServer(async(req,res)=>{
   if(path.startsWith('/__landing/')){
    res.setHeader('Cache-Control','no-store');
    if(path.endsWith('/sw.js')){
-    res.setHeader('Content-Type','text/javascript');res.end((await readFile(root+'/sw-template.js','utf8')).replaceAll('__VERSION__','landing-test').replace('__SHELL__',JSON.stringify(['./index.html','./app'])));return;
+    // Firefox's automation offline setting can leave service-worker fetches
+    // connected. Explicitly fail the network inside this isolated fixture.
+    const networkFixture="let forcedOffline=false;const networkFetch=self.fetch.bind(self);self.fetch=(...args)=>forcedOffline?Promise.reject(new TypeError('Fixture offline')):networkFetch(...args);self.addEventListener('message',event=>{if(event.data==='offline'){forcedOffline=true;event.ports[0].postMessage('offline');}});\n";
+    res.setHeader('Content-Type','text/javascript');res.end(networkFixture+(await readFile(root+'/sw-template.js','utf8')).replaceAll('__VERSION__','landing-test').replace('__SHELL__',JSON.stringify(['./index.html','./app'])));return;
    }
    if(path.endsWith('/index.html')){res.writeHead(302,{Location:'/__landing/'});res.end();return;}
    res.setHeader('Content-Type','text/html');res.end('<!doctype html><h1>'+ (path.endsWith('/app')?'FinFolk app':'FinFolk landing')+'</h1>');return;

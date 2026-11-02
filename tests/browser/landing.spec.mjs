@@ -4,6 +4,7 @@ test('offline navigation keeps the landing page separate from app and deep links
  await page.goto('/__landing/');
  await page.evaluate(async()=>{await navigator.serviceWorker.register('/__landing/sw.js',{scope:'/__landing/'});await navigator.serviceWorker.ready;});
  await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
+ await page.evaluate(()=>new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>{channel.port1.close();resolve();};navigator.serviceWorker.controller.postMessage('offline',[channel.port2]);}));
  await context.setOffline(true);
  for(const path of ['/__landing/','/__landing/?utm_source=instagram&fbclid=example']){
   await page.goto(path);await expect(page.locator('h1')).toHaveText('FinFolk landing');
