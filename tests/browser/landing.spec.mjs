@@ -17,10 +17,17 @@ test('offline navigation keeps the landing page separate from app and deep links
 
 test('landing walkthroughs, themes and forecasts work on desktop and mobile',async({page,browserName})=>{
  await page.goto('/landing.html');
+ await expect(page.locator('html')).toHaveAttribute('data-theme','yellow');
+ await expect(page.locator('#landing-theme')).toHaveValue('yellow');
  await expect(page.locator('#landing-signature [role=img]')).toHaveAttribute('aria-label','FinFolk');
  await expect(page.locator('[data-feature-demo]')).toHaveCount(8);
  await expect(page.locator('.landing-regulars-section [data-feature-demo=regulars] .demo-page')).toHaveCount(4);
  await expect(page.locator('iframe')).toHaveCount(0);
+ await expect(page.locator('figcaption')).not.toContainText(['Animated example','Fictional members','Sample data']);
+ await expect(page.locator('[data-feature-demo=planning]')).toContainText('Portsea Beach');
+ await expect(page.locator('[data-feature-demo=locations] .beach-thumbnail').first()).toHaveAttribute('aria-label','The Basin Beach location in Western Australia');
+ await expect(page.locator('[data-feature-demo=logs]')).toContainText('Waubs Beach');
+ await expect(page.locator('[data-feature-demo=tiktok-post]')).toContainText('Aldinga Beach');
  await expect(page.locator('.landing-illustration')).toHaveCount(4);
  await expect(page.locator('.landing-story .landing-illustration,.landing-social-feature .landing-illustration')).toHaveCount(0);
  await page.getByRole('button',{name:'Pause animations'}).click();
