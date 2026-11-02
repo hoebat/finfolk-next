@@ -54,6 +54,13 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "tiktokSync":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"tiktokSync",
+    "transport":"action",
+    "write":true
+  },
   "instagramClaimRead":{
     "auth":true,
     "domain":"instagram",
@@ -62,6 +69,13 @@ export var operations = {
     "path":"/v1/me/instagram/claims/:id",
     "transport":"rest",
     "write":false
+  },
+  "updateImportedMedia":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"updateImportedMedia",
+    "transport":"action",
+    "write":true
   },
   "instagramUnlink":{
     "auth":true,
@@ -149,6 +163,13 @@ export var operations = {
     "auth":true,
     "domain":"instagram",
     "name":"instagramAdminInbox",
+    "transport":"action",
+    "write":false
+  },
+  "mediaInbox":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"mediaInbox",
     "transport":"action",
     "write":false
   },
@@ -317,6 +338,13 @@ export var operations = {
     "transport":"rest",
     "write":false
   },
+  "tiktokConnect":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"tiktokConnect",
+    "transport":"action",
+    "write":true
+  },
   "visibility":{
     "auth":true,
     "domain":"logbook",
@@ -373,6 +401,13 @@ export var operations = {
     "auth":true,
     "domain":"posts",
     "name":"removePost",
+    "transport":"action",
+    "write":true
+  },
+  "tiktokDisconnect":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"tiktokDisconnect",
     "transport":"action",
     "write":true
   },
@@ -550,6 +585,13 @@ export var operations = {
     "auth":true,
     "domain":"siteSubmissions"
   },
+  "assignImportedMedia":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"assignImportedMedia",
+    "transport":"action",
+    "write":true
+  },
   "publicTrips":{
     "auth":false,
     "domain":"trips",
@@ -696,6 +738,13 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "hideImportedMedia":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"hideImportedMedia",
+    "transport":"action",
+    "write":true
+  },
   "session":{
     "auth":true,
     "domain":"logbook",
@@ -736,6 +785,13 @@ export var operations = {
     "name":"instagramDiscoveryRetry",
     "transport":"action",
     "write":true
+  },
+  "tiktokStatus":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"tiktokStatus",
+    "transport":"action",
+    "write":false
   },
   "instagramCommandStatus":{
     "auth":true,
@@ -878,8 +934,8 @@ export var RELATED = {
   "siteAdmin":["sites","siteSubmissions"],
   "member":["community","logbook","posts","trips"],
   "admin":["instagram","posts","member"],
-  "logbook":["community","trips","member"],
-  "instagram":["posts","member","admin"],
+  "logbook":["community","trips","member","instagram"],
+  "instagram":["posts","member","admin","logbook"],
   "posts":["member"],
   "invitations":["member"],
   "community":["member","logbook","posts","trips"],

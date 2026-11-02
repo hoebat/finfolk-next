@@ -160,7 +160,7 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
         if site_snapshot:
             web_files["sites-snapshot.json"] = Path(site_snapshot).read_bytes()
         digest = hashlib.sha256(b"".join(name.encode() + b"\0" + data for name, data in sorted(web_files.items()))).hexdigest()[:12]
-        brand_assets = {"finfolk-mark.svg", "finfolk-wordmark.svg", "finfolk-icon.svg", "finfolk-touch.png", "animal-octopus-v1.webp", "animal-octopus-hyper-v1.webp"}
+        brand_assets = {"habitat-seagrass-v1.webp", "demo-alex.webp", "demo-maya.webp", "demo-kai.webp", "demo-shore.webp", "finfolk-mark.svg", "finfolk-wordmark.svg", "finfolk-icon.svg", "finfolk-touch.png", "animal-octopus-v1.webp", "animal-octopus-hyper-v1.webp"}
         assets = {name: (Path(name).parent / f"{Path(name).stem}.{digest}{Path(name).suffix}").as_posix()
                   for name in web_files
                   if name in brand_assets or ("/" not in name and (Path(name).suffix in (".js", ".css") or name == "sites-snapshot.json"))
