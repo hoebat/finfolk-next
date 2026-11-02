@@ -22,6 +22,9 @@
 .landing-social-feature.landing-scene::before,.landing-regulars-feature.landing-scene::before,.landing-last.landing-scene::before{background-image:linear-gradient(color-mix(in srgb,var(--account-bg) 88%,transparent),color-mix(in srgb,var(--account-bg) 88%,transparent)),var(--landing-scene,none)}
 .landing-print{display:none}.landing-phone{transform:none}.landing-live-caption{background:var(--account-surface);color:var(--account-ink);padding:6px 12px;border-radius:12px}
 .landing-conditions-panel,.landing-conditions #landing-conditions-panel{position:relative}
+.landing-story-intro.landing-scene,.landing-chapter-copy.landing-scene,.landing-conditions-intro.landing-scene{padding-bottom:62px}
+.landing-story-intro.landing-scene::before,.landing-chapter-copy.landing-scene::before,.landing-conditions-intro.landing-scene::before{background-image:linear-gradient(color-mix(in srgb,var(--account-bg) 88%,transparent),color-mix(in srgb,var(--account-bg) 88%,transparent)),var(--landing-scene,none)}
+.landing-features>.landing-regulars-feature{padding:40px 30px 65px;border-radius:24px;background:var(--account-surface)}
 @media(max-width:900px){.landing-hero.landing-scene{padding:45px 5% 65px}.landing-story.landing-scene,.landing-conditions.landing-scene{padding:45px 5% 65px}.landing-hero-copy,.landing-story-intro,.landing-chapters,.landing-conditions-intro{padding:22px}.landing-scene-caption{font-size:9px}}
 
 /* Each feature shows its working app screen, with room to use it. */
