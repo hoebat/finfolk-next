@@ -234,7 +234,7 @@ export function installCommunity({
         for (const [name, panel] of Object.entries(panels)) panel.hidden = name !== key;
       }
       updateAccountTab=selectTab;
-      for (const [key, label] of [['checkin', 'Check in'], ['posts', 'Your posts'], ['instagram','Instagram'], ['profile', 'Profile & buddies'], ['settings', 'Settings'], ['sites', 'Dive sites']]) {
+      for (const [key, label] of [['checkin', 'Check in'], ['posts', 'Your posts'], ['instagram','Instagram tools'], ['profile', 'Profile & buddies'], ['settings', 'Settings'], ['sites', 'Dive sites']]) {
         const panel = el('div');
         panel.id = 'account-' + key;
         panel.setAttribute('role', 'tabpanel');
@@ -259,7 +259,7 @@ export function installCommunity({
       panels.settings.append(themeSettings());
       renderMessagingSettings({host:panels.settings,api:a});
       selectTab(accountTab);
-      const instagramReady = renderActions({host:panels.instagram,discoveryHost:panels.posts,api:a,beaches:getBeaches(),refresh:account});
+      const instagramReady = renderActions({host:panels.instagram,discoveryHost:panels.posts,api:a,beaches:getBeaches(),refresh:account,includeConnection:false});
       const profileStart = root.children.length;
       const me = await a.call('me');
       if (generation !== epoch) return;
@@ -274,7 +274,7 @@ export function installCommunity({
       const jump = id => { selectTab(id === 'social-checkins' ? 'checkin' : id === 'member-actions' ? 'instagram' : 'profile'); document.getElementById(id)?.scrollIntoView?.({behavior: 'smooth', block: 'start'}); };
       links.append(
         button('Check in at a beach', () => selectTab('checkin'), 'social-menu-action'),
-        button('Link Instagram', () => jump('member-actions'), 'social-menu-action'),
+        Object.assign(el('a','Connect Instagram','social-menu-action'),{href:'./profiles?screen=me#instagram-claim'}),
         button('Your buddies', () => jump('social-buddies'), 'social-menu-action'),
         button('Your check-ins', () => { const section = document.getElementById('social-checkins'); if (section) section.open = true; jump('social-checkins'); }, 'social-menu-action'),
         button('My sessions', () => shell.navigate('logbook'), 'social-menu-action'),
@@ -297,7 +297,7 @@ export function installCommunity({
       const name = field(form, 'Display name', 'displayName', p.displayName),
         bio = field(form, 'A little about you', 'bio', p.bio, 'textarea'),
         tiktok = field(form, 'TikTok profile link', 'tiktok', p.tiktok, 'url');
-      form.append(el('p','Manage your Instagram link in the Instagram tab.'),button('Manage Instagram',()=>selectTab('instagram')));
+      form.append(el('p','Manage your Instagram connection in Profile.'),Object.assign(el('a','Manage Instagram in Profile ↗'),{href:'./profiles?screen=me#instagram-claim'}));
       name.required = true;
       name.maxLength = 80;
       bio.maxLength = 500;

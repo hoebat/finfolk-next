@@ -5,7 +5,7 @@ const w=new Window({url:'https://finfolk.test/?view=logbook'});for(const k of ['
 let saved,assigned,created,opened,failSave=false;
 const item={id:crypto.randomUUID(),platform:'instagram',url:'https://www.instagram.com/reel/fixture/',day:'2026-11-01',locationName:'Bondi Beach',beachId:'bondi',notes:'',candidates:[]};
 const api={user:{uid:'alice'},call:async(action,values)=>{if(action==='mediaInbox')return {items:[item,{...item,id:crypto.randomUUID()}],instagram:{connected:true,ownerVerified:true,collecting:true},limit:100};if(action==='tiktokStatus')return {ready:false,connected:false};if(action==='updateImportedMedia'){if(failSave)throw Error('Connection failed. Try again.');saved=values;return {ok:true};}if(action==='assignImportedMedia'){assigned=values;return {id:'session-1'};}throw Error(action);},list:async()=>({sessions:[{id:'session-1',locationName:'Bondi Beach',date:'2026-11-01',visibility:'public'}],more:false})};
-const ui=mediaInbox({api,getBeaches:()=>[{id:'bondi',name:'Bondi Beach',state:'NSW'}],createSession:i=>{created=i;},openSession:id=>{opened=id;},openAccount(){}});document.body.append(ui.root);
+const ui=mediaInbox({api,getBeaches:()=>[{id:'bondi',name:'Bondi Beach',state:'NSW'}],createSession:i=>{created=i;},openSession:id=>{opened=id;},openProfile(){}});document.body.append(ui.root);
 const wait=async fn=>{for(let i=0;i<100;i++){if(fn())return;await new Promise(r=>setTimeout(r,5));}throw Error(document.body.textContent);};
 const click=text=>{const b=[...document.querySelectorAll('button')].find(b=>b.textContent===text);assert.ok(b,text);b.click();};
 try{

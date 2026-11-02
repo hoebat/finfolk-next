@@ -1,3 +1,4 @@
+import {discoverPeople} from './people-discovery.mjs';
 import {registerSitesPublic,registerSitesPrivate} from './sites.mjs';
 import {tiktokActions,tiktokAction,tiktokCallback,tiktokReady} from './tiktok.mjs';
 import {mediaAction,mediaActions,sessionMedia} from './media-imports.mjs';
@@ -343,6 +344,7 @@ export function createAPI({
         );
         break;
       case 'community': {
+        if(v.mode==='discover'){result=await discoverPeople({v,uid,q,basic,now});break;}
         const availability=v.availability||'',experience=v.experience||'';
         if(!['','weekday mornings','weekday afternoons','weekend mornings','weekend afternoons'].includes(availability)||!['','new','comfortable','experienced'].includes(experience))fail(400,'Choose listed availability and experience filters.');
         const b = await beach(v.beachId),

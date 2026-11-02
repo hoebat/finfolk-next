@@ -6,7 +6,7 @@ export function linkedMedia(items=[],onReturn){
  for(const item of items){const row=el('div',undefined,'imported-link'),a=el('a',`Open ${item.platform==='tiktok'?'TikTok video':'Instagram post / Reel'} ↗`);a.href=item.url;a.target='_blank';a.rel='noopener noreferrer';row.append(a);if(onReturn)row.append(button('Return to inbox',()=>onReturn(item)));box.append(row);}
  return box;
 }
-export function mediaInbox({api,getBeaches=()=>[],createSession,openSession,openAccount,notify=()=>{}}){
+export function mediaInbox({api,getBeaches=()=>[],createSession,openSession,openProfile,notify=()=>{}}){
  const root=el('section',undefined,'logbook-card media-inbox');let disposed=false;
  const status=el('p','','logbook-status');status.setAttribute('role','status');
  const run=async work=>{status.textContent='';try{await work();}catch(e){if(!disposed)status.textContent=e.message||'Imports could not be loaded. Try again.';}};
@@ -15,7 +15,7 @@ export function mediaInbox({api,getBeaches=()=>[],createSession,openSession,open
   root.replaceChildren(el('p','PHOTOS & VIDEOS','eyebrow'),el('h2','Tagged media'),el('p','Tag @finfolk.com.au on Instagram or TikTok. Connected accounts send matching posts here for you to review and sort into sessions.'),status);
   const connections=el('div',undefined,'import-connections');
   const ig=result.instagram;
-  connections.append(el('p',ig.collecting&&ig.connected&&ig.ownerVerified?'Instagram · importing tagged posts':ig.connected&&!ig.ownerVerified?'Instagram · media ownership verification needed':!ig.collecting?'Instagram · automatic collection is paused':'Instagram · connect your account'),button('Instagram connection',openAccount));
+  connections.append(el('p',ig.collecting&&ig.connected&&ig.ownerVerified?'Instagram · importing tagged posts':ig.connected&&!ig.ownerVerified?'Instagram · media ownership verification needed':!ig.collecting?'Instagram · automatic collection is paused':'Instagram · connect your account'),button('Instagram in Profile',openProfile));
   if(tiktok.connected){
    connections.append(el('p',`TikTok · ${tiktok.displayName||'Connected'}${tiktok.lastSuccess?' · Last checked '+new Date(tiktok.lastSuccess).toLocaleString():' · First import pending'}`),button('Check TikTok now',()=>run(async()=>{await api.call('tiktokSync');await render();})),button('Disconnect TikTok',()=>run(async()=>{if(!confirm('Disconnect TikTok and remove its imported links? Your sessions will remain.'))return;await api.call('tiktokDisconnect');await render();})));
   }else if(tiktok.ready){connections.append(button('Connect TikTok',()=>run(async()=>{const connection=await api.call('tiktokConnect');if(!disposed)location.assign(connection.url);})));}

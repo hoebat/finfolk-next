@@ -9,7 +9,7 @@ test('tagged media can be reviewed and attached with explicit public consent',as
   const item={id:crypto.randomUUID(),platform:'instagram',url:'https://www.instagram.com/reel/fixture/',day:'2026-11-01',locationName:'Bondi Beach',beachId:'bondi',notes:'',candidates:[]};
   window.importCalls=[];
   const api={user:{uid:'alice'},async call(action,v){window.importCalls.push({action,...v});if(action==='mediaInbox')return {items:[item],instagram:{connected:true,ownerVerified:true,collecting:true},limit:100};if(action==='tiktokStatus')return {ready:false,connected:false};if(action==='assignImportedMedia')return {id:'session-1'};return {ok:true};},async list(){return {sessions:[{id:'session-1',date:'2026-11-01',locationName:'Bondi Beach',visibility:'public'}],more:false};}};
-  const {mediaInbox}=await import('/media-inbox.js');window.inbox=mediaInbox({api,getBeaches:()=>[{id:'bondi',name:'Bondi Beach',state:'NSW'}],createSession:item=>{window.createdImport=item;},openSession:id=>{window.openedSession=id;},openAccount(){}});document.getElementById('logbook-page').append(window.inbox.root);
+  const {mediaInbox}=await import('/media-inbox.js');window.inbox=mediaInbox({api,getBeaches:()=>[{id:'bondi',name:'Bondi Beach',state:'NSW'}],createSession:item=>{window.createdImport=item;},openSession:id=>{window.openedSession=id;},openProfile(){}});document.getElementById('logbook-page').append(window.inbox.root);
  });
  await expect(page.getByRole('heading',{name:'Tagged media'})).toBeVisible();
  await page.getByLabel('Additional information').fill('Shore session with my buddy.');
