@@ -264,7 +264,10 @@ export function createAPI({
     if (typeof action === 'string' && action.startsWith('invitation')) return c.json({data:await invitationAction({action,v,uid,q,verified})});
     if (tripActions.has(action)) return c.json({data:await tripAction({action,v,uid,q,env:c.env||{},verified})});
     if (tiktokActions.has(action)) return c.json({data:await tiktokAction({action,uid,db,env:c.env||{},c,fetcher:messagingFetch})});
-    if (mediaActions.has(action)) return c.json({data:await mediaAction({action,v,uid,db,env:c.env||{}})});
+    if (mediaActions.has(action)) {
+      if(action==='assignImportedMedia' && v.publicConsent===true) verified();
+      return c.json({data:await mediaAction({action,v,uid,db,env:c.env||{}})});
+    }
     if (discoveryActions.has(action)) return c.json({data:await discoveryAction({action,v,uid,env:c.env||{},q,fetcher:messagingFetch})});
     if (typeof action === 'string' && action.startsWith('instagram')) {
       const result = isMessagingMemberAction(action) ? await messagingMemberAction({action,v,uid,env:c.env || {},db,verified}) : await instagramAction({action,v,uid,env:c.env || {},q,db,verified,fetcher:messagingFetch});

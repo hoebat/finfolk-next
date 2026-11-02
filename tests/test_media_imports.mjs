@@ -53,6 +53,11 @@ try{
  await call('visibility',{id:saved.id,visibility:'public'});session=await call('session',{id:saved.id},'bob');assert.equal(session.linkedMedia.length,1);
  const other=inbox.items.find(i=>i.id!==item.id);
  await assert.rejects(()=>call('assignImportedMedia',{id:other.id,key:randomUUID(),sessionId:saved.id}),e=>e.status===409);
+ if(!process.env.FINFOLK_TEST_DATABASE_URL){
+  await pg.exec('RESET ROLE');await query(`UPDATE neon_auth."user" SET "emailVerified"=false WHERE id='alice'`);await pg.exec('SET ROLE finfolk_api;');
+  await assert.rejects(()=>call('assignImportedMedia',{id:other.id,key:randomUUID(),sessionId:saved.id,publicConsent:true}),e=>e.status===403);
+  await pg.exec('RESET ROLE');await query(`UPDATE neon_auth."user" SET "emailVerified"=true WHERE id='alice'`);await pg.exec('SET ROLE finfolk_api;');
+ }
  await call('assignImportedMedia',{id:other.id,key:randomUUID(),sessionId:saved.id,publicConsent:true});
  await assert.rejects(()=>call('assignImportedMedia',{id:other.id,key:randomUUID(),values}),e=>e.status===409);
  if(process.env.FINFOLK_TEST_DATABASE_URL){
