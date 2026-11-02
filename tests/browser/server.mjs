@@ -6,6 +6,14 @@ let upgradeRequests=0;
 createServer(async(req,res)=>{
  try{
   const path=new URL(req.url,'http://localhost').pathname;
+  if(path.startsWith('/__redirect/')){
+   res.setHeader('Cache-Control','no-store');
+   if(path.endsWith('/sw.js')){
+    res.setHeader('Content-Type','text/javascript');res.end((await readFile(root+'/sw-template.js','utf8')).replaceAll('__VERSION__','redirect-test').replace('__SHELL__',JSON.stringify(['./index.html'])));return;
+   }
+   if(path.endsWith('/index.html')){res.writeHead(302,{Location:'/__redirect/'});res.end();return;}
+   res.setHeader('Content-Type','text/html');res.end('<!doctype html><h1>Offline FinFolk shell</h1>');return;
+  }
   if(path==='/__upgrade/account'){
    res.setHeader('Cache-Control','private, no-store');res.setHeader('Content-Type','application/json');
    res.writeHead(401);res.end(JSON.stringify({request:++upgradeRequests}));return;

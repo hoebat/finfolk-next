@@ -13,6 +13,15 @@ async function init(page,{account='alice',offline=false,environment='test'}={}){
   await window.member.ready;return window.app.storage?.stats();
  },{account,offline,environment});
 }
+test('offline navigation can reuse an index response redirected by the static host',async({page,context})=>{
+ await page.goto('/__redirect/');
+ await page.evaluate(async()=>{await navigator.serviceWorker.register('/__redirect/sw.js',{scope:'/__redirect/'});await navigator.serviceWorker.ready;});
+ await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
+ expect(await page.evaluate(async()=>{const cache=await caches.open('finfolk-shell-redirect-test');return (await cache.match('/__redirect/index.html')).redirected;})).toBe(true);
+ await context.setOffline(true);
+ await page.goto('/__redirect/?view=discover');
+ await expect(page.locator('h1')).toHaveText('Offline FinFolk shell');
+});
 test('main-origin shell upgrade preserves saved maps and preferences and bypasses account caching',async({page,context})=>{
  await page.goto('/__upgrade/index.html?version=legacy');
  await page.evaluate(async()=>{

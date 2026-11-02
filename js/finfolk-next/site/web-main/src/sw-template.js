@@ -18,7 +18,14 @@ self.addEventListener('fetch', (event) => {
         try {
           return await fetch(request, { signal: AbortSignal.timeout(5000) });
         } catch {
-          return (await caches.open(CACHE)).match('./index.html');
+          const cached = await (await caches.open(CACHE)).match('./index.html');
+          if (!cached) return new Response('FinFolk is offline. Reconnect to load the app.', {status:503});
+          // Static hosts redirect index.html to /. Navigation requests cannot
+          // consume a redirected cached response, so return a fresh HTML response.
+          const headers = new Headers(cached.headers);
+          headers.delete('Content-Encoding');
+          headers.delete('Content-Length');
+          return new Response(cached.body, {status:cached.status, statusText:cached.statusText, headers});
         }
       })(),
     );
