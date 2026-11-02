@@ -1,12 +1,15 @@
 import './appearance.js';
 export const THEMES=globalThis.FinFolkAppearance.themes;
 export const resolveTheme=id=>globalThis.FinFolkAppearance.resolve(id);
-export const applySavedTheme=()=>globalThis.FinFolkAppearance.saved();
+function announce(theme){document.dispatchEvent(new document.defaultView.CustomEvent('finfolk:appearance',{detail:theme}));return theme;}
+export const applySavedTheme=()=>announce(globalThis.FinFolkAppearance.saved());
 export function setTheme(id) {
   const theme=globalThis.FinFolkAppearance.apply(id);let persisted=true;
   try{localStorage.setItem('finfolk-theme',theme.id);}catch{persisted=false;}
+  announce(theme);
   return {theme,persisted};
 }
+globalThis.addEventListener?.('storage',event=>{if(event.key==='finfolk-theme'||event.key===null)applySavedTheme();});
 export function themeSettings() {
   const section=document.createElement('section');section.className='account-card theme-settings';
   const heading=document.createElement('h2');heading.textContent='Make FinFolk feel like you';

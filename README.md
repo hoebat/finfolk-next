@@ -63,6 +63,8 @@ Discover keeps the main search/activity and state controls visible. Region, wate
 
 The frontend owns its SVG masters and muted/hyper octopus artwork; it does not require the local Atelier server. Run `make dev` for the production application preview (`WEB_PORT` selects another local port).
 
+The public homepage is authored in `landing.html`, with illustrated Australian coastal scenes, live app previews and opt-in forecasts. The production build publishes it at `/` and keeps the application at `/app`. Existing root query links (including account callbacks and location links) still open the application; campaign tracking parameters alone keep visitors on the landing page. Both entry points have separate offline shells. Preview the landing source at `/landing.html` with `make dev`.
+
 ```sh
 make deploy
 ```

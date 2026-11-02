@@ -17,9 +17,15 @@ await writeFile(resolve(root,'robots.txt'),'User-agent: *\nAllow: /\nSitemap: ht
 await writeFile(resolve(root,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://finfolk.com.au/</loc></url></urlset>');
 await writeFile(resolve(root,'_headers'),'/sw.js\n  Cache-Control: no-cache\n/neon-config.json\n  Cache-Control: no-store\n/workers/finfolk.sharedworker.js\n  Cache-Control: no-cache\n');
 const index=resolve(root,'index.html');
-let html=await readFile(index,'utf8');
+const app=await readFile(index,'utf8');
+await writeFile(resolve(root,'app.html'),app.replace('</head>','<meta name="robots" content="noindex,follow"></head>'));
+let html=await readFile(resolve(root,'landing.html'),'utf8');
 html=html.replace('</head>','<link rel="canonical" href="https://finfolk.com.au/"></head>');
 await writeFile(index,html);
+// Cache the application separately from the public homepage. /app is the
+// extensionless static URL, avoiding the host's HTML canonical redirects.
+const sw=resolve(root,'sw.js');
+await writeFile(sw,(await readFile(sw,'utf8')).replace('SHELL = [','SHELL = ["./app",'));
 async function compress(directory) {
  for(const entry of await readdir(directory,{withFileTypes:true})) {
   if(entry.name==='__compressed')continue;

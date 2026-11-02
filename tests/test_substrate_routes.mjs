@@ -37,6 +37,15 @@ for(const spec of Object.values(operations).filter(o=>o.transport==='rest')){
 }
 await preview.fetch(new Request('https://finfolk.com.au/trips',{method:'OPTIONS'}),env);assert.equal(assets,0);
 await preview.fetch(new Request('https://finfolk.com.au/app.js'),env);assert.equal(assets,1);
+const assetRequests=[];
+const landingEnv={ASSETS:{async fetch(request){assetRequests.push(new URL(request.url));return new Response('static');}}};
+for(const path of ['/', '/?utm_source=instagram&fbclid=example','/?gclid=example']){
+ await preview.fetch(new Request('https://finfolk.com.au'+path),landingEnv);assert.equal(assetRequests.at(-1).pathname,'/','public and campaign URLs load the homepage');
+}
+for(const query of ['view=discover&section=index&q=beach','view=logbook','view=account&tab=settings','site=bondi','token=reset','invite=fixture']){
+ await preview.fetch(new Request('https://finfolk.com.au/?'+query),landingEnv);assert.equal(assetRequests.at(-1).pathname,'/app');assert.equal(assetRequests.at(-1).search,'?'+query,'preserve application and auth parameters');
+}
+await preview.fetch(new Request('https://finfolk.com.au/app'),landingEnv);assert.equal(assetRequests.at(-1).pathname,'/app');
 assert.equal(new URL(messagingReturnURL({ENVIRONMENT:'next'})).origin,'https://finfolk.com.au');assert.equal(new URL(messagingReturnURL({})).origin,'https://finfolk.com.au');
 // Actual runtime: different inputs retain separate outputs and duplicate reads coalesce.
 let release;const requests=[];const gate=new Promise(resolve=>{release=resolve;});

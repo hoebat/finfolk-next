@@ -18,7 +18,9 @@ self.addEventListener('fetch', (event) => {
         try {
           return await fetch(request, { signal: AbortSignal.timeout(5000) });
         } catch {
-          const cached = await (await caches.open(CACHE)).match('./index.html');
+          const application=url.pathname.endsWith('/app')||url.pathname.endsWith('/app.html')||[...url.searchParams.keys()].some(key=>!/^utm_/i.test(key)&&!['fbclid','gclid','msclkid'].includes(key));
+          const shell=application&&SHELL.includes('./app')?'./app':'./index.html';
+          const cached = await (await caches.open(CACHE)).match(shell);
           if (!cached) return new Response('FinFolk is offline. Reconnect to load the app.', {status:503});
           // Static hosts redirect index.html to /. Navigation requests cannot
           // consume a redirected cached response, so return a fresh HTML response.

@@ -9,9 +9,14 @@ assert.ok(browser.includes('./workers/'+kernel));assert.ok(browser.includes('./w
 assert.ok(code.includes('./'+wasm),'the kernel loads its matching WASM version');
 for(const file of [kernel,wasm,'finfolk.sharedworker.js'])assert.ok(sw.includes('./workers/'+file),'offline shell includes '+file);
 assert.deepEqual(await readFile(root+'/workers/'+wasm),await readFile('node_modules/@sqlite.org/sqlite-wasm/dist/sqlite3.wasm'));
-const html=await readFile(root+'/index.html','utf8'),config=JSON.parse(await readFile(root+'/neon-config.json','utf8'));
-assert.ok(html.includes('<title>FinFolk</title>'));assert.ok(html.includes('rel="canonical" href="https://finfolk.com.au/"'));
+const html=await readFile(root+'/index.html','utf8'),app=await readFile(root+'/app.html','utf8'),config=JSON.parse(await readFile(root+'/neon-config.json','utf8'));
+assert.ok(html.includes('<title>FinFolk · Freediving locations, logs and community</title>'));assert.ok(html.includes('rel="canonical" href="https://finfolk.com.au/"'));
 assert.ok(!html.includes('noindex')&&!html.includes('FinFolk Next ·'));
+assert.ok(html.includes('id="landing-main"')&&html.includes('id="landing-preview"'));
+assert.ok(/landing\.[a-f0-9]{12}\.js/.test(html),'homepage loads the fingerprinted landing module');
+assert.ok(app.includes('<title>FinFolk</title>')&&app.includes('id="app-main"'),'keep a separate application shell');
+assert.ok(sw.includes('"./app"'),'offline app shell is separate from the homepage');
+for(const scene of ['ningaloo','great-barrier','julian-rocks','port-phillip','bicheno','point-lowly'])for(const palette of ['acid-light','acid-dark','muted-light','muted-dark'])for(const mobile of ['', '-mobile'])assert.ok(files.includes(`scene-${scene}-${palette}${mobile}-v1.webp`),'publish all illustrated coastal palettes');
 assert.equal(config.apiUrl,'https://finfolk.com.au/');assert.equal(config.backbone,true);assert.equal(config.cacheBackend,'sqlite');assert.equal(config.googleEnabled,true);
 assert.ok(!(await readFile(root+'/robots.txt','utf8')).includes('Disallow: /'));
 console.log('WORKER_PUBLICATION_PASS: versioned kernel/WASM, stable coordinator and matching offline shell.');
