@@ -745,7 +745,7 @@ export function installCommunity({
             await beachPanel(beach);
             const status = el(
               'p',
-              `${result.count} of 3 regular visit days this month · self-reported`,
+              `${result.count} of 8 regular visit days this month · self-reported`,
             );
             document.getElementById('regulars-panel')?.prepend(status);
           },
@@ -764,7 +764,7 @@ export function installCommunity({
         el('h4', 'Suggested buddies'),
         suggestedCards,
       );
-      regularCards.append(el('small', 'Three visit days in the last 30 days.'));
+      regularCards.append(el('small', 'Eight visit days in the last 30 days.'));
       box.append(cards);
       let cursor = null;
       async function page() {
@@ -772,7 +772,7 @@ export function installCommunity({
         if (generation !== beachEpoch) return;
         cursor = data.cursor;
         nextRefresh = data.refreshAt || Infinity;
-        status.textContent = `${data.ownVisits} of 3 regular visit days in the last 30 days`;
+        status.textContent = `${data.ownVisits} of 8 regular visit days in the last 30 days`;
         for (const p of data.people) {
           const card = el('article', undefined, 'buddy-card');
           card.append(
@@ -801,9 +801,9 @@ export function installCommunity({
                   data.level < 1 && data.sharingClosed
                     ? 'Visit-based sharing is Closed. An accepted buddy connection is required.'
                     : data.level < 1
-                      ? `You: ${Math.min(3, data.progress)} of 3 visit days. Activity unlocks when both divers qualify.`
+                      ? `You: ${Math.min(8, data.progress)} of 8 visit days. Activity unlocks when both divers qualify.`
                       : data.level < 2
-                        ? `You: ${Math.min(5, data.progress)} of 5 visit days. Dive summaries unlock when both divers qualify.`
+                        ? `You: ${Math.min(8, data.progress)} of 8 visit days. Dive summaries unlock when both divers qualify.`
                         : 'Permitted statistics',
                 ),
               );

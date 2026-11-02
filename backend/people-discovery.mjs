@@ -1,3 +1,4 @@
+import {REGULAR_DAYS} from './community-core.mjs';
 import {windowFor} from './community-core.mjs';
 const fail=message=>{throw Object.assign(Error(message),{status:400});};
 export async function discoverPeople({v,uid,q,basic,now}){
@@ -24,5 +25,5 @@ export async function discoverPeople({v,uid,q,basic,now}){
  ) SELECT * FROM eligible WHERE ($3::text='' OR visits>0 OR coalesce(profile->'beaches','[]'::jsonb) ? $3)
  AND (mix_rank,user_id)>($8,$9) ORDER BY mix_rank,user_id LIMIT 7`,[uid,seed,beachId,start,today,availability,experience,rank,after]);
  const page=rows.slice(0,6),last=page.at(-1);
- return {people:page.map(m=>({...basic(m),regular:!!beachId&&m.visits>=3,recent:!!beachId&&m.visits>0,connection:m.connection})),cursor:rows.length>6?Buffer.from(JSON.stringify([seed,JSON.stringify([beachId,availability,experience]),last.mix_rank,last.user_id,uid])).toString('base64url'):null};
+ return {people:page.map(m=>({...basic(m),regular:!!beachId&&m.visits>=REGULAR_DAYS,recent:!!beachId&&m.visits>0,connection:m.connection})),cursor:rows.length>6?Buffer.from(JSON.stringify([seed,JSON.stringify([beachId,availability,experience]),last.mix_rank,last.user_id,uid])).toString('base64url'):null};
 }

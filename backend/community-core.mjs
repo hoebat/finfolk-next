@@ -1,4 +1,5 @@
 import {Buffer} from 'node:buffer';
+export const REGULAR_DAYS = 8;
 export const SHARING = ['visits', 'months', 'dives', 'time', 'depth'];
 export const ACTIVITIES = ['freediving', 'ocean-swimming', 'spearfishing'];
 export const AVAILABILITY = ['weekday mornings','weekday afternoons','weekend mornings','weekend afternoons'];
@@ -48,7 +49,7 @@ export function tierFor({
     visitCount(viewerDays, now, zone),
     visitCount(ownerDays, now, zone),
   );
-  return count >= 5 ? 2 : count >= 3 ? 1 : 0;
+  return count >= REGULAR_DAYS ? 2 : 0;
 }
 export function visibleStats(stats, sharing, tier) {
   const result = {};

@@ -11,7 +11,7 @@ showMemberTour({userId:'alice',shell});assert.equal(document.querySelectorAll('.
 click('Next'); click('Bondi Beach · Eastern Beaches'); assert.equal(document.querySelector('.tour-demo p').hidden,false);
 click('Next'); click('♡ Bondi Beach');assert.equal(document.querySelector('[aria-pressed=true]').textContent,'♥ Bondi Beach');
 click('Next');document.querySelector('.tour-demo form').dispatchEvent(new w.Event('submit',{cancelable:true}));assert.match(document.querySelector('[role=status]').textContent,/Example saved/);
-click('Next');for(let i=0;i<3;i++)click('Add an example visit day');assert.match(document.querySelector('.tour-demo').textContent,/Regular/);
+click('Next');for(let i=0;i<8;i++)click('Add an example visit day');assert.match(document.querySelector('.tour-demo').textContent,/Regular/);
 click('Next');click('Send example buddy request');assert.match(document.querySelector('[role=status]').textContent,/Waiting/);
 click('Next');assert.equal(document.querySelector('input[type=checkbox]').checked,false);
 click('Next');click('Show example connection command');assert.match(document.querySelector('[role=status]').textContent,/\/connect/);

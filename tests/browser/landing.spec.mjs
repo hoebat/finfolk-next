@@ -21,7 +21,7 @@ test('landing walkthroughs, themes and forecasts work on desktop and mobile',asy
  await expect(page.locator('#landing-theme')).toHaveValue('yellow');
  await expect(page.locator('#landing-signature [role=img]')).toHaveAttribute('aria-label','FinFolk');
  await expect(page.locator('[data-feature-demo]')).toHaveCount(8);
- await expect(page.locator('.landing-regulars-section [data-feature-demo=regulars] .demo-page')).toHaveCount(4);
+ await expect(page.locator('.landing-regulars-section [data-feature-demo=regulars] .demo-page')).toHaveCount(7);
  await expect(page.locator('iframe')).toHaveCount(0);
  await expect(page.locator('figcaption')).not.toContainText(['Animated example','Fictional members','Sample data']);
  await expect(page.locator('[data-feature-demo=planning]')).toContainText('Portsea Beach');
@@ -50,6 +50,9 @@ test('landing walkthroughs, themes and forecasts work on desktop and mobile',asy
  await expect(page.locator('[data-feature-demo][data-motion=paused]')).toHaveCount(8);
  await page.locator('[data-feature-demo=regulars]').scrollIntoViewIfNeeded();
  await page.locator('[data-feature-demo=regulars]').screenshot({path:'.cache/landing-regulars-'+browserName+'-mobile.png'});
+ await page.evaluate(async()=>{const {setDemoStep}=await import('/feature-demos.js');setDemoStep(document.querySelector('[data-feature-demo=regulars]'),4);});
+ expect(await page.locator('[data-feature-demo=regulars] .demo-page.is-active').evaluate(n=>n.scrollHeight<=n.clientHeight)).toBe(true);
+ await page.locator('[data-feature-demo=regulars]').screenshot({path:'.cache/regulars-eight-day-award-'+browserName+'.png'});
  await page.setViewportSize({width:1280,height:900});
  await page.locator('.landing-regulars-section').screenshot({path:'.cache/landing-regulars-'+browserName+'-desktop.png'});
 });
