@@ -10,7 +10,7 @@ export function showWelcome() {
     ],
     [
       'Become a regular',
-      'Check in when you visit. Three visit days in the last 30 days make you a regular. You choose what to share.',
+      'Check in when you visit. Eight visit days in the last 30 days make you a regular. You choose what to share.',
       '◉',
     ],
     [

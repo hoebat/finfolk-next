@@ -13,7 +13,7 @@ try {
  assert.equal(document.querySelector('input').value,'Bondi');assert.equal(document.querySelector('.tour-demo p').hidden,false);
  click('Next');finish();assert.equal(document.querySelectorAll('[aria-pressed=true]').length,2);
  click('Next');finish();assert.match(document.querySelector('[role=status]').textContent,/Example saved/);
- click('Next');finish();assert.match(document.querySelector('.tour-demo').textContent,/3 \/ 3/);
+ click('Next');finish();assert.match(document.querySelector('.tour-demo').textContent,/8 \/ 8/);
  click('Next');finish();assert.match(document.querySelector('[role=status]').textContent,/Request sent/);
  click('Next');finish();assert.equal(document.querySelector('input[type=checkbox]').checked,false);
  click('Replay step');assert.ok(timers.size);click('Close walkthrough');assert.equal(timers.size,0,'Close cancels playback');

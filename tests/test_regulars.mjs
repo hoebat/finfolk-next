@@ -14,7 +14,7 @@ const now = new Date('2026-10-31T00:00:00Z'),
   zone = 'Australia/Sydney',
   viewer = { open: true },
   owner = { open: true },
-  days = ['2026-10-27', '2026-10-28', '2026-10-29', '2026-10-30', '2026-10-31'];
+  days = Array.from({length:8},(_,i)=>'2026-10-'+String(24+i));
 assert.deepEqual(windowFor(now, zone), {
   today: '2026-10-31',
   start: '2026-10-02',
@@ -38,13 +38,14 @@ const tier = (a, b, extra = {}) =>
     ...extra,
   });
 assert.equal(tier(2, 5), 0);
-assert.equal(tier(3, 3), 1);
-assert.equal(tier(5, 4), 1);
-assert.equal(tier(5, 5), 2);
-assert.equal(tier(5, 5, { owner: { open: false } }), 0);
+assert.equal(tier(3, 3), 0);
+assert.equal(tier(8, 7), 0);
+assert.equal(tier(8, 8), 2);
+assert.equal(tier(8, 8, {viewerDays:Array(8).fill(days[0])}), 0);
+assert.equal(tier(8, 8, { owner: { open: false } }), 0);
 assert.equal(tier(0, 0, { connection: 'accepted', owner: { open: false } }), 2);
-assert.equal(tier(5, 5, { connection: 'accepted', blocked: true }), -1);
-assert.equal(tier(5, 5, { now: new Date('2026-12-01T00:00:00Z') }), 0);
+assert.equal(tier(8, 8, { connection: 'accepted', blocked: true }), -1);
+assert.equal(tier(8, 8, { now: new Date('2026-12-01T00:00:00Z') }), 0);
 assert.equal(localDay(new Date('2026-10-03T14:30:00Z'), zone), '2026-10-04');
 assert.deepEqual(
   visibleStats(
@@ -86,5 +87,5 @@ for(const invalid of ['https://example.test/avatar.webp','data:image/svg+xml;bas
 assert.deepEqual(preferences({featuredLogs:['same','same','<script>'],featuredPosts:['post-one']}).featuredLogs,['same']);
 assert.equal(compatibility(p, p).reasons.length, 5);
 console.log(
-  'Regulars rules passed: rolling 30 days, 3/5 gates, timezone/DST, reciprocity, expiry, accepted buddies, blocks and opt-in fields.',
+  'Regulars rules passed: rolling 30 days, 8-day gate, timezone/DST, reciprocity, expiry, accepted buddies, blocks and opt-in fields.',
 );

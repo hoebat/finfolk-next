@@ -23,6 +23,7 @@ import {
   windowFor,
   visitCount,
   tierFor,
+  REGULAR_DAYS,
   visibleStats,
   socialPost,
   nextDayAt,
@@ -366,7 +367,7 @@ export function createAPI({
           people: page
             .map((m) => ({
               ...basic(m),
-              regular: m.visits >= 3,
+              regular: m.visits >= REGULAR_DAYS,
               recent: m.visits > 0,
               connection: m.connection,
               ...(me.profile.open
@@ -414,7 +415,7 @@ export function createAPI({
             level,
           ),
           progress: Math.min(
-            5,
+            REGULAR_DAYS,
             visitCount(await days(uid, b), now(), b.timezone),
           ),
           sharingClosed: !me.profile.open || !target.profile.open,
