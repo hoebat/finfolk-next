@@ -29,3 +29,11 @@ console.log('WORKER_PUBLICATION_PASS: versioned kernel/WASM, stable coordinator 
 if(process.env.SITE_SNAPSHOT_FILE){const snapshot=files.find(f=>/^sites-snapshot\.[a-f0-9]{12}\.json$/.test(f));assert.ok(snapshot);assert.ok(sw.includes('./'+snapshot));const adapter=files.find(f=>/^site-catalog\.[a-f0-9]{12}\.js$/.test(f));assert.ok((await readFile(root+'/'+adapter,'utf8')).includes('./'+snapshot));assert.deepEqual(JSON.parse(await readFile(root+'/'+snapshot,'utf8')),JSON.parse(await readFile(process.env.SITE_SNAPSHOT_FILE,'utf8')));console.log('SITE_SNAPSHOT_PASS: public database snapshot is versioned and available in the offline shell.');}
 
 assert.ok(sw.includes('./workers/finfolk.sharedworker.js?protocol=2'),'cache the coordinator protocol URL for offline starts');
+
+for(const [file,key] of [['index.html','home'],['landing.html','home'],['app.html','home'],['profiles.html','people']]){
+ const html=await readFile(root+'/'+file,'utf8');
+ assert.ok(html.includes('property="og:image" content="https://finfolk.com.au/og-'+key+'-acid-club-v1.png"'),'Server-rendered OG image on '+file);
+ assert.ok(html.includes('name="twitter:card" content="summary_large_image"'));
+}
+for(const key of ['home','discover','people','logbook'])assert.deepEqual(await readFile(root+'/og-'+key+'-acid-club-v1.png'),await readFile('js/finfolk-next/site/web-main/src/og-'+key+'-acid-club-v1.png'));
+console.log('SOCIAL_PUBLICATION_PASS: real landing screenshots and crawler-visible Open Graph/Twitter metadata.');
