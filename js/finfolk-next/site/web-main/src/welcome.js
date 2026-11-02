@@ -62,6 +62,8 @@ export function showWelcome() {
   dialog.showModal();
 }
 export function welcomeOnFirstVisit() {
+  // Embedded previews already sit inside the landing page introduction.
+  if (document.defaultView.parent !== document.defaultView) return;
   try {
     if (!localStorage.getItem('finfolk:welcome')) showWelcome();
   } catch {

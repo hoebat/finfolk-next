@@ -175,7 +175,7 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
                         text = text.replace("./" + Path(original).name, "./" + Path(versioned).name)
                 rendered = text.encode()
             # Keep source URLs for compatibility, but the page loads a versioned module graph.
-            write(name, rendered if name == "index.html" else data)
+            write(name, rendered if Path(name).suffix == ".html" else data)
             if name in assets:
                 write(assets[name], rendered)
         write(".nojekyll", b"")

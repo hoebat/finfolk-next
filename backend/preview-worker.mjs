@@ -12,6 +12,10 @@ export default {
       route.pathname='/health';return env.NEXT_API.fetch(new Request(route,request));
     }
     if(isBrowserAPIPath(route.pathname))return env.NEXT_API.fetch(request);
+    if(route.pathname==='/' && [...route.searchParams.keys()].some(key=>!/^utm_/i.test(key)&&!['fbclid','gclid','msclkid'].includes(key))){
+      const app=new URL(request.url);app.pathname='/app';
+      return env.ASSETS.fetch(new Request(app,request));
+    }
     const original = await env.ASSETS.fetch(request);
     if(original.status !== 404 || !['GET','HEAD'].includes(request.method)) return original;
     const url = new URL(request.url);
