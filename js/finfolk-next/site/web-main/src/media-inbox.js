@@ -20,7 +20,8 @@ export function mediaInbox({api,getBeaches=()=>[],createSession,openSession,open
    connections.append(el('p',`TikTok · ${tiktok.displayName||'Connected'}${tiktok.lastSuccess?' · Last checked '+new Date(tiktok.lastSuccess).toLocaleString():' · First import pending'}`),button('Check TikTok now',()=>run(async()=>{await api.call('tiktokSync');await render();})),button('Disconnect TikTok',()=>run(async()=>{if(!confirm('Disconnect TikTok and remove its imported links? Your sessions will remain.'))return;await api.call('tiktokDisconnect');await render();})));
   }else if(tiktok.ready){connections.append(button('Connect TikTok',()=>run(async()=>{const connection=await api.call('tiktokConnect');if(!disposed)location.assign(connection.url);})));}
   else connections.append(el('p','TikTok · automatic imports are awaiting app approval and configuration.'));
-  root.append(connections,button('Refresh inbox',()=>run(render)));
+  const places=el('datalist');places.id='media-inbox-places';for(const b of getBeaches()){const option=el('option');option.value=`${b.name} · ${b.state||''}`;places.append(option);}
+  root.append(connections,button('Refresh inbox',()=>run(render)),places);
   if(!result.items.length)root.append(el('p','No unsorted posts yet. New imports appear here before they become part of a session.'));
   for(const item of result.items)root.append(itemCard(item));
   if(result.items.length>=result.limit)root.append(el('p','Showing the latest 100 unsorted posts. Sort these into sessions to see older imports.'));
@@ -31,8 +32,7 @@ export function mediaInbox({api,getBeaches=()=>[],createSession,openSession,open
   const form=el('form');
   const day=field(form,'Day','date',item.day),place=field(form,'Location','text',item.locationName),notes=field(form,'Additional information','textarea',item.notes);
   place.maxLength=160;notes.maxLength=10000;notes.rows=3;
-  const list=el('datalist');list.id='import-places-'+item.id;place.setAttribute('list',list.id);
-  for(const b of getBeaches()){const option=el('option');option.value=`${b.name} · ${b.state||''}`;list.append(option);}form.append(list);
+  place.setAttribute('list','media-inbox-places');
   if(!item.day)form.append(el('small','The provider did not supply a day. Add it here.'));
   if(!item.locationName)form.append(el('small',item.candidates?.length>1?'More than one location matched. Choose the right place.':'No location matched. Add the place yourself.'));
   form.append(el('small','The day comes from the post timestamp, using the matched beach’s time zone or UTC when unknown. Check it if you posted later.'));
