@@ -2,17 +2,3 @@
 :root[data-theme]{--account-bg:var(--theme-bg);--account-surface:var(--theme-surface);--account-ink:var(--theme-ink);--account-accent:var(--theme-accent);--account-muted:var(--theme-muted);--account-line:var(--theme-line)}
 .landing-wordmark>.brand-f,.landing-footer .landing-wordmark>.brand-f{width:48px;height:55px;border:0;border-radius:0}
 @media(max-width:480px){.landing-wordmark>.brand-f{width:38px;height:44px}}
-
-/* Each landing palette has its own underwater backdrop. */
-:root[data-theme="yellow"]{--landing-backdrop:url('./scene-ningaloo-acid-light-v1.webp');--landing-backdrop-opacity:.14}
-:root[data-theme="cobalt"]{--landing-backdrop:url('./scene-julian-rocks-acid-dark-v1.webp');--landing-backdrop-opacity:.18}
-:root[data-theme="navy-light"]{--landing-backdrop:url('./scene-bicheno-muted-light-v1.webp');--landing-backdrop-opacity:.14}
-:root[data-theme="navy"]{--landing-backdrop:url('./scene-port-phillip-muted-dark-v1.webp');--landing-backdrop-opacity:.22}
-body.finfolk-landing{isolation:isolate}
-body.finfolk-landing::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;background-image:var(--landing-backdrop);background-position:center;background-size:cover;background-repeat:no-repeat;opacity:var(--landing-backdrop-opacity)}
-@media(max-width:600px){
- :root[data-theme="yellow"]{--landing-backdrop:url('./scene-ningaloo-acid-light-mobile-v1.webp')}
- :root[data-theme="cobalt"]{--landing-backdrop:url('./scene-julian-rocks-acid-dark-mobile-v1.webp')}
- :root[data-theme="navy-light"]{--landing-backdrop:url('./scene-bicheno-muted-light-mobile-v1.webp')}
- :root[data-theme="navy"]{--landing-backdrop:url('./scene-port-phillip-muted-dark-mobile-v1.webp')}
-}
