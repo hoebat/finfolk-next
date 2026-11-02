@@ -63,3 +63,7 @@
 .feature-demo .brand-f{width:var(--brand-size,24px);height:calc(var(--brand-size,24px)*1.15)}
 
 .demo-imported-media{margin-top:18px;padding-top:14px;border-top:1px solid var(--account-line);font-size:10px;color:var(--account-muted)}
+
+/* Hero planning concept: illustrative invitations, no live actions. */
+.demo-plan-recap{display:grid;gap:4px;padding:14px;margin:14px 0 18px;border:1px solid var(--account-line);border-radius:16px;background:var(--account-bg)}.demo-plan-recap strong{font-size:16px}.demo-plan-recap span{font-size:11px;color:var(--account-muted)}
+.demo-invite-person{display:flex;align-items:center;gap:11px;padding:12px 0;border-bottom:1px solid var(--account-line)}.demo-invite-person>img{width:44px;height:44px;object-fit:cover;border-radius:50%;flex:none}.demo-invite-person>div{display:grid;gap:3px;flex:1;min-width:0}.demo-invite-person strong{font-size:13px}.demo-invite-person small{font-size:10px;color:var(--account-muted)}.demo-invite-person .demo-check,.demo-invite-person .demo-pill{flex:none}.demo-page .demo-invite-person+.demo-hint{margin-top:16px}
