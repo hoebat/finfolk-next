@@ -2,6 +2,7 @@
 // Browsers transparently decompress these responses, preserving atlas checksums.
 import {directoryRoute} from '../js/finfolk-next/site/web-main/src/directory-route.js';
 import {isBrowserAPIPath} from './browser-routes.mjs';
+import {socialResponse} from './social-metadata.mjs';
 export default {
   async fetch(request, env) {
     const route=new URL(request.url);
@@ -15,11 +16,11 @@ export default {
     if(isBrowserAPIPath(route.pathname))return env.NEXT_API.fetch(request);
     if(route.pathname==='/' && [...route.searchParams.keys()].some(key=>!/^utm_/i.test(key)&&!['fbclid','gclid','msclkid'].includes(key))){
       const app=new URL(request.url);app.pathname='/app';
-      return env.ASSETS.fetch(new Request(app,request));
+      return socialResponse(await env.ASSETS.fetch(new Request(app,request)),request);
     }
     if(directoryRoute(route)&&['GET','HEAD'].includes(request.method)){const page=new URL(request.url);page.pathname=route.pathname.startsWith('/events')?'/events':'/directory';return env.ASSETS.fetch(new Request(page,request));}
     const original = await env.ASSETS.fetch(request);
-    if(original.status !== 404 || !['GET','HEAD'].includes(request.method)) return original;
+    if(original.status !== 404 || !['GET','HEAD'].includes(request.method)) return socialResponse(original,request);
     const url = new URL(request.url);
     if(!url.pathname.startsWith('/data/')) return original;
     url.pathname = '/__compressed' + url.pathname + '.gz';

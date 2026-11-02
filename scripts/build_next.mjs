@@ -3,6 +3,7 @@ import {readdir,stat,readFile,writeFile,mkdir,unlink} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 import {resolve,relative,dirname} from 'node:path';
 import {createHash} from 'node:crypto';
+import {addSocialMetadata} from '../backend/social-metadata.mjs';
 const environment=JSON.parse(await readFile('next.environment.json','utf8'));
 if(environment.environment!=='next' || environment.database!=='finfolk_next' || environment.authUrl.includes('crimson-queen') || !environment.authUrl.includes('.neonauth.'))throw Error('Refusing non-isolated Next build.');
 execFileSync(process.execPath,['scripts/generate_db.mjs','--check'],{stdio:'inherit'});
@@ -17,11 +18,14 @@ await writeFile(resolve(root,'robots.txt'),'User-agent: *\nAllow: /\nSitemap: ht
 await writeFile(resolve(root,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://finfolk.com.au/</loc></url><url><loc>https://finfolk.com.au/directory</loc></url></urlset>');
 await writeFile(resolve(root,'_headers'),'/sw.js\n  Cache-Control: no-cache\n/neon-config.json\n  Cache-Control: no-store\n/workers/finfolk.sharedworker.js\n  Cache-Control: no-cache\n');
 const index=resolve(root,'index.html');
-const app=await readFile(index,'utf8');
+const app=addSocialMetadata(await readFile(index,'utf8'),'https://finfolk.com.au/app');
 await writeFile(resolve(root,'app.html'),app.replace('</head>','<meta name="robots" content="noindex,follow"></head>'));
-let html=await readFile(resolve(root,'landing.html'),'utf8');
+let html=addSocialMetadata(await readFile(resolve(root,'landing.html'),'utf8'),'https://finfolk.com.au/');
 html=html.replace('</head>','<link rel="canonical" href="https://finfolk.com.au/"></head>');
 await writeFile(index,html);
+await writeFile(resolve(root,'landing.html'),html);
+const profiles=resolve(root,'profiles.html');
+await writeFile(profiles,addSocialMetadata(await readFile(profiles,'utf8'),'https://finfolk.com.au/profiles?screen=people'));
 // Cache the application separately from the public homepage. /app is the
 // extensionless static URL, avoiding the host's HTML canonical redirects.
 const sw=resolve(root,'sw.js');
