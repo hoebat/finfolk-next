@@ -10,7 +10,15 @@ try{
  INSERT INTO finfolk.members(user_id,profile) VALUES('alice','{"displayName":"Alice"}'),('bob','{"displayName":"Bob"}'),('banned','{}');
  INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney'),('future','East','Pacific/Kiritimati'),('past','West','Etc/GMT+12');`);
  const functions=(await owner.query(`SELECT p.proname,p.prosecdef,p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' ORDER BY p.proname`)).rows;
- assert.deepEqual(functions.map(f=>f.proname),['actor_id','auth_identity','checkin_record','directory_operation','directory_public','event_operation','member_permitted','member_profile','profile_save','site_catalog_read','site_document_valid','site_draft_save','site_publish']);
+ assert.deepEqual(functions.map(f=>f.proname),['actor_id','auth_identity','checkin_record','directory_operation','directory_public','discover_popular','event_operation','member_permitted','member_profile','profile_save','site_catalog_read','site_document_valid','site_draft_save','site_publish']);
+ await owner.query('BEGIN');
+ await owner.query(`INSERT INTO finfolk.members(user_id,profile) VALUES('rank-a','{"sharing":{"visits":true}}'),('rank-b','{"sharing":{"visits":true}}'),('rank-c','{"sharing":{"visits":false}}'); INSERT INTO finfolk.checkins(user_id,beach_id,visit_day) VALUES('rank-a','bondi',current_date),('rank-b','bondi',current_date),('rank-c','bondi',current_date);`);
+ assert.deepEqual((await owner.query('SELECT finfolk_rpc.discover_popular() AS data')).rows[0].data,{places:[]});
+ await owner.query(`UPDATE finfolk.members SET profile='{"sharing":{"visits":true}}' WHERE user_id='rank-c'`);
+ assert.deepEqual((await owner.query('SELECT finfolk_rpc.discover_popular() AS data')).rows[0].data,{places:['bondi']});
+ await owner.query(`UPDATE finfolk.checkins SET visit_day=current_date-90 WHERE user_id='rank-c'`);
+ assert.deepEqual((await owner.query('SELECT finfolk_rpc.discover_popular() AS data')).rows[0].data,{places:[]});
+ await owner.query('ROLLBACK');
  assert.deepEqual(await memberProfile(db,'alice'),{displayName:'Alice'});
  assert.deepEqual(await memberProfile(db,'bob'),{displayName:'Bob'});
  assert.equal(await memberProfile(db,'banned'),null);assert.equal(await memberProfile(db,'missing'),null);

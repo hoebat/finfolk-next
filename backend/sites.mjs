@@ -46,6 +46,7 @@ export function parseSiteImport(raw,format){
 export async function publicSiteCatalog(q){const value=(await q('SELECT finfolk_rpc.site_catalog_read() AS value'))[0]?.value;if(!value)fail(503,'The site directory is being prepared.');return value;}
 const mapError=e=>{if(e.code==='40001')fail(409,'This site changed. Reload the latest record before publishing or editing.','site_revision_conflict');if(e.code==='42501')fail(403,'Verified member access is required.');if(e.code==='22023')fail(400,'Site details could not be validated.');throw e;};
 export function registerSitesPublic(app,{db}){
+ app.get('/v1/discover/popular',async c=>c.json((await db.query('SELECT finfolk_rpc.discover_popular() AS data'))[0].data));
  app.get('/v1/sites/catalog',async c=>c.json(await publicSiteCatalog(db.query)));
  app.get('/v1/sites/:id',async c=>{const row=(await db.query("SELECT payload,revision FROM finfolk.site_profiles WHERE id=$1 AND status='published'",[c.req.param('id')]))[0];if(!row)fail(404,'Dive site not found.');return c.json({...row.payload,revision:row.revision});});
 }

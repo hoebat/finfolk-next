@@ -27,6 +27,15 @@ export var operations = {
     "write":true,
     "domain":"directoryOwner"
   },
+  "discoverPopular":{
+    "name":"discoverPopular",
+    "path":"/v1/discover/popular",
+    "method":"GET",
+    "transport":"rest",
+    "auth":false,
+    "write":false,
+    "domain":"discovery"
+  },
   "siteAdmin":{
     "name":"siteAdmin",
     "path":"/v1/admin/sites",

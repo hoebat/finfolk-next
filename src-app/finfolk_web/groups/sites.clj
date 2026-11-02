@@ -1,7 +1,8 @@
 (ns finfolk-web.groups.sites
  "Site catalog and review operations; authorization is server-owned.")
 (def OPERATIONS
- {"siteImportDetail" {"name" "siteImportDetail" "path" "/v1/admin/sites/imports/:id" "method" "GET" "transport" "rest" "auth" true "admin" true "write" false "domain" "siteAdmin"}
+ {"discoverPopular" {"name" "discoverPopular" "path" "/v1/discover/popular" "method" "GET" "transport" "rest" "auth" false "write" false "domain" "discovery"}
+ "siteImportDetail" {"name" "siteImportDetail" "path" "/v1/admin/sites/imports/:id" "method" "GET" "transport" "rest" "auth" true "admin" true "write" false "domain" "siteAdmin"}
  "siteCatalog" {"name" "siteCatalog"
  "path" "/v1/sites/catalog"
  "method" "GET"
