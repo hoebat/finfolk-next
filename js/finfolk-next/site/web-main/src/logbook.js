@@ -1,6 +1,6 @@
+import {mediaInbox,linkedMedia} from './media-inbox.js';
 import {tripCards} from './trip-report.js';
 import { getInstagramFeed } from './instagram-discovery.js';
-import { instagramPanel } from "./instagram.js";
 import { socialGallery } from "./media.js";
 import { readResource } from "./activity.js";
 import {
@@ -65,13 +65,12 @@ export function installLogbook({
     epoch = 0,
     urls = [],
     editor = null,
-    instagramUI = null;
+    importsUI = null;
   const status = el("p", "", "logbook-status");
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
   function release() {
-    instagramUI?.dispose();
-    instagramUI = null;
+    importsUI?.dispose();importsUI=null;
     for (const url of urls) URL.revokeObjectURL(url);
     urls = [];
   }
@@ -353,9 +352,9 @@ export function installLogbook({
         );
         root.append(banner);
       }
-      if (config.instagram?.enabled) {
-        instagramUI=instagramPanel({api,beaches:getBeaches(),notify:message,brand:config.instagramHandle || "finfolk.com.au"});
-        root.append(instagramUI.root);
+      if(api.call){
+        importsUI=mediaInbox({api,getBeaches,createSession:item=>edit({date:item.day||'',locationName:item.locationName||'',beachId:item.beachId||'',notes:item.notes||'',photos:[]},getBeaches().find(b=>b.id===item.beachId)||null,item),openSession:id=>navigate({session:id}),openProfile:()=>{location.href='./profiles?screen=me#instagram-claim';},notify:message});
+        root.append(importsUI.root);
       }
       await list(api.user.uid);
     } catch (error) {
@@ -477,6 +476,9 @@ export function installLogbook({
         );
       }
     }
+    article.append(linkedMedia(s.linkedMedia,api.user?.uid===s.ownerId?async item=>{
+      await api.call('assignImportedMedia',{id:item.id,sessionId:null,key:crypto.randomUUID()});await render();
+    }:null));
     await gallery(s, article, generation);
     if (config.instagramHandle && generation === epoch) {
       const invite = el("aside", undefined, "follow-invitation");
@@ -519,17 +521,18 @@ export function installLogbook({
         "primary",
       ),
     );
-    body.append(actions);
+    body.append(linkedMedia(s.linkedMedia),el("p","Linked Instagram and TikTok posts above will be visible with this session. Your private import notes stay in your inbox."),actions);
     dialog.append(body);
     root.append(dialog);
     dialog.addEventListener("close", () => dialog.remove());
     dialog.showModal();
     gallery(s, body, epoch);
   }
-  function edit(session = null, beach = null) {
+  function edit(session = null, beach = null, imported = null) {
     ++epoch;
-    header(session ? "Edit session" : "Log a session");
+    header(imported ? "Create session from imported media" : session?.id ? "Edit session" : "Log a session");
     editor = session ? { ...session } : { id: null, photos: [] };
+    const assignmentKey=imported?crypto.randomUUID():null;
     const form = el("form", undefined, "logbook-card session-form");
     const today = new Date();
     today.setMinutes(today.getMinutes() - today.getTimezoneOffset());
@@ -610,7 +613,7 @@ export function installLogbook({
     files.accept = "image/jpeg,image/png,image/webp";
     files.multiple = true;
     files.closest("label").hidden = true;
-    form.append(el("p", "Keep photos on Instagram or TikTok. Add post links on a beach page."));
+    form.append(el("p", imported?"Your imported post will be linked when this private session is saved.":"Keep photos on Instagram or TikTok. Tagged imports can be added from your logbook inbox."));
     let pending = [];
     files.onchange = () => {
       pending = [...files.files];
@@ -655,7 +658,7 @@ export function installLogbook({
           maxDepthMetres: depth.value,
           notes: notes.value,
         };
-        draft.id = await api.save(draft.id, values);
+        draft.id = imported ? (await api.call('assignImportedMedia',{id:imported.id,key:assignmentKey,values})).id : await api.save(draft.id, values);
         files.disabled = true;
         try {
           while (pending.length) {
@@ -725,10 +728,6 @@ export function installLogbook({
       }, save);
     };
     root.append(form);
-    if (config.instagram?.enabled) {
-      instagramUI=instagramPanel({api,beaches:getBeaches(),notify:message,brand:config.instagramHandle || "finfolk.com.au"});
-      root.append(instagramUI.root);
-    }
     const settings = el("section", undefined, "logbook-card");
     settings.append(el("h2", "Sign-in methods"), el("p", api.user.email || ""));
     const providers = api.user.providerData.map((p) => p.providerId);

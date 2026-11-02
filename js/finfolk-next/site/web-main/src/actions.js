@@ -13,6 +13,7 @@ export async function renderActions({
   api,
   beaches = [],
   refresh = () => {},
+  includeConnection = true,
 }) {
   const root = el("section", undefined, "account-card actions-panel");
   root.id = "member-actions";
@@ -45,8 +46,9 @@ export async function renderActions({
   };
   const call = (action, v) => api.call(action, v);
   root.append(status);
+  if(!includeConnection){const profile=el('a','Manage Instagram in Profile ↗');profile.href='./profiles?screen=me#instagram-claim';root.append(profile);}
   try {
-    const [state] = await Promise.all([call("instagramStatus"),renderInstagramClaim({host:root,api,refresh})]);
+    const [state] = await Promise.all([call("instagramStatus"),includeConnection?renderInstagramClaim({host:root,api,refresh}):Promise.resolve()]);
     await renderCommentCommands({host:root,api,beaches,admin:state.admin});
     const c = state.connection;
     const extrasMarker=el('div');root.append(extrasMarker);

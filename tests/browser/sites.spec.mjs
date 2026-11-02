@@ -31,7 +31,7 @@ test('discovery filters preserve inland and boat access in the URL',async({page}
  await expect(page.locator('#index-waterbody')).not.toBeVisible();await expect(page.locator('#index-advanced-count')).toHaveText('2');
  await page.locator('#index-advanced > summary').focus();await page.keyboard.press('Enter');await expect(page.locator('#index-waterbody')).toBeVisible();
  await page.locator('#index-waterbody').selectOption('ocean');await page.locator('#index-access').selectOption('boat_only');await expect(page).toHaveURL(/waterbody=ocean/);await expect(page).toHaveURL(/access=boat_only/);await expect(page.locator('#beach-count')).toHaveText('1 locations');
- await page.locator('#suggest-advanced > summary').click();await page.locator('#suggest-access').selectOption('boat_only');await expect(page.locator('#recommendations')).toContainText('Boat only');
+ await expect(page.locator('#activity-filter')).not.toBeVisible();await page.locator('.discovery-tuning > summary').click();await page.locator('#suggest-advanced > summary').click();await page.locator('#suggest-access').selectOption('boat_only');await expect(page.locator('#recommendations')).toContainText('Boat only');
  await page.locator('#index-advanced-reset').click();await expect(page.locator('#index-waterbody')).toHaveValue('');await expect(page.locator('#index-access')).toHaveValue('');await expect(page.locator('#index-advanced-count')).not.toBeVisible();await expect(page.locator('#suggest-advanced-count')).toHaveText('1');
  const params=new URL(page.url()).searchParams;expect(params.has('waterbody')).toBe(false);expect(params.has('access')).toBe(false);expect(params.get('suggest_access')).toBe('boat_only');
 });

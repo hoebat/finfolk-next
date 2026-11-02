@@ -1,6 +1,9 @@
 import {registerEventsPublic,registerEventsPrivate} from './events.mjs';
 import {registerDirectoryPublic,registerDirectoryPrivate} from './directory.mjs';
+import {discoverPeople} from './people-discovery.mjs';
 import {registerSitesPublic,registerSitesPrivate} from './sites.mjs';
+import {tiktokActions,tiktokAction,tiktokCallback,tiktokReady} from './tiktok.mjs';
+import {mediaAction,mediaActions,sessionMedia} from './media-imports.mjs';
 import {publicPage} from './public-pages.mjs';
 import { memberProfile, saveMemberProfile, recordMemberCheckin, lookupIdentity } from './backbone.mjs';
 import { registerMessagingAPI,messagingProblem,messagingMemberAction,isMessagingMemberAction } from './messaging-api.mjs';
@@ -62,7 +65,8 @@ export function createAPI({
 }) {
   const app = new Hono();
   const q = db.query;
-  for(const path of ['/privacy','/data-deletion','/v1/integrations/tiktok/oauth/callback'])app.get(path,c=>publicPage(c.req.path));
+  for(const path of ['/privacy','/data-deletion'])app.get(path,c=>publicPage(c.req.path));
+  app.get('/v1/integrations/tiktok/oauth/callback',c=>tiktokReady(c.env||{})?tiktokCallback(c.req.raw,c.env,db,messagingFetch):publicPage(c.req.path));
   app.use('*', async (c, next) => {
     if(c.req.path.startsWith('/v1/')){const requestId=randomUUID();c.set('requestId',requestId);c.header('X-Request-Id',requestId);}
     const origin = c.req.header('Origin');
@@ -263,6 +267,11 @@ export function createAPI({
     let result;
     if (typeof action === 'string' && action.startsWith('invitation')) return c.json({data:await invitationAction({action,v,uid,q,verified})});
     if (tripActions.has(action)) return c.json({data:await tripAction({action,v,uid,q,env:c.env||{},verified})});
+    if (tiktokActions.has(action)) return c.json({data:await tiktokAction({action,uid,db,env:c.env||{},c,fetcher:messagingFetch})});
+    if (mediaActions.has(action)) {
+      if(action==='assignImportedMedia' && v.publicConsent===true) verified();
+      return c.json({data:await mediaAction({action,v,uid,db,env:c.env||{}})});
+    }
     if (discoveryActions.has(action)) return c.json({data:await discoveryAction({action,v,uid,env:c.env||{},q,fetcher:messagingFetch})});
     if (typeof action === 'string' && action.startsWith('instagram')) {
       const result = isMessagingMemberAction(action) ? await messagingMemberAction({action,v,uid,env:c.env || {},db,verified}) : await instagramAction({action,v,uid,env:c.env || {},q,db,verified,fetcher:messagingFetch});
@@ -338,6 +347,7 @@ export function createAPI({
         );
         break;
       case 'community': {
+        if(v.mode==='discover'){result=await discoverPeople({v,uid,q,basic,now});break;}
         const availability=v.availability||'',experience=v.experience||'';
         if(!['','weekday mornings','weekday afternoons','weekend mornings','weekend afternoons'].includes(availability)||!['','new','comfortable','experienced'].includes(experience))fail(400,'Choose listed availability and experience filters.');
         const b = await beach(v.beachId),
@@ -522,7 +532,7 @@ export function createAPI({
           (row.owner_id !== uid && row.data.visibility !== 'public')
         )
           fail(404, 'Session unavailable.');
-        result = { ...row.data, id: row.id, ownerId: row.owner_id };
+        result = { ...row.data, id: row.id, ownerId: row.owner_id, linkedMedia:await sessionMedia(q,row.id,row.owner_id) };
         break;
       }
       case 'saveSession': {
@@ -580,6 +590,8 @@ export function createAPI({
         await tq('DELETE FROM finfolk.instagram_dm_limits WHERE sender_id IN (SELECT rate_limit_key FROM finfolk.instagram_dm_events WHERE owner_id=$1)',[uid]);
         await tq('DELETE FROM finfolk.instagram_dm_events WHERE owner_id=$1',[uid]);
         await tq('DELETE FROM finfolk.messaging_idempotency WHERE user_id=$1',[uid]);
+        await tq('DELETE FROM finfolk.media_imports WHERE owner_id=$1',[uid]);
+        await tq('DELETE FROM finfolk.tiktok_connections WHERE user_id=$1',[uid]);
         await tq('DELETE FROM finfolk.messaging_oauth_states WHERE user_id=$1',[uid]);
         await tq('DELETE FROM finfolk.instagram_dm_limits WHERE sender_id IN (SELECT sender_id FROM finfolk.instagram_connections WHERE user_id=$1)',[uid]);
         await tq('DELETE FROM finfolk.instagram_claims WHERE user_id=$1',[uid]);

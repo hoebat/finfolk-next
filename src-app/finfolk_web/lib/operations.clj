@@ -33,9 +33,9 @@
    "siteAdmin" ["sites" "siteSubmissions"] "siteSubmissions" ["siteAdmin"]
    "member" ["community" "logbook" "posts" "trips"]
    "community" ["member" "logbook" "posts" "trips"]
-   "logbook" ["community" "trips" "member"]
+   "logbook" ["community" "trips" "member" "instagram"]
    "posts" ["member"]
-   "instagram" ["posts" "member" "admin"]
+   "instagram" ["posts" "member" "admin" "logbook"]
    "admin" ["instagram" "posts" "member"] "invitations" ["member"]})
 (defn.js affectedDomains [spec]
   (return (Array.from (new Set (. [(. spec ["domain"])] (concat (or (. -/RELATED [(. spec ["domain"])]) [])))))))

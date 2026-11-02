@@ -15,33 +15,22 @@ test('offline navigation keeps the landing page separate from app and deep links
  await page.goto('/__landing/profiles?screen=people');await expect(page.locator('h1')).toHaveText('FinFolk profiles');
 });
 
-test('landing previews, palette synchronisation and forecast recovery work on desktop and mobile',async({page})=>{
- // Isolate the landing interactions from account services and app startup.
- await page.route(/\/\?view=/,route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>FinFolk app preview</title><p>App preview</p>'}));
- await page.route(/\/profiles\?/,route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>FinFolk People</title><p>People</p>'}));
+test('landing walkthroughs, themes and forecasts work on desktop and mobile',async({page,browserName})=>{
  await page.goto('/landing.html');
  await expect(page.locator('#landing-signature [role=img]')).toHaveAttribute('aria-label','FinFolk');
- await expect(page.locator('.landing-hero')).not.toHaveClass(/landing-scene/);
- await expect(page.locator('.landing-story')).not.toHaveClass(/landing-scene/);
- await expect(page.locator('.landing-conditions')).not.toHaveClass(/landing-scene/);
- const illustrated=page.locator('.landing-story-intro');await illustrated.scrollIntoViewIfNeeded();
- await expect(illustrated).toHaveCSS('--landing-scene',/ningaloo-acid-light-v1.webp/);
- const log=page.locator('.landing-chapter-copy [data-demo-route=logbook]');
- await log.click();
- await expect(page.locator('#landing-demo')).toBeVisible();
- await expect(page.locator('#landing-demo-frame')).toHaveAttribute('src','./?view=logbook');
- await page.keyboard.press('Escape');
- await expect(page.locator('#landing-demo')).not.toBeVisible();
- await expect(log).toBeFocused();
- await page.locator('.landing-chapter-copy [data-demo-route=people]').click();
- await expect(page.locator('#landing-demo-frame')).toHaveAttribute('src','./profiles?screen=people&location=bondi');
- await page.keyboard.press('Escape');
- const preview=page.frames().find(frame=>frame.url().includes('?view=discover'));
- await preview.evaluate(async()=>{const {setTheme}=await import('/theme.js');setTheme('navy');});
+ await expect(page.locator('[data-feature-demo]')).toHaveCount(7);
+ await expect(page.locator('iframe')).toHaveCount(0);
+ await expect(page.locator('.landing-illustration')).toHaveCount(4);
+ await expect(page.locator('.landing-story .landing-illustration,.landing-social-feature .landing-illustration')).toHaveCount(0);
+ await page.getByRole('button',{name:'Pause animations'}).click();
+ await expect(page.locator('[data-feature-demo][data-motion=paused]')).toHaveCount(7);
+ await page.locator('#landing-theme').selectOption('navy');
  await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
- await expect(illustrated).toHaveCSS('--landing-scene',/ningaloo-muted-dark-v1.webp/);
+ await page.evaluate(()=>scrollTo(0,0));
+ await page.screenshot({path:'.cache/landing-backgrounds-'+browserName+'-desktop.png'});
  await page.setViewportSize({width:390,height:844});
- await expect(illustrated).toHaveCSS('--landing-scene',/ningaloo-muted-dark-mobile-v1.webp/);
+ await page.evaluate(()=>scrollTo(0,0));
+ await page.screenshot({path:'.cache/landing-backgrounds-'+browserName+'-mobile.png'});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.locator('#landing-coast').selectOption('portsea');
  await expect(page.locator('#landing-coast-open')).toHaveAttribute('href','./?view=maps&site=portsea');
@@ -49,4 +38,6 @@ test('landing previews, palette synchronisation and forecast recovery work on de
  await page.getByRole('button',{name:'Load forecast'}).click();
  await expect(page.locator('.conditions-status')).toContainText('Forecast unavailable');
  await expect(page.getByRole('button',{name:'Refresh forecast'})).toBeEnabled();
+ await page.emulateMedia({reducedMotion:'reduce'});
+ await expect(page.locator('[data-feature-demo][data-motion=paused]')).toHaveCount(7);
 });

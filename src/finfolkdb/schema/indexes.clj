@@ -21,6 +21,8 @@
 {:name "instagram_dm_pending" :definition "CREATE INDEX instagram_dm_pending ON finfolk.instagram_dm_events USING btree (status, created_at)"}
 {:name "instagram_media_owner" :definition "CREATE UNIQUE INDEX instagram_media_owner ON finfolk.instagram_connections USING btree (media_owner_id) WHERE (media_owner_id IS NOT NULL)"}
 {:name "instagram_sender_scope" :definition "CREATE UNIQUE INDEX instagram_sender_scope ON finfolk.instagram_connections USING btree (provider_scope, sender_id) WHERE (sender_id IS NOT NULL)"}
+{:name "media_imports_inbox" :definition "CREATE INDEX media_imports_inbox ON finfolk.media_imports USING btree (owner_id, created_at DESC, id DESC) WHERE ((session_id IS NULL) AND (state = 'active'::text))"}
+{:name "media_imports_session" :definition "CREATE INDEX media_imports_session ON finfolk.media_imports USING btree (session_id) WHERE (session_id IS NOT NULL)"}
 {:name "messaging_events_work" :definition "CREATE INDEX messaging_events_work ON finfolk.instagram_dm_events USING btree (processing_state, next_attempt_at)"}
 {:name "messaging_outbox_work" :definition "CREATE INDEX messaging_outbox_work ON finfolk.messaging_outbox USING btree (state, next_attempt_at)"}
 {:name "posts_public_feed" :definition "CREATE INDEX posts_public_feed ON finfolk.posts USING btree (beach_id, created_at DESC, id DESC) WHERE ((status = 'approved'::text) AND public_consent)"}
