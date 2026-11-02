@@ -62,13 +62,13 @@ test('profile editor saves portraits and selected public content and preserves f
  await page.getByRole('link',{name:'Edit profile',exact:true}).first().click();await page.getByRole('button',{name:'Use standard illustration',exact:true}).click();await page.getByRole('button',{name:'Save profile',exact:true}).click();await expect(page.locator('.member-hero img')).toHaveAttribute('data-default-portrait',/alex|maya|kai/);
 });
 
-test('guest profiles and five-item navigation fit mobile and retain one responsive logo',async({page})=>{
+test('guest profiles expose only Map and Discover on mobile and retain one responsive logo',async({page})=>{
  await mount(page,{guest:true});await expect(page.getByRole('link',{name:'Sign in or create an account ↗'})).toBeVisible();await expect(page.locator('[data-person]')).toHaveCount(0);
  await page.setViewportSize({width:390,height:844});
  await expect(page.locator('.navigation-logo')).toBeVisible();await expect(page.locator('.navigation-logo')).toHaveCSS('width','36px');
- expect(await page.locator('.ff-primary-nav>.ff-nav-item:visible').count()).toBe(5);
+ expect(await page.locator('.ff-primary-nav>.ff-nav-item:visible').count()).toBe(2);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
- await page.getByRole('button',{name:'Open menu',exact:true}).click();await expect(page.locator('#local-menu-panel')).toBeVisible();await page.keyboard.press('Escape');await expect(page.locator('#local-menu-panel')).not.toBeVisible();
+ await expect(page.getByRole('button',{name:'Open menu',exact:true})).toBeHidden();await expect(page.getByRole('link',{name:'Sign in',exact:true})).toBeVisible();await expect(page.locator('#local-menu-panel')).toBeHidden();
  await page.setViewportSize({width:1440,height:1000});await expect(page.locator('.navigation-logo')).toHaveCSS('width','146px');
  await page.getByRole('combobox',{name:'Theme',exact:true}).selectOption('navy');await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
 });
