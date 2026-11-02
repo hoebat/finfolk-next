@@ -19,6 +19,7 @@ for(const area of directory.areas){area.map_region=area.id;regions.push({id:area
 regions.push({id:'unavailable-configured-survey',name:'Unavailable survey',state:'TEST',center:[151,-34],zoom:10,rasters:[],tiles:{},contour_file:'data/contours/unavailable.geojson',contours:null,status:'empty'});
 const guides=await readFile(new URL('../js/finfolk-next/site/web-main/src/guides.json',import.meta.url),'utf8'),social=await readFile(new URL('../js/finfolk-next/site/web-main/src/social.json',import.meta.url),'utf8');
 for(const name of ['document','location','history','Event','MouseEvent','HTMLCanvasElement','localStorage'])globalThis[name]=window[name];
+globalThis.addEventListener=window.addEventListener.bind(window);
 if(mobileRun)globalThis.matchMedia=window.matchMedia.bind(window);
 globalThis.devicePixelRatio=1;globalThis.ResizeObserver=class{observe(){}};
 const ctx=new Proxy({measureText:text=>({width:text.length*7})},{get:(target,key)=>target[key]||(()=>{})});window.HTMLCanvasElement.prototype.getContext=()=>ctx;window.HTMLCanvasElement.prototype.setPointerCapture=()=>{};
@@ -68,6 +69,8 @@ try{
   document.querySelector('[data-view=maps]').click();$('map-search').value='Test Inland Site';$('map-search').dispatchEvent(new window.Event('input'));document.querySelector('.map-match').click();await waitFor(()=>$('place-title').textContent==='Test Inland Site'&&!$('data-panel').hidden);assert.equal($('data-status').textContent,'No depth data published yet');assert.match($('measure-reference').textContent,/do not apply/);assert.ok($('beach-summary').textContent.includes('27 m reported'));assert.equal($('measure-start').disabled,true);
   $('map-search').value='Test Boat Site';$('map-search').dispatchEvent(new window.Event('input'));document.querySelector('.map-match').click();await waitFor(()=>$('place-title').textContent==='Test Boat Site'&&!$('data-panel').hidden);assert.match($('measure-result').textContent,/Boat-access/);assert.doesNotMatch($('measure-result').textContent,/one way|return/);assert.ok($('beach-summary').textContent.includes('Boat departure: Test departure'));
  }
+ for(const view of ['logbook','trip']){history.pushState(null,'','?view='+view);window.dispatchEvent(new window.PopStateEvent('popstate'));await waitFor(()=>document.body.dataset.view==='account');assert.equal(new URL(location.href).searchParams.get('view'),'account','Guest member links open sign-in');}
+ assert.deepEqual([...document.querySelectorAll('.primary-nav>.ff-nav-item')].filter(n=>!n.hidden).map(n=>n.dataset.localNav),['discover','map']);
  assert.equal(new Set([...document.querySelectorAll('[id]')].map(n=>n.id)).size,document.querySelectorAll('[id]').length,'All control IDs unique');
  console.log((mobileRun?'Mobile application':'Application')+' checks passed: independent search/forms, stable canvas, Place/Layers, sourced details, comparison, stays and opt-in Instagram.');
 }

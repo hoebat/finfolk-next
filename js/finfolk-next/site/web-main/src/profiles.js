@@ -35,6 +35,7 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
  const sites=directory.beaches,siteById=id=>sites.find(site=>site.id===id);
  const selectedLocation=()=>siteById(current().get('location'))||siteById(current().get('site'))||siteById(me?.profile?.beaches?.[0])||siteById('bondi')||sites[0];
  const navigation=installNavigation({doc,nav:doc.querySelector('.profile-nav'),rail:doc.querySelector('.profile-rail'),context:()=>selectedLocation()?.id||''});
+ navigation.setUser(api.user);
  const themeControl=doc.getElementById('profile-theme');
  function syncTheme(){themeControl.value=doc.documentElement.dataset.theme;}
  themeControl.onchange=()=>{const result=setTheme(themeControl.value);if(!result.persisted)message('Theme applied for this visit. Storage is unavailable.');};
@@ -237,7 +238,7 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   finally{if(generation===epoch)main.removeAttribute('aria-busy');}
  }
  const popstate=()=>render();win.addEventListener('popstate',popstate);
- let actor=api.user?.uid;const stop=api.observe?.(user=>{if(actor===user?.uid)return;actor=user?.uid;me=null;message('');render();});
+ let actor=api.user?.uid;const stop=api.observe?.(user=>{navigation.setUser(user);if(actor===user?.uid)return;actor=user?.uid;me=null;message('');render();});
  await render();
  if('serviceWorker' in win.navigator)win.navigator.serviceWorker.register('./sw.js').catch(()=>{});
  return {render,navigate,destroy(){for(const stop of directoryStops.splice(0))stop();disposed=true;epoch++;stop?.();navigation.destroy();win.removeEventListener('popstate',popstate);doc.removeEventListener('click',onLink);doc.removeEventListener('finfolk:appearance',syncTheme);}};

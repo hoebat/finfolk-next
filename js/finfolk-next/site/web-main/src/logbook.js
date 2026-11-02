@@ -799,7 +799,7 @@ export function installLogbook({
       config = value;
       nav.hidden = true;
       const logButton = document.getElementById("log-session");
-      if (logButton) logButton.hidden = !value.enabled || !getSelectedBeach();
+      if (logButton) logButton.hidden = !api?.user || !value.enabled || !getSelectedBeach();
     })
     .catch(() => {
       nav.hidden = true;

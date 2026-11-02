@@ -2,7 +2,7 @@ import {renderDirectory} from './directory.js';
 import {renderEvents} from './events.js';
 import {readSiteDirectory,observeSiteDirectory} from './site-catalog.js';
 import {canAutoMeasure,isInland,hydrateSiteCatalog} from './site-model.js';
-import {applicationBackbone} from './app-backbone.js';
+import {applicationBackbone,appConfiguration} from './app-backbone.js';
 import {installTripPage} from './trip-report.js';
 // Keep an invite through OAuth redirects without putting it in the identity provider callback.
 try { const invite = new URL(location.href).searchParams.get('invite'); if (/^[A-Za-z0-9_-]{24}$/.test(invite || '')) sessionStorage.setItem('finfolk:invite', invite); } catch {}
@@ -31,12 +31,17 @@ const data=new StaticData();map.dataBase=data.base;
 let catalog,region,profile=null,drawing=false,measuring=false,vertices=[],viewTimer,inspectionRequest=0,profileRequest=0,viewRequest=0,loadRequest=0;
 let beachCatalog={beaches:[]},selectedBeachId='',contoursReady=false,discovery,selectionRequest=0,activeAreaId='';
 const shell=installAppShell({backbone:appBackbone,onLayout:()=>map.resize(),onMapActivity:active=>map.setActive(active),onOpen:()=>map.cancelGesture()});
-installNavigation({nav:document.querySelector('.primary-nav'),rail:document.querySelector('.app-rail'),context:()=>new URL(location.href).searchParams.get('site')||''});
+const navigation=installNavigation({nav:document.querySelector('.primary-nav'),rail:document.querySelector('.app-rail'),context:()=>new URL(location.href).searchParams.get('site')||''});
 let mapSearch;
 const logbook=installLogbook({shell,getBeaches:()=>beachCatalog.beaches,getSelectedBeach:()=>findBeach(beachCatalog,selectedBeachId)});
 installOfflineUI(data.downloads,{region:()=>region,onOpen:id=>openSurvey(id)});
 installTripPage({shell,loadJSON:path=>data.json(path)});
 const community=installCommunity({shell,getBeaches:()=>beachCatalog.beaches,getSelectedBeach:()=>findBeach(beachCatalog,selectedBeachId)});
+// Restore identity before exposing member navigation. All member data still uses the authenticated API.
+let signedIn=false;
+const guardMemberRoute=()=>{if(!signedIn&&['logbook','trip'].includes(shell.route.view))shell.navigate('account',{historyMode:'replace',params:{session:null,profile:null,trip:null}});};
+shell.subscribe(guardMemberRoute);
+(async()=>{try{const config=await appConfiguration();if(config.enabled&&config.authUrl){const {createLogbookClient}=await import('./neon-client.js');const client=await createLogbookClient(config);client.observe(user=>{signedIn=!!user;navigation.setUser(user);$('log-session').hidden=!user||!selectedBeachId;guardMemberRoute();});}else guardMemberRoute();}catch{guardMemberRoute();}})();
 $('log-session').onclick=()=>logbook.newSession(findBeach(beachCatalog,selectedBeachId)).catch(e=>notice(e.message));
 function revealMap(){map.resize();}
 const number=(value,places=1)=>Number(value).toLocaleString('en-AU',{maximumFractionDigits:places});
@@ -78,7 +83,7 @@ async function chooseBeach(id,{writeURL=true,depth=Number($('measure-depth').val
   if(beach&&isInland(beach))beach.region='site-'+beach.id;
   if(beach){activeAreaId=beach.area_id;map.focusedAreaId=beach.area_id;}else map.focusedAreaId=null;
   if(beach&&(beach.region!==region?.id||!contoursReady))await load(beach.region,false,{center:beach.point,zoom:15});else loadRequest++;if(request!==selectionRequest)return;
-  selectedBeachId=beach?.id||'';appBackbone?.state('atlas',{status:'ready',region:region?.id,site:selectedBeachId});$('log-session').hidden=!beach||!logbook.enabled;if([...$('measure-depth').options].some(o=>Number(o.value)===depth))$('measure-depth').value=depth;await discovery?.select(selectedBeachId);if(request!==selectionRequest)return;map.resize();map.selectedBeach=selectedBeachId;resetProfile();clearMeasurement();$('inspection').hidden=true;inspectionRequest++;notice('');
+  selectedBeachId=beach?.id||'';appBackbone?.state('atlas',{status:'ready',region:region?.id,site:selectedBeachId});$('log-session').hidden=!signedIn||!beach||!logbook.enabled;if([...$('measure-depth').options].some(o=>Number(o.value)===depth))$('measure-depth').value=depth;await discovery?.select(selectedBeachId);if(request!==selectionRequest)return;map.resize();map.selectedBeach=selectedBeachId;resetProfile();clearMeasurement();$('inspection').hidden=true;inspectionRequest++;notice('');
   if(beach){
     $('place-title').textContent=beach.name;document.title=`${beach.name} · FinFolk`;map.center=beach.point;map.zoom=15;map.marker=beach.point;map.draw();map.onview?.();
     map.siteAccessPoints=beach.access_points||[];map.draw();

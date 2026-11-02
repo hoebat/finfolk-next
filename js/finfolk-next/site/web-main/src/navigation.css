@@ -39,3 +39,7 @@ body.finfolk-app-navigation{grid-template-columns:200px minmax(0,1fr)}
 @media(max-width:900px){:root[data-theme] body.finfolk-navigation-enabled nav.ff-primary-nav{padding-left:64px}.finfolk-navigation-enabled :is(.profile-home,.app-rail>.brand){display:flex;position:fixed;left:12px;bottom:calc(9px + env(safe-area-inset-bottom));z-index:65;width:44px;height:50px;min-height:0;align-items:center;justify-content:center;margin:0;padding:0;border:0}.finfolk-navigation-enabled .navigation-logo{width:36px;height:44px;aspect-ratio:auto;mask-image:url('./finfolk-mark.svg');-webkit-mask-image:url('./finfolk-mark.svg')}}
 
 @media(min-width:901px){:root[data-theme] body.finfolk-app-navigation{grid-template-columns:200px minmax(0,1fr)}}
+
+.ff-menu-toggle[hidden]{display:none!important}
+.finfolk-guest-navigation nav.ff-primary-nav{grid-template-columns:repeat(2,minmax(0,1fr))}
+@media(max-width:900px){.finfolk-guest-navigation .ff-utility-menu{width:72px}.finfolk-guest-navigation .ff-menu-toggle{width:72px;white-space:nowrap;text-decoration:none}}
