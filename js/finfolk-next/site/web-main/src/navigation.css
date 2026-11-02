@@ -47,3 +47,4 @@ body.finfolk-app-navigation{grid-template-columns:200px minmax(0,1fr)}
 .ff-menu-panel a[hidden]{display:none!important}
 .ff-utility-menu{display:grid;gap:8px}
 @media(max-width:900px){.finfolk-guest-navigation .ff-utility-menu{display:flex;gap:8px;width:auto}.finfolk-guest-navigation #local-menu-toggle{width:44px}}
+@media(min-width:901px){.ff-menu-panel{bottom:calc(100% + 12px)}}
