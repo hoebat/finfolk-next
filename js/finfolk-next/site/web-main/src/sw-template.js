@@ -18,7 +18,7 @@ self.addEventListener('fetch', (event) => {
         try {
           return await fetch(request, { signal: AbortSignal.timeout(5000) });
         } catch {
-          const application=url.pathname.endsWith('/app')||url.pathname.endsWith('/app.html')||[...url.searchParams.keys()].some(key=>!/^utm_/i.test(key)&&!['fbclid','gclid','msclkid'].includes(key));
+          const application=url.pathname.endsWith('/app')||url.pathname.endsWith('/app.html')||[...url.searchParams.keys()].some(key=>!/^utm_/i.test(key)&&!['fbclid','gclid','msclkid','v'].includes(key));
           const profilePage=/\/profiles(?:\.html)?$/.test(url.pathname)&&SHELL.includes('./profiles');
           const shell=profilePage?'./profiles':application&&SHELL.includes('./app')?'./app':'./index.html';
           const cached = await (await caches.open(CACHE)).match(shell);
