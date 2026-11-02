@@ -21,7 +21,11 @@ test('landing previews, palette synchronisation and forecast recovery work on de
  await page.route(/\/profiles\?/,route=>route.fulfill({contentType:'text/html',body:'<!doctype html><title>FinFolk People</title><p>People</p>'}));
  await page.goto('/landing.html');
  await expect(page.locator('#landing-signature [role=img]')).toHaveAttribute('aria-label','FinFolk');
- await expect(page.locator('.landing-hero')).toHaveCSS('--landing-scene',/ningaloo-acid-light-v1.webp/);
+ await expect(page.locator('.landing-hero')).not.toHaveClass(/landing-scene/);
+ await expect(page.locator('.landing-story')).not.toHaveClass(/landing-scene/);
+ await expect(page.locator('.landing-conditions')).not.toHaveClass(/landing-scene/);
+ const illustrated=page.locator('.landing-story-intro');await illustrated.scrollIntoViewIfNeeded();
+ await expect(illustrated).toHaveCSS('--landing-scene',/ningaloo-acid-light-v1.webp/);
  const log=page.locator('.landing-chapter-copy [data-demo-route=logbook]');
  await log.click();
  await expect(page.locator('#landing-demo')).toBeVisible();
@@ -35,9 +39,9 @@ test('landing previews, palette synchronisation and forecast recovery work on de
  const preview=page.frames().find(frame=>frame.url().includes('?view=discover'));
  await preview.evaluate(async()=>{const {setTheme}=await import('/theme.js');setTheme('navy');});
  await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
- await expect(page.locator('.landing-hero')).toHaveCSS('--landing-scene',/ningaloo-muted-dark-v1.webp/);
+ await expect(illustrated).toHaveCSS('--landing-scene',/ningaloo-muted-dark-v1.webp/);
  await page.setViewportSize({width:390,height:844});
- await expect(page.locator('.landing-hero')).toHaveCSS('--landing-scene',/ningaloo-muted-dark-mobile-v1.webp/);
+ await expect(illustrated).toHaveCSS('--landing-scene',/ningaloo-muted-dark-mobile-v1.webp/);
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
  await page.locator('#landing-coast').selectOption('portsea');
  await expect(page.locator('#landing-coast-open')).toHaveAttribute('href','./?view=maps&site=portsea');

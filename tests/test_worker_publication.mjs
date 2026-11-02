@@ -10,7 +10,7 @@ assert.ok(code.includes('./'+wasm),'the kernel loads its matching WASM version')
 for(const file of [kernel,wasm,'finfolk.sharedworker.js'])assert.ok(sw.includes('./workers/'+file),'offline shell includes '+file);
 assert.deepEqual(await readFile(root+'/workers/'+wasm),await readFile('node_modules/@sqlite.org/sqlite-wasm/dist/sqlite3.wasm'));
 const html=await readFile(root+'/index.html','utf8'),app=await readFile(root+'/app.html','utf8'),config=JSON.parse(await readFile(root+'/neon-config.json','utf8'));
-assert.ok(html.includes('<title>FinFolk · Freediving locations, logs and community</title>'));assert.ok(html.includes('rel="canonical" href="https://finfolk.com.au/"'));
+assert.ok(html.includes('<title>FinFolk - Discover Freediving</title>'));assert.ok(html.includes('rel="canonical" href="https://finfolk.com.au/"'));
 assert.ok(!html.includes('noindex')&&!html.includes('FinFolk Next ·'));
 assert.ok(html.includes('id="landing-main"')&&html.includes('id="landing-preview"'));
 assert.ok(/landing\.[a-f0-9]{12}\.js/.test(html),'homepage loads the fingerprinted landing module');
