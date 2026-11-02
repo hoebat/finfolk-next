@@ -4,6 +4,7 @@ import {distance} from './data-client.js';
 const highlights=['ningaloo','jervis','julian','bicheno','port phillip','edithvale','bondi','sydney'];
 export function installDiscoverPreferences({catalog,refresh}){
  const doc=document,select=doc.getElementById('suggest-state'),index=doc.getElementById('state-filter'),bar=doc.createElement('div');bar.className='state-choices';bar.setAttribute('role','group');bar.setAttribute('aria-label','Choose a state or territory');
+ doc.querySelector('#suggest-advanced .advanced-grid').prepend(doc.getElementById('activity-filter').closest('label'));
  let manual=new URL(location.href).searchParams.has('state')||new URL(location.href).searchParams.has('suggest_state')||new URL(location.href).searchParams.has('all_states'),position=null,popular=[],shuffle=false;
  function paint(){for(const button of bar.querySelectorAll('[data-state]'))button.setAttribute('aria-pressed',String(button.dataset.state===select.value));}
  function choose(value,explicit=true){const previous=manual;if(explicit)manual=true;const url=new URL(location.href);if(explicit){value?url.searchParams.delete('all_states'):url.searchParams.set('all_states','1');history.replaceState(null,'',url);}for(const node of [select,index]){node.value=value;node.dispatchEvent(new Event('change',{bubbles:true}));}manual=explicit||previous;paint();}
