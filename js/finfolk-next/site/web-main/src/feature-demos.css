@@ -89,3 +89,6 @@
 .feature-demo[data-feature-demo=regulars] .demo-regular-day{padding-block:7px;gap:4px}
 .feature-demo[data-feature-demo=regulars] .demo-regular-days{margin-block:14px 10px}
 .feature-demo[data-feature-demo=regulars] .demo-regular-count{margin:8px 0 14px}
+
+/* Commands remain readable as code in copy, captions and message bubbles. */
+.finfolk-landing code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:.94em;font-weight:500;padding:.12em .35em;border:1px solid color-mix(in srgb,currentColor 18%,transparent);border-radius:5px;background:color-mix(in srgb,currentColor 6%,transparent);box-decoration-break:clone;-webkit-box-decoration-break:clone;overflow-wrap:anywhere}

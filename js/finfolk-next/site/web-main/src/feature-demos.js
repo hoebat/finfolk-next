@@ -31,14 +31,15 @@ const brandMark='<span class="brand-f" style="--brand-size:24px"></span>';
 const platformIcon=platform=>platform==='FinFolk'?brandMark:'<span class="demo-platform-symbol" aria-hidden="true">'+(platform==='Instagram'?'◎':'♪')+'</span>';
 const thread=content=>'<div class="demo-thread-title">'+brandMark+'<div><strong>finfolk.com.au</strong><small>Instagram</small></div></div>'+content;
 const message=(text,sent=false)=>'<div class="demo-message '+(sent?'is-sent':'')+'">'+text+'</div>';
+const command=text=>'<code>'+text+'</code>';
 const typed=text=>'<span data-demo-type="'+text+'">'+text+'</span>';
 const video=(spot,pose='gliding')=>'<div class="demo-post-media demo-session-art" data-pose="'+pose+'"><span class="demo-session-diver" aria-hidden="true"></span><span class="demo-session-play" aria-hidden="true">▶</span><small>'+spot.name+' · Freediving</small></div>';
 function instagramConnectPages(){const spot=DEMO_LOCATIONS['instagram-connect'];return [
  page(0,'<p class="demo-overline">INSTAGRAM</p><div class="demo-instagram-profile">'+brandMark+'<h4>finfolk.com.au</h4><p>Freediving locations, logs and community.</p></div>'+action('Follow @finfolk.com.au','demo-tap-target')+'<p class="demo-hint">Follow FinFolk to connect and use member commands.</p>'),
- page(1,thread(message(typed('/connect'),true)+'<div class="demo-connect-reply">'+message('Your FinFolk code: <b>•••• ••••</b><br>Enter it on FinFolk within 10 minutes.')+'</div>')+'<div class="demo-compose">Message… <span>↑</span></div>'),
+ page(1,thread(message(command(typed('/connect')),true)+'<div class="demo-connect-reply">'+message('Your FinFolk code: <b>•••• ••••</b><br>Enter it on FinFolk within 10 minutes.')+'</div>')+'<div class="demo-compose">Message… <span>↑</span></div>'),
  page(2,'<p class="demo-overline">PROFILE / INSTAGRAM</p><h4>Connect Instagram</h4>'+field('Code from your Instagram DM','<span class="demo-code">'+typed('•••• ••••')+'</span>','demo-tap-target')+'<div class="demo-confirmation demo-connect-success">'+check+' Connected to @alex.dives</div><p class="demo-hint">Enter the code sent to your own Instagram account.</p>'),
- page(3,thread(message(typed('/checkin '+spot.name+''),true))+'<div class="demo-compose demo-tap-target">/checkin '+spot.name+' <span>↑</span></div>'),
- page(4,thread(message('/checkin '+spot.name,true)+message('Checked in at '+spot.name+' for today. Your profile and sharing preferences still apply.'))),
+ page(3,thread(message(command(typed('/checkin '+spot.name)),true))+'<div class="demo-compose demo-tap-target">'+command('/checkin '+spot.name)+' <span>↑</span></div>'),
+ page(4,thread(message(command('/checkin '+spot.name),true)+message('Checked in at '+spot.name+' for today. Your profile and sharing preferences still apply.'))),
  page(5,'<p class="demo-overline">MY ACCOUNT / VISITS</p>'+ownProfile()+'<div class="demo-confirmation">'+check+' Visit recorded</div><div class="demo-visit"><strong>'+spot.name+'</strong><span>Today · Self-reported visit</span>'+pill('1 visit day')+'</div><p class="demo-hint">Become a Regular after visits on eight separate days within 30 days. Your profile is still Closed.</p>')
 ].join('');}
 function importPages(platform='Instagram'){const tiktok=platform==='TikTok';const spot=DEMO_LOCATIONS[platform==='Instagram'?'instagram-post':'tiktok-post'];return [
@@ -74,14 +75,14 @@ export const FEATURE_DEMOS=Object.freeze({
  locations:{title:'Profile',captions:['Start with your profile','Search for a spot','Add '+DEMO_LOCATIONS.locations.query,'Your spots, on your profile'],durations:standardDurations,pages:locationPages},
  logs:{title:'Logbook',captions:['Choose your location','Add your session details','Keep it private or publish','Your session is saved'],durations:standardDurations,pages:logPages},
  people:{title:'People',captions:['Find divers at your spot','Open a profile','See their logs and socials','Send a connection request'],durations:standardDurations,pages:peoplePages},
- 'instagram-connect':{title:'Instagram',captions:['Follow @finfolk.com.au','Send /connect in Instagram','Enter your code on FinFolk','Send /checkin '+DEMO_LOCATIONS['instagram-connect'].name,'Receive your check-in confirmation','See the visit in your account'],durations:[2600,3600,3400,3200,3000,3600],platforms:['Instagram','Instagram','FinFolk','Instagram','Instagram','FinFolk'],pages:instagramConnectPages},
+ 'instagram-connect':{title:'Instagram',captions:['Follow @finfolk.com.au','Send '+command('/connect')+' in Instagram','Enter your code on FinFolk','Send '+command('/checkin '+DEMO_LOCATIONS['instagram-connect'].name),'Receive your check-in confirmation','See the visit in your account'],durations:[2600,3600,3400,3200,3000,3600],platforms:['Instagram','Instagram','FinFolk','Instagram','Instagram','FinFolk'],pages:instagramConnectPages},
  'instagram-post':{title:'Logbook',captions:['Tag your photo or video','It arrives in your FinFolk log','Review the day and location','Sort into a session','Add details when you’re ready'],durations:[3400,3200,3400,3600,3800],platforms:['Instagram','FinFolk','FinFolk','FinFolk','FinFolk'],pages:()=>importPages('Instagram')},
  'tiktok-post':{title:'Logbook',captions:['Tag your TikTok video','It arrives in your FinFolk log','Review the day and location','Sort into a session','Add details when you’re ready'],durations:[3400,3200,3400,3600,3800],platforms:['TikTok','FinFolk','FinFolk','FinFolk','FinFolk'],pages:()=>importPages('TikTok')},
 });
 export function setDemoStep(figure,step,progress=1){
  const kind=figure.dataset.featureDemo,definition=FEATURE_DEMOS[kind];
  if(figure.dataset.step!==String(step)){
-  figure.dataset.step=String(step);figure.querySelector('[data-demo-caption]').textContent=definition.captions[step];
+  figure.dataset.step=String(step);figure.querySelector('[data-demo-caption]').innerHTML=definition.captions[step];
   for(const page of figure.querySelectorAll('.demo-page'))page.classList.toggle('is-active',Number(page.dataset.phase)===step);
   for(const dot of figure.querySelectorAll('[data-demo-progress]'))dot.classList.toggle('is-active',Number(dot.dataset.demoProgress)===step);
   const platform=definition.platforms?.[step]||'FinFolk';figure.dataset.platform=platform.toLowerCase();
