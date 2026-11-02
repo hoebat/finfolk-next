@@ -76,6 +76,14 @@
     "definition": "CREATE UNIQUE INDEX instagram_sender_scope ON finfolk.instagram_connections USING btree (provider_scope, sender_id) WHERE (sender_id IS NOT NULL)"
   },
   {
+    "name": "media_imports_inbox",
+    "definition": "CREATE INDEX media_imports_inbox ON finfolk.media_imports USING btree (owner_id, created_at DESC, id DESC) WHERE ((session_id IS NULL) AND (state = 'active'::text))"
+  },
+  {
+    "name": "media_imports_session",
+    "definition": "CREATE INDEX media_imports_session ON finfolk.media_imports USING btree (session_id) WHERE (session_id IS NOT NULL)"
+  },
+  {
     "name": "messaging_events_work",
     "definition": "CREATE INDEX messaging_events_work ON finfolk.instagram_dm_events USING btree (processing_state, next_attempt_at)"
   },

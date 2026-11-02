@@ -2,7 +2,15 @@
   "Browser bindings for logbook; HTTP permissions remain server-owned.")
 
 (def OPERATIONS
- {"deleteSession" {"auth" true
+ { "mediaInbox" {"auth" true "domain" "logbook" "name" "mediaInbox" "transport" "action" "write" false}
+ "updateImportedMedia" {"auth" true "domain" "logbook" "name" "updateImportedMedia" "transport" "action" "write" true}
+ "assignImportedMedia" {"auth" true "domain" "logbook" "name" "assignImportedMedia" "transport" "action" "write" true}
+ "hideImportedMedia" {"auth" true "domain" "logbook" "name" "hideImportedMedia" "transport" "action" "write" true}
+ "tiktokStatus" {"auth" true "domain" "logbook" "name" "tiktokStatus" "transport" "action" "write" false}
+ "tiktokConnect" {"auth" true "domain" "logbook" "name" "tiktokConnect" "transport" "action" "write" true}
+ "tiktokDisconnect" {"auth" true "domain" "logbook" "name" "tiktokDisconnect" "transport" "action" "write" true}
+ "tiktokSync" {"auth" true "domain" "logbook" "name" "tiktokSync" "transport" "action" "write" true}
+ "deleteSession" {"auth" true
  "domain" "logbook"
  "name" "deleteSession"
  "transport" "action"

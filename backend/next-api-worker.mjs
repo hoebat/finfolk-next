@@ -1,3 +1,4 @@
+import {tiktokReady,scheduleTikTok} from './tiktok.mjs';
 import {publicPage} from './public-pages.mjs';
 import {createAPI,managedVerifier} from './api.mjs';
 import {database} from './db.mjs';
@@ -22,7 +23,7 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
  return {
   async fetch(request,env,ctx){
    const path=new URL(request.url).pathname;
-   if(['GET','HEAD'].includes(request.method)){const publication=publicPage(path);if(publication)return request.method==='HEAD'?new Response(null,{status:publication.status,headers:publication.headers}):publication;}
+   if(['GET','HEAD'].includes(request.method)){const publication=path==='/v1/integrations/tiktok/oauth/callback'&&tiktokReady(env)&&request.method==='GET'?null:publicPage(path);if(publication)return request.method==='HEAD'?new Response(null,{status:publication.status,headers:publication.headers}):publication;}
    if(path==='/instagram/webhook' && request.method==='GET' && env.ENVIRONMENT==='next')
     return instagramWebhook(request,env,()=>{throw Error('Verification must be database independent');});
    if(path==='/instagram/webhook' && env.INSTAGRAM_NEXT_INGRESS_ENABLED!=='true')
@@ -55,7 +56,7 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
   async scheduled(event,env){
    await withDatabase(env,async db=>{
     if(event.cron==='* * * * *')await reconcileInstagramDM(env,db.query);
-    else{await reconcileInstagram(env,db.query);await scheduleInstagramDiscovery(env,db.query);}
+    else{await reconcileInstagram(env,db.query);await scheduleInstagramDiscovery(env,db.query);await scheduleTikTok(env,db);}
    });
   }
  };

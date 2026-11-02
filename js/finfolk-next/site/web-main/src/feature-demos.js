@@ -1,6 +1,7 @@
 import {beachThumbnail} from './beach-thumbnail.js';
 const BEACH={id:'bondi',name:'Bondi Beach',state_id:'NSW',state:'New South Wales',point:[151.278267,-33.891157]};
-const portrait=name=>`<img src="${new URL('./demo-'+name.toLowerCase()+'.webp',import.meta.url).href}" alt="" loading="lazy" width="900" height="1125">`;
+const PORTRAITS={alex:new URL('./demo-alex.webp',import.meta.url).href,maya:new URL('./demo-maya.webp',import.meta.url).href,kai:new URL('./demo-kai.webp',import.meta.url).href};
+const portrait=name=>`<img src="${PORTRAITS[name.toLowerCase()]}" alt="" loading="lazy" width="900" height="1125">`;
 const pill=text=>`<span class="demo-pill">${text}</span>`;
 const field=(label,value,cls='')=>`<div class="demo-field ${cls}"><small>${label}</small><span>${value}</span></div>`;
 const action=(text,cls='')=>`<div class="demo-action ${cls}">${text}</div>`;
@@ -25,7 +26,7 @@ function peoplePages(){return [
  page(2,'<div class="demo-profile-mini">'+portrait('Maya')+'<div><h4>Maya</h4><p>Regular at Bondi Beach</p></div></div><div class="demo-socials">'+pill('Instagram ↗')+pill('TikTok ↗')+'</div><p class="demo-overline">PUBLISHED LOG</p><div class="demo-saved-session"><h4>Shore freediving</h4><p>Bondi Beach</p><div class="demo-session-stats"><b>45 <small>min</small></b><b>8 <small>m max</small></b></div></div>'+action('Connect with Maya','demo-tap-target')),
  page(3,'<div class="demo-profile-portrait">'+portrait('Maya')+'<div><span>REGULAR / BONDI BEACH</span><h4>Maya</h4></div></div>'+action(check+' Request sent','is-success')+'<p class="demo-hint">Maya chooses whether to accept your request.</p><div class="demo-socials">'+pill('Instagram ↗')+pill('TikTok ↗')+'</div>')
 ].join('');}
-const brandMark='<span class="brand-f" style="width:24px;height:28px" aria-hidden="true"></span>';
+const brandMark='<span class="brand-f" style="--brand-size:24px"></span>';
 const platformIcon=platform=>platform==='FinFolk'?brandMark:'<span class="demo-platform-symbol" aria-hidden="true">'+(platform==='Instagram'?'◎':'♪')+'</span>';
 const thread=content=>'<div class="demo-thread-title">'+brandMark+'<div><strong>finfolk.com.au</strong><small>Instagram · Example conversation</small></div></div>'+content;
 const message=(text,sent=false)=>'<div class="demo-message '+(sent?'is-sent':'')+'">'+text+'</div>';
@@ -39,27 +40,21 @@ function instagramConnectPages(){return [
  page(4,thread(message('/checkin Bondi Beach',true)+message('Checked in at Bondi Beach for today. Your profile and sharing preferences still apply.'))),
  page(5,'<p class="demo-overline">MY ACCOUNT / VISITS</p>'+ownProfile()+'<div class="demo-confirmation">'+check+' Visit recorded</div><div class="demo-visit"><strong>Bondi Beach</strong><span>Today · Self-reported visit</span>'+pill('1 visit day')+'</div><p class="demo-hint">Become a Regular after visits on three separate days within 30 days. Your profile is still Closed.</p>')
 ].join('');}
-function postPages(platform){const instagram=platform==='Instagram',kind=instagram?'Instagram post/Reel':'TikTok video',url=instagram?'instagram.com/reel/example/':'tiktok.com/@alex.dives/video/123456789';return [
- page(0,'<p class="demo-overline">'+(instagram?'NEW POST / REEL':'POST VIDEO')+'</p><h4>Share your session</h4>'+video()+'<div class="demo-post-caption"><strong>@alex.dives</strong><p>Shore session at Bondi Beach.<br><span class="demo-mention">'+typed('@finfolk.com.au')+'</span></p></div>'+action('Post','demo-tap-target')),
- page(1,'<p class="demo-overline">'+platform.toUpperCase()+'</p>'+video()+'<div class="demo-share-sheet"><strong>Share your '+(instagram?'post':'video')+'</strong><div class="demo-copy-link demo-tap-target">↗ &nbsp; Copy link</div><p>'+url+'</p></div>'),
- page(2,'<div class="demo-post-submit"><p class="demo-overline">YOUR POSTS</p><h4>Submit your post</h4>'+field('Beach in your post','Bondi Beach')+field('Public '+kind+' URL',url)+field('Your username','@alex.dives')+'<div class="demo-consents"><span>✓ I published this post.</span><span>✓ It tags @finfolk.com.au.</span><span>✓ List my post and username publicly after review, even if my profile is Closed.</span></div>'+action('Submit for review','demo-tap-target')+'</div>'),
- page(3,'<p class="demo-overline">YOUR POSTS</p><h4>Submitted for review</h4><div class="demo-review-card">'+video()+pill('Pending review')+'<strong>Bondi Beach</strong><span>'+platform+' · @alex.dives</span></div><p class="demo-hint">FinFolk reviews the tag, creator attribution and location before the post appears. You can withdraw it at any time.</p>')
-].join('');}
-function planningPages(){return [
- page(0,'<p class="demo-overline">PLAN A SESSION</p><h4>Where shall we dive?</h4><div class="demo-search"><span>⌕</span><span>Bondi Beach</span></div><div class="demo-location-card"><div data-demo-map></div><h4>Bondi Beach</h4><p>Sydney Eastern Beaches · NSW</p></div>'+action('Plan here','demo-tap-target')),
- page(1,'<p class="demo-overline">YOUR PLAN / BONDI BEACH</p><h4>Make a little time.</h4>'+field('Session','Saturday shore session')+'<div class="demo-field-pair">'+field('Day','Saturday')+field('Meet at','7:30 am','demo-tap-target')+'</div>'+field('Meeting point','To be confirmed')+pill('Invite only')+action('Choose your people')),
- page(2,'<p class="demo-overline">INVITE YOUR FINFOLK</p><h4>Who’s joining?</h4><div class="demo-plan-recap"><strong>Bondi Beach</strong><span>Saturday · 7:30 am</span></div>'+['Maya','Kai'].map(name=>'<div class="demo-invite-person">'+portrait(name)+'<div><strong>'+name+'</strong><small>Your connection</small></div>'+check+'</div>').join('')+'<p class="demo-hint">Your invited connections can join the plan in FinFolk.</p>'+action('Send 2 invitations','demo-tap-target')),
- page(3,'<p class="demo-overline">YOUR UPCOMING SESSION</p><h4>See you at Bondi.</h4><div class="demo-profile-spot"><div data-demo-map></div><strong>Bondi Beach</strong><span>Saturday · 7:30 am</span></div><div class="demo-confirmation">'+check+' Invitations sent</div><div class="demo-invite-person">'+portrait('Maya')+'<div><strong>Maya</strong><small>Joined your plan</small></div>'+pill('Joined')+'</div><div class="demo-invite-person">'+portrait('Kai')+'<div><strong>Kai</strong><small>Waiting for a reply</small></div>'+pill('Invited')+'</div><p class="demo-hint">Invite only · Meeting point to be confirmed.</p>')
+function importPages(platform='Instagram'){const tiktok=platform==='TikTok';return [
+ page(0,'<p class="demo-overline">'+(tiktok?'TIKTOK / VIDEO':'INSTAGRAM / PHOTO OR REEL')+'</p><h4>Share your dive</h4>'+video()+'<div class="demo-post-caption"><strong>@alex.dives</strong><p>Shore session at Bondi Beach.<br><span class="demo-mention">'+typed('@finfolk.com.au')+'</span></p></div>'+action('Post','demo-tap-target')),
+ page(1,'<p class="demo-overline">FINFOLK / TAGGED MEDIA</p><h4>New in your log</h4><div class="demo-confirmation">'+check+' '+(tiktok?'Tagged video imported':'Tagged photo or video imported')+'</div><div class="demo-review-card">'+video()+pill('Not in a session yet')+'<strong>Bondi Beach</strong><span>29 October 2026 · '+platform+'</span></div><p class="demo-hint">The post’s day and matched location come with it.</p>'),
+ page(2,'<p class="demo-overline">REVIEW IMPORT</p><h4>Day and location</h4>'+field('Day','29 October 2026')+field('Detected location','Bondi Beach')+field('Additional information',typed('Shore session with my buddy.'),'demo-notes')+'<p class="demo-hint">Check the day and confirm or change the location.</p>'+action('Sort into a session','demo-tap-target')),
+ page(3,'<p class="demo-overline">SORT INTO A SESSION</p><h4>Choose a session</h4><div class="demo-saved-session">'+pill('Private')+'<p>29 October 2026</p><h4>Bondi Beach</h4><p>Shore session with my buddy.</p></div>'+action('Add to this session','demo-tap-target')+'<p class="demo-hint">Or create a new session. Add dive details when you’re ready.</p>'),
+ page(4,'<p class="demo-overline">LOGBOOK / BONDI BEACH</p><h4>Your session</h4><div class="demo-confirmation">'+check+' Photo or video added</div><div class="demo-saved-session">'+pill('Private')+'<p>29 October 2026</p><h4>Bondi Beach</h4><p>Shore session with my buddy.</p><div class="demo-imported-media">'+(tiktok?'TikTok video linked':'Instagram photo / video linked')+'</div></div><p class="demo-hint">Add more information or publish the session later. The original media stays on '+platform+'.</p>')
 ].join('');}
 const standardDurations=[2400,2600,3000,3400];
 export const FEATURE_DEMOS=Object.freeze({
- planning:{title:'Plan a session',captions:['Choose where to meet','Set the day and time','Invite your connections','See who has joined'],durations:[2800,3000,3400,4000],pages:planningPages,sample:'Planning concept · Fictional members'},
  locations:{title:'My profile',captions:['Start with your profile','Search for a spot','Add Bondi Beach','Your spots, on your profile'],durations:standardDurations,pages:locationPages,sample:'Fictional profile'},
  logs:{title:'Logbook',captions:['Choose your location','Add your session details','Keep it private or publish','Your session is saved'],durations:standardDurations,pages:logPages,sample:'Sample data'},
  people:{title:'People',captions:['Find divers at your spot','Open a profile','See their logs and socials','Send a connection request'],durations:standardDurations,pages:peoplePages,sample:'Fictional members'},
  'instagram-connect':{title:'Instagram',captions:['Follow @finfolk.com.au','Send /connect in Instagram','Enter your code on FinFolk','Send /checkin Bondi Beach','Receive your check-in confirmation','See the visit in your account'],durations:[2600,3600,3400,3200,3000,3600],platforms:['Instagram','Instagram','FinFolk','Instagram','Instagram','FinFolk'],pages:instagramConnectPages,sample:'Illustrative screens · Sample account'},
- 'instagram-post':{title:'Instagram',captions:['Mention @finfolk.com.au','Copy your public post link','Submit the link and location','Your post is pending review'],durations:[3400,2800,4200,3800],platforms:['Instagram','Instagram','FinFolk','FinFolk'],pages:()=>postPages('Instagram'),sample:'Illustrative screens · Sample post'},
- 'tiktok-post':{title:'TikTok',captions:['Mention @finfolk.com.au','Copy the full video link','Submit the link and location','Your video is pending review'],durations:[3400,2800,4200,3800],platforms:['TikTok','TikTok','FinFolk','FinFolk'],pages:()=>postPages('TikTok'),sample:'Illustrative screens · Sample post'},
+ 'instagram-post':{title:'Logbook',captions:['Tag your photo or video','It arrives in your FinFolk log','Review the day and location','Sort into a session','Add details when you’re ready'],durations:[3400,3200,3400,3600,3800],platforms:['Instagram','FinFolk','FinFolk','FinFolk','FinFolk'],pages:()=>importPages('Instagram'),sample:'Illustrative screens · Sample photo / video'},
+ 'tiktok-post':{title:'Logbook',captions:['Tag your TikTok video','It arrives in your FinFolk log','Review the day and location','Sort into a session','Add details when you’re ready'],durations:[3400,3200,3400,3600,3800],platforms:['TikTok','FinFolk','FinFolk','FinFolk','FinFolk'],pages:()=>importPages('TikTok'),sample:'Illustrative screens · Sample video'},
 });
 export function setDemoStep(figure,step,progress=1){
  const kind=figure.dataset.featureDemo,definition=FEATURE_DEMOS[kind];
@@ -68,7 +63,7 @@ export function setDemoStep(figure,step,progress=1){
   for(const page of figure.querySelectorAll('.demo-page'))page.classList.toggle('is-active',Number(page.dataset.phase)===step);
   for(const dot of figure.querySelectorAll('[data-demo-progress]'))dot.classList.toggle('is-active',Number(dot.dataset.demoProgress)===step);
   const platform=definition.platforms?.[step]||'FinFolk';figure.dataset.platform=platform.toLowerCase();
-  const title=platform==='FinFolk'?(definition.platforms?(kind==='instagram-connect'?(step===2?'Connect Instagram':'Your visits'):'Your posts'):definition.title):platform;
+  const title=platform==='FinFolk'?(definition.platforms?(kind==='instagram-connect'?(step===2?'Connect Instagram':'Your visits'):'Logbook'):definition.title):platform;
   figure.querySelector('.demo-app-title').innerHTML=platformIcon(platform)+'<span>'+title+'</span>';
  }
  const update=(element,value)=>{if(element&&element.textContent!==value)element.textContent=value;};
