@@ -5,6 +5,6 @@
   "database": "finfolk_next",
   "authUrl": "https://ep-spring-recipe-a74ty1t5.neonauth.ap-southeast-2.aws.neon.tech/finfolk_next/auth",
   "jwksUrl": "https://ep-spring-recipe-a74ty1t5.neonauth.ap-southeast-2.aws.neon.tech/finfolk_next/auth/.well-known/jwks.json",
-  "sqlSha": "b9202200b351669bab66b76a54c1d6ef8c971fdb82bf255b1c40f30a3d8945f1",
+  "sqlSha": "8d290093546d40f79fd203395c616840bedbe135b7d994d7549c96ebdbb66e95",
   "hyperdriveId": "46cea2fc114e4e269ce51d37e1ff2f16"
 }
