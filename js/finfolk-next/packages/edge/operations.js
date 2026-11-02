@@ -876,13 +876,14 @@ export function restOperation(path,method){
 
 export var RELATED = {
   "siteAdmin":["sites","siteSubmissions"],
-  "siteSubmissions":["siteAdmin"],
   "member":["community","logbook","posts","trips"],
-  "community":["member","logbook","posts","trips"],
-  "logbook":["community","trips"],
+  "admin":["instagram","posts","member"],
+  "logbook":["community","trips","member"],
   "instagram":["posts","member","admin"],
-  "admin":["instagram","posts"],
-  "invitations":["member"]
+  "posts":["member"],
+  "invitations":["member"],
+  "community":["member","logbook","posts","trips"],
+  "siteSubmissions":["siteAdmin"]
 };
 
 export function affectedDomains(spec){

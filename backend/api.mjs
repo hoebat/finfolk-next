@@ -217,14 +217,22 @@ export function createAPI({
           [target, b.id],
         )
       ).map((r) => r.day);
-    const basic = (m) => ({
+    const basic = (m,details=true) => ({
       id: m.user_id,
       displayName: m.profile.displayName,
+      open: m.profile.open,
+      ...(!details?{restricted:true}:{
       bio: m.profile.bio,
       instagram: m.profile.instagram,
       tiktok: m.profile.tiktok,
+      portrait: m.profile.portrait || '',
+      availability: m.profile.availability || [],
+      experience: m.profile.experience || '',
+      beaches: m.profile.beaches || [],
+      ...(Array.isArray(m.profile.featuredLogs)?{featuredLogs:m.profile.featuredLogs}:{}),
+      ...(Array.isArray(m.profile.featuredPosts)?{featuredPosts:m.profile.featuredPosts}:{}),
       ...(Number.isInteger(m.participationPoints) ? {participationPoints:m.participationPoints} : {}),
-      open: m.profile.open,
+      }),
     });
     async function statsFor(target, b) {
       const ds = await days(target, b),
@@ -263,7 +271,9 @@ export function createAPI({
       case 'profile': {
         const target = await member(v.target);
         if (await blocked(target.user_id)) fail(404, 'Profile unavailable.');
-        result = basic(target);
+        const details=target.user_id===uid||target.profile.open===true||(await relation(target.user_id))?.status==='accepted';
+        result = basic(target,details);
+        result.posts=details&&c.env?.COMMUNITY_POSTS_ENABLED==='true'&&target.profile.featuredPosts?.length?await q("SELECT p.id,p.beach_id,p.url,p.platform,b.name AS beach_name FROM finfolk.posts p JOIN finfolk.beaches b ON b.id=p.beach_id WHERE p.owner_id=$1 AND p.id::text IN (SELECT jsonb_array_elements_text($2::jsonb)) AND p.status='approved' AND p.public_consent",[target.user_id,JSON.stringify(target.profile.featuredPosts)]):[];
         break;
       }
       case 'me':
@@ -272,12 +282,17 @@ export function createAPI({
       case 'preferences': {
         let p;
         try {
-          p = preferences(v.profile);
+          if(!v.profile||typeof v.profile!=='object'||Array.isArray(v.profile))throw Error('Invalid profile.');
+          p = preferences({...me.profile,...v.profile});
         } catch (e) {
           fail(400, e.message);
         }
         if (p.open) verified();
         for (const b of p.beaches) await beach(b);
+        for(const [key,table,condition]of [['featuredLogs','sessions',"data->>'visibility'='public'"],['featuredPosts','posts',"status='approved' AND public_consent"]])if(p[key]?.length){
+          const owned=await q(`SELECT id::text AS id FROM finfolk.${table} WHERE owner_id=$1 AND id::text IN (SELECT jsonb_array_elements_text($2::jsonb)) AND ${condition}`,[uid,JSON.stringify(p[key])]);
+          const allowed=new Set(owned.map(row=>row.id));p[key]=p[key].filter(id=>allowed.has(id));
+        }
         if(c.env?.DB_BACKBONE_ENABLED==='true')p=await saveMemberProfile(db,uid,p);
         else await q(
           'UPDATE finfolk.members SET profile=$2::jsonb,updated_at=now() WHERE user_id=$1',
@@ -320,12 +335,14 @@ export function createAPI({
         );
         break;
       case 'community': {
+        const availability=v.availability||'',experience=v.experience||'';
+        if(!['','weekday mornings','weekday afternoons','weekend mornings','weekend afternoons'].includes(availability)||!['','new','comfortable','experienced'].includes(experience))fail(400,'Choose listed availability and experience filters.');
         const b = await beach(v.beachId),
           { start, today } = windowFor(now(), b.timezone),
           cursor = typeof v.cursor === 'string' ? v.cursor : '';
         const candidates = await q(
-          "SELECT m.*,count(*)::int AS visits,(SELECT status FROM finfolk.connections rel WHERE (rel.a=$5 AND rel.b=m.user_id) OR (rel.b=$5 AND rel.a=m.user_id) LIMIT 1) AS connection FROM finfolk.members m JOIN finfolk.checkins c ON c.user_id=m.user_id WHERE c.beach_id=$1 AND c.visit_day BETWEEN $2::date AND $3::date AND m.user_id>$4 AND m.user_id<>$5 AND m.deleted=false AND m.profile->>'open'='true' AND NOT EXISTS(SELECT 1 FROM finfolk.blocks bl WHERE (bl.owner_id=$5 AND bl.target_id=m.user_id) OR (bl.owner_id=m.user_id AND bl.target_id=$5)) AND NOT EXISTS(SELECT 1 FROM finfolk.connections cn WHERE ((cn.a=$5 AND cn.b=m.user_id) OR (cn.b=$5 AND cn.a=m.user_id)) AND cn.status='declined') GROUP BY m.user_id ORDER BY m.user_id LIMIT 21",
-          [b.id, start, today, cursor, uid],
+          "SELECT m.*,count(c.visit_day)::int AS visits,(SELECT status FROM finfolk.connections rel WHERE (rel.a=$5 AND rel.b=m.user_id) OR (rel.b=$5 AND rel.a=m.user_id) LIMIT 1) AS connection FROM finfolk.members m LEFT JOIN finfolk.checkins c ON c.user_id=m.user_id AND c.beach_id=$1 AND c.visit_day BETWEEN $2::date AND $3::date WHERE (c.user_id IS NOT NULL OR coalesce(m.profile->'beaches','[]'::jsonb) ? $1) AND m.user_id>$4 AND m.user_id<>$5 AND m.deleted=false AND m.profile->>'open'='true' AND ($6::text='' OR coalesce(m.profile->'availability','[]'::jsonb) ? $6) AND ($7::text='' OR m.profile->>'experience'=$7) AND NOT EXISTS(SELECT 1 FROM finfolk.blocks bl WHERE (bl.owner_id=$5 AND bl.target_id=m.user_id) OR (bl.owner_id=m.user_id AND bl.target_id=$5)) AND NOT EXISTS(SELECT 1 FROM finfolk.connections cn WHERE ((cn.a=$5 AND cn.b=m.user_id) OR (cn.b=$5 AND cn.a=m.user_id)) AND cn.status='declined') GROUP BY m.user_id ORDER BY m.user_id LIMIT 21",
+          [b.id, start, today, cursor, uid,availability,experience],
         );
         const page = candidates.slice(0, 20);
         if (page.length) {
@@ -337,6 +354,7 @@ export function createAPI({
             .map((m) => ({
               ...basic(m),
               regular: m.visits >= 3,
+              recent: m.visits > 0,
               connection: m.connection,
               ...(me.profile.open
                 ? compatibility(
@@ -375,7 +393,7 @@ export function createAPI({
           zone: b.timezone,
         });
         result = {
-          profile: basic(target),
+          profile: basic(target,target.user_id===uid||target.profile.open===true||rel?.status==='accepted'),
           level,
           stats: visibleStats(
             await statsFor(target.user_id, b),
@@ -403,7 +421,7 @@ export function createAPI({
           if (existing?.status === 'declined')
             fail(403, 'This connection is unavailable.');
           await q(
-            "INSERT INTO finfolk.connections(a,b,requested_by,status) VALUES($1,$2,$3,'pending') ON CONFLICT DO NOTHING",
+            "INSERT INTO finfolk.connections(a,b,requested_by,status) VALUES($1,$2,$3,'pending') ON CONFLICT(a,b) DO UPDATE SET requested_by=excluded.requested_by,status='pending',updated_at=now() WHERE finfolk.connections.status='removed'",
             [a, b, uid],
           );
         } else if (['accept', 'decline'].includes(mode)) {

@@ -8,6 +8,7 @@ import {
   preferences,
   compatibility,
   socialPost,
+  profilePortrait,
 } from '../backend/community-core.mjs';
 const now = new Date('2026-10-31T00:00:00Z'),
   zone = 'Australia/Sydney',
@@ -79,6 +80,10 @@ const p = {
   experience: 'new',
   depthGoal: 10,
 };
+const portrait='data:image/webp;base64,UklGRiIAAABXRUJQVlA4IBYAAAAwAQCdASoBAAEADsD+JaQAA3AAAAAA';
+assert.equal(profilePortrait(portrait),portrait);assert.equal(profilePortrait(''),'');
+for(const invalid of ['https://example.test/avatar.webp','data:image/svg+xml;base64,PHN2Zz4=','data:image/webp;base64,AAAA',portrait+'A'.repeat(70000)])assert.throws(()=>profilePortrait(invalid));
+assert.deepEqual(preferences({featuredLogs:['same','same','<script>'],featuredPosts:['post-one']}).featuredLogs,['same']);
 assert.equal(compatibility(p, p).reasons.length, 5);
 console.log(
   'Regulars rules passed: rolling 30 days, 3/5 gates, timezone/DST, reciprocity, expiry, accepted buddies, blocks and opt-in fields.',

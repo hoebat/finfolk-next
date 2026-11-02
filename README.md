@@ -65,6 +65,10 @@ The frontend owns its SVG masters and muted/hyper octopus artwork; it does not r
 
 The public homepage is authored in `landing.html`, with illustrated Australian coastal scenes, live app previews and opt-in forecasts. The production build publishes it at `/` and keeps the application at `/app`. Existing root query links (including account callbacks and location links) still open the application; campaign tracking parameters alone keep visitors on the landing page. Both entry points have separate offline shells. Preview the landing source at `/landing.html` with `make dev`.
 
+Member screens live at `/profiles?screen=people`, `screen=me`, `screen=member&id=…` and `screen=edit`. The atlas and profile pages share Discover, Map, People, Logbook and My profile navigation, with Check in and Settings under More. The landing community preview opens People. Profiles use the existing authenticated account API, including server-side location/availability/experience filtering, buddy requests, closed-profile restrictions and field-level statistics sharing. Visitors see a sign-in entry point rather than sample members.
+
+Portrait uploads are decoded and reduced to a WebP (or JPEG on Safari) thumbnail of at most 48 KiB, then validated by the API and saved in the existing member profile JSON. Featured items retain their selected order; the API filters selections to the member's own published logs and approved, consented posts. Removing or unpublishing content invalidates cached profile reads. Legacy profile edits preserve these optional fields. This release requires the API and frontend Workers together and does not change the database schema or SQL release hash.
+
 ```sh
 make deploy
 ```

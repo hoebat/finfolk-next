@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import { Window } from 'happy-dom';
 import { readFile } from 'node:fs/promises';
-const window = new Window({ url: 'https://finfolk.test/?view=account&tab=settings&messaging=connected' });
+const window = new Window({ url: 'https://finfolk.test/?view=account&tab=settings&messaging=connected&site=bondi' });
 window.document.write(
   await readFile(new URL('../js/finfolk-next/site/web-main/src/index.html', import.meta.url), 'utf8'),
 );
@@ -56,6 +56,7 @@ installCommunity({
 await new Promise((r) => setTimeout(r, 30));
 assert.equal(document.getElementById('account-settings').hidden, false, 'OAuth return opens Settings');
 assert.equal(document.getElementById('account-tab-settings').getAttribute('aria-selected'), 'true');
+assert.equal(document.querySelector('[aria-label="Dive site to check in at"]').value,'bondi','Profile navigation preserves the selected check-in location');
 assert.ok(
   document
     .getElementById('account-page')

@@ -25,7 +25,7 @@ await writeFile(index,html);
 // Cache the application separately from the public homepage. /app is the
 // extensionless static URL, avoiding the host's HTML canonical redirects.
 const sw=resolve(root,'sw.js');
-await writeFile(sw,(await readFile(sw,'utf8')).replace('SHELL = [','SHELL = ["./app",'));
+await writeFile(sw,(await readFile(sw,'utf8')).replace('SHELL = [','SHELL = ["./app","./profiles",'));
 async function compress(directory) {
  for(const entry of await readdir(directory,{withFileTypes:true})) {
   if(entry.name==='__compressed')continue;

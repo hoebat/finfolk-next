@@ -269,6 +269,7 @@ export function installCommunity({
       const menu = el('section', undefined, 'social-menu');
       menu.setAttribute('aria-label', 'Social menu');
       menu.append(el('h2', `Welcome${p.displayName ? ', ' + p.displayName : ''}`), el('p', 'Check in, find your people and keep your diving close.'));
+      menu.append(link('View your profile ↗','./profiles?screen=me'));
       const links = el('div', undefined, 'social-menu-actions');
       const jump = id => { selectTab(id === 'social-checkins' ? 'checkin' : id === 'member-actions' ? 'instagram' : 'profile'); document.getElementById(id)?.scrollIntoView?.({behavior: 'smooth', block: 'start'}); };
       links.append(
@@ -534,12 +535,14 @@ export function installCommunity({
       beachSelect.setAttribute('aria-label', 'Dive site to check in at');
       beachSelect.required = true;
       function beachOptions() {
-        const previous = beachSelect.value || getSelectedBeach()?.id;
+        const previous = beachSelect.value || new URL(location.href).searchParams.get('site') || getSelectedBeach()?.id;
         beachSelect.replaceChildren();
         const placeholder = el('option', 'Choose a dive site');
         placeholder.value = '';
         beachSelect.append(placeholder);
-        for (const beach of getBeaches().filter(b => `${b.name} ${b.area_name || ''} ${b.state || ''}`.toLowerCase().includes(beachSearch.value.trim().toLowerCase())).slice(0, 150)) {
+        const matching=getBeaches().filter(b => `${b.name} ${b.area_name || ''} ${b.state || ''}`.toLowerCase().includes(beachSearch.value.trim().toLowerCase())),visible=matching.slice(0,150),selected=matching.find(b=>b.id===previous);
+        if(selected&&!visible.includes(selected))visible.unshift(selected);
+        for (const beach of visible) {
           const option = el('option', `${beach.name} · ${beach.area_name || beach.state || ''}`);
           option.value = beach.id;
           beachSelect.append(option);

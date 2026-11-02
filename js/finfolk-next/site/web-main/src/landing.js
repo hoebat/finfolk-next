@@ -15,7 +15,7 @@ function renderCoast(){
 coast.addEventListener('change',renderCoast);renderCoast();
 
 const dialog=document.getElementById('landing-demo'),frame=document.getElementById('landing-demo-frame');
-const routes={discover:'?view=discover&section=index&q=beach',logbook:'?view=logbook',account:'?view=account',posts:'?view=account&tab=posts',regulars:'?view=account&tab=checkin'};
+const routes={discover:'?view=discover&section=index&q=beach',logbook:'?view=logbook',account:'?view=account',posts:'?view=account&tab=posts',people:'profiles?screen=people&location=bondi',regulars:'?view=account&tab=checkin'};
 let opener;
 for(const button of document.querySelectorAll('[data-open-demo]'))button.addEventListener('click',()=>{
  opener=button;frame.src='./'+(routes[button.dataset.demoRoute]||routes.discover);
