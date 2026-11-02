@@ -21,7 +21,7 @@ const originalLog=console.log;console.log=()=>{};
 try{
  await pg.exec('CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;');
  for(const file of(await readdir('backend/migrations')).filter(n=>n.endsWith('.sql')).sort()){
-  if(file==='0028_instagram_visit_times.sql')await q(`UPDATE finfolk.messaging_accounts SET mode='pilot',generation=7,pilot_sender_ids='["100"]',enabled_commands='["help","checkin"]'`);
+  if(file==='0029_instagram_visit_times.sql')await q(`UPDATE finfolk.messaging_accounts SET mode='pilot',generation=7,pilot_sender_ids='["100"]',enabled_commands='["help","checkin"]'`);
   await pg.exec(await readFile('backend/migrations/'+file,'utf8'));
  }
  const migrated=(await q('SELECT mode,generation,pilot_sender_ids,enabled_commands FROM finfolk.messaging_accounts'))[0];
