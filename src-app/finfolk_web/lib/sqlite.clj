@@ -77,7 +77,7 @@
   (var key (-/cacheKey scope id))
   (var entry {"data" value "savedAt" (Date.now) "domain" (. spec ["domain"])})
   (. (. store ["memory"]) (set key entry))
-  (when (and (not (. spec ["admin"])) (not (. spec ["write"])) (not= (. spec ["domain"]) "admin"))
+  (when (and (not= (. spec ["cache"]) false) (not (. spec ["admin"])) (not (. spec ["write"])) (not= (. spec ["domain"]) "admin"))
     (try
       (sqlite/record-add (. store ["impl"]) "Result"
         [{"id" key "scope" scope "value" entry "used" (Date.now) "size" (. (new TextEncoder) (encode (JSON.stringify entry)) ["byteLength"])}])

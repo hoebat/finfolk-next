@@ -135,7 +135,7 @@
           (return (. saved ["data"]))))
       (when (and (not (. spec ["write"])) (. error ["status"])) ((. ctx ["storage"] ["remove"]) (. entry ["key"])))
       (when (and (not (. spec ["write"])) (. error ["status"])) ((. ctx ["onInvalidate"]) (. entry ["key"])))
-      (when (not (. ctx ["closed"])) (-/publish ctx entry {"status" "error" "error" error "data" (:? (. spec ["write"]) undefined (. entry ["state"] ["data"]))}))
+      (when (not (. ctx ["closed"])) (-/publish ctx entry {"status" "error" "error" error "data" (:? (or (. spec ["write"]) (and (== (. spec ["domain"]) "directoryPublic") (== (. error ["status"]) 404))) undefined (. entry ["state"] ["data"]))}))
       (throw error))
     (finally
       (:= (. entry ["options"]) nil)

@@ -1,3 +1,6 @@
+import {renderEvents} from './events.js';
+import {directoryRoute} from './directory-route.js';
+import {renderDirectory} from './directory.js';
 import {installNavigation,navigationURL} from './navigation.js';
 import {createWordmark} from './identity.js';
 import {applySavedTheme,setTheme} from './theme.js';
@@ -10,13 +13,14 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
  const link=(text,href,cls='profile-action')=>{const n=node('a',text,cls);n.href=href;return n;};
  const message=text=>{status.textContent=text;};
  const option=(text,value)=>{const n=node('option',text);n.value=value;return n;};
- const current=()=>new URL(win.location.href).searchParams;
+ const current=()=>{const url=new URL(win.location.href);return directoryRoute(url)||url.searchParams;};
+ let directoryStops=[];
  let epoch=0,me=null,api=providedAPI,directory=providedDirectory,disposed=false,config;
  applySavedTheme();
  if(current().get('presentation')==='landing')doc.body.classList.add('profile-landing-preview');
  if(!api){
   const response=await fetch(new URL('./neon-config.json',import.meta.url),{cache:'no-store'});config=await response.json();
-  if(!config.enabled)throw Error('Accounts are unavailable.');api=await loadClient(config);
+  if(!config.enabled){if(!['directory','listing','events'].includes(current().get('screen')))throw Error('Accounts are unavailable.');api={user:null};}else api=await loadClient(config);
  }
  if(!directory){
   const paths=[...(config?.apiUrl?[new URL('/v1/sites/catalog',config.apiUrl).href]:[]),'./sites-snapshot.json','./beaches.json'];
@@ -203,11 +207,13 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   };
  }
  async function render(){
+  for(const stop of directoryStops.splice(0))stop();
   const generation=++epoch;main.replaceChildren(node('p','Loading profiles…'));main.setAttribute('aria-busy','true');
   try{
-   if(api.user)me=await api.call('me');else me=null;if(generation!==epoch||disposed)return;
+   if(api.user&&!['directory','listing','events'].includes(current().get('screen')))me=await api.call('me');else me=null;if(generation!==epoch||disposed)return;
    main.replaceChildren();const screen=current().get('screen')||'people';
-   if(screen==='people')await people(generation);else if(screen==='edit')await editProfile(generation);else await memberProfile(generation,screen!=='member');
+   doc.querySelector('link[rel=canonical]')?.remove();const robots=doc.querySelector('meta[name=robots]');if(robots)robots.content=['directory','listing','events'].includes(screen)?'index,follow':'noindex,follow';
+   if(screen==='events')await renderEvents({main,api,params:current(),refresh:render,doc});else if(['directory','listing','superadmin','my-listings','page-invite'].includes(screen))await renderDirectory({main,api,config,screen,params:current(),doc,refresh:render,dispose:stop=>{if(generation===epoch&&!disposed)directoryStops.push(stop);else stop();}});else if(screen==='people')await people(generation);else if(screen==='edit')await editProfile(generation);else await memberProfile(generation,screen!=='member');
    if(generation===epoch){navigation.update();doc.title=(screen==='people'?'People':screen==='edit'?'Edit profile':main.querySelector('h1')?.textContent||'My profile')+' · FinFolk';}
   }catch(error){if(generation===epoch&&!disposed){main.replaceChildren(empty('Profiles could not load',error.message||'Reconnect and try again.',button('Try again',()=>render())));}}
   finally{if(generation===epoch)main.removeAttribute('aria-busy');}
@@ -216,5 +222,5 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
  let actor=api.user?.uid;const stop=api.observe?.(user=>{if(actor===user?.uid)return;actor=user?.uid;me=null;message('');render();});
  await render();
  if('serviceWorker' in win.navigator)win.navigator.serviceWorker.register('./sw.js').catch(()=>{});
- return {render,navigate,destroy(){disposed=true;epoch++;stop?.();navigation.destroy();win.removeEventListener('popstate',popstate);doc.removeEventListener('click',onLink);doc.removeEventListener('finfolk:appearance',syncTheme);}};
+ return {render,navigate,destroy(){for(const stop of directoryStops.splice(0))stop();disposed=true;epoch++;stop?.();navigation.destroy();win.removeEventListener('popstate',popstate);doc.removeEventListener('click',onLink);doc.removeEventListener('finfolk:appearance',syncTheme);}};
 }

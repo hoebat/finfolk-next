@@ -19,7 +19,7 @@ try{
  await migrate();assert.deepEqual((await db.query('SELECT * FROM public.finfolk_migrations ORDER BY name')).rows,before);
  const latest=files.filter(n=>/backbone_/.test(n)).at(-1),sha=b=>createHash('sha256').update(b).digest('hex');
  assert.equal(sha(await readFile('resources/finfolkdb/pilot.sql')),sha(await readFile('backend/migrations/'+latest)));
- const contracts=JSON.parse(await readFile('js/finfolk-next/site/web-main/src/next-contracts.json','utf8'));assert.equal(Object.keys(contracts).length,3);
+ const contracts=JSON.parse(await readFile('js/finfolk-next/site/web-main/src/next-contracts.json','utf8'));assert.equal(Object.keys(contracts).length,5);
  directory=await mkdtemp(resolve('.cache/migration-fixture-'));await cp('backend/migrations',directory,{recursive:true});
  await writeFile(directory+'/'+files[0],(await readFile(directory+'/'+files[0],'utf8'))+'\n-- modified fixture\n');
  await assert.rejects(migrate({FINFOLK_TEST_MIGRATIONS_DIR:directory}),e=>e.stderr.includes('Previously applied migration changed'));

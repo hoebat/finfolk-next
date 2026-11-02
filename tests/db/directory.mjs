@@ -1,0 +1,25 @@
+import assert from 'node:assert/strict';import pg from 'pg';
+import {connect,migrate,apiDatabase} from './harness.mjs';import {directoryRPC} from '../../backend/directory.mjs';
+const owner=await connect(),pool=new pg.Pool({connectionString:process.env.FINFOLK_TEST_DATABASE_URL,max:4,options:'-c role=finfolk_api'}),db=apiDatabase(pool);
+try{await migrate(owner);await owner.query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false),('bad','Bad',false,false);INSERT INTO finfolk.members(user_id) VALUES('alice'),('bob'),('bad');`);
+for(const table of ['directory_listings','directory_socials','directory_claims','directory_reports','directory_runs','directory_audit'])await assert.rejects(db.query('SELECT * FROM finfolk.'+table),e=>e.code==='42501');
+await assert.rejects(directoryRPC(db,'bad',true,'admin',{}),e=>e.status===403);await assert.rejects(directoryRPC(db,'bob',false,'admin',{}),e=>e.status===403);
+const document={name:'School',category:'School',state:'VIC',locality:'Melbourne',description:'Training',website:'',sources:['https://example.com'],socials:['https://instagram.com/test.school/']};
+const {id}=await directoryRPC(db,'alice',true,'admin-save',{document,status:'published'});
+assert.equal((await directoryRPC(db,null,false,'public-detail',{id})).notes,undefined);
+const a=await directoryRPC(db,'alice',false,'claim',{id}),b=await directoryRPC(db,'bob',false,'claim',{id});
+const approvals=await Promise.allSettled([a,b].map(c=>directoryRPC(db,'alice',true,'claim-review',{id:c.id,approve:true,evidence:'Actual sender and challenge checked'})));
+assert.equal(approvals.filter(r=>r.status==='fulfilled').length,1);assert.equal(approvals.filter(r=>r.status==='rejected')[0].reason.status,409);
+const pageOwner=(await owner.query('SELECT owner_id FROM finfolk.directory_listings WHERE id=$1',[id])).rows[0].owner_id;
+const delegate=pageOwner==='alice'?'bob':'alice';
+const invite=await directoryRPC(db,pageOwner,false,'invite-create',{id});
+const redemption=await Promise.allSettled([1,2].map(()=>directoryRPC(db,delegate,false,'invite-redeem',{token:invite.token})));
+assert.equal(redemption.filter(r=>r.status==='fulfilled').length,1);
+assert.equal(redemption.filter(r=>r.status==='rejected')[0].reason.status,409);
+await assert.rejects(directoryRPC(db,delegate,false,'invite-create',{id}),e=>e.status===403);
+assert.equal((await directoryRPC(db,delegate,false,'mine')).listings.find(p=>p.id===id).role,'admin');
+await directoryRPC(db,pageOwner,false,'admin-remove',{id,user:delegate});
+await assert.rejects(directoryRPC(db,delegate,false,'page-access',{id}),e=>e.status===403);
+assert.equal((await db.query("SELECT current_setting('finfolk.actor_id',true) AS actor"))[0].actor,'');
+console.log('DIRECTORY_DB_PASS: API role function-only access, verified member/admin gates, private projection, competing approvals and pooled actor cleanup');
+}finally{await pool.end();await owner.end();}

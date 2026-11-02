@@ -6,7 +6,7 @@
   :static {:application ["finfolk"] :all {:schema ["finfolk"]}}})
 
 ;; Physical table: finfolk.trip_dives
-(deftype.pg ^{:finfolk/constraints ["NOT NULL data" "NOT NULL day" "FOREIGN KEY (import_id) REFERENCES finfolk.trip_imports(id) ON DELETE CASCADE" "NOT NULL import_id" "NOT NULL ordinal" "PRIMARY KEY (import_id ordinal)"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL data" "NOT NULL day" "FOREIGN KEY (import_id) REFERENCES finfolk.trip_imports(id) ON DELETE CASCADE" "NOT NULL import_id" "NOT NULL ordinal" "PRIMARY KEY (import_id, ordinal)"]}
   trip_dives
   [:import-id {:type :uuid :required true :primary "default"}
    :ordinal {:type :integer :required true :primary "default"}
@@ -14,14 +14,14 @@
    :data {:type :jsonb :required true}])
 
 ;; Physical table: finfolk.trip_import_batches
-(deftype.pg ^{:finfolk/constraints ["CHECK (((batch_index >= 0) AND (batch_index <= 9999)))" "NOT NULL batch_index" "FOREIGN KEY (import_id) REFERENCES finfolk.trip_imports(id) ON DELETE CASCADE" "NOT NULL import_id" "PRIMARY KEY (import_id batch_index)" "NOT NULL rows"]}
+(deftype.pg ^{:finfolk/constraints ["CHECK (((batch_index >= 0) AND (batch_index <= 9999)))" "NOT NULL batch_index" "FOREIGN KEY (import_id) REFERENCES finfolk.trip_imports(id) ON DELETE CASCADE" "NOT NULL import_id" "PRIMARY KEY (import_id, batch_index)" "NOT NULL rows"]}
   trip_import_batches
   [:import-id {:type :uuid :required true :primary "default"}
    :batch-index {:type :integer :required true :primary "default"}
    :rows {:type :jsonb :required true}])
 
 ;; Physical table: finfolk.trip_imports
-(deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "CHECK (((expected_rows >= 1) AND (expected_rows <= 10000)))" "NOT NULL expected_rows" "NOT NULL id" "PRIMARY KEY (id)" "CHECK ((state = ANY (ARRAY['uploading'::text 'complete'::text])))" "NOT NULL state" "FOREIGN KEY (trip_id) REFERENCES finfolk.trips(id) ON DELETE CASCADE" "NOT NULL trip_id"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "CHECK (((expected_rows >= 1) AND (expected_rows <= 10000)))" "NOT NULL expected_rows" "NOT NULL id" "PRIMARY KEY (id)" "CHECK ((state = ANY (ARRAY['uploading'::text, 'complete'::text])))" "NOT NULL state" "FOREIGN KEY (trip_id) REFERENCES finfolk.trips(id) ON DELETE CASCADE" "NOT NULL trip_id"]}
   trip_imports
   [:id {:type :uuid :required true :primary true :finfolk/default-sql "gen_random_uuid()"}
    :trip-id {:type :uuid :required true}

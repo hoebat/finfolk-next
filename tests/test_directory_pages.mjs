@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import {directoryRoute,directoryURL} from '../js/finfolk-next/site/web-main/src/directory-route.js';
+import worker from '../backend/preview-worker.mjs';
+const id='a9557d38-1fab-4d62-bb98-af125831e4c1';
+assert.equal(directoryURL(id),'/directory/'+id);
+assert.equal(directoryRoute(new URL('https://finfolk.com.au/directory/'+id)).get('id'),id);
+assert.equal(directoryRoute(new URL('https://finfolk.com.au/directory?state=VIC')).get('state'),'VIC');
+assert.equal(directoryRoute(new URL('https://finfolk.com.au/directory?screen=superadmin')).get('screen'),'directory');
+assert.equal(directoryRoute(new URL('https://finfolk.com.au/directory/bad/extra')),null);
+assert.equal(directoryRoute(new URL('https://finfolk.com.au/profiles?screen=listing&id='+id)),null);
+const requests=[];const env={ASSETS:{fetch:async req=>{requests.push(req);return new Response('<html>directory</html>');}}};
+const response=await worker.fetch(new Request('https://finfolk.com.au/directory/'+id),env);
+assert.equal(response.status,200);assert.equal(new URL(requests[0].url).pathname,'/directory');
+await worker.fetch(new Request('https://finfolk.com.au/directory?state=VIC'),env);assert.equal(new URL(requests[1].url).searchParams.get('state'),'VIC');
+console.log('Directory pages passed: public paths, deep links, protected screen parsing and worker asset routing');

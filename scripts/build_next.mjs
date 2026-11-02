@@ -14,7 +14,7 @@ const root=resolve('.cache/next-site');
 execFileSync(process.env.PYTHON || '.venv/bin/python',['-m','depth_explorer','build-static','--output',root],{stdio:'inherit',env:{...process.env,NEON_AUTH_BASE_URL:environment.authUrl,NEON_API_URL:'https://finfolk.com.au/'}});
 await writeFile(resolve(root,'CNAME'),'finfolk.com.au\n');
 await writeFile(resolve(root,'robots.txt'),'User-agent: *\nAllow: /\nSitemap: https://finfolk.com.au/sitemap.xml\n');
-await writeFile(resolve(root,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://finfolk.com.au/</loc></url></urlset>');
+await writeFile(resolve(root,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://finfolk.com.au/</loc></url><url><loc>https://finfolk.com.au/directory</loc></url></urlset>');
 await writeFile(resolve(root,'_headers'),'/sw.js\n  Cache-Control: no-cache\n/neon-config.json\n  Cache-Control: no-store\n/workers/finfolk.sharedworker.js\n  Cache-Control: no-cache\n');
 const index=resolve(root,'index.html');
 const app=await readFile(index,'utf8');

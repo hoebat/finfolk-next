@@ -1,3 +1,5 @@
+import {registerEventsPublic,registerEventsPrivate} from './events.mjs';
+import {registerDirectoryPublic,registerDirectoryPrivate} from './directory.mjs';
 import {registerSitesPublic,registerSitesPrivate} from './sites.mjs';
 import {publicPage} from './public-pages.mjs';
 import { memberProfile, saveMemberProfile, recordMemberCheckin, lookupIdentity } from './backbone.mjs';
@@ -96,7 +98,8 @@ export function createAPI({
   app.get('/instagram/webhook', c => instagramWebhook(c.req.raw, c.env || {}, q));
   app.post('/instagram/webhook', c => instagramWebhook(c.req.raw, c.env || {}, q));
   registerSitesPublic(app,{db});
-  registerMessagingAPI(app,{db,verify,fetcher:messagingFetch,registerPrivate:()=>registerSitesPrivate(app,{db})});
+  registerDirectoryPublic(app,{db});registerEventsPublic(app,{db});
+  registerMessagingAPI(app,{db,verify,fetcher:messagingFetch,registerPrivate:()=>{registerSitesPrivate(app,{db});registerEventsPrivate(app,{db});registerDirectoryPrivate(app,{db,fetcher:messagingFetch});}});
   app.get('/health', (c) =>
     c.json({ ok: true, service: 'FinFolk account API' }),
   );

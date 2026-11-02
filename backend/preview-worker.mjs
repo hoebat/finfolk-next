@@ -1,5 +1,6 @@
 // Large public survey files are stored compressed to fit the static asset limit.
 // Browsers transparently decompress these responses, preserving atlas checksums.
+import {directoryRoute} from '../js/finfolk-next/site/web-main/src/directory-route.js';
 import {isBrowserAPIPath} from './browser-routes.mjs';
 export default {
   async fetch(request, env) {
@@ -16,6 +17,7 @@ export default {
       const app=new URL(request.url);app.pathname='/app';
       return env.ASSETS.fetch(new Request(app,request));
     }
+    if(directoryRoute(route)&&['GET','HEAD'].includes(request.method)){const page=new URL(request.url);page.pathname=route.pathname.startsWith('/events')?'/events':'/directory';return env.ASSETS.fetch(new Request(page,request));}
     const original = await env.ASSETS.fetch(request);
     if(original.status !== 404 || !['GET','HEAD'].includes(request.method)) return original;
     const url = new URL(request.url);

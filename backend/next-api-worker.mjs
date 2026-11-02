@@ -15,7 +15,7 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
   const db=openDatabase(env.HYPERDRIVE.connectionString);
   try{
    const release=(await db.query('SELECT current_database() AS database,sql_sha FROM finfolk.backbone_release WHERE id=1'))[0];
-   if(release?.database!==databaseName || release.sql_sha!==env.DB_SQL_SHA)throw Error('Next database release mismatch.');
+   if(release?.database!==databaseName || ![env.DB_SQL_SHA,env.DB_SQL_SHA_PREVIOUS].filter(Boolean).includes(release.sql_sha))throw Error('Next database release mismatch.');
    return await run(db);
   }finally{await db.pool.end();}
  }

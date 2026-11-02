@@ -22,7 +22,7 @@
    :created-at {:type :timestamptz :required true :finfolk/default-sql "now()"}])
 
 ;; Physical table: finfolk.points_ledger
-(deftype.pg ^{:finfolk/constraints ["FOREIGN KEY (action_id) REFERENCES finfolk.instagram_actions(id)" "UNIQUE (action_id)" "NOT NULL action_id" "NOT NULL created_at" "NOT NULL day" "NOT NULL id" "PRIMARY KEY (id)" "CHECK ((points = 1))" "NOT NULL points" "NOT NULL reversed" "UNIQUE (user_id day)" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id"]}
+(deftype.pg ^{:finfolk/constraints ["FOREIGN KEY (action_id) REFERENCES finfolk.instagram_actions(id)" "UNIQUE (action_id)" "NOT NULL action_id" "NOT NULL created_at" "NOT NULL day" "NOT NULL id" "PRIMARY KEY (id)" "CHECK ((points = 1))" "NOT NULL points" "NOT NULL reversed" "UNIQUE (user_id, day)" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id"]}
   points_ledger
   [:id {:type :uuid :required true :primary true :finfolk/default-sql "gen_random_uuid()"}
    :user-id {:type :text :required true}

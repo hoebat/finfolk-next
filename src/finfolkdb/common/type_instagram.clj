@@ -6,7 +6,7 @@
   :static {:application ["finfolk"] :all {:schema ["finfolk"]}}})
 
 ;; Physical table: finfolk.instagram_actions
-(deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "NOT NULL data" "NOT NULL id" "CHECK ((kind = ANY (ARRAY['reply'::text 'stats'::text 'dive'::text 'points'::text])))" "NOT NULL kind" "NOT NULL member_confirmed" "FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "PRIMARY KEY (id)" "UNIQUE (source_id kind)" "NOT NULL source_id" "NOT NULL state" "NOT NULL updated_at"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "NOT NULL data" "NOT NULL id" "CHECK ((kind = ANY (ARRAY['reply'::text, 'stats'::text, 'dive'::text, 'points'::text])))" "NOT NULL kind" "NOT NULL member_confirmed" "FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "PRIMARY KEY (id)" "UNIQUE (source_id, kind)" "NOT NULL source_id" "NOT NULL state" "NOT NULL updated_at"]}
   instagram_actions
   [:id {:type :uuid :required true :primary true :finfolk/default-sql "gen_random_uuid()"}
    :source-id {:type :text :required true}
@@ -30,7 +30,7 @@
    :created-at {:type :timestamptz :required true :finfolk/default-sql "now()"}])
 
 ;; Physical table: finfolk.instagram_claims
-(deftype.pg ^{:finfolk/constraints ["UNIQUE (claim_id)" "NOT NULL claim_id" "UNIQUE (code_hash)" "NOT NULL created_at" "NOT NULL error" "NOT NULL expires_at" "PRIMARY KEY (user_id)" "NOT NULL provider_scope" "CHECK ((state = ANY (ARRAY['waiting'::text 'checking'::text 'follow_required'::text 'failed'::text 'review_requested'::text 'claimed'::text 'cancelled'::text])))" "NOT NULL state" "NOT NULL updated_at" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id"]}
+(deftype.pg ^{:finfolk/constraints ["UNIQUE (claim_id)" "NOT NULL claim_id" "UNIQUE (code_hash)" "NOT NULL created_at" "NOT NULL error" "NOT NULL expires_at" "PRIMARY KEY (user_id)" "NOT NULL provider_scope" "CHECK ((state = ANY (ARRAY['waiting'::text, 'checking'::text, 'follow_required'::text, 'failed'::text, 'review_requested'::text, 'claimed'::text, 'cancelled'::text])))" "NOT NULL state" "NOT NULL updated_at" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id"]}
   instagram_claims
   [:user-id {:type :text :required true :primary true}
    :code-hash {:type :text}
@@ -48,7 +48,7 @@
    :provider-scope {:type :text :required true :finfolk/default-sql "'facebook-login:legacy'::text"}])
 
 ;; Physical table: finfolk.instagram_commands
-(deftype.pg ^{:finfolk/constraints ["NOT NULL actor_id" "NOT NULL args" "FOREIGN KEY (beach_id) REFERENCES finfolk.beaches(id)" "NOT NULL command" "CHECK ((context = ANY (ARRAY['mention'::text 'owned'::text])))" "NOT NULL context" "NOT NULL id" "NOT NULL namespace" "FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "PRIMARY KEY (id)" "NOT NULL received_at" "CHECK ((send_state = ANY (ARRAY['pending'::text 'sending'::text 'sent'::text 'uncertain'::text 'skipped'::text])))" "NOT NULL send_state" "CHECK ((state = ANY (ARRAY['new'::text 'confirmation'::text 'done'::text 'cancelled'::text 'limited'::text])))" "NOT NULL state" "NOT NULL updated_at"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL actor_id" "NOT NULL args" "FOREIGN KEY (beach_id) REFERENCES finfolk.beaches(id)" "NOT NULL command" "CHECK ((context = ANY (ARRAY['mention'::text, 'owned'::text])))" "NOT NULL context" "NOT NULL id" "NOT NULL namespace" "FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "PRIMARY KEY (id)" "NOT NULL received_at" "CHECK ((send_state = ANY (ARRAY['pending'::text, 'sending'::text, 'sent'::text, 'uncertain'::text, 'skipped'::text])))" "NOT NULL send_state" "CHECK ((state = ANY (ARRAY['new'::text, 'confirmation'::text, 'done'::text, 'cancelled'::text, 'limited'::text])))" "NOT NULL state" "NOT NULL updated_at"]}
   instagram_commands
   [:id {:type :text :required true :primary true}
    :context {:type :text :required true}
@@ -72,7 +72,7 @@
    :send-started-at {:type :timestamptz}])
 
 ;; Physical table: finfolk.instagram_comment_identities
-(deftype.pg ^{:finfolk/constraints ["UNIQUE (challenge_hash)" "NOT NULL connection_scope" "NOT NULL handle" "UNIQUE (namespace actor_id)" "NOT NULL namespace" "PRIMARY KEY (user_id)" "NOT NULL sender_id" "NOT NULL updated_at" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id"]}
+(deftype.pg ^{:finfolk/constraints ["UNIQUE (challenge_hash)" "NOT NULL connection_scope" "NOT NULL handle" "UNIQUE (namespace, actor_id)" "NOT NULL namespace" "PRIMARY KEY (user_id)" "NOT NULL sender_id" "NOT NULL updated_at" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id"]}
   instagram_comment_identities
   [:user-id {:type :text :required true :primary true}
    :namespace {:type :text :required true}
@@ -126,7 +126,7 @@
    :identity-version {:type :uuid :required true :finfolk/default-sql "gen_random_uuid()"}])
 
 ;; Physical table: finfolk.instagram_discoveries
-(deftype.pg ^{:finfolk/constraints ["NOT NULL automatic" "FOREIGN KEY (beach_id) REFERENCES finfolk.beaches(id)" "NOT NULL candidates" "NOT NULL caption" "NOT NULL created_at" "NOT NULL id" "CHECK (((media_id IS NULL) OR (media_id ~ '^[0-9]{1,40}$'::text)))" "UNIQUE (media_id)" "FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE SET NULL" "PRIMARY KEY (id)" "NOT NULL sources" "CHECK ((state = ANY (ARRAY['pending'::text 'published'::text 'hidden'::text 'rejected'::text 'unavailable'::text])))" "NOT NULL state" "NOT NULL updated_at" "UNIQUE (url)" "NOT NULL url"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL automatic" "FOREIGN KEY (beach_id) REFERENCES finfolk.beaches(id)" "NOT NULL candidates" "NOT NULL caption" "NOT NULL created_at" "NOT NULL id" "CHECK (((media_id IS NULL) OR (media_id ~ '^[0-9]{1,40}$'::text)))" "UNIQUE (media_id)" "FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE SET NULL" "PRIMARY KEY (id)" "NOT NULL sources" "CHECK ((state = ANY (ARRAY['pending'::text, 'published'::text, 'hidden'::text, 'rejected'::text, 'unavailable'::text])))" "NOT NULL state" "NOT NULL updated_at" "UNIQUE (url)" "NOT NULL url"]}
   instagram_discoveries
   [:id {:type :uuid :required true :primary true :finfolk/default-sql "gen_random_uuid()"}
    :media-id {:type :text}
@@ -155,7 +155,7 @@
    :created-at {:type :timestamptz :required true :finfolk/default-sql "now()"}])
 
 ;; Physical table: finfolk.instagram_dm_events
-(deftype.pg ^{:finfolk/constraints ["NOT NULL args" "NOT NULL attempts" "NOT NULL command" "NOT NULL correlation_id" "NOT NULL created_at" "NOT NULL error" "UNIQUE (event_id)" "NOT NULL event_id" "NOT NULL generation" "NOT NULL id" "NOT NULL message_at" "NOT NULL next_attempt_at" "FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "PRIMARY KEY (id)" "CHECK ((processing_state = ANY (ARRAY['received'::text 'queued'::text 'processing'::text 'completed'::text 'ignored'::text 'blocked'::text 'paused'::text 'failed'::text])))" "NOT NULL processing_state" "NOT NULL provider_scope" "NOT NULL recipient_id" "CHECK ((send_state = ANY (ARRAY['pending'::text 'sending'::text 'sent'::text 'uncertain'::text 'skipped'::text])))" "NOT NULL send_state" "NOT NULL sender_id" "CHECK ((status = ANY (ARRAY['queued'::text 'processing'::text 'done'::text 'error'::text])))" "NOT NULL status" "NOT NULL updated_at"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL args" "NOT NULL attempts" "NOT NULL command" "NOT NULL correlation_id" "NOT NULL created_at" "NOT NULL error" "UNIQUE (event_id)" "NOT NULL event_id" "NOT NULL generation" "NOT NULL id" "NOT NULL message_at" "NOT NULL next_attempt_at" "FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "PRIMARY KEY (id)" "CHECK ((processing_state = ANY (ARRAY['received'::text, 'queued'::text, 'processing'::text, 'completed'::text, 'ignored'::text, 'blocked'::text, 'paused'::text, 'failed'::text])))" "NOT NULL processing_state" "NOT NULL provider_scope" "NOT NULL recipient_id" "CHECK ((send_state = ANY (ARRAY['pending'::text, 'sending'::text, 'sent'::text, 'uncertain'::text, 'skipped'::text])))" "NOT NULL send_state" "NOT NULL sender_id" "CHECK ((status = ANY (ARRAY['queued'::text, 'processing'::text, 'done'::text, 'error'::text])))" "NOT NULL status" "NOT NULL updated_at"]}
   instagram_dm_events
   [:id {:type :text :required true :primary true}
    :sender-id {:type :text :required true}
@@ -203,7 +203,7 @@
    :updated-at {:type :timestamptz :required true :finfolk/default-sql "now()"}])
 
 ;; Physical table: finfolk.instagram_post_reports
-(deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "NOT NULL day" "FOREIGN KEY (discovery_id) REFERENCES finfolk.instagram_discoveries(id) ON DELETE CASCADE" "NOT NULL discovery_id" "UNIQUE (discovery_id reason day)" "NOT NULL id" "PRIMARY KEY (id)" "CHECK ((reason = ANY (ARRAY['wrong_location'::text 'inappropriate'::text 'removed'::text 'other'::text])))" "NOT NULL reason"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "NOT NULL day" "FOREIGN KEY (discovery_id) REFERENCES finfolk.instagram_discoveries(id) ON DELETE CASCADE" "NOT NULL discovery_id" "UNIQUE (discovery_id, reason, day)" "NOT NULL id" "PRIMARY KEY (id)" "CHECK ((reason = ANY (ARRAY['wrong_location'::text, 'inappropriate'::text, 'removed'::text, 'other'::text])))" "NOT NULL reason"]}
   instagram_post_reports
   [:id {:type :bigint :required true :primary true :finfolk/identity "a"}
    :discovery-id {:type :uuid :required true}
@@ -212,7 +212,7 @@
    :created-at {:type :timestamptz :required true :finfolk/default-sql "now()"}])
 
 ;; Physical table: finfolk.instagram_sources
-(deftype.pg ^{:finfolk/constraints ["NOT NULL data" "NOT NULL failures" "NOT NULL key" "CHECK ((kind = ANY (ARRAY['tags'::text 'hashtag'::text 'recheck'::text])))" "NOT NULL kind" "NOT NULL next_at" "PRIMARY KEY (key)" "NOT NULL status"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL data" "NOT NULL failures" "NOT NULL key" "CHECK ((kind = ANY (ARRAY['tags'::text, 'hashtag'::text, 'recheck'::text])))" "NOT NULL kind" "NOT NULL next_at" "PRIMARY KEY (key)" "NOT NULL status"]}
   instagram_sources
   [:key {:type :text :required true :primary true}
    :kind {:type :text :required true}

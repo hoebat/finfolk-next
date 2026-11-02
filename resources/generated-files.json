@@ -60,7 +60,9 @@
   "js/finfolk-next/site/web-main/src/next-contracts.json",
   "resources/finfolkdb/catalog.json",
   "resources/finfolkdb/pilot.sql",
+  "resources/finfolkdb/schema.sql",
   "resources/finfolkdb/site-schema.sql",
   "resources/generated-files.json",
-  "resources/xtalk-publication.json"
+  "resources/xtalk-publication.json",
+  "tests/db/indexes.json"
 ]

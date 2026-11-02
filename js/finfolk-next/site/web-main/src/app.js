@@ -1,3 +1,5 @@
+import {renderDirectory} from './directory.js';
+import {renderEvents} from './events.js';
 import {readSiteDirectory,observeSiteDirectory} from './site-catalog.js';
 import {canAutoMeasure,isInland,hydrateSiteCatalog} from './site-model.js';
 import {applicationBackbone} from './app-backbone.js';
@@ -225,6 +227,8 @@ async function start(){
   catalog=await data.catalog();beachCatalog=await readSiteDirectory({application:appBackbone,data,fallback:beachCatalog,atlas:catalog});region=catalog.regions[0];map.areaZones=buildAreaZones(beachCatalog.areas,beachCatalog.beaches,regionShapes);map.draw();
   const published=catalog.regions.filter(hasPublishedData);for(const state of [...new Set(published.map(r=>r.state))].sort((a,b)=>a.localeCompare(b))){const group=elem('optgroup');group.label=state;for(const r of published.filter(r=>r.state===state).sort((a,b)=>a.name.localeCompare(b.name))){const option=elem('option',r.name);option.value=r.id;group.append(option);}$('survey-select').append(group);}
   discovery=installDiscovery({catalog:beachCatalog,summaries,guides,social,getCommunityPosts:id=>logbook.publicInstagramPosts(id),navigation:shell,loadJSON:path=>data.json(path),onSelect:openBeach,onArea:openArea,onContext:(coastline,contextContours,contextSource)=>setAreaContext({coastline,context_contours:contextContours,context_source:contextSource}),onStays:stays=>{map.stays=stays;map.draw();}});
+  async function extras(route){if(route.view!=='discover'||!['directory','events'].includes(route.section))return;const main=$(route.section+'-panel');main.classList.add('profile-main');main.replaceChildren();try{if(route.section==='directory')await renderDirectory({main,api:{user:null},screen:'directory',params:new URLSearchParams()});else await renderEvents({main,params:new URLSearchParams()});}catch(e){main.textContent=e.message;}}
+  shell.subscribe(extras);await extras(shell.route);
   mapSearch=installMapSearch({catalog:beachCatalog,onBeach:id=>openBeach(id),onArea:area=>{shell.navigate('maps',{params:{site:null}});openArea(area);},onAll:query=>discovery.showIndex(query),onTyping:()=>shell.closePanel()});
   observeSiteDirectory({application:appBackbone,directory:beachCatalog,atlas:catalog,onChange(){discovery.updateCatalog();map.areaZones=buildAreaZones(beachCatalog.areas,beachCatalog.beaches,regionShapes);map.beaches=beachCatalog.beaches.filter(b=>activeAreaId?b.area_id===activeAreaId:b.region===region?.id);mapSearch.close();map.draw();if(selectedBeachId&&!beachCatalog.beaches.some(b=>b.id===selectedBeachId)){selectedBeachId='';map.selectedBeach='';map.siteAccessPoints=[];discovery.select('');notice('This site is no longer in the published directory.');}}});
   map.onArea=zone=>{const area=beachCatalog.areas.find(candidate=>candidate.id===zone.id);if(!area)return;shell.navigate('maps',{params:{site:null}});openArea(area);};

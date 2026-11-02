@@ -168,7 +168,7 @@ export function putEntry(store,scope,id,value,spec){
   let key = cacheKey(scope,id);
   let entry = {"data":value,"savedAt":Date.now(),"domain":spec["domain"]};
   store["memory"].set(key,entry);
-  if(!spec["admin"] && !spec["write"] && (spec["domain"] != "admin")){
+  if((spec["cache"] != false) && !spec["admin"] && !spec["write"] && (spec["domain"] != "admin")){
     try{
       sqlite.record_add(store["impl"],"Result",[
         {
