@@ -10,7 +10,7 @@ try{
  INSERT INTO finfolk.members(user_id,profile) VALUES('alice','{"displayName":"Alice"}'),('bob','{"displayName":"Bob"}'),('banned','{}');
  INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney'),('future','East','Pacific/Kiritimati'),('past','West','Etc/GMT+12');`);
  const functions=(await owner.query(`SELECT p.proname,p.prosecdef,p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' ORDER BY p.proname`)).rows;
- assert.deepEqual(functions.map(f=>f.proname),['actor_id','auth_identity','checkin_record','member_permitted','member_profile','profile_save','site_catalog_read','site_document_valid','site_draft_save','site_publish']);
+ assert.deepEqual(functions.map(f=>f.proname),['actor_id','auth_identity','checkin_record','directory_operation','directory_public','event_operation','member_permitted','member_profile','profile_save','site_catalog_read','site_document_valid','site_draft_save','site_publish']);
  assert.deepEqual(await memberProfile(db,'alice'),{displayName:'Alice'});
  assert.deepEqual(await memberProfile(db,'bob'),{displayName:'Bob'});
  assert.equal(await memberProfile(db,'banned'),null);assert.equal(await memberProfile(db,'missing'),null);

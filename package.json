@@ -29,7 +29,7 @@
     "test:connect": "node tests/test_instagram_connect.mjs && node tests/test_instagram_claim_ui.mjs",
     "db:generate": "lein generate",
     "db:check": "node scripts/check_generated.mjs",
-    "test:backbone": "node scripts/bundle_backbone.mjs && node tests/test_sqlite.mjs && node tests/test_generated_contracts.mjs && node tests/test_backbone.mjs && node tests/test_next_backbone.mjs && node tests/test_next_client.mjs && node tests/test_substrate_routes.mjs && node tests/test_substrate_api.mjs && node tests/test_substrate_public.mjs && yarn test:substrate:ui",
+    "test:backbone": "node scripts/bundle_backbone.mjs && node tests/test_sqlite.mjs && node tests/test_generated_contracts.mjs && node tests/test_backbone.mjs && node tests/test_next_backbone.mjs && node tests/test_next_client.mjs && node tests/test_substrate_routes.mjs && node tests/test_substrate_api.mjs && node tests/test_substrate_public.mjs && yarn test:substrate:ui && yarn test:directory-events",
     "build:next": "node scripts/build_next.mjs && node tests/test_worker_publication.mjs",
     "deploy:next": "wrangler deploy --config wrangler.next.jsonc",
     "deploy:next:api": "wrangler deploy --config wrangler.next-api.jsonc",
@@ -42,7 +42,8 @@
     "dev:api": "node --env-file=.env.next.local backend/server.mjs",
     "test:sqlite": "node tests/test_sqlite.mjs",
     "test:db": "node scripts/test_database.mjs",
-    "test:browser": "playwright test"
+    "test:browser": "playwright test",
+    "test:directory-events": "node tests/test_directory_architecture.mjs && node tests/test_directory.mjs && node tests/test_directory_ui.mjs && node tests/test_directory_pages.mjs && node tests/test_events_ui.mjs"
   },
   "dependencies": {
     "@hono/node-server": "2.1.5",

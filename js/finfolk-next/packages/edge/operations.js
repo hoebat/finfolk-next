@@ -1,11 +1,31 @@
 // Generated from finfolk-web.lib.operations; do not edit.
 export var operations = {
+  "directoryReportResolve":{
+    "name":"directoryReportResolve",
+    "path":"/v1/admin/directory/report-resolve",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":true,
+    "domain":"directoryAdmin"
+  },
   "tripImportBatch":{
     "auth":true,
     "domain":"trips",
     "name":"tripImportBatch",
     "transport":"action",
     "write":true
+  },
+  "directoryClaim":{
+    "name":"directoryClaim",
+    "path":"/v1/me/directory/claim",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":false,
+    "write":true,
+    "domain":"directoryOwner"
   },
   "siteAdmin":{
     "name":"siteAdmin",
@@ -47,6 +67,16 @@ export var operations = {
     "transport":"rest",
     "write":false
   },
+  "directoryAdminSave":{
+    "name":"directoryAdminSave",
+    "path":"/v1/admin/directory/save",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":true,
+    "domain":"directoryAdmin"
+  },
   "instagramProfileLink":{
     "auth":true,
     "domain":"instagram",
@@ -54,12 +84,50 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "eventInvite":{
+    "name":"eventInvite",
+    "path":"/v1/me/events/invite",
+    "method":"POST",
+    "auth":true,
+    "write":true,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
+  },
+  "publicDirectoryDetail":{
+    "name":"publicDirectoryDetail",
+    "path":"/v1/directory/:id",
+    "method":"GET",
+    "transport":"rest",
+    "auth":false,
+    "write":false,
+    "domain":"directoryPublic"
+  },
+  "directoryReport":{
+    "name":"directoryReport",
+    "path":"/v1/me/directory/report",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":false,
+    "write":true,
+    "domain":"directoryOwner"
+  },
   "tiktokSync":{
     "auth":true,
     "domain":"logbook",
     "name":"tiktokSync",
     "transport":"action",
     "write":true
+  },
+  "pageInviteRedeem":{
+    "name":"pageInviteRedeem",
+    "path":"/v1/me/directory/invite-redeem",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":true,
+    "domain":"directoryOwner"
   },
   "instagramClaimRead":{
     "auth":true,
@@ -85,6 +153,15 @@ export var operations = {
     "path":"/v1/me/instagram",
     "transport":"rest",
     "write":true
+  },
+  "pageAccess":{
+    "name":"pageAccess",
+    "path":"/v1/me/directory/access",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":false,
+    "domain":"directoryOwner"
   },
   "instagramHidePost":{
     "auth":true,
@@ -131,6 +208,26 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "directoryDiscover":{
+    "name":"directoryDiscover",
+    "path":"/v1/admin/directory/discover",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":true,
+    "domain":"directoryAdmin"
+  },
+  "eventRoster":{
+    "name":"eventRoster",
+    "path":"/v1/me/events/roster",
+    "method":"POST",
+    "auth":true,
+    "write":false,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
+  },
   "instagramCommandResolve":{
     "admin":true,
     "auth":true,
@@ -138,6 +235,16 @@ export var operations = {
     "name":"instagramCommandResolve",
     "transport":"action",
     "write":true
+  },
+  "eventMine":{
+    "name":"eventMine",
+    "path":"/v1/me/events/mine",
+    "method":"POST",
+    "auth":true,
+    "write":false,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
   },
   "instagramProfile":{
     "auth":true,
@@ -230,6 +337,16 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "publicEvent":{
+    "name":"publicEvent",
+    "path":"/v1/events/:id",
+    "method":"GET",
+    "auth":false,
+    "write":false,
+    "domain":"eventsPublic",
+    "transport":"rest",
+    "cache":true
+  },
   "tripUnpublish":{
     "auth":true,
     "domain":"trips",
@@ -273,6 +390,16 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "eventRsvp":{
+    "name":"eventRsvp",
+    "path":"/v1/me/events/rsvp",
+    "method":"POST",
+    "auth":true,
+    "write":true,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
+  },
   "instagramReversePoints":{
     "admin":true,
     "auth":true,
@@ -295,6 +422,16 @@ export var operations = {
     "name":"instagramDiscoveryInbox",
     "transport":"action",
     "write":false
+  },
+  "directoryMine":{
+    "name":"directoryMine",
+    "path":"/v1/me/directory",
+    "method":"GET",
+    "transport":"rest",
+    "auth":true,
+    "admin":false,
+    "write":false,
+    "domain":"directoryOwner"
   },
   "saveSession":{
     "auth":true,
@@ -319,6 +456,16 @@ export var operations = {
     "transport":"rest",
     "write":true
   },
+  "publicEvents":{
+    "name":"publicEvents",
+    "path":"/v1/events",
+    "method":"GET",
+    "auth":false,
+    "write":false,
+    "domain":"eventsPublic",
+    "transport":"rest",
+    "cache":true
+  },
   "siteDraftSave":{
     "name":"siteDraftSave",
     "path":"/v1/admin/sites/drafts",
@@ -328,6 +475,26 @@ export var operations = {
     "auth":true,
     "domain":"siteAdmin",
     "admin":true
+  },
+  "eventDetail":{
+    "name":"eventDetail",
+    "path":"/v1/me/events/detail",
+    "method":"POST",
+    "auth":true,
+    "write":false,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
+  },
+  "directoryAdmin":{
+    "name":"directoryAdmin",
+    "path":"/v1/admin/directory",
+    "method":"GET",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":false,
+    "domain":"directoryAdmin"
   },
   "publicInstagram":{
     "auth":false,
@@ -510,6 +677,15 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "pageInviteRevoke":{
+    "name":"pageInviteRevoke",
+    "path":"/v1/me/directory/invite-revoke",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":true,
+    "domain":"directoryOwner"
+  },
   "messagingEvent":{
     "admin":true,
     "auth":true,
@@ -576,6 +752,15 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "pageInvite":{
+    "name":"pageInvite",
+    "path":"/v1/me/directory/invite",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":true,
+    "domain":"directoryOwner"
+  },
   "siteSubmissionWithdraw":{
     "name":"siteSubmissionWithdraw",
     "path":"/v1/me/site-submissions/:id/withdraw",
@@ -637,6 +822,16 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "eventSave":{
+    "name":"eventSave",
+    "path":"/v1/me/events/save",
+    "method":"POST",
+    "auth":true,
+    "write":true,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
+  },
   "tripReport":{
     "auth":true,
     "domain":"trips",
@@ -653,6 +848,16 @@ export var operations = {
     "path":"/v1/admin/messaging/instagram/authorization",
     "transport":"rest",
     "write":true
+  },
+  "eventAccept":{
+    "name":"eventAccept",
+    "path":"/v1/me/events/accept",
+    "method":"POST",
+    "auth":true,
+    "write":true,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
   },
   "instagramClaimReviewInbox":{
     "admin":true,
@@ -680,6 +885,16 @@ export var operations = {
     "path":"/v1/admin/messaging/instagram",
     "transport":"rest",
     "write":true
+  },
+  "directoryMerge":{
+    "name":"directoryMerge",
+    "path":"/v1/admin/directory/merge",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":true,
+    "domain":"directoryAdmin"
   },
   "tripList":{
     "auth":true,
@@ -717,12 +932,31 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "publicDirectory":{
+    "name":"publicDirectory",
+    "path":"/v1/directory",
+    "method":"GET",
+    "transport":"rest",
+    "auth":false,
+    "write":false,
+    "domain":"directoryPublic"
+  },
   "instagramCommandReview":{
     "auth":true,
     "domain":"instagram",
     "name":"instagramCommandReview",
     "transport":"action",
     "write":true
+  },
+  "directoryClaimReview":{
+    "name":"directoryClaimReview",
+    "path":"/v1/admin/directory/claim-review",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":true,
+    "domain":"directoryAdmin"
   },
   "tripImportBegin":{
     "auth":true,
@@ -737,6 +971,16 @@ export var operations = {
     "name":"report",
     "transport":"action",
     "write":true
+  },
+  "eventModerate":{
+    "name":"eventModerate",
+    "path":"/v1/me/events/moderate",
+    "method":"POST",
+    "auth":true,
+    "write":true,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
   },
   "hideImportedMedia":{
     "auth":true,
@@ -771,6 +1015,16 @@ export var operations = {
     "auth":false,
     "domain":"sites"
   },
+  "eventCancel":{
+    "name":"eventCancel",
+    "path":"/v1/me/events/cancel",
+    "method":"POST",
+    "auth":true,
+    "write":true,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
+  },
   "myPosts":{
     "auth":true,
     "domain":"posts",
@@ -799,6 +1053,15 @@ export var operations = {
     "name":"instagramCommandStatus",
     "transport":"action",
     "write":false
+  },
+  "pageAdminRemove":{
+    "name":"pageAdminRemove",
+    "path":"/v1/me/directory/admin-remove",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":true,
+    "domain":"directoryOwner"
   },
   "messagingClaimReviews":{
     "admin":true,
@@ -836,6 +1099,26 @@ export var operations = {
     "path":"/v1/admin/messaging/instagram/authorization/diagnostics",
     "transport":"rest",
     "write":false
+  },
+  "eventRevoke":{
+    "name":"eventRevoke",
+    "path":"/v1/me/events/revoke",
+    "method":"POST",
+    "auth":true,
+    "write":true,
+    "domain":"eventsMember",
+    "transport":"rest",
+    "cache":false
+  },
+  "directoryOwnerSave":{
+    "name":"directoryOwnerSave",
+    "path":"/v1/me/directory/save",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":false,
+    "write":true,
+    "domain":"directoryOwner"
   },
   "instagramStatus":{
     "auth":true,
@@ -934,6 +1217,9 @@ export var RELATED = {
   "siteAdmin":["sites","siteSubmissions"],
   "member":["community","logbook","posts","trips"],
   "admin":["instagram","posts","member"],
+  "eventsMember":["eventsPublic","directoryPublic"],
+  "directoryOwner":["directoryPublic","directoryAdmin"],
+  "directoryAdmin":["directoryPublic","directoryOwner"],
   "logbook":["community","trips","member","instagram"],
   "instagram":["posts","member","admin","logbook"],
   "posts":["member"],

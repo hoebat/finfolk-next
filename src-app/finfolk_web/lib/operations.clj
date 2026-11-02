@@ -1,6 +1,8 @@
 (ns finfolk-web.lib.operations
   (:require [lang.core :as l]
             [finfolk-web.groups.admin :as admin]
+            [finfolk-web.groups.directory :as directory]
+            [finfolk-web.groups.events :as events]
             [finfolk-web.groups.community :as community]
             [finfolk-web.groups.instagram :as instagram]
             [finfolk-web.groups.invitations :as invitations]
@@ -10,7 +12,7 @@
             [finfolk-web.groups.trips :as trips]
             [finfolk-web.groups.sites :as sites]))
 
-(def DEFINITIONS (merge admin/OPERATIONS community/OPERATIONS instagram/OPERATIONS invitations/OPERATIONS logbook/OPERATIONS member/OPERATIONS posts/OPERATIONS trips/OPERATIONS sites/OPERATIONS))
+(def DEFINITIONS (merge events/OPERATIONS directory/OPERATIONS admin/OPERATIONS community/OPERATIONS instagram/OPERATIONS invitations/OPERATIONS logbook/OPERATIONS member/OPERATIONS posts/OPERATIONS trips/OPERATIONS sites/OPERATIONS))
 (l/script :js)
 (def.js operations (@! DEFINITIONS))
 (defn.js operation [name]
@@ -26,7 +28,9 @@
       (return spec)))
   (throw (new Error (+ "Unknown substrate endpoint: " method " " pathname))))
 (def.js RELATED
-  {"siteAdmin" ["sites" "siteSubmissions"] "siteSubmissions" ["siteAdmin"]
+  {"eventsMember" ["eventsPublic" "directoryPublic"]
+   "directoryOwner" ["directoryPublic" "directoryAdmin"] "directoryAdmin" ["directoryPublic" "directoryOwner"]
+   "siteAdmin" ["sites" "siteSubmissions"] "siteSubmissions" ["siteAdmin"]
    "member" ["community" "logbook" "posts" "trips"]
    "community" ["member" "logbook" "posts" "trips"]
    "logbook" ["community" "trips" "member" "instagram"]

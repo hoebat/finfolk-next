@@ -1,3 +1,4 @@
+import {directoryRoute} from '../js/finfolk-next/site/web-main/src/directory-route.js';
 import {createServer} from 'node:http';
 import {readFile,stat,access} from 'node:fs/promises';
 import {watch,existsSync} from 'node:fs';
@@ -9,7 +10,7 @@ if(!existsSync(built+'/data/catalog.json'))execFileSync(process.execPath,['scrip
 const types={'.html':'text/html','.js':'text/javascript','.wasm':'application/wasm','.css':'text/css','.json':'application/json','.geojson':'application/geo+json','.svg':'image/svg+xml','.jpeg':'image/jpeg','.png':'image/png','.webp':'image/webp'};
 const server=createServer(async(req,res)=>{
  try {
-  const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname),name=path==='/'?'/index.html':path==='/profiles'?'/profiles.html':path;
+  const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname),name=path==='/'?'/index.html':path==='/profiles'?'/profiles.html':directoryRoute(new URL(req.url,'http://localhost'))?(path.startsWith('/events')?'/events.html':'/directory.html'):path;
   if(name==='/neon-client.js'){
    res.writeHead(200,{'Content-Type':'text/javascript','Cache-Control':'no-store'});res.end(execFileSync(process.execPath,['scripts/bundle_neon.mjs']));return;
   }

@@ -245,7 +245,7 @@ export async function run(ctx,name,values,options){
       publish(ctx,entry,{
         "status":"error",
         "error":error,
-        "data":spec["write"] ? undefined : entry["state"]["data"]
+        "data":(spec["write"] || ((spec["domain"] == "directoryPublic") && (error["status"] == 404))) ? undefined : entry["state"]["data"]
       });
     }
     throw error;

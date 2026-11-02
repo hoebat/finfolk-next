@@ -6,7 +6,7 @@
   :static {:application ["finfolk"] :all {:schema ["finfolk"]}}})
 
 ;; Physical table: finfolk.messaging_accounts
-(deftype.pg ^{:finfolk/constraints ["NOT NULL checks" "NOT NULL enabled_commands" "NOT NULL generation" "CHECK ((id = 'instagram'::text))" "NOT NULL id" "CHECK ((mode = ANY (ARRAY['disabled'::text 'pilot'::text 'live'::text])))" "NOT NULL mode" "NOT NULL pilot_sender_ids" "PRIMARY KEY (id)" "NOT NULL updated_at"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL checks" "NOT NULL enabled_commands" "NOT NULL generation" "CHECK ((id = 'instagram'::text))" "NOT NULL id" "CHECK ((mode = ANY (ARRAY['disabled'::text, 'pilot'::text, 'live'::text])))" "NOT NULL mode" "NOT NULL pilot_sender_ids" "PRIMARY KEY (id)" "NOT NULL updated_at"]}
   messaging_accounts
   [:id {:type :text :required true :primary true}
    :account-id {:type :text}
@@ -35,7 +35,7 @@
    :created-at {:type :timestamptz :required true :finfolk/default-sql "now()"}])
 
 ;; Physical table: finfolk.messaging_idempotency
-(deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "NOT NULL expires_at" "NOT NULL key_hash" "PRIMARY KEY (user_id key_hash)" "NOT NULL request_hash" "NOT NULL response_status" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL created_at" "NOT NULL expires_at" "NOT NULL key_hash" "PRIMARY KEY (user_id, key_hash)" "NOT NULL request_hash" "NOT NULL response_status" "FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE" "NOT NULL user_id"]}
   messaging_idempotency
   [:user-id {:type :text :required true :primary "default"}
    :key-hash {:type :text :required true :primary "default"}
@@ -56,7 +56,7 @@
    :flow-key {:type :text}])
 
 ;; Physical table: finfolk.messaging_outbox
-(deftype.pg ^{:finfolk/constraints ["NOT NULL attempts" "CHECK ((length(body) <= 2000))" "NOT NULL body" "FOREIGN KEY (connect_code_id) REFERENCES finfolk.instagram_connect_codes(id) ON DELETE SET NULL" "NOT NULL correlation_id" "NOT NULL created_at" "NOT NULL deadline" "FOREIGN KEY (event_id) REFERENCES finfolk.instagram_dm_events(id) ON DELETE CASCADE" "UNIQUE (event_id)" "NOT NULL event_id" "NOT NULL id" "NOT NULL next_attempt_at" "PRIMARY KEY (id)" "CHECK ((reply_kind = ANY (ARRAY['text'::text 'connect_code'::text 'connect_guidance'::text])))" "NOT NULL reply_kind" "CHECK ((state = ANY (ARRAY['pending'::text 'sending'::text 'provider_accepted'::text 'failed'::text 'uncertain'::text 'cancelled'::text 'expired'::text])))" "NOT NULL state" "NOT NULL updated_at"]}
+(deftype.pg ^{:finfolk/constraints ["NOT NULL attempts" "CHECK ((length(body) <= 2000))" "NOT NULL body" "FOREIGN KEY (connect_code_id) REFERENCES finfolk.instagram_connect_codes(id) ON DELETE SET NULL" "NOT NULL correlation_id" "NOT NULL created_at" "NOT NULL deadline" "FOREIGN KEY (event_id) REFERENCES finfolk.instagram_dm_events(id) ON DELETE CASCADE" "UNIQUE (event_id)" "NOT NULL event_id" "NOT NULL id" "NOT NULL next_attempt_at" "PRIMARY KEY (id)" "CHECK ((reply_kind = ANY (ARRAY['text'::text, 'connect_code'::text, 'connect_guidance'::text])))" "NOT NULL reply_kind" "CHECK ((state = ANY (ARRAY['pending'::text, 'sending'::text, 'provider_accepted'::text, 'failed'::text, 'uncertain'::text, 'cancelled'::text, 'expired'::text])))" "NOT NULL state" "NOT NULL updated_at"]}
   messaging_outbox
   [:id {:type :uuid :required true :primary true :finfolk/default-sql "gen_random_uuid()"}
    :event-id {:type :text :required true}
