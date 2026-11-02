@@ -1,7 +1,6 @@
 import {mediaInbox,linkedMedia} from './media-inbox.js';
 import {tripCards} from './trip-report.js';
 import { getInstagramFeed } from './instagram-discovery.js';
-import { instagramPanel } from "./instagram.js";
 import { socialGallery } from "./media.js";
 import { readResource } from "./activity.js";
 import {
@@ -66,15 +65,12 @@ export function installLogbook({
     epoch = 0,
     urls = [],
     editor = null,
-    instagramUI = null,
     importsUI = null;
   const status = el("p", "", "logbook-status");
   status.setAttribute("role", "status");
   status.setAttribute("aria-live", "polite");
   function release() {
     importsUI?.dispose();importsUI=null;
-    instagramUI?.dispose();
-    instagramUI = null;
     for (const url of urls) URL.revokeObjectURL(url);
     urls = [];
   }
@@ -356,12 +352,8 @@ export function installLogbook({
         );
         root.append(banner);
       }
-      if (config.instagram?.enabled) {
-        instagramUI=instagramPanel({api,beaches:getBeaches(),notify:message,brand:config.instagramHandle || "finfolk.com.au"});
-        root.append(instagramUI.root);
-      }
       if(api.call){
-        importsUI=mediaInbox({api,getBeaches,createSession:item=>edit({date:item.day||'',locationName:item.locationName||'',beachId:item.beachId||'',notes:item.notes||'',photos:[]},getBeaches().find(b=>b.id===item.beachId)||null,item),openSession:id=>navigate({session:id}),openAccount:()=>shell.navigate('account',{params:{tab:'instagram'}}),notify:message});
+        importsUI=mediaInbox({api,getBeaches,createSession:item=>edit({date:item.day||'',locationName:item.locationName||'',beachId:item.beachId||'',notes:item.notes||'',photos:[]},getBeaches().find(b=>b.id===item.beachId)||null,item),openSession:id=>navigate({session:id}),openProfile:()=>{location.href='./profiles?screen=me#instagram-claim';},notify:message});
         root.append(importsUI.root);
       }
       await list(api.user.uid);
@@ -736,10 +728,6 @@ export function installLogbook({
       }, save);
     };
     root.append(form);
-    if (config.instagram?.enabled) {
-      instagramUI=instagramPanel({api,beaches:getBeaches(),notify:message,brand:config.instagramHandle || "finfolk.com.au"});
-      root.append(instagramUI.root);
-    }
     const settings = el("section", undefined, "logbook-card");
     settings.append(el("h2", "Sign-in methods"), el("p", api.user.email || ""));
     const providers = api.user.providerData.map((p) => p.providerId);

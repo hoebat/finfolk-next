@@ -64,12 +64,12 @@ assert.ok(
 );
 assert.ok(document.querySelector('[aria-label="Social menu"]')?.textContent.includes('Your buddies'));
 assert.ok(document.querySelector('[aria-label="Social menu"]')?.textContent.includes('Check in at a beach'));
-assert.ok([...document.querySelectorAll('button')].some(b=>b.textContent==='Link Instagram'));
+assert.ok([...document.querySelectorAll('a')].some(a=>a.textContent==='Connect Instagram'&&a.getAttribute('href')==='./profiles?screen=me#instagram-claim'));
 document.getElementById('account-tab-instagram').click();
 assert.equal(document.getElementById('account-instagram').hidden,false);
-assert.ok(document.getElementById('account-instagram').textContent.includes('Link Instagram'));
+assert.ok(document.getElementById('account-instagram').textContent.includes('Manage Instagram in Profile'));assert.equal(document.getElementById('account-instagram').querySelector('#instagram-claim'),null,'Connection controls live in Profile');
 document.getElementById('account-tab-profile').click();
-assert.equal(document.querySelector('#account-profile [name=instagram]'),null,'Instagram is managed in its own tab');
+assert.equal(document.querySelector('#account-profile [name=instagram]'),null,'Instagram is managed in Profile');
 assert.equal(document.querySelector('[name=open]').checked, false);
 if(process.env.SUBSTRATE_TEST)assert.equal(calls.filter(c=>c.action==='me').length,1,'Changing account tabs does not reload all account sections');
 document.querySelector('[name=open]').checked = true;
@@ -91,8 +91,7 @@ assert.deepEqual(saved.profile.beaches, ['bondi']);
 assert.ok(
   document.getElementById('account-page').textContent.includes('Saved.'),
 );
-[...document.querySelectorAll('#account-profile button')].find(b=>b.textContent==='Manage Instagram').click();
-assert.equal(document.getElementById('account-instagram').hidden,false);
+assert.ok([...document.querySelectorAll('#account-profile a')].some(a=>a.textContent==='Manage Instagram in Profile ↗'&&a.getAttribute('href')==='./profiles?screen=me#instagram-claim'));
 document.getElementById('account-tab-settings').click();
 assert.equal(document.getElementById('account-settings').hidden, false);
 assert.equal(document.getElementById('account-profile').hidden, true);

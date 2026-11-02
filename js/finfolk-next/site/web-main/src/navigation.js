@@ -1,12 +1,13 @@
 // Shared navigation for the atlas and member profiles.
 const installed=new WeakMap();
-export const NAV_ITEMS=[['discover','Discover'],['map','Map'],['people','People'],['logbook','Logbook'],['me','My profile']];
+export const NAV_ITEMS=[['discover','Discover'],['map','Map'],['people','People'],['logbook','Logbook'],['me','Profile']];
 const paths={discover:['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18Z','m16 8-2.5 5.5L8 16l2.5-5.5Z'],map:['m3 5 6-2 6 2 6-2v16l-6 2-6-2-6 2Z','M9 3v16M15 5v16'],people:['M15 8a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z','M4 21v-2a8 8 0 0 1 16 0v2M19 4a3 3 0 0 1 0 6M3 4a3 3 0 0 0 0 6'],logbook:['M12 5c-3-2-6-2-9-1v15c3-1 6-1 9 1 3-2 6-2 9-1V4c-3-1-6-1-9 1v15','M6 8h3m-3 4h3m6-4h3m-3 4h3'],me:['M16 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0Z','M4 22v-2a8 8 0 0 1 16 0v2'],more:['M4 6h16M4 12h16M4 18h16']};
 function icon(doc,key){const svg=doc.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('aria-hidden','true');svg.setAttribute('fill','none');svg.setAttribute('stroke','currentColor');svg.setAttribute('stroke-width','1.7');svg.setAttribute('stroke-linecap','round');svg.setAttribute('stroke-linejoin','round');for(const d of paths[key]||paths.more){const p=doc.createElementNS(svg.namespaceURI,'path');p.setAttribute('d',d);svg.append(p);}return svg;}
 export function navigationURL(key,location=''){
  const site=location?encodeURIComponent(location):'',context=site?'&site='+site:'';
- if(['people','me','edit'].includes(key))return './profiles?screen='+key+(site?'&location='+site:'');
- if(key==='discover')return './?view=discover&section=index'+context;
+ if(key==='people')return './profiles?screen=people';
+ if(['me','edit'].includes(key))return './profiles?screen='+key+(site?'&location='+site:'');
+ if(key==='discover')return './?view=discover&section=suggested'+context;
  if(key==='map')return './?view=maps'+context;
  if(key==='logbook')return './?view=logbook'+context;
  if(key==='checkin')return './?view=account&tab=checkin'+context;
@@ -17,7 +18,7 @@ export function installNavigation({doc=document,nav,rail,context=()=>''}={}){
  if(!nav||!rail)return null;if(installed.has(nav))return installed.get(nav);
  const win=doc.defaultView,listeners=[];let expanded=false;
  if(nav.classList.contains('primary-nav')){
-  for(const [key,label]of [['people','People'],['me','My profile']]){
+  for(const [key,label]of [['people','People'],['me','Profile']]){
    const a=doc.createElement('a');a.dataset.nav=key;a.textContent=label;
    key==='people'?nav.insertBefore(a,nav.querySelector('[data-view=logbook]')):nav.append(a);
   }

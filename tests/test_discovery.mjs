@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {summary} from '../scripts/build_beach_summaries.mjs';
-import {capabilities,searchBeaches,areaDirectory,nearbyStays,recommendationReasons} from '../js/finfolk-next/site/web-main/src/discovery.js';
+import {capabilities,searchBeaches,areaDirectory,nearbyStays,recommendationReasons,mixLocations} from '../js/finfolk-next/site/web-main/src/discovery.js';
 import {socialPostURL,postsForBeach} from '../js/finfolk-next/site/web-main/src/media.js';
 const line=(depth,y)=>({properties:{depth_m:depth,datum_label:'TEST'},geometry:{type:'LineString',coordinates:[[0,y],[.02,y]]}});
 assert.deepEqual(capabilities({rasters:[]},[]),{raster:false,contours:false,measure:false,fine:false});
@@ -25,3 +25,5 @@ assert.equal(socialPostURL('https://www.instagram.com/p/abc-12/?tracking=1').url
 for(const url of ['javascript:alert(1)','https://evil.example/p/123/','https://instagram.com.evil.example/p/a/','https://user:password@instagram.com/p/a/','https://x.com/user/status/not-an-id'])assert.equal(socialPostURL(url),null);
 assert.equal(postsForBeach({posts:[{beach_ids:['a'],url:'https://instagram.com/p/a/'},{area_ids:['a-area'],url:'https://x.com/author/status/123'}]},beach).length,2);
 console.log('Discovery checks passed: directory sorting, global aliases, honest depth gaps, stay radius/facilities, activity restrictions and safe social URLs.');
+
+const explore=Array.from({length:20},(_,i)=>({id:'place-'+i}));const firstMix=mixLocations(explore,'first');assert.deepEqual(firstMix,mixLocations(explore,'first'),'A displayed mix stays stable');assert.equal(new Set(firstMix.map(p=>p.id)).size,6);assert.ok(mixLocations(explore,'second',firstMix.map(p=>p.id)).every(p=>!firstMix.some(old=>old.id===p.id)),'Refresh favours unseen places');

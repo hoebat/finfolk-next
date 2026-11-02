@@ -50,6 +50,19 @@ try {
  await alice.call('messagingSettings',{__rest:true,path:'/v1/admin/messaging/instagram'});await assert.rejects(()=>bob.call('messagingSettings',{__rest:true,path:'/v1/admin/messaging/instagram'}),e=>e.status===403);
  await assert.rejects(()=>alice.call('instagramCodeConnect',{__rest:true,path:'/v1/me/instagram/connect',body:{code:'SECRETTEST'}}),e=>e.status>=400 && !e.mutationCommitted);
  assert.ok(!JSON.stringify(alice.node).includes('SECRETTEST'),'Mutation credentials are not retained in model state');
+ // Browse-first discovery is global by default, shuffled per seed and private by design.
+ for(let i=0;i<18;i++)await query('INSERT INTO finfolk.members(user_id,profile) VALUES($1,$2::jsonb)',['wander-'+String(i).padStart(2,'0'),JSON.stringify({displayName:'Fixture '+i,open:true,beaches:i%2?[]:['bondi'],availability:[i%2?'weekday mornings':'weekend mornings'],experience:'comfortable'})]);
+ for(const [name,open,deleted]of [['closed-person',false,false],['deleted-person',true,true],['blocked-by-me',true,false],['blocked-me',true,false],['declined-person',true,false]])await query('INSERT INTO finfolk.members(user_id,profile,deleted) VALUES($1,$2::jsonb,$3)',[name,JSON.stringify({displayName:name,open,bio:'Hidden fixture',beaches:['bondi']}),deleted]);
+ await query("INSERT INTO finfolk.blocks(owner_id,target_id) VALUES('alice','blocked-by-me'),('blocked-me','alice')");
+ await query("INSERT INTO finfolk.connections(a,b,requested_by,status) VALUES('alice','declined-person','alice','declined')");
+ const browse={mode:'discover',seed:'organic-fixture-one'},first=await alice.call('community',browse),repeat=await alice.call('community',browse);
+ assert.deepEqual(first,repeat,'A mix stays stable while browsing');assert.equal(first.people.length,6);assert.ok(first.people.every(p=>p.open&&!p.regular));
+ const seen=[...first.people];let cursor=first.cursor;while(cursor){const page=await alice.call('community',{...browse,cursor});seen.push(...page.people);cursor=page.cursor;}
+ assert.equal(seen.length,18);assert.equal(new Set(seen.map(p=>p.id)).size,18,'Seeded pagination does not repeat people');assert.ok(seen.every(p=>p.id.startsWith('wander-')),'Closed, deleted, blocked, declined and own profiles are excluded');
+ assert.notDeepEqual((await alice.call('community',{...browse,seed:'organic-fixture-two'})).people.map(p=>p.id),first.people.map(p=>p.id),'A new seed makes a new mix');
+ const filtered=await alice.call('community',{...browse,beachId:'bondi',availability:'weekend mornings'});assert.ok(filtered.people.length);assert.ok(filtered.people.every(p=>p.beaches.includes('bondi')&&p.availability.includes('weekend mornings')));
+ await assert.rejects(()=>alice.call('community',{...browse,seed:'changed-seed',cursor:first.cursor}),e=>e.status===400);await assert.rejects(()=>bob.call('community',{...browse,cursor:first.cursor}),e=>e.status===400);
+ await assert.rejects(()=>alice.call('community',{...browse,experience:'not-listed'}),e=>e.status===400);
  alice.close();bob.close();assert.deepEqual(alice.cache.rows,{});
  console.log('SUBSTRATE_API_PASS: actual SQL and API behind models; profile, visits, buddies, sessions, posts, trips, admin gates and disabled integrations.');
 } finally {await pg.close();}

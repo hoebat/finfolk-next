@@ -1,3 +1,5 @@
+import {renderInstagramClaim} from './instagram-claim.js';
+import {closeInstagramConnectDialogs} from './instagram-connect.js';
 import {installNavigation,navigationURL} from './navigation.js';
 import {createWordmark} from './identity.js';
 import {applySavedTheme,setTheme} from './theme.js';
@@ -11,7 +13,7 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
  const message=text=>{status.textContent=text;};
  const option=(text,value)=>{const n=node('option',text);n.value=value;return n;};
  const current=()=>new URL(win.location.href).searchParams;
- let epoch=0,me=null,api=providedAPI,directory=providedDirectory,disposed=false,config;
+ let epoch=0,me=null,api=providedAPI,directory=providedDirectory,disposed=false,config,peopleSeed=win.crypto.randomUUID(),peopleOptionsOpen=false;
  applySavedTheme();
  if(current().get('presentation')==='landing')doc.body.classList.add('profile-landing-preview');
  if(!api){
@@ -33,11 +35,11 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
  themeControl.onchange=()=>{const result=setTheme(themeControl.value);if(!result.persisted)message('Theme applied for this visit. Storage is unavailable.');};
  doc.addEventListener('finfolk:appearance',syncTheme);syncTheme();
  async function navigate(screen,values={},replace=false){
-  const location=selectedLocation()?.id,url=profileURL(screen,{location,...values});
+  const location=screen==='people'?(current().get('location')||''):selectedLocation()?.id,url=profileURL(screen,{location,...values});
   if(new URL(url,win.location.href).href===win.location.href)return;
   win.history[replace?'replaceState':'pushState'](null,'',url);await render();main.focus({preventScroll:true});
  }
- function profileLink(text,screen,values={},cls='profile-action'){return link(text,profileURL(screen,{location:selectedLocation()?.id,...values}),cls);}
+ function profileLink(text,screen,values={},cls='profile-action'){return link(text,profileURL(screen,{...(screen==='people'?{}:{location:selectedLocation()?.id}),...values}),cls);}
  const onLink=event=>{
   const anchor=event.target.closest?.('a');if(!anchor||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||event.button)return;
   const url=new URL(anchor.href,win.location.href);if(url.origin!==win.location.origin||!/^\/profiles(?:\.html)?$/.test(url.pathname))return;
@@ -76,34 +78,40 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
  function personCard(member){
   const article=node('article',undefined,'person-card');article.dataset.person=member.id;
   const photo=profileLink('', 'member',{id:member.id},'person-portrait-link');photo.setAttribute('aria-label','View '+member.displayName+'’s profile');photo.append(portrait(member));
-  const title=node('div',undefined,'person-card-title'),name=node('h2');name.append(profileLink(member.displayName,'member',{id:member.id},''));title.append(name,node('span',member.regular?'Regular':member.recent===false?'Follows this location':'Recent diver','person-relationship'));
+  const title=node('div',undefined,'person-card-title'),name=node('h2');name.append(profileLink(member.displayName,'member',{id:member.id},''));title.append(name,node('span',member.regular?'Regular':member.recent?'Recent diver':current().get('location')?'Follows this location':'Freediver','person-relationship'));
   const actions=node('div',undefined,'profile-action-row');actions.append(profileLink('View profile ↗','member',{id:member.id}),connect(member,member.connection));
-  article.append(photo,title,node('p',member.bio||'','person-card-bio'),socials(member),actions);return article;
+  const spots=node('div',undefined,'person-spots');for(const id of (member.beaches||[]).slice(0,2)){const place=siteById(id);if(place)spots.append(profileLink(place.name,'people',{location:id},'person-spot'));}
+  article.append(photo,title,node('p',member.bio||'','person-card-bio'),spots,socials(member),actions);return article;
  }
  async function people(generation){
-  const site=selectedLocation();heading('PEOPLE'+(site?' / '+site.name.toUpperCase():''),'Discover your FinFolk.','Browse freedivers by location. View their profiles, published logs and social links.');
-  const filters=node('form',undefined,'profile-filters');filters.setAttribute('aria-label','Filter people');filters.onsubmit=event=>event.preventDefault();
-  const label=node('label','Location'),search=node('input'),list=node('datalist');search.id='people-location';search.type='search';search.value=site?.name||'';search.autocomplete='off';search.setAttribute('list','people-locations');list.id='people-locations';
-  for(const beach of sites)list.append(option(beach.state_id||beach.state||'',beach.name));label.append(search,list);filters.append(label);
-  search.oninput=()=>search.setCustomValidity('');search.onchange=()=>{const selected=sites.find(beach=>[beach.id,beach.name].some(value=>value?.toLowerCase()===search.value.trim().toLowerCase()));if(!selected){search.setCustomValidity('Choose a location from the list.');search.reportValidity();return;}navigate('people',{location:selected.id,availability:current().get('availability'),experience:current().get('experience')},true);};
+  const location=current().get('location')||'',site=siteById(location);
+  heading('PEOPLE'+(site?' / '+site.name.toUpperCase():''),'Discover your FinFolk.','A fresh mix of freedivers. Open a profile, follow a shared spot and see who you meet.');
+  const options=node('details',undefined,'people-options');options.open=peopleOptionsOpen;options.ontoggle=()=>{if(options.isConnected&&generation===epoch)peopleOptionsOpen=options.open;};options.append(node('summary','Refine the mix'+([location,current().get('availability'),current().get('experience')].filter(Boolean).length?' · '+[location,current().get('availability'),current().get('experience')].filter(Boolean).length:'')));
+  const filters=node('form',undefined,'profile-filters');filters.setAttribute('aria-label','Refine people');filters.onsubmit=event=>event.preventDefault();
+  const locationField=node('label','Location'),choice=node('select');choice.name='location';choice.append(option('Everywhere',''));for(const place of sites)choice.append(option(place.name+' · '+(place.state_id||place.state||''),place.id));choice.value=location;locationField.append(choice);filters.append(locationField);
+  choice.onchange=()=>navigate('people',{location:choice.value},true);
   for(const [key,title,values]of [['availability','Availability',AVAILABILITY.map(value=>[value,value])],['experience','Experience',Object.entries(EXPERIENCES)]]){
    const field=node('label',title),select=node('select');select.name=key;select.append(option('Any '+title.toLowerCase(),''));for(const [value,text]of values)select.append(option(text,value));select.value=current().get(key)||'';
-   select.onchange=()=>navigate('people',{availability:key==='availability'?select.value:current().get('availability'),experience:key==='experience'?select.value:current().get('experience')},true);field.append(select);filters.append(field);
+   select.onchange=()=>navigate('people',{[key]:select.value,availability:key==='availability'?select.value:current().get('availability'),experience:key==='experience'?select.value:current().get('experience')},true);field.append(select);filters.append(field);
   }
-  filters.append(button('Clear filters',()=>navigate('people',{},true)));main.append(filters);
-  if(!api.user){guest('people');return;}if(!site){main.append(empty('Choose a location','No locations are available yet.'));return;}
+  filters.append(button('Clear filters',()=>navigate('people',{location:'',availability:'',experience:''},true)));options.append(filters);main.append(options);
+  if(!api.user){guest('people');return;}
+  if(location&&!site){main.append(empty('Location unavailable','Choose another location or explore the whole mix.',profileLink('Meet people everywhere','people',{location:''})));return;}
   if(!me.profile.open){const note=node('div',undefined,'profile-visibility-note');note.append(node('span','Your profile is Closed and does not appear in People.'),profileLink('Edit visibility ↗','edit',{},''));main.append(note);}
-  const grid=node('div',undefined,'people-grid'),progress=node('p','Loading divers…','profile-small'),more=button('Load more divers',()=>load(cursor));let cursor=null;
-  main.append(progress,grid);more.hidden=true;main.append(more);
-  async function load(after){
-   more.disabled=true;
+  const grid=node('div',undefined,'people-grid'),progress=node('p','Finding your FinFolk…','profile-small');progress.setAttribute('role','status');
+  const more=button('Meet more people',()=>load(cursor,true),'profile-action primary');let cursor=null,loading=false;
+  main.append(progress,grid,more);more.hidden=true;
+  async function load(after,replace=false){
+   if(loading)return;loading=true;more.disabled=true;
+   if(replace&&!after)peopleSeed=win.crypto.randomUUID();
    try{
-    const data=await api.call('community',{beachId:site.id,availability:current().get('availability')||'',experience:current().get('experience')||'',...(after?{cursor:after}:{})});
+    const data=await api.call('community',{mode:'discover',seed:peopleSeed,beachId:location,availability:current().get('availability')||'',experience:current().get('experience')||'',...(after?{cursor:after}:{})});
     if(generation!==epoch||disposed)return;
-    for(const person of data.people||[])grid.append(personCard(person));cursor=data.cursor;more.hidden=!cursor;progress.textContent=grid.children.length+(grid.children.length===1?' diver':' divers');
-    if(!grid.children.length)main.append(empty('No divers here yet.','Try another location, clear the filters or check in to start the community here.',link('Check in ↗',navigationURL('checkin',site.id))));
-   }catch(error){if(generation===epoch){progress.textContent=error.message||'Divers could not load.';more.textContent='Try again';more.hidden=false;}}
-   finally{more.disabled=false;}
+    if(replace)grid.replaceChildren();for(const person of data.people||[])grid.append(personCard(person));cursor=data.cursor;
+    more.hidden=!grid.children.length;more.textContent=cursor?'Meet more people':'Mix it up again';progress.textContent=grid.children.length?(site?'People around '+site.name:'People from across FinFolk'):'';
+    if(!grid.children.length)main.append(empty('Your people are still finding their way here.',location||current().get('availability')||current().get('experience')?'Try a wider mix, or come back as more freedivers join.':'Come back as more freedivers open their profiles. You can add your spots and start the conversation.',profileLink('Explore your profile','me')));
+   }catch(error){if(generation===epoch&&!disposed){progress.textContent=error.message||'People could not load.';more.textContent='Try again';more.hidden=false;}}
+   finally{loading=false;more.disabled=false;}
   }await load();
  }
  function publishedLogCard(log){
@@ -113,18 +121,24 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   article.append(metrics,node('p',log.notes||''),link('View log ↗','./?view=logbook&session='+encodeURIComponent(log.id)));return article;
  }
  async function memberProfile(generation,own){
-  if(!api.user){heading('MY PROFILE','Your FinFolk.','Your profile, published logs and connections in one place.');guest('me');return;}
+  if(!api.user){heading('PROFILE','Your FinFolk.','Your profile, published logs and connections in one place.');guest('me');return;}
   const id=own?api.user.uid:current().get('id');if(!id)throw Error('Choose a diver.');
   const [member,connections]=await Promise.all([own?Promise.resolve({...me.profile,id}):api.call('profile',{target:id}),api.call('connections')]);
   if(generation!==epoch||disposed)return;
   if(member.restricted){main.append(empty('Profile unavailable','This diver is not sharing their profile with you.',profileLink('Back to People','people')));return;}
-  main.append(profileLink('← People at '+(selectedLocation()?.name||'your spot'),'people',{},'profile-back'));
-  const hero=node('section',undefined,'member-hero'),content=node('div');content.append(node('p',own?'MY PROFILE':'DIVER PROFILE','profile-eyebrow'),node('h1',member.displayName),node('p',member.bio||'No bio added.','member-bio'));
+  main.append(profileLink('← Meet more people','people',{},'profile-back'));
+  const hero=node('section',undefined,'member-hero'+(own?' is-own':'')),content=node('div');content.append(node('p',own?'PROFILE':'DIVER PROFILE','profile-eyebrow'),node('h1',member.displayName),node('p',member.bio||'No bio added.','member-bio'));
   const tags=node('div',undefined,'profile-tags');if(EXPERIENCES[member.experience])tags.append(node('span',EXPERIENCES[member.experience]));for(const value of member.availability||[])tags.append(node('span',value));content.append(tags,socials(member));
   const actions=node('div',undefined,'profile-action-row');
-  if(own)actions.append(profileLink('Edit profile','edit',{},'profile-action primary'),link('Check in ↗',navigationURL('checkin',selectedLocation()?.id)));
+  if(own)actions.append(profileLink('Edit profile','edit',{},'profile-action primary'),link('Instagram connection','#instagram-claim'),link('Check in ↗',navigationURL('checkin',selectedLocation()?.id)));
   else actions.append(connect(member,connections.find(row=>row.id===id)?.status));
   content.append(actions,node('p',own?(member.open?'Open · Your profile can appear in People.':'Closed · Hidden from People. Published logs can still be shared; accepted buddies keep access to permitted statistics.'):'Experience and log details are self-reported.','profile-small'));hero.append(portrait(member),content);main.append(hero);
+  if(own){
+   const instagram=node('section',undefined,'profile-section profile-instagram');main.append(instagram);
+   await renderInstagramClaim({host:instagram,api,refresh:()=>render(),onVerifyEmail:()=>{win.location.href='./?view=account&tab=profile#account-email-verification';}});
+   if(generation!==epoch||disposed)return;
+   if(win.location.hash==='#instagram-claim')instagram.scrollIntoView?.({block:'start'});
+  }
   const places=node('section',undefined,'profile-section'),locations=node('div',undefined,'profile-tags');places.append(node('h2','Locations'));
   for(const siteId of member.beaches||[]){const site=siteById(siteId);if(site)locations.append(profileLink(site.name+' · '+(site.state_id||site.state||''),'people',{location:site.id},''));}places.append(locations);if(!locations.children.length)places.append(node('p','No locations selected.','profile-small'));main.append(places);
   const posts=node('section',undefined,'profile-section');posts.append(node('h2','Selected social posts'));main.append(posts);
@@ -159,7 +173,7 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   if(blocked.length){const group=node('details',undefined,'profile-section');group.append(node('summary','Blocked profiles'));for(const row of blocked){const control=button('Unblock '+(row.name||'diver'),()=>mutate(control,'unblock',{target:row.id},()=>render()));group.append(control);}main.append(group);}
  }
  async function editProfile(generation){
-  heading('MY PROFILE','Edit profile','Choose how you appear to other divers and what you share.');if(!api.user){guest('edit');return;}
+  heading('PROFILE','Edit profile','Choose how you appear to other divers and what you share.');if(!api.user){guest('edit');return;}
   const [listed,posts]=await Promise.all([api.call('sessions',{}),api.call('myPosts')]);if(generation!==epoch||disposed)return;
   const extra=await Promise.allSettled((me.profile.featuredLogs||[]).filter(id=>!(listed.sessions||[]).some(log=>log.id===id)).map(id=>api.call('session',{id})));
   if(generation!==epoch||disposed)return;
@@ -179,7 +193,7 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   search.oninput=showSites;showSites();
   const availability=[];for(const value of AVAILABILITY){const input=check(places,'availability',value,(profile.availability||[]).includes(value));input.value=value;availability.push(input);}
   const experienceLabel=node('label','Experience'),experience=node('select');experience.name='experience';experience.append(option('Choose an experience level',''));for(const [value,label]of Object.entries(EXPERIENCES))experience.append(option(label,value));experience.value=profile.experience||'';experienceLabel.append(experience);places.append(experienceLabel);
-  const social=group('Linked profiles');social.append(link('Manage Instagram ↗','./?view=account&tab=instagram'));field(social,'tiktok','TikTok profile URL','url',profile.tiktok||'').placeholder='https://www.tiktok.com/@yourname/';social.append(node('p','Links open the original platform. Saving a link does not verify ownership.','profile-small'));
+  const social=group('Linked profiles');social.append(link('Manage Instagram ↗','./profiles?screen=me#instagram-claim'));field(social,'tiktok','TikTok profile URL','url',profile.tiktok||'').placeholder='https://www.tiktok.com/@yourname/';social.append(node('p','Links open the original platform. Saving a link does not verify ownership.','profile-small'));
   function featurePicker(title,key,items,initial){
    const box=group(title),order=Array.isArray(initial)?initial.filter(id=>items.some(item=>item.id===id)):items.slice(0,6).map(item=>item.id),list=node('div');box.append(list);
    function draw(){list.replaceChildren();for(const item of [...order.map(id=>items.find(row=>row.id===id)),...items.filter(row=>!order.includes(row.id))]){
@@ -203,12 +217,14 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   };
  }
  async function render(){
+  const existingOptions=main.querySelector('.people-options');if(existingOptions)peopleOptionsOpen=existingOptions.open;
+  closeInstagramConnectDialogs();
   const generation=++epoch;main.replaceChildren(node('p','Loading profiles…'));main.setAttribute('aria-busy','true');
   try{
    if(api.user)me=await api.call('me');else me=null;if(generation!==epoch||disposed)return;
-   main.replaceChildren();const screen=current().get('screen')||'people';
+   main.replaceChildren();const screen=current().get('screen')||'people';main.dataset.screen=screen;
    if(screen==='people')await people(generation);else if(screen==='edit')await editProfile(generation);else await memberProfile(generation,screen!=='member');
-   if(generation===epoch){navigation.update();doc.title=(screen==='people'?'People':screen==='edit'?'Edit profile':main.querySelector('h1')?.textContent||'My profile')+' · FinFolk';}
+   if(generation===epoch){navigation.update();doc.title=(screen==='people'?'People':screen==='edit'?'Edit profile':main.querySelector('h1')?.textContent||'Profile')+' · FinFolk';}
   }catch(error){if(generation===epoch&&!disposed){main.replaceChildren(empty('Profiles could not load',error.message||'Reconnect and try again.',button('Try again',()=>render())));}}
   finally{if(generation===epoch)main.removeAttribute('aria-busy');}
  }
@@ -216,5 +232,5 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
  let actor=api.user?.uid;const stop=api.observe?.(user=>{if(actor===user?.uid)return;actor=user?.uid;me=null;message('');render();});
  await render();
  if('serviceWorker' in win.navigator)win.navigator.serviceWorker.register('./sw.js').catch(()=>{});
- return {render,navigate,destroy(){disposed=true;epoch++;stop?.();navigation.destroy();win.removeEventListener('popstate',popstate);doc.removeEventListener('click',onLink);doc.removeEventListener('finfolk:appearance',syncTheme);}};
+ return {render,navigate,destroy(){closeInstagramConnectDialogs();disposed=true;epoch++;stop?.();navigation.destroy();win.removeEventListener('popstate',popstate);doc.removeEventListener('click',onLink);doc.removeEventListener('finfolk:appearance',syncTheme);}};
 }

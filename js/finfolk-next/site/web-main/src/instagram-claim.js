@@ -3,7 +3,7 @@ import { instagramHandle } from './logbook-model.js';
 const el=(tag,text,cls)=>{const n=document.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
 const storagePrefix='finfolk:instagram-claim:';
 export function clearInstagramClaimStorage(){closeInstagramConnectDialogs();try{for(const key of Object.keys(sessionStorage))if(key.startsWith(storagePrefix))sessionStorage.removeItem(key);}catch{}}
-export async function renderInstagramClaim({host,api,refresh=()=>{},initialState}) {
+export async function renderInstagramClaim({host,api,refresh=()=>{},initialState,onVerifyEmail}) {
   const root=el('section',undefined,'instagram-claim');root.id='instagram-claim';host.append(root);
   const key=api.user?.uid?storagePrefix+api.user.uid:null;
   let state=initialState,editing=false;
@@ -40,7 +40,7 @@ export async function renderInstagramClaim({host,api,refresh=()=>{},initialState
       root.append(el('p','This saves a profile link. Verification by Instagram message is not available yet.','claim-note'));
       return;
     }else{
-      if(api.user?.emailVerified===false){root.append(el('p','Verify your FinFolk email before linking Instagram.'),button('Verify email',()=>{document.getElementById('account-tab-profile')?.click();document.getElementById('account-email-verification')?.scrollIntoView?.({block:'start'});}));return;}
+      if(api.user?.emailVerified===false){root.append(el('p','Verify your FinFolk email before linking Instagram.'),button('Verify email',()=>{if(onVerifyEmail)return onVerifyEmail();document.getElementById('account-tab-profile')?.click();document.getElementById('account-email-verification')?.scrollIntoView?.({block:'start'});}));return;}
       root.append(el('p','Follow @finfolk.com.au, send /connect, then enter the code from our reply.'),button('Connect Instagram',()=>{
         openInstagramConnect({owner:root,api,onDone:refresh,onConnected:async result=>{
           forget();state={...state,...result};draw();

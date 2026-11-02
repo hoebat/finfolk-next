@@ -21,7 +21,8 @@ export function openInstagramConnect({ owner, api, onConnected, onDone = () => {
   const demo = node('section', undefined, 'connect-demo');
   demo.setAttribute('aria-label', 'Example: follow FinFolk, send /connect and receive a code');
   const heading = node('div', undefined, 'connect-demo-heading');
-  heading.append(node('span', 'f', 'connect-avatar'), node('strong', 'finfolk.com.au'), node('small', 'EXAMPLE'));
+  const avatar=node('span',undefined,'brand-f connect-avatar');avatar.setAttribute('aria-hidden','true');
+  heading.append(avatar, node('strong', 'finfolk.com.au'), node('small', 'EXAMPLE'));
   const follow = node('div', 'Follow @finfolk.com.au', 'connect-demo-follow');
   const sent = node('div', '/connect', 'connect-bubble connect-sent');
   const received = node('div', 'Your FinFolk code: •••• ••••\nEnter it on FinFolk within 10 minutes.', 'connect-bubble connect-received');

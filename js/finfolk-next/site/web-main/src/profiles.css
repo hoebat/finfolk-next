@@ -16,3 +16,9 @@
 .profile-landing-preview .profile-visibility-note{margin:16px 0;padding:10px 14px}
 .profile-landing-preview .profile-filters{margin:16px 0;padding:14px 0;gap:10px}
 @media(prefers-reduced-motion:reduce){.profile-demo{scroll-behavior:auto}}
+
+.people-options{margin:4px 0 24px;border-block:1px solid var(--account-line)}.people-options>summary{padding:16px 0;cursor:pointer;font-size:12px;color:var(--account-ink)}.people-options .profile-filters{margin:0;padding:14px 0 22px;border:0}.people-grid+.profile-action{margin-top:32px}.profile-instagram{scroll-margin-top:24px}.profile-instagram .instagram-claim{max-width:620px}.profile-instagram .instagram-claim h2{font-size:30px}.profile-instagram .instagram-claim>p{font-size:13px;line-height:1.8}.profile-instagram .instagram-command-guide{font-size:12px}
+
+.person-spots{display:flex;flex-wrap:wrap;gap:7px;margin:12px 0}.person-spot{padding:7px 11px;border:1px solid var(--account-line);border-radius:20px;font-size:10px;text-decoration:none;color:var(--account-ink);background:var(--account-surface)}
+
+.profile-main[data-screen=people] h1{font-size:clamp(42px,5.4vw,72px)}.people-grid .person-portrait{aspect-ratio:1}.people-grid .person-portrait img{object-position:center 35%}@media(max-width:600px){.member-hero.is-own .person-portrait{aspect-ratio:4/3;max-height:260px}}
