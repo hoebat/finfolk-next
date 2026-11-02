@@ -6,10 +6,10 @@ test('offline navigation keeps the landing page separate from app and deep links
  await expect.poll(()=>page.evaluate(()=>!!navigator.serviceWorker.controller)).toBe(true);
  await page.evaluate(()=>new Promise(resolve=>{const channel=new MessageChannel();channel.port1.onmessage=()=>{channel.port1.close();resolve();};navigator.serviceWorker.controller.postMessage('offline',[channel.port2]);}));
  await context.setOffline(true);
- for(const path of ['/__landing/','/__landing/?utm_source=instagram&fbclid=example']){
+ for(const path of ['/__landing/','/__landing/?utm_source=instagram&fbclid=example','/__landing/?v=2','/__landing/?v=2&utm_source=instagram']){
   await page.goto(path);await expect(page.locator('h1')).toHaveText('FinFolk landing');
  }
- for(const path of ['/__landing/?view=discover','/__landing/?site=bondi','/__landing/app']){
+ for(const path of ['/__landing/?view=discover','/__landing/?site=bondi','/__landing/app','/__landing/?view=discover&v=2','/__landing/?site=bondi&v=2']){
   await page.goto(path);await expect(page.locator('h1')).toHaveText('FinFolk app');
  }
  await page.goto('/__landing/profiles?screen=people');await expect(page.locator('h1')).toHaveText('FinFolk profiles');

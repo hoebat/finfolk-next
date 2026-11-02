@@ -14,7 +14,8 @@ export default {
       route.pathname='/health';return env.NEXT_API.fetch(new Request(route,request));
     }
     if(isBrowserAPIPath(route.pathname))return env.NEXT_API.fetch(request);
-    if(route.pathname==='/' && [...route.searchParams.keys()].some(key=>!/^utm_/i.test(key)&&!['fbclid','gclid','msclkid'].includes(key))){
+    // A cache-busting version parameter keeps the public homepage selected.
+    if(route.pathname==='/' && [...route.searchParams.keys()].some(key=>!/^utm_/i.test(key)&&!['fbclid','gclid','msclkid','v'].includes(key))){
       const app=new URL(request.url);app.pathname='/app';
       return socialResponse(await env.ASSETS.fetch(new Request(app,request)),request);
     }
