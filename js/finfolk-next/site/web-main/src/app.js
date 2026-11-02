@@ -1,3 +1,4 @@
+import {installMapSettings} from './map-settings.js';
 import {renderDirectory} from './directory.js';
 import {renderEvents} from './events.js';
 import {readSiteDirectory,observeSiteDirectory} from './site-catalog.js';
@@ -32,6 +33,7 @@ let catalog,region,profile=null,drawing=false,measuring=false,vertices=[],viewTi
 let beachCatalog={beaches:[]},selectedBeachId='',contoursReady=false,discovery,selectionRequest=0,activeAreaId='';
 const shell=installAppShell({backbone:appBackbone,onLayout:()=>map.resize(),onMapActivity:active=>map.setActive(active),onOpen:()=>map.cancelGesture()});
 const navigation=installNavigation({nav:document.querySelector('.primary-nav'),rail:document.querySelector('.app-rail'),context:()=>new URL(location.href).searchParams.get('site')||''});
+const mapSettings=installMapSettings();
 let mapSearch;
 const logbook=installLogbook({shell,getBeaches:()=>beachCatalog.beaches,getSelectedBeach:()=>findBeach(beachCatalog,selectedBeachId)});
 installOfflineUI(data.downloads,{region:()=>region,onOpen:id=>openSurvey(id)});

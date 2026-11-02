@@ -12,7 +12,7 @@
   => [true true "community" false true])
 ^{:id api-coverage}
 (fact "the extracted browser contract includes every deployed operation"
-  (count operations/DEFINITIONS) => 145)
+  (count operations/DEFINITIONS) => 146)
 ^{:id deployed-sql}
 (fact "site transactions are published with the member backbone"
   (clojure.string/includes? (publication/sql) "FUNCTION finfolk_rpc.site_publish") => true)

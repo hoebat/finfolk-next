@@ -708,7 +708,8 @@ export function installCommunity({
     document.getElementById('regulars-panel')?.remove();
     document.querySelectorAll('.beach-post-feed').forEach(n=>n.remove());
     if (!beach) return;
-    const host = document.getElementById('beach-summary');
+    const rootHost = document.getElementById('beach-summary');
+    const host = rootHost?.querySelector('.compact-place-details') || rootHost;
     if (!host) return;
     const box = el('section', undefined, 'regulars-panel');
     box.id = 'regulars-panel';
