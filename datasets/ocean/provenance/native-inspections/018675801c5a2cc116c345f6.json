@@ -1,0 +1,129 @@
+{
+  "asset_id": "018675801c5a2cc116c345f6",
+  "filename": "PortPhillipBayDriftAlgae-Bathymetry-2m-2018.zip",
+  "sha256": "3883dfa4d5eaf7bccab2deae8e21e2566def0bc25105bded9dec86d234a252b6",
+  "bytes": 8148542,
+  "inspection": {
+    "status": "container_inspected",
+    "native_members": [
+      "20180001S_PortPhillipBayDriftAlgae_Bathymetry_EPSG4326_EGM2008_SK55_Depth_2m_2018_20260203.tiff",
+      "PortPhillipBayDriftAlgae_Bathymetry_SK55_Depth_2m_2018_cog.tiff",
+      "PortPhillipBayDriftAlgae_Bathymetry_SK55_Depth_2m_2018_hs.tiff"
+    ],
+    "unpacked_bytes": 1666214225
+  },
+  "zip_crc": "all_members_passed",
+  "checked_at": "2026-11-04T23:02:55Z",
+  "note": "Source archive integrity and native container/header inspection. Scientific accuracy and datum compatibility are not inferred.",
+  "raster_headers": [
+    {
+      "member": "20180001S_PortPhillipBayDriftAlgae_Bathymetry_EPSG4326_EGM2008_SK55_Depth_2m_2018_20260203.tiff",
+      "driver": "GTiff",
+      "crs": "EPSG:4326",
+      "width": 31818,
+      "height": 13039,
+      "bounds": [
+        144.42120184368434,
+        -38.127721005564105,
+        145.1151870033263,
+        -37.843326244844654
+      ],
+      "resolution": [
+        2.1811086794957328e-05,
+        2.1811086794957328e-05
+      ],
+      "bands": 1,
+      "types": [
+        "float32"
+      ],
+      "nodata": "3.4028234663852886e+38",
+      "units": [
+        "m"
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        "Band 1"
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    },
+    {
+      "member": "PortPhillipBayDriftAlgae_Bathymetry_SK55_Depth_2m_2018_cog.tiff",
+      "driver": "GTiff",
+      "crs": "EPSG:4326",
+      "width": 31818,
+      "height": 13039,
+      "bounds": [
+        144.42120184368434,
+        -38.127721005564105,
+        145.1151870033263,
+        -37.843326244844654
+      ],
+      "resolution": [
+        2.1811086794957328e-05,
+        2.1811086794957328e-05
+      ],
+      "bands": 1,
+      "types": [
+        "float32"
+      ],
+      "nodata": "3.4028234663852886e+38",
+      "units": [
+        "m"
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        "Band 1"
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    },
+    {
+      "member": "PortPhillipBayDriftAlgae_Bathymetry_SK55_Depth_2m_2018_hs.tiff",
+      "driver": "GTiff",
+      "crs": "EPSG:4326",
+      "width": 31818,
+      "height": 13039,
+      "bounds": [
+        144.42120184368434,
+        -38.127721005564105,
+        145.1151870033263,
+        -37.843326244844654
+      ],
+      "resolution": [
+        2.1811086794957328e-05,
+        2.1811086794957328e-05
+      ],
+      "bands": 1,
+      "types": [
+        "uint8"
+      ],
+      "nodata": "0.0",
+      "units": [
+        null
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        null
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    }
+  ],
+  "header_checked_at": "2026-11-04T23:07:06.880427+00:00"
+}

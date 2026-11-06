@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "vcdem-2021",
+  "title": "VCDEM 2021 high-resolution and seamless products",
+  "source_url": "https://discover.data.vic.gov.au/dataset/victorian-coastal-digital-elevation-model-2021-vcdem-250cm",
+  "attribution": "VCDEM 2021 high-resolution and seamless products; retain individual publisher attribution on acquisition",
+  "licence": "Creative Commons Attribution 4.0 International",
+  "discovery": {
+    "states": [
+      "VIC"
+    ],
+    "resolution_m": 2.5,
+    "resolution_note": "Grid spacing does not establish measurement accuracy. Collections contain varying resolutions.",
+    "horizontal_datum": "unverified",
+    "vertical_datum": "unverified",
+    "survey_date": "varies; verify product metadata",
+    "reviewed_at": "2026-11-04"
+  },
+  "review": {
+    "acquisition_status": "discovered",
+    "quality": "mixed",
+    "datum_verified": false,
+    "blocker": "",
+    "next_action": "Acquire the public full native package and inspect numeric contents, datum and source-quality metadata."
+  }
+}

@@ -1,0 +1,33 @@
+{
+  "asset_id": "0048b89494540da1d533770a",
+  "filename": "HD20180814_Mean.bag",
+  "sha256": "f220f9b499d884ec2f97ab7ebc11261f66f74b2e256b6c9811943bf3ae4fcfd3",
+  "bytes": 155340544,
+  "inspection": {
+    "status": "header_inspected",
+    "driver": "BAG",
+    "crs": "COMPD_CS[\"GDA94 / MGA zone 50 + Instantaneous Water Level Height\",PROJCS[\"GDA94 / MGA zone 50\",GEOGCS[\"GDA94\",DATUM[\"Geocentric_Datum_of_Australia_1994\",SPHEROID[\"GRS 1980\",6378137,298.257222101,AUTHORITY[\"EPSG\",\"7019\"]],AUTHORITY[\"EPSG\",\"6283\"]],PRIMEM[\"Greenwich\",0,AUTHORITY[\"EPSG\",\"8901\"]],UNIT[\"degree\",0.0174532925199433,AUTHORITY[\"EPSG\",\"9122\"]],AUTHORITY[\"EPSG\",\"4283\"]],PROJECTION[\"Transverse_Mercator\"],PARAMETER[\"latitude_of_origin\",0],PARAMETER[\"central_meridian\",117],PARAMETER[\"scale_factor\",0.9996],PARAMETER[\"false_easting\",500000],PARAMETER[\"false_northing\",10000000],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Easting\",EAST],AXIS[\"Northing\",NORTH],AUTHORITY[\"EPSG\",\"28350\"]],VERT_CS[\"Instantaneous Water Level Height\",VERT_DATUM[\"Instantaneous Water Level\",2005,AUTHORITY[\"EPSG\",\"5113\"]],UNIT[\"metre\",1,AUTHORITY[\"EPSG\",\"9001\"]],AXIS[\"Up\",UP],AUTHORITY[\"EPSG\",\"5829\"]]]",
+    "resolution": [
+      1.0,
+      1.0
+    ],
+    "bands": 2,
+    "types": [
+      "float32",
+      "float32"
+    ],
+    "nodata": "1000000.0",
+    "scales": [
+      1.0,
+      1.0
+    ],
+    "offsets": [
+      0.0,
+      0.0
+    ],
+    "datum_verification": "not_inferred"
+  },
+  "zip_crc": null,
+  "checked_at": "2026-11-04T23:02:54Z",
+  "note": "Source archive integrity and native container/header inspection. Scientific accuracy and datum compatibility are not inferred."
+}

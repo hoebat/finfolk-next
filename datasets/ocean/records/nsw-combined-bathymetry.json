@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "nsw-combined-bathymetry",
+  "title": "NSW multibeam and marine lidar bathymetry",
+  "source_url": "https://data.nsw.gov.au/data/en/dataset/nsw-bathymetry-sourced-from-multibeam-and-marine-lidar-surveys",
+  "attribution": "NSW multibeam and marine lidar bathymetry; retain individual publisher attribution on acquisition",
+  "licence": "Creative Commons Attribution 4.0",
+  "discovery": {
+    "states": [
+      "NSW",
+      "JBT"
+    ],
+    "resolution_m": null,
+    "resolution_note": "Grid spacing does not establish measurement accuracy. Collections contain varying resolutions.",
+    "horizontal_datum": "unverified",
+    "vertical_datum": "unverified",
+    "survey_date": "varies; verify product metadata",
+    "reviewed_at": "2026-11-04"
+  },
+  "review": {
+    "acquisition_status": "partial",
+    "quality": "mixed",
+    "datum_verified": false,
+    "blocker": "",
+    "next_action": "Acquire the native SEED package using GET; inspect raster contents, datum and survey lineage."
+  },
+  "acquisitions": [
+    {
+      "id": "6ebec98ca688224f174507c5",
+      "url": "https://datasets.seed.nsw.gov.au/dataset/aa8f268e-a23d-4d27-b046-f60c45f8349b/resource/2ef6c816-04b1-4aa7-9f06-e727b9c0cdd9/download/bathymetrymosaic_marinelidar_mbes.zip",
+      "filename": "bathymetrymosaic_marinelidar_mbes.zip",
+      "state": "acquired",
+      "bytes": 1686561321,
+      "etag": "\"5517357f23c803a07c3aab3470cc6513-322\"",
+      "last_modified": "Fri, 22 Sep 2023 04:32:46 GMT",
+      "licence_evidence": "https://datasets.seed.nsw.gov.au/api/3/action/package_show?id=nsw-bathymetry-sourced-from-multibeam-and-marine-lidar-surveys",
+      "reason": "URLError: <urlopen error [Errno 54] Connection reset by peer>",
+      "aliases": [
+        "https://www.planningportal.nsw.gov.au/opendata/dataset/a40c3e5e-860a-40ab-b54f-47d38c5ca5fd/resource/2ef6c816-04b1-4aa7-9f06-e727b9c0cdd9/download/bathymetrymosaic_marinelidar_mbes.zip"
+      ],
+      "sha256": "a2cf8b4e8f35e6bf1ddd324e4f8467387bc0063d905f24aa72e1c6eb4917f256",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/nsw-combined-bathymetry/6ebec98ca688224f174507c5/000000.bin",
+          "bytes": 1073741824,
+          "sha256": "9bda1e5f0853ff6b43d2b9ef05d626869c710c7c0101865e259838893ab62fe2"
+        },
+        {
+          "path": "datasets/raw/ocean/nsw-combined-bathymetry/6ebec98ca688224f174507c5/000001.bin",
+          "bytes": 612819497,
+          "sha256": "76cbb63a7fc9d7f0a59165693dbf83c7ce599b35418f6dc6091b1daf821b8b9d"
+        }
+      ],
+      "acquired_at": "2026-11-04T23:13:39Z",
+      "numeric_validation": "pending"
+    }
+  ]
+}

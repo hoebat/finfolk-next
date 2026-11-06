@@ -1,0 +1,154 @@
+{
+  "id": "victoria-coastkit-contours",
+  "title": "victoria-coastkit-contours",
+  "source_url": "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/7",
+  "attribution": "© State of Victoria, Department of Energy, Environment and Climate Action",
+  "licence": "CC BY 4.0",
+  "observed": {
+    "inventory_sha256": "fc9245660a8b8099d140e15beea0f6271311a809d189120667cd6d8aaa04bf5c",
+    "packages": [
+      {
+        "region": "vic-corner-inlet",
+        "kind": "published_contour",
+        "metadata": {
+          "file": "processed/vic-corner-inlet/contours-ae344de29b20.geojson",
+          "count": 712,
+          "source_revision": 1,
+          "source_urls": [
+            "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/7",
+            "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/8"
+          ],
+          "query_bbox": [
+            146.181507,
+            -38.882589,
+            146.919043,
+            -38.599939
+          ],
+          "downloaded_at": "2026-10-28T03:36:35.016882+00:00",
+          "sha256": "9d18cfc370ae4e2c46d02257bbcb081d2b59503fe90ec2c9a3eadf3f9801ebb8",
+          "source_url": "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/7",
+          "datum": "Unverified — original DATUM code retained per feature",
+          "survey_date": "Not established in service metadata",
+          "licence": "CC BY 4.0",
+          "attribution": "© State of Victoria, Department of Energy, Environment and Climate Action"
+        }
+      },
+      {
+        "region": "vic-mallacoota",
+        "kind": "published_contour",
+        "metadata": {
+          "file": "processed/vic-mallacoota/contours-34b7405e9f68.geojson",
+          "count": 109,
+          "source_revision": 1,
+          "source_urls": [
+            "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/10",
+            "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/11"
+          ],
+          "query_bbox": [
+            149.693355,
+            -37.563784,
+            149.802769,
+            -37.48828
+          ],
+          "downloaded_at": "2026-10-28T03:36:40.105739+00:00",
+          "sha256": "531e350e6cb7a158a22ca882c0715948fc5afdbe52f5df6213314fc9225d36e8",
+          "source_url": "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/10",
+          "datum": "Unverified — original DATUM code retained per feature",
+          "survey_date": "Not established in service metadata",
+          "licence": "CC BY 4.0",
+          "attribution": "© State of Victoria, Department of Energy, Environment and Climate Action"
+        }
+      },
+      {
+        "region": "western-port",
+        "kind": "published_contour",
+        "metadata": {
+          "file": "processed/western-port/contours-32c088bc4401.geojson",
+          "count": 5598,
+          "source_revision": 1,
+          "source_urls": [
+            "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/17",
+            "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/18"
+          ],
+          "query_bbox": [
+            144.95,
+            -38.63,
+            145.62,
+            -38.15
+          ],
+          "downloaded_at": "2026-10-27T23:14:58.801368+00:00",
+          "sha256": "c09fec774c48991999f65d2d7e52b21700615c5f396255eea3b2fb067546664a",
+          "source_url": "https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/BathyContours/MapServer/17",
+          "datum": "Unverified — original DATUM code retained per feature",
+          "survey_date": "Not established in service metadata",
+          "licence": "CC BY 4.0",
+          "attribution": "© State of Victoria, Department of Energy, Environment and Climate Action"
+        }
+      }
+    ],
+    "assets": [
+      {
+        "path": "datasets/processed/vic-corner-inlet/contours-ae344de29b20.geojson",
+        "role": "processed",
+        "sha256": "e724fed2c2ce2d47e108c55882a489f673c23ad5c158030346c05103ca1e6df8",
+        "bytes": 3931861
+      },
+      {
+        "path": "datasets/processed/vic-mallacoota/contours-34b7405e9f68.geojson",
+        "role": "processed",
+        "sha256": "a2c6e16a017f6214b46cebedf39296b83dcad2cd6d601469df9907c13d4891a4",
+        "bytes": 1676374
+      },
+      {
+        "path": "datasets/processed/western-port/contours-32c088bc4401.geojson",
+        "role": "processed",
+        "sha256": "f7521c660554167e277b805fbbe5a7b796cbf1c1bb3cc6fdae6eaad8dd163805",
+        "bytes": 17129058
+      },
+      {
+        "path": "datasets/raw/vic-corner-inlet/contours-ae344de29b20/original.geojson",
+        "role": "raw",
+        "sha256": "9d18cfc370ae4e2c46d02257bbcb081d2b59503fe90ec2c9a3eadf3f9801ebb8",
+        "bytes": 3778663
+      },
+      {
+        "path": "datasets/raw/vic-corner-inlet/contours-ae344de29b20/service.json",
+        "role": "service_metadata",
+        "sha256": "d650fce35cf75293d174da7d771e37ae969e4ff6ce13b71b44ffcd7a544fe90d",
+        "bytes": 15027
+      },
+      {
+        "path": "datasets/raw/vic-mallacoota/contours-34b7405e9f68/original.geojson",
+        "role": "raw",
+        "sha256": "531e350e6cb7a158a22ca882c0715948fc5afdbe52f5df6213314fc9225d36e8",
+        "bytes": 1652934
+      },
+      {
+        "path": "datasets/raw/vic-mallacoota/contours-34b7405e9f68/service.json",
+        "role": "service_metadata",
+        "sha256": "a945f5e472d246607b91ec10dd2479c749b476795611b48d16fa40c270cf3c09",
+        "bytes": 13022
+      },
+      {
+        "path": "datasets/raw/western-port/contours-32c088bc4401/original.geojson",
+        "role": "raw",
+        "sha256": "c09fec774c48991999f65d2d7e52b21700615c5f396255eea3b2fb067546664a",
+        "bytes": 15919939
+      },
+      {
+        "path": "datasets/raw/western-port/contours-32c088bc4401/service.json",
+        "role": "service_metadata",
+        "sha256": "686df2675be934b37e4bb25ccb9587bc346c51cd4210c5b426628daeb7e01f9b",
+        "bytes": 15031
+      }
+    ]
+  },
+  "schema_version": 1,
+  "review": {
+    "acquisition_status": "partial",
+    "quality": "unverified",
+    "datum_verified": false,
+    "blocker": "Only the inventoried regional or site-area extracts are acquired; full product coverage has not been established.",
+    "next_action": "Review source lineage, datum and coverage; acquire numeric rasters where missing."
+  }
+}

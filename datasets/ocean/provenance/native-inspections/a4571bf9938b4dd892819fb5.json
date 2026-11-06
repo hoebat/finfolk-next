@@ -1,0 +1,30 @@
+{
+  "asset_id": "a4571bf9938b4dd892819fb5",
+  "filename": "08_hadal_bathy.tif",
+  "sha256": "c06b86f3e0fd0119b15460960dec8dd2a3396e5c92c68355f96bdc3e60bacf6d",
+  "bytes": 21833710,
+  "inspection": {
+    "status": "header_inspected",
+    "driver": "GTiff",
+    "crs": "EPSG:9473",
+    "resolution": [
+      210.0,
+      210.0
+    ],
+    "bands": 1,
+    "types": [
+      "float32"
+    ],
+    "nodata": "3.3999999521443642e+38",
+    "scales": [
+      1.0
+    ],
+    "offsets": [
+      0.0
+    ],
+    "datum_verification": "not_inferred"
+  },
+  "zip_crc": null,
+  "checked_at": "2026-11-04T23:02:55Z",
+  "note": "Source archive integrity and native container/header inspection. Scientific accuracy and datum compatibility are not inferred."
+}

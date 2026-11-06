@@ -1,0 +1,49 @@
+{
+  "schema_version": 1,
+  "id": "imas-eez-composite",
+  "title": "IMAS Australian EEZ multi-resolution bathymetry",
+  "source_url": "https://metadata.imas.utas.edu.au/geonetwork/geonetwork/api/records/69e9ac91-babe-47ed-8c37-0ef08f29338a",
+  "attribution": "IMAS Australian EEZ multi-resolution bathymetry; retain individual publisher attribution on acquisition",
+  "licence": "Verify individual product and distribution licence before acquisition",
+  "discovery": {
+    "states": [
+      "*"
+    ],
+    "resolution_m": 10,
+    "resolution_note": "Grid spacing does not establish measurement accuracy. Collections contain varying resolutions.",
+    "horizontal_datum": "unverified",
+    "vertical_datum": "unverified",
+    "survey_date": "varies; verify product metadata",
+    "reviewed_at": "2026-11-04"
+  },
+  "review": {
+    "acquisition_status": "partial",
+    "quality": "mixed",
+    "datum_verified": false,
+    "blocker": "Native data and source footprints not yet validated",
+    "next_action": "Inspect product metadata, licence, numeric format and valid coverage; acquire a bounded region extract."
+  },
+  "acquisitions": [
+    {
+      "id": "a4571bf9938b4dd892819fb5",
+      "url": "https://data.imas.utas.edu.au/attachments/69e9ac91-babe-47ed-8c37-0ef08f29338a/bathymetry/08_hadal_bathy.tif",
+      "filename": "08_hadal_bathy.tif",
+      "state": "acquired",
+      "bytes": 21833710,
+      "licence_evidence": "https://metadata.imas.utas.edu.au/geonetwork/geonetwork/api/records/69e9ac91-babe-47ed-8c37-0ef08f29338a",
+      "etag": "\"14d27ee-61e9bc0f04580\"",
+      "last_modified": "Thu, 01 Aug 2024 09:22:46 GMT",
+      "sha256": "c06b86f3e0fd0119b15460960dec8dd2a3396e5c92c68355f96bdc3e60bacf6d",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/imas-eez-composite/a4571bf9938b4dd892819fb5/000000.bin",
+          "bytes": 21833710,
+          "sha256": "c06b86f3e0fd0119b15460960dec8dd2a3396e5c92c68355f96bdc3e60bacf6d"
+        }
+      ],
+      "acquired_at": "2026-11-04T17:29:46Z",
+      "numeric_validation": "pending",
+      "source_hash_verified_at": "2026-11-04T22:56:16Z"
+    }
+  ]
+}

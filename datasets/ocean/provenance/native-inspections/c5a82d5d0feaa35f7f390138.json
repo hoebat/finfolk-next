@@ -1,0 +1,92 @@
+{
+  "asset_id": "c5a82d5d0feaa35f7f390138",
+  "filename": "AusBathyTopo_Australia_2026_250m.zip",
+  "sha256": "4f1409ce9edcd451a850611791c300eeb383d905ce48fa1823a9b8ca5e6ddec6",
+  "bytes": 2380292468,
+  "inspection": {
+    "status": "container_inspected",
+    "native_members": [
+      "AusBathyTopo_Australia_2026_250m/AusBathyTopo_Australia_2026_250m_MSL_cog.tif",
+      "AusBathyTopo_Australia_2026_250m/AusBathyTopo_Australia_2026_250m_MSL_tid.tif"
+    ],
+    "unpacked_bytes": 2392263327
+  },
+  "zip_crc": "all_members_passed",
+  "checked_at": "2026-11-04T23:03:03Z",
+  "note": "Source archive integrity and native container/header inspection. Scientific accuracy and datum compatibility are not inferred.",
+  "raster_headers": [
+    {
+      "member": "AusBathyTopo_Australia_2026_250m/AusBathyTopo_Australia_2026_250m_MSL_cog.tif",
+      "driver": "GTiff",
+      "crs": "EPSG:4326",
+      "width": 32001,
+      "height": 20799,
+      "bounds": [
+        92.000138888874,
+        -59.997360839921,
+        172.002638888874,
+        -7.9998608399209985
+      ],
+      "resolution": [
+        0.0025,
+        0.0025
+      ],
+      "bands": 1,
+      "types": [
+        "float32"
+      ],
+      "nodata": "3.3999999521443642e+38",
+      "units": [
+        null
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        null
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    },
+    {
+      "member": "AusBathyTopo_Australia_2026_250m/AusBathyTopo_Australia_2026_250m_MSL_tid.tif",
+      "driver": "GTiff",
+      "crs": "EPSG:4326",
+      "width": 32161,
+      "height": 20882,
+      "bounds": [
+        91.800138888874,
+        -60.00236083992099,
+        172.202638888874,
+        -7.797360839920998
+      ],
+      "resolution": [
+        0.0024999999999999996,
+        0.0024999999999999996
+      ],
+      "bands": 1,
+      "types": [
+        "uint8"
+      ],
+      "nodata": "None",
+      "units": [
+        null
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        null
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    }
+  ],
+  "header_checked_at": "2026-11-04T23:07:06.918244+00:00"
+}

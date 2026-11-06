@@ -1,0 +1,93 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-11-05T23:28:38Z",
+  "paused": true,
+  "limit_bytes": 100000000000,
+  "ledger": {
+    "charged_bytes": 30895411715,
+    "received_bytes": 17741312531,
+    "received_bytes_is_lower_bound": true,
+    "historical_budget_debit_bytes": 24648779756,
+    "historical_received_minimum_bytes": 11670841340,
+    "reconciliation_file": ".cache/ocean-acquisition/reconciliation/20261104T224745Z/accounting.json"
+  },
+  "manifest_sha256": "61233e0e491912e5da8c5d7db7b5d41360e776a5f0b53636e229d30e98409bf8",
+  "partials": [
+    {
+      "id": "03989c6ba9fa23b34a46c9ff",
+      "resume": {
+        "validator": "\"a6f6aefc4288b131a70723427d48f633-5\""
+      },
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/_checkpoint/03989c6ba9fa23b34a46c9ff/000000.bin",
+          "bytes": 16777216,
+          "sha256": "f4d58482d06d635054782b36102846e4795cceb65bf3e202849a0e3b0f835d11"
+        }
+      ]
+    },
+    {
+      "id": "2cde2da92d40c8f645111d82",
+      "resume": {
+        "validator": "\"f41ea497fed1fcd6a3284d1cbc432489-4657\""
+      },
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000.bin",
+          "bytes": 1031798784,
+          "sha256": "462414ca2f2b8cea3343c7faf762b8b7b978ab9b8bd371e2edf6bdb12f6c07be"
+        }
+      ]
+    },
+    {
+      "id": "c93207365db8055a57e9ab33",
+      "resume": {
+        "validator": "\"e72ab860084e40065ae0b4b3032489b7-720\""
+      },
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/_checkpoint/c93207365db8055a57e9ab33/000000.bin",
+          "bytes": 1073741824,
+          "sha256": "f7c26bf0a99cb529afa9eca054df2bd60240c6139335e04de287ba6fb44e3852"
+        },
+        {
+          "path": "datasets/raw/ocean/_checkpoint/c93207365db8055a57e9ab33/000001.bin",
+          "bytes": 1073741824,
+          "sha256": "8f41ee3e6180b125c74f6d8ac363bb3583b3732c0e6964ea6734a4fe30178e9b"
+        },
+        {
+          "path": "datasets/raw/ocean/_checkpoint/c93207365db8055a57e9ab33/000002.bin",
+          "bytes": 251658240,
+          "sha256": "e75fb03a4385d9917762de5896a2a3a060beb33d13f0a2f4502d720079ac3792"
+        }
+      ]
+    },
+    {
+      "id": "de7551bbb62d2027d3dfa586",
+      "resume": {
+        "validator": "\"5f48146141ef08a0710fac69cfbe9e92-833\""
+      },
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/_checkpoint/de7551bbb62d2027d3dfa586/000000.bin",
+          "bytes": 830472192,
+          "sha256": "944624dcbbe8acf4a268289a33e6d271ba23d491b6e0580f8d6142784a072be6"
+        }
+      ]
+    },
+    {
+      "id": "ed8179f48791c9afbc710b40",
+      "resume": {
+        "validator": "\"57a2dd303-6240fb4852d00\""
+      },
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/_checkpoint/ed8179f48791c9afbc710b40/000000.bin",
+          "bytes": 218103808,
+          "sha256": "9cf9ffa717f509956d5b0969d3c1ec9665dd8717713ada22c0dd366f1ef7a623"
+        }
+      ]
+    }
+  ],
+  "note": "Quarantined suspect bytes remain on the original computer and are not resumable assets."
+}

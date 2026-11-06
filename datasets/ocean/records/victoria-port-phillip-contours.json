@@ -1,0 +1,65 @@
+{
+  "id": "victoria-port-phillip-contours",
+  "title": "victoria-port-phillip-contours",
+  "source_url": "https://core-gis.mapshare.vic.gov.au/arcgis/rest/services/Mapshare/MarineCoastal/MapServer/25",
+  "attribution": "© State of Victoria, Department of Energy, Environment and Climate Action",
+  "licence": "CC BY 4.0",
+  "observed": {
+    "inventory_sha256": "fc9245660a8b8099d140e15beea0f6271311a809d189120667cd6d8aaa04bf5c",
+    "packages": [
+      {
+        "region": "port-phillip",
+        "kind": "published_contour",
+        "metadata": {
+          "file": "processed/port-phillip/contours-627623e89803.geojson",
+          "count": 1518,
+          "source_revision": 1,
+          "source_urls": [
+            "https://core-gis.mapshare.vic.gov.au/arcgis/rest/services/Mapshare/MarineCoastal/MapServer/25"
+          ],
+          "query_bbox": [
+            144.3,
+            -38.4,
+            145.18,
+            -37.8
+          ],
+          "downloaded_at": "2026-10-27T23:11:47.508033+00:00",
+          "sha256": "81399759d355944ba39ddb673bdfbd28654c50b3223325e020ba26e9c25a6ea2",
+          "source_url": "https://core-gis.mapshare.vic.gov.au/arcgis/rest/services/Mapshare/MarineCoastal/MapServer/25",
+          "datum": "Unverified — original DATUM code retained per feature",
+          "survey_date": "1971–2000 (catalogue temporal coverage)",
+          "licence": "CC BY 4.0",
+          "attribution": "© State of Victoria, Department of Energy, Environment and Climate Action"
+        }
+      }
+    ],
+    "assets": [
+      {
+        "path": "datasets/processed/port-phillip/contours-627623e89803.geojson",
+        "role": "processed",
+        "sha256": "8a61b336f63684b25374cb1993c32145e4d17f75c73f9cd6aa2302d7e606d1bc",
+        "bytes": 28125584
+      },
+      {
+        "path": "datasets/raw/port-phillip/contours-627623e89803/original.geojson",
+        "role": "raw",
+        "sha256": "81399759d355944ba39ddb673bdfbd28654c50b3223325e020ba26e9c25a6ea2",
+        "bytes": 27784914
+      },
+      {
+        "path": "datasets/raw/port-phillip/contours-627623e89803/service.json",
+        "role": "service_metadata",
+        "sha256": "9efe6bcdc5e3f48aacddaf34b28c083bb5b69769fce54a58fbc3f20916e824f9",
+        "bytes": 8814
+      }
+    ]
+  },
+  "schema_version": 1,
+  "review": {
+    "acquisition_status": "partial",
+    "quality": "unverified",
+    "datum_verified": false,
+    "blocker": "Only the inventoried regional or site-area extracts are acquired; full product coverage has not been established.",
+    "next_action": "Review source lineage, datum and coverage; acquire numeric rasters where missing."
+  }
+}

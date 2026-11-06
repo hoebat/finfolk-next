@@ -1,0 +1,55 @@
+{
+  "asset_id": "02086213259b8070ae7e6612",
+  "filename": "Mudjimba-Island-Bathymetry-0.5m-2024.zip",
+  "sha256": "d8dd683bf1fff5902a448e9a6d2c9c0409a665f681b5df44044deb29c3b00141",
+  "bytes": 12471082,
+  "inspection": {
+    "status": "container_inspected",
+    "native_members": [
+      "Mudjimba_Island_Bathymetry_2024_0_5m_MSL_cog.tif"
+    ],
+    "unpacked_bytes": 12866291
+  },
+  "zip_crc": "all_members_passed",
+  "checked_at": "2026-11-04T23:02:55Z",
+  "note": "Source archive integrity and native container/header inspection. Scientific accuracy and datum compatibility are not inferred.",
+  "raster_headers": [
+    {
+      "member": "Mudjimba_Island_Bathymetry_2024_0_5m_MSL_cog.tif",
+      "driver": "GTiff",
+      "crs": "EPSG:4326",
+      "width": 3290,
+      "height": 2938,
+      "bounds": [
+        153.107936746317,
+        -26.620426317286,
+        153.123654510757,
+        -26.606390210318
+      ],
+      "resolution": [
+        4.777436000002441e-06,
+        4.77743599999971e-06
+      ],
+      "bands": 1,
+      "types": [
+        "float32"
+      ],
+      "nodata": "3.4028234663852886e+38",
+      "units": [
+        "m"
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        "Band 1"
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    }
+  ],
+  "header_checked_at": "2026-11-04T23:07:06.885461+00:00"
+}

@@ -1,0 +1,26 @@
+{
+  "schema_version": 1,
+  "id": "gbr-2020",
+  "title": "Great Barrier Reef 30m 2020 compilation",
+  "source_url": "https://pid.geoscience.gov.au/dataset/ga/134142",
+  "attribution": "Great Barrier Reef 30m 2020 compilation; retain individual publisher attribution on acquisition",
+  "licence": "Verify individual product and distribution licence before acquisition",
+  "discovery": {
+    "states": [
+      "QLD"
+    ],
+    "resolution_m": 30,
+    "resolution_note": "Grid spacing does not establish measurement accuracy. Collections contain varying resolutions.",
+    "horizontal_datum": "unverified",
+    "vertical_datum": "unverified",
+    "survey_date": "varies; verify product metadata",
+    "reviewed_at": "2026-11-04"
+  },
+  "review": {
+    "acquisition_status": "discovered",
+    "quality": "mixed",
+    "datum_verified": false,
+    "blocker": "Native data and source footprints not yet validated",
+    "next_action": "Inspect product metadata, licence, numeric format and valid coverage; acquire a bounded region extract."
+  }
+}

@@ -1,0 +1,45 @@
+{
+  "reason": "Discard these partials from resume because the competing legacy runner could have interleaved valid-sized chunks. Files are preserved for forensic review.",
+  "assets": [
+    {
+      "asset_id": "c93207365db8055a57e9ab33",
+      "path": ".cache/ocean-acquisition/quarantine/c93207365db8055a57e9ab33-legacy-overlap-1793832970079986000",
+      "bytes": 1207959552
+    },
+    {
+      "asset_id": "ed8179f48791c9afbc710b40",
+      "path": ".cache/ocean-acquisition/quarantine/ed8179f48791c9afbc710b40-legacy-overlap-1793832970080239000",
+      "bytes": 461373440
+    },
+    {
+      "asset_id": "5ba4819823d5d1db37929454",
+      "path": ".cache/ocean-acquisition/quarantine/5ba4819823d5d1db37929454-legacy-overlap-1793832970080417000",
+      "bytes": 2181038080
+    },
+    {
+      "asset_id": "47433fb288ab2c227a993b0b",
+      "path": ".cache/ocean-acquisition/quarantine/47433fb288ab2c227a993b0b-legacy-overlap-1793832970080832000",
+      "bytes": 394264576
+    },
+    {
+      "asset_id": "248f7e716c66146d55f82ebf",
+      "path": ".cache/ocean-acquisition/quarantine/248f7e716c66146d55f82ebf-legacy-overlap-1793832970081037000",
+      "bytes": 125829120
+    },
+    {
+      "asset_id": "de03301cf84a722ed3b7a205",
+      "path": ".cache/ocean-acquisition/quarantine/de03301cf84a722ed3b7a205-legacy-overlap-1793832970081221000",
+      "bytes": 377487360
+    },
+    {
+      "asset_id": "4c516de6c227f88641b337ad",
+      "path": ".cache/ocean-acquisition/quarantine/4c516de6c227f88641b337ad-legacy-overlap-1793832970081390000",
+      "bytes": 419430400
+    },
+    {
+      "asset_id": "de7551bbb62d2027d3dfa586",
+      "path": ".cache/ocean-acquisition/quarantine/de7551bbb62d2027d3dfa586-legacy-overlap-1793832970081580000",
+      "bytes": 570425344
+    }
+  ]
+}

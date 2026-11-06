@@ -1,0 +1,129 @@
+{
+  "asset_id": "01d42ead7384c7c96033b403",
+  "filename": "20140011S-MerriMarineSanctuary.zip",
+  "sha256": "80ae7e2e4c14fa18da5d26ebb27d7a580f6c5c36071352327e8d03304b8142b5",
+  "bytes": 7952629,
+  "inspection": {
+    "status": "container_inspected",
+    "native_members": [
+      "32Bit_Geotiff/20140011S_Merri_Bathymetry_epsg32754_egm2008_Depth_1m_2014_20250714.tiff",
+      "32Bit_Geotiff/Merri_Bathymetry_Depth_1m_2014_cog.tiff",
+      "32Bit_Geotiff/Merri_Bathymetry_Depth_1m_2014_hs.tiff"
+    ],
+    "unpacked_bytes": 8572237
+  },
+  "zip_crc": "all_members_passed",
+  "checked_at": "2026-11-04T23:02:55Z",
+  "note": "Source archive integrity and native container/header inspection. Scientific accuracy and datum compatibility are not inferred.",
+  "raster_headers": [
+    {
+      "member": "32Bit_Geotiff/20140011S_Merri_Bathymetry_epsg32754_egm2008_Depth_1m_2014_20250714.tiff",
+      "driver": "GTiff",
+      "crs": "EPSG:32754",
+      "width": 9684,
+      "height": 3631,
+      "bounds": [
+        626589.5,
+        5746034.5,
+        636273.5,
+        5749665.5
+      ],
+      "resolution": [
+        1.0,
+        1.0
+      ],
+      "bands": 1,
+      "types": [
+        "float32"
+      ],
+      "nodata": "3.4028234663852886e+38",
+      "units": [
+        "m"
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        "Band 1"
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    },
+    {
+      "member": "32Bit_Geotiff/Merri_Bathymetry_Depth_1m_2014_cog.tiff",
+      "driver": "GTiff",
+      "crs": "EPSG:32754",
+      "width": 9684,
+      "height": 3631,
+      "bounds": [
+        626589.5,
+        5746034.5,
+        636273.5,
+        5749665.5
+      ],
+      "resolution": [
+        1.0,
+        1.0
+      ],
+      "bands": 1,
+      "types": [
+        "float32"
+      ],
+      "nodata": "3.4028234663852886e+38",
+      "units": [
+        "m"
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        "Band 1"
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    },
+    {
+      "member": "32Bit_Geotiff/Merri_Bathymetry_Depth_1m_2014_hs.tiff",
+      "driver": "GTiff",
+      "crs": "EPSG:32754",
+      "width": 9684,
+      "height": 3631,
+      "bounds": [
+        626589.5,
+        5746034.5,
+        636273.5,
+        5749665.5
+      ],
+      "resolution": [
+        1.0,
+        1.0
+      ],
+      "bands": 1,
+      "types": [
+        "uint8"
+      ],
+      "nodata": "0.0",
+      "units": [
+        null
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        null
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    }
+  ],
+  "header_checked_at": "2026-11-04T23:07:06.884045+00:00"
+}

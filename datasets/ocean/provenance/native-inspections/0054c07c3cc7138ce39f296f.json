@@ -1,0 +1,55 @@
+{
+  "asset_id": "0054c07c3cc7138ce39f296f",
+  "filename": "HunterMarineParkWorimiOuterGibber-Bathymetry-5m-2020.zip",
+  "sha256": "37d03b5305ae98184d9be34e5924a873e59f455e2f3374d7a7c5a02c28b643bd",
+  "bytes": 16299837,
+  "inspection": {
+    "status": "container_inspected",
+    "native_members": [
+      "Hunter_Marine_Park_2020_5m_MSL_cog.tif"
+    ],
+    "unpacked_bytes": 16662302
+  },
+  "zip_crc": "all_members_passed",
+  "checked_at": "2026-11-04T23:02:55Z",
+  "note": "Source archive integrity and native container/header inspection. Scientific accuracy and datum compatibility are not inferred.",
+  "raster_headers": [
+    {
+      "member": "Hunter_Marine_Park_2020_5m_MSL_cog.tif",
+      "driver": "GTiff",
+      "crs": "EPSG:32756",
+      "width": 6690,
+      "height": 5440,
+      "bounds": [
+        438230.0,
+        6385100.0,
+        471680.0,
+        6412300.0
+      ],
+      "resolution": [
+        5.0,
+        5.0
+      ],
+      "bands": 1,
+      "types": [
+        "float32"
+      ],
+      "nodata": "-9999.0",
+      "units": [
+        null
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "descriptions": [
+        null
+      ],
+      "datum_verification": "not_inferred",
+      "depth_classification": "not_inferred_from_extension"
+    }
+  ],
+  "header_checked_at": "2026-11-04T23:07:06.876677+00:00"
+}

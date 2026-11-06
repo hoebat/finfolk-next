@@ -1,0 +1,1647 @@
+{
+  "schema_version": 1,
+  "regions": [
+    {
+      "id": "vic-port-phillip",
+      "name": "Port Phillip Bay",
+      "state": "VIC",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "vcdem-2021",
+        "victoria-coastkit-contours",
+        "victoria-port-phillip-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "vic-western-port",
+      "name": "Western Port & Phillip Island",
+      "state": "VIC",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "vcdem-2021",
+        "victoria-coastkit-contours",
+        "victoria-port-phillip-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "vic-surf-coast",
+      "name": "Bellarine & Surf Coast",
+      "state": "VIC",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "vcdem-2021",
+        "victoria-coastkit-contours",
+        "victoria-port-phillip-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "vic-great-ocean-road",
+      "name": "Great Ocean Road",
+      "state": "VIC",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "vcdem-2021",
+        "victoria-coastkit-contours",
+        "victoria-port-phillip-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "vic-south-west-vic",
+      "name": "South West Coast",
+      "state": "VIC",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "vcdem-2021",
+        "victoria-coastkit-contours",
+        "victoria-port-phillip-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "vic-prom-coast",
+      "name": "Wilsons Promontory & Prom Coast",
+      "state": "VIC",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "vcdem-2021",
+        "victoria-coastkit-contours",
+        "victoria-port-phillip-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "vic-gippsland",
+      "name": "Gippsland Lakes & Ninety Mile Beach",
+      "state": "VIC",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "vcdem-2021",
+        "victoria-coastkit-contours",
+        "victoria-port-phillip-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "vic-east-gippsland",
+      "name": "East Gippsland",
+      "state": "VIC",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "vcdem-2021",
+        "victoria-coastkit-contours",
+        "victoria-port-phillip-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-sydney-east",
+      "name": "Sydney Eastern Beaches",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-sydney-north",
+      "name": "Sydney Northern Beaches",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-sydney-south",
+      "name": "Sydney Southern Beaches",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-jervis-bay",
+      "name": "Jervis Bay & Shoalhaven",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-illawarra",
+      "name": "Illawarra",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-eurobodalla",
+      "name": "Eurobodalla",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-sapphire",
+      "name": "Sapphire Coast",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-central-coast",
+      "name": "Central Coast",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-hunter",
+      "name": "Newcastle & Port Stephens",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-mid-north",
+      "name": "Mid North Coast",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-north-coast",
+      "name": "Coffs Coast & Clarence",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-northern-rivers",
+      "name": "Northern Rivers & Tweed",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-gold-coast",
+      "name": "Gold Coast",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-moreton",
+      "name": "Brisbane & Moreton Bay",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-sunshine",
+      "name": "Sunshine Coast",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-fraser",
+      "name": "Fraser Coast & K\u2019gari",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-bundaberg",
+      "name": "Bundaberg & Southern Great Barrier Reef",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-capricorn",
+      "name": "Capricorn Coast",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-mackay",
+      "name": "Mackay & Whitsundays",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-townsville",
+      "name": "Townsville & Magnetic Island",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-cassowary",
+      "name": "Cassowary Coast",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-cairns",
+      "name": "Cairns & Port Douglas",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-cape-york",
+      "name": "Cape York & Torres Strait",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-gulf-qld",
+      "name": "Gulf Country",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-perth",
+      "name": "Perth & Rottnest",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-peel",
+      "name": "Peel & Mandurah",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-south-west-wa",
+      "name": "Bunbury & Margaret River",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-great-southern",
+      "name": "Great Southern",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-esperance",
+      "name": "Esperance & Nullarbor",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-mid-west",
+      "name": "Mid West Coast",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-shark-bay",
+      "name": "Shark Bay & Gascoyne",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-ningaloo",
+      "name": "Ningaloo & Exmouth",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-pilbara",
+      "name": "Pilbara Coast",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-broome",
+      "name": "Broome & Dampier Peninsula",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-kimberley",
+      "name": "Kimberley Coast",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "sa-adelaide",
+      "name": "Adelaide & Fleurieu",
+      "state": "SA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "sa-kangaroo-island",
+      "name": "Kangaroo Island",
+      "state": "SA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "sa-yorke",
+      "name": "Yorke Peninsula",
+      "state": "SA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "sa-eyre",
+      "name": "Eyre Peninsula",
+      "state": "SA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "sa-far-west-sa",
+      "name": "Far West Coast",
+      "state": "SA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "sa-limestone",
+      "name": "Limestone Coast",
+      "state": "SA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "sa-spencer",
+      "name": "Spencer Gulf",
+      "state": "SA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "tas-hobart",
+      "name": "Hobart & South East",
+      "state": "TAS",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "seamap-tasmania-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "tas-east-tas",
+      "name": "East Coast",
+      "state": "TAS",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "seamap-tasmania-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "tas-north-east-tas",
+      "name": "North East & Bay of Fires",
+      "state": "TAS",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "seamap-tasmania-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "tas-north-tas",
+      "name": "North Coast",
+      "state": "TAS",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "seamap-tasmania-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "tas-north-west-tas",
+      "name": "North West Coast",
+      "state": "TAS",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "seamap-tasmania-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "tas-west-tas",
+      "name": "West Coast",
+      "state": "TAS",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "seamap-tasmania-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "tas-south-west-tas",
+      "name": "South West Coast",
+      "state": "TAS",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "seamap-tasmania-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "tas-bass-islands",
+      "name": "Bass Strait Islands",
+      "state": "TAS",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "seamap-tasmania-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nt-darwin",
+      "name": "Darwin & Top End",
+      "state": "NT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nt-tiwi",
+      "name": "Tiwi Islands",
+      "state": "NT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nt-west-arnhem",
+      "name": "West Arnhem Land",
+      "state": "NT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nt-east-arnhem",
+      "name": "East Arnhem Land",
+      "state": "NT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nt-gulf-nt",
+      "name": "Gulf of Carpentaria",
+      "state": "NT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "jbt-booderee",
+      "name": "Booderee & Jervis Bay Territory",
+      "state": "JBT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "ext-indian-ocean-islands",
+      "name": "Indian Ocean Territories",
+      "state": "EXT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "ext-norfolk",
+      "name": "Norfolk Island",
+      "state": "EXT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-other-coast",
+      "name": "Other coastal locations",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nt-other-coast",
+      "name": "Other coastal locations",
+      "state": "NT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "qld-other-coast",
+      "name": "Other coastal locations",
+      "state": "QLD",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "gbr-2020",
+        "imas-eez-composite",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "sa-other-coast",
+      "name": "Other coastal locations",
+      "state": "SA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "tas-other-coast",
+      "name": "Other coastal locations",
+      "state": "TAS",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "seamap-tasmania-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "vic-other-coast",
+      "name": "Other coastal locations",
+      "state": "VIC",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "vcdem-2021",
+        "victoria-coastkit-contours",
+        "victoria-port-phillip-contours"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "wa-other-coast",
+      "name": "Other coastal locations",
+      "state": "WA",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "northern-australia-2018",
+        "wa-bathymetry-surveys"
+      ],
+      "priority": "high",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "jbt-other-coast",
+      "name": "Other coastal locations",
+      "state": "JBT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "ext-other-coast",
+      "name": "Other coastal locations",
+      "state": "EXT",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    },
+    {
+      "id": "nsw-lord-howe",
+      "name": "Lord Howe Island",
+      "state": "NSW",
+      "candidate_datasets": [
+        "ausbathy-2024-shallow-5m",
+        "ausbathytopo-2026",
+        "ausseabed-local-surveys",
+        "imas-eez-composite",
+        "nsw-combined-bathymetry",
+        "nsw-marine-lidar-2018"
+      ],
+      "priority": "medium",
+      "goals": [
+        "numeric_depth",
+        "regional_contours",
+        "datum_verified",
+        "source_quality_reviewed"
+      ],
+      "blocker": "No numeric rasters acquired; candidate extents require cell/footprint verification.",
+      "next_action": "Acquire and validate numeric bathymetry; assess contour gaps and datum evidence independently."
+    }
+  ]
+}

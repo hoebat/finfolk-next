@@ -1,0 +1,78 @@
+{
+  "asset_id": "c5a82d5d0feaa35f7f390138",
+  "sha256": "4f1409ce9edcd451a850611791c300eeb383d905ce48fa1823a9b8ca5e6ddec6",
+  "zip_crc": "all_members_passed",
+  "native_rasters": [
+    {
+      "member": "AusBathyTopo_Australia_2026_250m/AusBathyTopo_Australia_2026_250m_MSL_cog.tif",
+      "driver": "GTiff",
+      "width": 32001,
+      "height": 20799,
+      "bands": 1,
+      "types": [
+        "float32"
+      ],
+      "crs": "EPSG:4326",
+      "resolution": [
+        0.0025,
+        0.0025
+      ],
+      "nodata": "3.3999999521443642e+38",
+      "units": [
+        null
+      ],
+      "descriptions": [
+        null
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "bounds_native": [
+        92.000138888874,
+        -59.997360839921,
+        172.002638888874,
+        -7.9998608399209985
+      ]
+    },
+    {
+      "member": "AusBathyTopo_Australia_2026_250m/AusBathyTopo_Australia_2026_250m_MSL_tid.tif",
+      "driver": "GTiff",
+      "width": 32161,
+      "height": 20882,
+      "bands": 1,
+      "types": [
+        "uint8"
+      ],
+      "crs": "EPSG:4326",
+      "resolution": [
+        0.0024999999999999996,
+        0.0024999999999999996
+      ],
+      "nodata": "None",
+      "units": [
+        null
+      ],
+      "descriptions": [
+        null
+      ],
+      "scales": [
+        1.0
+      ],
+      "offsets": [
+        0.0
+      ],
+      "bounds_native": [
+        91.800138888874,
+        -60.00236083992099,
+        172.202638888874,
+        -7.797360839920998
+      ]
+    }
+  ],
+  "scientific_limitations": [
+    "Grid/source quality and depth sign remain governed by publisher metadata; header inspection alone does not establish accuracy."
+  ]
+}

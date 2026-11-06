@@ -1,0 +1,23 @@
+{
+  "source_catalog": "https://discover.data.vic.gov.au/dataset/victorian-coastal-digital-elevation-model-2021-vcdem-250cm",
+  "publisher_portal": "https://datashare.maps.vic.gov.au/search?md=8ea2cdd5-864d-4c66-8e03-55a9d31d8329",
+  "catalog_fields": {
+    "uuid": "8ea2cdd5-864d-4c66-8e03-55a9d31d8329",
+    "defaulttitle": "Victorian Coastal Digital Elevation Model 2021 (VCDEM) - 250cm",
+    "download_url": "https://cl-isd-prd-datashare-s3-delivery.s3.amazonaws.com/PrePackages/VicCoastDEM2021_250cm.zip (38.1Gb)",
+    "can_order_dataset": "ALL-USERS",
+    "orderableondatashare": "True",
+    "available_formats": "ECW,GeoTIFF,JPEG,JPEG 2000,TIFF",
+    "crs": "EPSG Geodetic Parameter",
+    "rowresolution": "10mcm",
+    "columnresolution": "10mcm",
+    "abstract": "The Victorian Coastal Digital Elevation Model 2021 (VCDEM) incorporates several new datasets to previous versions of the dataset created in 2017 and 2010, integrating new bathymetric datasets to the VCDEM product. The VCDEM dataset is foundational to the Victorian Coastal Mapping Program (VCMP) and updates to the VCDEM will improve the understanding of dynamic coastal processes and their associated risks advanced by the VCMP.\n\nThe VCDEM2022 produced by Veris is comprised of two major outputs:\n1.\tHIGH RESOLUTION VCDEM2021\nContains gridded data sources with a gridded spatial resolution (pixel size) equal or superior to 10m in addition to vertical uncertainty meeting IHO Order 1b specifications (ie better than 0.5m). The high resolution VCDEM2021 will necessarily contain gaps where data does not meet these conditions.\n2.\tSEAMLESS VCDEM2021\nContains gridded data sources with a gridded spatial resolution (pixel size) equal or superior to 10m in addition to vertical uncertainty meeting IHO Order 1b specifications (ie better than 0.5m). Low resolution bathymetric data is used in areas with no high resolution bathymetric coverage and algorithms are used to merge bathymetric to a seamless product."
+  },
+  "licence": "Creative Commons Attribution 4.0 International; DataVic catalog licence",
+  "direct_download_head": {
+    "status": 200,
+    "bytes": 39062003888,
+    "etag": "\"f41ea497fed1fcd6a3284d1cbc432489-4657\"",
+    "last_modified": "Wed, 25 Sep 2024 01:50:54 GMT"
+  }
+}

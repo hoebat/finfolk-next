@@ -1,0 +1,19 @@
+{
+  "publisher_api": "https://datasets.seed.nsw.gov.au/api/3/action/package_show?id=nsw-bathymetry-sourced-from-multibeam-and-marine-lidar-surveys",
+  "download_url": "https://datasets.seed.nsw.gov.au/dataset/aa8f268e-a23d-4d27-b046-f60c45f8349b/resource/2ef6c816-04b1-4aa7-9f06-e727b9c0cdd9/download/bathymetrymosaic_marinelidar_mbes.zip",
+  "licence": "Creative Commons Attribution 4.0",
+  "method": "GET",
+  "checked_at": "2026-11-04T22:43:32.705275+00:00",
+  "range_check": {
+    "status": 206,
+    "content_range": "bytes 0-1023/1686561321",
+    "zip_signature": [
+      80,
+      75,
+      3,
+      4
+    ],
+    "etag": "\"5517357f23c803a07c3aab3470cc6513-322\""
+  },
+  "note": "The publisher issues a signed GET redirect. HEAD can fail despite a valid download. Signed redirect query parameters are intentionally omitted."
+}

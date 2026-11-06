@@ -45,7 +45,7 @@ make dev
 
 ## Data and verification
 
-Public survey sources are stored in Git LFS. The frozen national directory and coastline inputs are under `resources/atlas`; a fresh clone can reproduce the public site without a developer's cache. Existing publisher attribution, metadata and survey limitations are retained. To refresh upstream sources deliberately, use the acquisition scripts; normal builds do not refresh them automatically.
+Public survey sources are stored in Git LFS. The independent [ocean dataset catalog](datasets/ocean/README.md) and [cross-computer handoff](docs/OCEAN_DATA_HANDOFF.md) cover native bathymetry archives and paused download recovery. The frozen national directory and coastline inputs are under `resources/atlas`; a fresh clone can reproduce the public site without a developer's cache. Existing publisher attribution, metadata and survey limitations are retained. To refresh upstream sources deliberately, use the acquisition scripts; normal builds do not refresh them automatically.
 
 `make test` runs Clojure contract/release checks, Python atlas tests, and the existing generated-runtime, SQL/API and desktop/mobile UI tests. Tests cover cache keys, concurrency, invalidation, committed-write refresh failures, authentication changes, navigation/history, public forwarding, member actions and admin restrictions. External Meta messaging remains governed by its existing feature switches.
 

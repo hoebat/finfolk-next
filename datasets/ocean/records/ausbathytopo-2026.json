@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "id": "ausbathytopo-2026",
+  "title": "AusBathyTopo Australia 250m 2026",
+  "source_url": "https://ecat.ga.gov.au/geonetwork/srv/api/records/7ff1f558-8ef4-427b-9696-007b76aab2c6?language=eng",
+  "attribution": "AusBathyTopo Australia 250m 2026; retain individual publisher attribution on acquisition",
+  "licence": "Verify individual product and distribution licence before acquisition",
+  "discovery": {
+    "states": [
+      "*"
+    ],
+    "resolution_m": 250,
+    "resolution_note": "Grid spacing does not establish measurement accuracy. Collections contain varying resolutions.",
+    "horizontal_datum": "unverified",
+    "vertical_datum": "unverified",
+    "survey_date": "varies; verify product metadata",
+    "reviewed_at": "2026-11-04"
+  },
+  "review": {
+    "acquisition_status": "partial",
+    "quality": "context",
+    "datum_verified": false,
+    "blocker": "Native data and source footprints not yet validated",
+    "next_action": "Inspect product metadata, licence, numeric format and valid coverage; acquire a bounded region extract."
+  },
+  "acquisitions": [
+    {
+      "id": "c5a82d5d0feaa35f7f390138",
+      "url": "https://files.ausseabed.gov.au/survey/AusBathyTopo_Australia_2026_250m.zip",
+      "filename": "AusBathyTopo_Australia_2026_250m.zip",
+      "state": "acquired",
+      "bytes": 2380292468,
+      "licence_evidence": "https://ecat.ga.gov.au/geonetwork/srv/api/records/7ff1f558-8ef4-427b-9696-007b76aab2c6?language=eng",
+      "etag": "\"dc9fe4e3e714817d6f854c31df29a45d-455\"",
+      "last_modified": "Fri, 07 Aug 2026 06:20:09 GMT",
+      "sha256": "4f1409ce9edcd451a850611791c300eeb383d905ce48fa1823a9b8ca5e6ddec6",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/ausbathytopo-2026/c5a82d5d0feaa35f7f390138/000000.bin",
+          "bytes": 1073741824,
+          "sha256": "f3081a363d14c3e9ec896e300832db9fe6e16d7935c7eb3b4d558e1caeacd6ac"
+        },
+        {
+          "path": "datasets/raw/ocean/ausbathytopo-2026/c5a82d5d0feaa35f7f390138/000001.bin",
+          "bytes": 1073741824,
+          "sha256": "1bf2d391a0e304c3bec71e7929047fc6e8dcf0b335e7a131946a8a5cbd9fd835"
+        },
+        {
+          "path": "datasets/raw/ocean/ausbathytopo-2026/c5a82d5d0feaa35f7f390138/000002.bin",
+          "bytes": 232808820,
+          "sha256": "ca87ace38bf6f243037c5dbe26cd7dd9683b93444c7ba361719d17921bae4d10"
+        }
+      ],
+      "acquired_at": "2026-11-04T10:11:40Z",
+      "numeric_validation": "pending"
+    }
+  ]
+}

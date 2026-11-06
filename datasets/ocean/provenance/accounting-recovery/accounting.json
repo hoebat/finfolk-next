@@ -1,0 +1,30 @@
+{
+  "reason": "A pre-lock legacy runner and subsequent runners could overwrite the shared counter. Exact historical transfer totals are unavailable. This debit conservatively covers retained bytes, possible replaced complete originals, failed read buffers across known runs, and metadata/probe traffic.",
+  "known_runner_pids": [
+    90025,
+    91857,
+    98991,
+    3164,
+    6329
+  ],
+  "attempted_asset_count": 18,
+  "retained_bytes": 11670841340,
+  "unique_completed_bytes": 2611144700,
+  "possible_replaced_original_bytes": 10444578800,
+  "failed_buffer_upper_bound_bytes": 2264924160,
+  "metadata_allowance_bytes": 268435456,
+  "pre_repair_budget_debit_bytes": 24648779756,
+  "evidence": [
+    ".cache/ocean-acquisition/reconciliation/20261104T224745Z/processes.txt",
+    ".cache/ocean-acquisition/reconciliation/20261104T224745Z/ledger.json",
+    ".cache/ocean-acquisition/reconciliation/20261104T224745Z/after-ledger.json",
+    "datasets/ocean/acquisition-manifest.json"
+  ],
+  "basis": [
+    "All attempted assets still have matching resume/source validators; immutable-version transfers were not intentionally discarded.",
+    "At most one complete replacement per known runner is reserved for every completed original.",
+    "Three failed 8MiB reads per attempted asset per known runner are reserved.",
+    "Quarantined and unreferenced retained .bin bytes are included, without deleting any data."
+  ],
+  "measured_total_is_exact": false
+}

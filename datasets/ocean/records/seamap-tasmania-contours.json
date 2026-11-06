@@ -1,0 +1,65 @@
+{
+  "id": "seamap-tasmania-contours",
+  "title": "seamap-tasmania-contours",
+  "source_url": "https://geoserver.imas.utas.edu.au/geoserver/imas/wfs",
+  "attribution": "Lucieer, V.L. (2007), SeaMap Tasmania Bathymetric Data. Tasmanian Aquaculture and Fisheries Institute, University of Tasmania. Accessed 28 October 2026.",
+  "licence": "CC BY 4.0",
+  "observed": {
+    "inventory_sha256": "fc9245660a8b8099d140e15beea0f6271311a809d189120667cd6d8aaa04bf5c",
+    "packages": [
+      {
+        "region": "tas-southeast",
+        "kind": "published_contour",
+        "metadata": {
+          "file": "processed/tas-southeast/contours-178df542b1c2.geojson",
+          "count": 1445,
+          "source_revision": 2,
+          "source_urls": [
+            "https://geoserver.imas.utas.edu.au/geoserver/imas/wfs"
+          ],
+          "query_bbox": [
+            143.5,
+            -43.8,
+            148.6,
+            -39.5
+          ],
+          "downloaded_at": "2026-10-29T08:58:45.748760+00:00",
+          "sha256": "963eca84717613470fa0da8075c672ea1b90843b29f53359aa05f9bffc111c52",
+          "source_url": "https://geoserver.imas.utas.edu.au/geoserver/imas/wfs",
+          "datum": "MSL (EPSG:5715)",
+          "survey_date": "SeaMap Tasmania compilation, published 2007; acquisition dates vary",
+          "licence": "CC BY 4.0",
+          "attribution": "Lucieer, V.L. (2007), SeaMap Tasmania Bathymetric Data. Tasmanian Aquaculture and Fisheries Institute, University of Tasmania. Accessed 28 October 2026."
+        }
+      }
+    ],
+    "assets": [
+      {
+        "path": "datasets/processed/tas-southeast/contours-178df542b1c2.geojson",
+        "role": "processed",
+        "sha256": "5783969ccbe086a1f5cb7cbcb74fcce23432ae8a1de752d44be8106bd251499c",
+        "bytes": 265889204
+      },
+      {
+        "path": "datasets/raw/tas-southeast/contours-178df542b1c2/original.geojson",
+        "role": "raw",
+        "sha256": "963eca84717613470fa0da8075c672ea1b90843b29f53359aa05f9bffc111c52",
+        "bytes": 265593254
+      },
+      {
+        "path": "datasets/raw/tas-southeast/contours-178df542b1c2/service.json",
+        "role": "service_metadata",
+        "sha256": "c5d15ec7919b27bddef38c44af00c80152e75e63f2b6927ebc8f67bb5742a944",
+        "bytes": 645
+      }
+    ]
+  },
+  "schema_version": 1,
+  "review": {
+    "acquisition_status": "partial",
+    "quality": "unverified",
+    "datum_verified": false,
+    "blocker": "Only the inventoried regional or site-area extracts are acquired; full product coverage has not been established.",
+    "next_action": "Review source lineage, datum and coverage; acquire numeric rasters where missing."
+  }
+}

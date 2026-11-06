@@ -1,0 +1,89 @@
+{
+  "schema_version": 1,
+  "id": "wa-bathymetry-surveys",
+  "title": "WA Bathymetric surveys collection",
+  "source_url": "https://www.transport.wa.gov.au/marine/charts-warnings-current-conditions/coastal-data-charts/geospatial-data",
+  "attribution": "WA Bathymetric surveys collection; retain individual publisher attribution on acquisition",
+  "licence": "Coastal data: CC BY 4.0; chart and Notices to Mariners conditions are separately stated by the publisher.",
+  "discovery": {
+    "states": [
+      "WA"
+    ],
+    "resolution_m": null,
+    "resolution_note": "Grid spacing does not establish measurement accuracy. Collections contain varying resolutions.",
+    "horizontal_datum": "unverified",
+    "vertical_datum": "unverified",
+    "survey_date": "varies; verify product metadata",
+    "reviewed_at": "2026-11-04"
+  },
+  "review": {
+    "acquisition_status": "partial",
+    "quality": "unverified",
+    "datum_verified": false,
+    "blocker": "Native data and source footprints not yet validated",
+    "next_action": "Inspect product metadata, licence, numeric format and valid coverage; acquire a bounded region extract."
+  },
+  "acquisitions": [
+    {
+      "id": "0048b89494540da1d533770a",
+      "url": "https://dotazprdauegisextpubst01.blob.core.windows.net/transport-wa-public/bathymetry/rasters/HD20180814_Mean.bag",
+      "filename": "HD20180814_Mean.bag",
+      "state": "acquired",
+      "bytes": 155340544,
+      "licence_evidence": "https://www.transport.wa.gov.au/marine/charts-warnings-current-conditions/coastal-data-charts/disclaimer-copyright",
+      "etag": "0x8DAC846D0E7A1B6",
+      "last_modified": "Thu, 17 Nov 2022 02:52:50 GMT",
+      "sha256": "f220f9b499d884ec2f97ab7ebc11261f66f74b2e256b6c9811943bf3ae4fcfd3",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/wa-bathymetry-surveys/0048b89494540da1d533770a/000000.bin",
+          "bytes": 155340544,
+          "sha256": "f220f9b499d884ec2f97ab7ebc11261f66f74b2e256b6c9811943bf3ae4fcfd3"
+        }
+      ],
+      "acquired_at": "2026-11-04T17:58:15Z",
+      "numeric_validation": "pending"
+    },
+    {
+      "id": "009e423317a8bb6943e47492",
+      "url": "https://dotazprdauegisextpubst01.blob.core.windows.net/transport-wa-public/bathymetry/rasters/DH20210426_Laser.bag",
+      "filename": "DH20210426_Laser.bag",
+      "state": "acquired",
+      "bytes": 1969920,
+      "licence_evidence": "https://www.transport.wa.gov.au/marine/charts-warnings-current-conditions/coastal-data-charts/disclaimer-copyright",
+      "etag": "0x8DAC60B95269BD1",
+      "last_modified": "Mon, 14 Nov 2022 06:43:47 GMT",
+      "sha256": "92d61f9b86ebcc64b8c72fa1cd9fa65b6965d3bc226299bc4901463f04584517",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/wa-bathymetry-surveys/009e423317a8bb6943e47492/000000.bin",
+          "bytes": 1969920,
+          "sha256": "92d61f9b86ebcc64b8c72fa1cd9fa65b6965d3bc226299bc4901463f04584517"
+        }
+      ],
+      "acquired_at": "2026-11-04T19:12:26Z",
+      "numeric_validation": "pending"
+    },
+    {
+      "id": "010cd09024d35eae1d9e59e0",
+      "url": "https://dotazprdauegisextpubst01.blob.core.windows.net/transport-wa-public/bathymetry/rasters/EX20210429_Laser.bag",
+      "filename": "EX20210429_Laser.bag",
+      "state": "acquired",
+      "bytes": 6835968,
+      "licence_evidence": "https://www.transport.wa.gov.au/marine/charts-warnings-current-conditions/coastal-data-charts/disclaimer-copyright",
+      "etag": "0x8DAC60B9FD15157",
+      "last_modified": "Mon, 14 Nov 2022 06:44:05 GMT",
+      "sha256": "390a4e69d9b5ec839764f8edbceb19ce735861384e1c78780cc7982e3280745e",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/wa-bathymetry-surveys/010cd09024d35eae1d9e59e0/000000.bin",
+          "bytes": 6835968,
+          "sha256": "390a4e69d9b5ec839764f8edbceb19ce735861384e1c78780cc7982e3280745e"
+        }
+      ],
+      "acquired_at": "2026-11-04T22:27:04Z",
+      "numeric_validation": "pending"
+    }
+  ],
+  "licence_url": "https://www.transport.wa.gov.au/marine/charts-warnings-current-conditions/coastal-data-charts/disclaimer-copyright"
+}

@@ -17,3 +17,6 @@ resources/atlas/*.geojson filter=lfs diff=lfs merge=lfs -text
 # Preserve immutable applied SQL bytes, including generator label whitespace.
 backend/migrations/*.sql whitespace=-blank-at-eol
 resources/finfolkdb/*.sql whitespace=-blank-at-eol
+
+# Bathymetric Attributed Grids retain numeric depths and uncertainty in LFS.
+*.bag filter=lfs diff=lfs merge=lfs -text

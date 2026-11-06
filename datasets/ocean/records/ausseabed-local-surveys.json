@@ -1,0 +1,108 @@
+{
+  "schema_version": 1,
+  "id": "ausseabed-local-surveys",
+  "title": "AusSeabed local survey acquisitions",
+  "source_url": "https://ausseabed.gov.au/data/bathymetry",
+  "attribution": "AusSeabed local survey acquisitions; retain individual publisher attribution on acquisition",
+  "licence": "Verify individual product and distribution licence before acquisition",
+  "discovery": {
+    "states": [
+      "*"
+    ],
+    "resolution_m": null,
+    "resolution_note": "Grid spacing does not establish measurement accuracy. Collections contain varying resolutions.",
+    "horizontal_datum": "unverified",
+    "vertical_datum": "unverified",
+    "survey_date": "varies; verify product metadata",
+    "reviewed_at": "2026-11-04"
+  },
+  "review": {
+    "acquisition_status": "partial",
+    "quality": "unverified",
+    "datum_verified": false,
+    "blocker": "Native data and source footprints not yet validated",
+    "next_action": "Inspect product metadata, licence, numeric format and valid coverage; acquire a bounded region extract."
+  },
+  "acquisitions": [
+    {
+      "id": "0054c07c3cc7138ce39f296f",
+      "url": "https://files.ausseabed.gov.au/survey/HunterMarineParkWorimiOuterGibber-Bathymetry-5m-2020.zip",
+      "filename": "HunterMarineParkWorimiOuterGibber-Bathymetry-5m-2020.zip",
+      "state": "acquired",
+      "bytes": 16299837,
+      "licence_evidence": "https://ausseabed.gov.au/data/bathymetry",
+      "etag": "\"14dfb594241b45e9daf5c1b5237af44c-4\"",
+      "last_modified": "Thu, 02 Oct 2025 02:01:38 GMT",
+      "sha256": "37d03b5305ae98184d9be34e5924a873e59f455e2f3374d7a7c5a02c28b643bd",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/ausseabed-local-surveys/0054c07c3cc7138ce39f296f/000000.bin",
+          "bytes": 16299837,
+          "sha256": "37d03b5305ae98184d9be34e5924a873e59f455e2f3374d7a7c5a02c28b643bd"
+        }
+      ],
+      "acquired_at": "2026-11-04T17:57:10Z",
+      "numeric_validation": "pending"
+    },
+    {
+      "id": "018675801c5a2cc116c345f6",
+      "url": "https://files.ausseabed.gov.au/survey/PortPhillipBayDriftAlgae-Bathymetry-2m-2018.zip",
+      "filename": "PortPhillipBayDriftAlgae-Bathymetry-2m-2018.zip",
+      "state": "acquired",
+      "bytes": 8148542,
+      "licence_evidence": "https://ausseabed.gov.au/data/bathymetry",
+      "etag": "\"eb681119df5bb57540b9291ab7c191bd-2\"",
+      "last_modified": "Wed, 11 Feb 2026 00:30:08 GMT",
+      "sha256": "3883dfa4d5eaf7bccab2deae8e21e2566def0bc25105bded9dec86d234a252b6",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/ausseabed-local-surveys/018675801c5a2cc116c345f6/000000.bin",
+          "bytes": 8148542,
+          "sha256": "3883dfa4d5eaf7bccab2deae8e21e2566def0bc25105bded9dec86d234a252b6"
+        }
+      ],
+      "acquired_at": "2026-11-04T17:58:22Z",
+      "numeric_validation": "pending"
+    },
+    {
+      "id": "01d42ead7384c7c96033b403",
+      "url": "https://files.ausseabed.gov.au/survey/20140011S-MerriMarineSanctuary.zip",
+      "filename": "20140011S-MerriMarineSanctuary.zip",
+      "state": "acquired",
+      "bytes": 7952629,
+      "licence_evidence": "https://ausseabed.gov.au/data/bathymetry",
+      "etag": "\"e8669101a612360714ae092fbd451598-2\"",
+      "last_modified": "Tue, 02 Dec 2025 01:16:06 GMT",
+      "sha256": "80ae7e2e4c14fa18da5d26ebb27d7a580f6c5c36071352327e8d03304b8142b5",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/ausseabed-local-surveys/01d42ead7384c7c96033b403/000000.bin",
+          "bytes": 7952629,
+          "sha256": "80ae7e2e4c14fa18da5d26ebb27d7a580f6c5c36071352327e8d03304b8142b5"
+        }
+      ],
+      "acquired_at": "2026-11-04T19:12:25Z",
+      "numeric_validation": "pending"
+    },
+    {
+      "id": "02086213259b8070ae7e6612",
+      "url": "https://files.ausseabed.gov.au/survey/Mudjimba-Island-Bathymetry-0.5m-2024.zip",
+      "filename": "Mudjimba-Island-Bathymetry-0.5m-2024.zip",
+      "state": "acquired",
+      "bytes": 12471082,
+      "licence_evidence": "https://ausseabed.gov.au/data/bathymetry",
+      "etag": "\"789b60cf2024bffd9adf975acd08b161-3\"",
+      "last_modified": "Thu, 02 Oct 2025 02:26:16 GMT",
+      "sha256": "d8dd683bf1fff5902a448e9a6d2c9c0409a665f681b5df44044deb29c3b00141",
+      "parts": [
+        {
+          "path": "datasets/raw/ocean/ausseabed-local-surveys/02086213259b8070ae7e6612/000000.bin",
+          "bytes": 12471082,
+          "sha256": "d8dd683bf1fff5902a448e9a6d2c9c0409a665f681b5df44044deb29c3b00141"
+        }
+      ],
+      "acquired_at": "2026-11-04T22:27:01Z",
+      "numeric_validation": "pending"
+    }
+  ]
+}
