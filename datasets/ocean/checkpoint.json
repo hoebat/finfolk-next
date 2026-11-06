@@ -33,9 +33,321 @@
       },
       "parts": [
         {
-          "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000.bin",
           "bytes": 1031798784,
-          "sha256": "462414ca2f2b8cea3343c7faf762b8b7b978ab9b8bd371e2edf6bdb12f6c07be"
+          "sha256": "462414ca2f2b8cea3343c7faf762b8b7b978ab9b8bd371e2edf6bdb12f6c07be",
+          "name": "000000.bin",
+          "segments": [
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000000.bin",
+              "bytes": 16777216,
+              "sha256": "9a8ffa9424a9f3cb965aae890f0024d3b55fbd42d29e333024afbb0b2f7b2add"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000001.bin",
+              "bytes": 16777216,
+              "sha256": "050e0ad3eae97a9c3daef459c01759446b8d85ee2375a716c25dd27b25f09c77"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000002.bin",
+              "bytes": 16777216,
+              "sha256": "129bbfa36f9eec8b1e04c101a405a01196751971957d527633d097c371f6a11a"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000003.bin",
+              "bytes": 16777216,
+              "sha256": "c5095de47d8ac0f4891881023fdc2bffc54332c52b682085d89da3777a43cbd1"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000004.bin",
+              "bytes": 16777216,
+              "sha256": "228cd6dafb9d4c81be423b17038f1712a04e2266f9a75820bf963dabb94dc1fe"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000005.bin",
+              "bytes": 16777216,
+              "sha256": "275fcc8aaa5a2f96f0a703e71b5f2d9f6f40682a07e4cb0b00c41416b6beb792"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000006.bin",
+              "bytes": 16777216,
+              "sha256": "41e1697daa43bb529b97c7bfccb1ab3da81b718bdbfe63bf2f2c0ce620722401"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000007.bin",
+              "bytes": 16777216,
+              "sha256": "e86a0747de2a6d435f9539da2d49a9b6b57d093d6f5339789b6a1dbeaef9d843"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000008.bin",
+              "bytes": 16777216,
+              "sha256": "62b385fd9414f02497cd4d74e9d45327cf7956dd892c2f08ca74555e63f665a4"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000009.bin",
+              "bytes": 16777216,
+              "sha256": "59ed9114ce452dc8c584abb619a652700e967a61509c7afc62c1522ce4e295cf"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000010.bin",
+              "bytes": 16777216,
+              "sha256": "be6c1c4aa618c78d4bdb9dece691ea0b979606faa639dd98a0d4477a240f6ca3"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000011.bin",
+              "bytes": 16777216,
+              "sha256": "6b572c33f00a128a694ff063f050bb7c1c111859f46b8c55e35e37595e3c7cf1"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000012.bin",
+              "bytes": 16777216,
+              "sha256": "407ace51a81747dc3cb50f27657fd570bc12620e848587178a7a0f792fb3aa1a"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000013.bin",
+              "bytes": 16777216,
+              "sha256": "660b548cb049866d6ce63e6fd2668b6b68d43a53e2aadf446c22f8d1d98f8871"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000014.bin",
+              "bytes": 16777216,
+              "sha256": "8b340b48230635ba8b8f86f1503263650a09c65f396788d21238ccaacfa10a44"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000015.bin",
+              "bytes": 16777216,
+              "sha256": "bfe4ea6ed2c960196db843454076f9e4adfa8563e1ac5fd6ab2ca6bd7b3a7fdc"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000016.bin",
+              "bytes": 16777216,
+              "sha256": "252914d03e840076d0adb929673ba0e47984fb7b94cc441cac508bceef9a2625"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000017.bin",
+              "bytes": 16777216,
+              "sha256": "88df2b88e0609b36a21cde548cbf983bf3dd2088ceede2f089d18b5e0780b695"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000018.bin",
+              "bytes": 16777216,
+              "sha256": "63f6207f7a89f960333641b66e288939c313e7a309c640b3562fab7f1c9a7f86"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000019.bin",
+              "bytes": 16777216,
+              "sha256": "0566c5addd13600273b33999891d5a729c1151aeae86c0444d5dcfe2536a0c89"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000020.bin",
+              "bytes": 16777216,
+              "sha256": "3e1e898f7acbcac47eb33e5ba6bfc129edc11125c03a7b3b3125fad67061932e"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000021.bin",
+              "bytes": 16777216,
+              "sha256": "b3eca38f6203265350ffb398b1f7ad342709a2a01675152e3598c266ebddd4e1"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000022.bin",
+              "bytes": 16777216,
+              "sha256": "34c09f2d151fd36654cf1c15c684263c28a42c63be3fac95ac299c78f8a53369"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000023.bin",
+              "bytes": 16777216,
+              "sha256": "36a76956090cce43b158d78b3f3d6240424b6c3f05c896e5bdee1de4a7251adf"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000024.bin",
+              "bytes": 16777216,
+              "sha256": "e1fc98cd76d09ee465dbc9038bd2859852a339e4a0238dfd9fa7a16ba2b51c0b"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000025.bin",
+              "bytes": 16777216,
+              "sha256": "639848b4b6c228d7478c9ef6cf6cd4b968fee407d252acd92f1eb4e550536f44"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000026.bin",
+              "bytes": 16777216,
+              "sha256": "c829f97611996579b7949c1ed504d68a144e29d7528292e27d13e91ca81904bf"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000027.bin",
+              "bytes": 16777216,
+              "sha256": "0535a84e220c4124b6e3b488a11eab47e5364388692fa29600cc77fce66ee244"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000028.bin",
+              "bytes": 16777216,
+              "sha256": "3d73df02c6b13e74874b529036cd3a88b496621c9054046431edf83a9f3911b1"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000029.bin",
+              "bytes": 16777216,
+              "sha256": "0c354082e56cca759fb6a6678f3b6fde9017f834bacf22594cfb9fe7c9edff3d"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000030.bin",
+              "bytes": 16777216,
+              "sha256": "e81e53330ea2d28d1b64ee3a690b165d1ed3714c78fbfba4fcff353095839bdc"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000031.bin",
+              "bytes": 16777216,
+              "sha256": "d206969be8eafd17f83e0369d6ea7d5701952e1e022c1c82fe8484b6c41c95e8"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000032.bin",
+              "bytes": 16777216,
+              "sha256": "d1643b657f011bd8e1fe9b863ebf764356793fc419ed5e7dc2fc98a1362192fe"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000033.bin",
+              "bytes": 16777216,
+              "sha256": "c8a3073fb728a993727e45272434496d49d89104d44437c6608268a31617b27d"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000034.bin",
+              "bytes": 16777216,
+              "sha256": "cef71fc356516701c941f0e66178b4a8c905afdc136c77d3b98ba91e3358cbe8"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000035.bin",
+              "bytes": 16777216,
+              "sha256": "985da42cab3530f4894d2f97fa1f21f529db5c4dd153181a831c545b24e13535"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000036.bin",
+              "bytes": 16777216,
+              "sha256": "a4cc282f4a87fe47d31686d1e0db39ac2cbd388d352d851d8a2c2fce07a7f63f"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000037.bin",
+              "bytes": 16777216,
+              "sha256": "b8548d8e68bdddfa83ceea8e4e56e82068b4a472f047dafabb0dbbd022430566"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000038.bin",
+              "bytes": 16777216,
+              "sha256": "52b144ad742f413f61c876598780444a5b972fe878c2e243efcaa661cf78259a"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000039.bin",
+              "bytes": 16777216,
+              "sha256": "0500683ab45402c4b386bdd533bc26c66583ceded53fbb8dd9f14523e526448d"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000040.bin",
+              "bytes": 16777216,
+              "sha256": "edfa04acbc9faa57d1615ce8f4e18f5de042ae16e8c9664a84c545556ee4d72c"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000041.bin",
+              "bytes": 16777216,
+              "sha256": "c62528535925817a1145e581ce6d31614808b93be279e4ec49d93865cad7ed6c"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000042.bin",
+              "bytes": 16777216,
+              "sha256": "c7e77d2b67324118f0283a63f5d5670b574fb847815b7485ddb5ac22dde5989b"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000043.bin",
+              "bytes": 16777216,
+              "sha256": "8b705301a5f0d9e8ad15795e4689dc586ed979b4a04d29ba7493ab9e1e118773"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000044.bin",
+              "bytes": 16777216,
+              "sha256": "b1e9d460e2b9e63f88633a71043b72cf5d5b196f66aa31b89960a6ca3548ad00"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000045.bin",
+              "bytes": 16777216,
+              "sha256": "87678415cf911807c9ee67fd548df3898b8f49f786f595ed9ccf86c33b0cf8bd"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000046.bin",
+              "bytes": 16777216,
+              "sha256": "0d63ff1f107ea3aab1e14689cc5b06253cb87d0e040ff8bf1bc89eaf1f44312f"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000047.bin",
+              "bytes": 16777216,
+              "sha256": "09eea49a0a090a3ad138c78a0d6d30f3691de24a63aa66f79a9595a754a20f41"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000048.bin",
+              "bytes": 16777216,
+              "sha256": "239c1a11dade20312a2cadfda2334761791c854d61491f85fd80c34c0e074bde"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000049.bin",
+              "bytes": 16777216,
+              "sha256": "28655829e2ab149cc4aa24552a39061155ed3e7e493cf03b5081fe8292810b46"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000050.bin",
+              "bytes": 16777216,
+              "sha256": "d9ce279eb9ce1df7ab9bb186e61753b451230847018cf68ce5652a0ab6f37e15"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000051.bin",
+              "bytes": 16777216,
+              "sha256": "811dd85a692a93ec4dfe4a4028503b0ef3746c95478ef76d6bf02bdc34dd0c43"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000052.bin",
+              "bytes": 16777216,
+              "sha256": "e9bfd77b670211d369f4259d0eaf403f76f769009c258f99d8fe02ecde7ca391"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000053.bin",
+              "bytes": 16777216,
+              "sha256": "519c0ddc110d07799d8de72d4d99604c920970225959d9f57f8edb963067f341"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000054.bin",
+              "bytes": 16777216,
+              "sha256": "faedfceb0e6f807435abfcc54aca5ce8725b358577f739bb297f598253bc8ad3"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000055.bin",
+              "bytes": 16777216,
+              "sha256": "43e8a87e9591d299d35209349995ccb85ca0948df67683e56e3aff1ea75627b8"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000056.bin",
+              "bytes": 16777216,
+              "sha256": "56f2b636c546e5f89adbfdba0addeb897e8cb7e67b51a58d60e5d9aca92d98e3"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000057.bin",
+              "bytes": 16777216,
+              "sha256": "5cdc43b6855aae0abd3a4f999baa1da3d63d916470e4b715681a4a7b6b603297"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000058.bin",
+              "bytes": 16777216,
+              "sha256": "4175be0be93713b1e85a03f5ab6681a8ade1fe6ebb0b68b71c12ad57eff3122d"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000059.bin",
+              "bytes": 16777216,
+              "sha256": "aabd55f08dd3d9bf84da12e940e605298a3cc6dce6ba2c577c72f339f2545c0d"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000060.bin",
+              "bytes": 16777216,
+              "sha256": "654ee746e80d6d1d3ee3b340330962435d4aeb0274c6317d2c9902ee0deab8d0"
+            },
+            {
+              "path": "datasets/raw/ocean/_checkpoint/2cde2da92d40c8f645111d82/000000/16777216/000061.bin",
+              "bytes": 8388608,
+              "sha256": "eb9b120c53a5e7999fc25c3df94904cd5c4ba3780f3f066c7dfef76bdfa2a9fb"
+            }
+          ]
         }
       ]
     },

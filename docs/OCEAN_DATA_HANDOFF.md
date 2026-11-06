@@ -21,31 +21,34 @@ the uncommitted app/API integrations described in earlier conversation.
 
 ## Get the same files on another computer
 
-The initial LFS upload encountered a GitHub network timeout after uploading only
-one small object. GitHub rejected the full-data branch because 19 LFS objects were
-still unknown. The delivery branch **`handoff/ocean-data-2026-11-06`** therefore
-contains code, catalogs, inspection evidence and checkpoint metadata, but deliberately
-omits the 20 new binary payload files. Full-data commits `783e423` and `4cc002f`
-are preserved locally on `fix/sign-in-theme-card` on the originating computer.
-Do not assume that branch's remote copy contains those commits until its push
-succeeds. Do not reset the budget or discard the local originals.
+Delivery branch: **`handoff/ocean-data-2026-11-06`**. It initially carried code
+and metadata only; a follow-up adds all completed originals and resumable partials.
+Confirm the final delivery message before assuming the payload push is complete.
 
-On the originating computer, retry **all referenced objects**, even after the Git
-branch is already pushed:
+The first large uploads timed out or restarted after system/lid sleep. One final
+checkpoint chunk was therefore repackaged into 62 transport segments of at most
+16 MiB. `restore` checks each segment and the original whole-chunk checksum, then
+reconstructs the same 1 GiB-or-smaller acquisition chunk. Saved offsets, original
+bytes, source validators and the 100 GB ledger are unchanged.
+
+The old full-data commits on the originating computer's `fix/sign-in-theme-card`
+branch reference a superseded, unuploaded large checkpoint object. They are retained
+locally for recovery; do not use that history for this delivery. The handoff branch
+preserves the equivalent data with smaller transport objects and without requiring
+the obsolete object. The original unsplit checkpoint copy remains in ignored cache.
+Unrelated application/database working-tree changes are still local only.
+
+If a transfer retry is needed on the originating computer, use this delivery branch:
 
 ```sh
-git lfs push --all origin fix/sign-in-theme-card
-git push origin fix/sign-in-theme-card
+git lfs push --all origin handoff/ocean-data-2026-11-06
+git push origin handoff/ocean-data-2026-11-06
 ```
 
-This checks server availability and skips existing remote objects. After the full
-branch is pushed, a receiving agent can fetch/switch to it before hydrating the
-payloads. Preserve any new work on the handoff branch when switching. The original
-machine retains all completed files and checkpoint payloads. If bandwidth remains
-limited, copy the repository's `datasets/raw/ocean/` tree directly between machines
-and run the same verification/restore commands; the `.bin` files must contain actual
-bytes, not LFS pointers. Local partial/cache copies alone do not constitute an LFS
-upload. Acquisition must remain paused until transfer and verification are done.
+Completed remote objects are reused. Keep the computer awake and its lid open
+until transfer completes. If bandwidth is limited, copying actual payload files
+from `datasets/raw/ocean/` directly is also valid; verify and restore afterward.
+Do not reset the budget or discard the local originals.
 
 Git LFS is required for data work. Clone the code/handoff delivery branch:
 
@@ -59,10 +62,9 @@ python3 -m venv .venv
 .venv/bin/python scripts/ocean_catalog.py validate --metadata-only
 ```
 
-Once the full-data branch has been successfully pushed, or after copying actual
-payload files directly from the original computer, hydrate/verify/restore. If using
-the pushed full-data branch, first fetch and switch to `fix/sign-in-theme-card`
-(preserving any new code work), then:
+Once the payload follow-up on the same handoff branch has been successfully
+pushed, pull that branch, then hydrate/verify/restore (or copy actual payload files
+directly from the original computer):
 
 ```sh
 git lfs pull --include='datasets/**,resources/atlas/**' --exclude=''
@@ -101,7 +103,8 @@ The frozen checkpoint has:
 - Charged budget: **30,895,411,715 bytes**.
 - Remaining allowance: **69,104,588,285 bytes**.
 - Completed originals: **10**, totalling **4,297,706,021 bytes**.
-- Partial originals: **5**, totalling **4,496,293,888 saved bytes** in seven chunks.
+- Partial originals: **5**, totalling **4,496,293,888 saved bytes** in seven logical chunks
+  transported in 68 files (one logical chunk uses 62 smaller segments).
 - `received_bytes_is_lower_bound: true`.
 
 The charged amount is not usable acquired data or an exact measured traffic

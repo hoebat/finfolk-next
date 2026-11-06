@@ -58,3 +58,36 @@ class CheckpointTests(unittest.TestCase):
         (self.cache / 'partial/asset/000000.bin').write_bytes(b'newer-data')
         with self.assertRaisesRegex(ValueError, 'refusing to overwrite'):
             cp.restore(self.root)
+
+    def test_segmented_transport_rebuilds_the_same_logical_chunk(self):
+        cp.export(self.root)
+        result = cp.segment(self.root, 'asset', 3)
+        self.assertEqual(len(result['replaced_payload_paths']), 1)
+        checkpoint = acq.load(self.root / cp.CHECKPOINT)
+        part = checkpoint['partials'][0]['parts'][0]
+        self.assertEqual([p['bytes'] for p in part['segments']], [3, 3, 2])
+        (self.root / result['replaced_payload_paths'][0]).unlink()
+        (self.cache / 'partial/asset/000000.bin').unlink()
+        cp.restore(self.root)
+        self.assertEqual((self.cache / 'partial/asset/000000.bin').read_bytes(), b'12345678')
+        self.assertEqual(acq.load(self.cache / 'ledger.json')['charged_bytes'], 50)
+
+    def test_corrupt_segment_does_not_replace_a_saved_partial(self):
+        cp.export(self.root)
+        cp.segment(self.root, 'asset', 3)
+        part = acq.load(self.root / cp.CHECKPOINT)['partials'][0]['parts'][0]
+        (self.root / part['segments'][1]['path']).write_bytes(b'bad')
+        with self.assertRaisesRegex(ValueError, 'corrupt'):
+            cp.restore(self.root)
+        self.assertEqual((self.cache / 'partial/asset/000000.bin').read_bytes(), b'12345678')
+
+    def test_resegment_keeps_logical_bytes_and_uses_smaller_transport(self):
+        cp.export(self.root)
+        cp.segment(self.root, 'asset', 3)
+        result = cp.segment(self.root, 'asset', 2)
+        self.assertEqual(len(result['replaced_payload_paths']), 3)
+        part = acq.load(self.root / cp.CHECKPOINT)['partials'][0]['parts'][0]
+        self.assertEqual([p['bytes'] for p in part['segments']], [2, 2, 2, 2])
+        (self.cache / 'partial/asset/000000.bin').unlink()
+        cp.restore(self.root)
+        self.assertEqual((self.cache / 'partial/asset/000000.bin').read_bytes(), b'12345678')

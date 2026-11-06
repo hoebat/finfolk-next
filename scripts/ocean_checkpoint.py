@@ -1,6 +1,7 @@
 """Transfer a paused ocean acquisition between computers without resetting its budget."""
 import argparse
 import fcntl
+import hashlib
 import json
 import re
 import shutil
@@ -66,6 +67,52 @@ def export(root):
                 'charged_bytes': ledger['charged_bytes'], 'checkpoint': CHECKPOINT}
 
 
+def segment(root, ident, segment_bytes=16*1024**2):
+    """Repackage a checkpoint asset; logical acquisition chunk sizes stay unchanged."""
+    if not 0 < segment_bytes <= acq.PART:
+        raise ValueError('Invalid transport segment size')
+    with stopped(root):
+        checkpoint = acq.load(root / CHECKPOINT)
+        partial = next((a for a in checkpoint['partials'] if a['id'] == ident), None)
+        if partial is None:
+            raise ValueError('Unknown checkpoint asset')
+        replaced = []
+        for part in partial['parts']:
+            if part['bytes'] <= segment_bytes or ('segments' in part and all(s['bytes'] <= segment_bytes for s in part['segments'])):
+                continue
+            previous = [s['path'] for s in part['segments']] if 'segments' in part else [part['path']]
+            source = root / '.cache/ocean-acquisition/partial' / ident / part['name'] if 'segments' in part else acq.safe(root, part['path'])
+            if source.stat().st_size != part['bytes'] or acq.digest(source) != part['sha256']:
+                raise ValueError('Corrupt original checkpoint payload')
+            if shutil.disk_usage(root).free < acq.RESERVE + part['bytes']:
+                raise ValueError('Insufficient segmentation space')
+            segments = []
+            with source.open('rb') as src:
+                remaining = part['bytes']
+                while remaining:
+                    target = root / 'datasets/raw/ocean/_checkpoint' / ident / source.stem / str(segment_bytes) / f'{len(segments):06d}.bin'
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    size = min(remaining, segment_bytes)
+                    temporary = target.with_suffix('.segment-tmp')
+                    with temporary.open('wb') as out:
+                        left = size
+                        while left:
+                            block = src.read(min(left, acq.BLOCK))
+                            if not block:
+                                raise ValueError('Truncated checkpoint source')
+                            out.write(block)
+                            left -= len(block)
+                    temporary.replace(target)
+                    segments.append({'path': target.relative_to(root).as_posix(), 'bytes': size, 'sha256': acq.digest(target)})
+                    remaining -= size
+            replaced.extend(previous)
+            part.pop('path', None)
+            part.update(name=source.name, segments=segments)
+        acq.save(root / CHECKPOINT, checkpoint)
+        return {'asset_id': ident, 'replaced_payload_paths': replaced,
+                'note': 'Original payloads are retained locally; exclude replaced paths from a new delivery tree.'}
+
+
 def restore(root):
     with stopped(root) as cache:
         checkpoint = acq.load(root / CHECKPOINT)
@@ -85,19 +132,34 @@ def restore(root):
             directory = cache / 'partial' / ident
             expected_names = set()
             for i, part in enumerate(partial['parts']):
-                source = acq.safe(root, part['path'])
-                if source.name != f'{i:06d}.bin' or not 0 < part['bytes'] <= acq.PART:
+                name = part.get('name') or Path(part['path']).name
+                if name != f'{i:06d}.bin' or not 0 < part['bytes'] <= acq.PART:
                     raise ValueError('Invalid checkpoint part')
                 if i < len(partial['parts'])-1 and part['bytes'] != acq.PART:
                     raise ValueError('Incomplete non-final checkpoint part')
-                if source.stat().st_size != part['bytes'] or acq.digest(source) != part['sha256']:
-                    raise ValueError('Missing, unhydrated or corrupt checkpoint payload: ' + part['path'])
-                target = directory / source.name
-                expected_names.add(source.name)
+                payloads = part.get('segments', [part])
+                if not payloads or sum(p['bytes'] for p in payloads) != part['bytes']:
+                    raise ValueError('Invalid checkpoint segment extent')
+                sources = []
+                whole = hashlib.sha256()
+                for j, payload in enumerate(payloads):
+                    source = acq.safe(root, payload['path'])
+                    if 'segments' in part and source.name != f'{j:06d}.bin':
+                        raise ValueError('Invalid segment order')
+                    if source.stat().st_size != payload['bytes'] or acq.digest(source) != payload['sha256']:
+                        raise ValueError('Missing, unhydrated or corrupt checkpoint payload: ' + payload['path'])
+                    with source.open('rb') as src:
+                        for block in iter(lambda: src.read(acq.BLOCK), b''):
+                            whole.update(block)
+                    sources.append(source)
+                if whole.hexdigest() != part['sha256']:
+                    raise ValueError('Logical checkpoint chunk checksum mismatch')
+                target = directory / name
+                expected_names.add(name)
                 if target.exists() and (target.stat().st_size != part['bytes'] or acq.digest(target) != part['sha256']):
                     raise ValueError('Existing partial differs; refusing to overwrite: ' + str(target))
                 if not target.exists():
-                    copies.append((source, target, part['bytes']))
+                    copies.append((sources, target, part['bytes']))
             if any(p.name not in expected_names for p in acq.parts_for(directory)):
                 raise ValueError('Existing partial contains newer parts')
             resume = directory / 'resume.json'
@@ -112,10 +174,13 @@ def restore(root):
         if not ledgerpath.exists() or acq.load(ledgerpath)['charged_bytes'] < ledger['charged_bytes']:
             acq.save(ledgerpath, ledger)
         acq.save(cache / 'stop-request.json', {'reason': 'Restored checkpoint; acquisition remains paused'})
-        for source, target, _ in copies:
+        for sources, target, _ in copies:
             target.parent.mkdir(parents=True, exist_ok=True)
             temporary = target.with_suffix('.restore-tmp')
-            shutil.copyfile(source, temporary)
+            with temporary.open('wb') as out:
+                for source in sources:
+                    with source.open('rb') as src:
+                        shutil.copyfileobj(src, out, acq.BLOCK)
             temporary.replace(target)
         for path, value in resumes:
             acq.save(path, value)
@@ -125,7 +190,11 @@ def restore(root):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('command', choices=['export', 'restore'])
+    parser.add_argument('command', choices=['export', 'restore', 'segment'])
+    parser.add_argument('--asset-id')
     parser.add_argument('--root', type=Path, default=Path(__file__).resolve().parents[1])
     args = parser.parse_args()
-    print(json.dumps(export(args.root) if args.command == 'export' else restore(args.root), indent=2))
+    if args.command == 'segment' and not args.asset_id:
+        parser.error('segment requires --asset-id')
+    result = export(args.root) if args.command == 'export' else restore(args.root) if args.command == 'restore' else segment(args.root, args.asset_id)
+    print(json.dumps(result, indent=2))

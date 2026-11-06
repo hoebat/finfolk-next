@@ -203,3 +203,11 @@ request in place. Acquisition refuses to start from a missing or older ledger
 when a portable checkpoint exists. Keep only one computer acquiring this batch.
 Read the handoff before explicitly resuming. A later transfer needs a fresh
 export; the committed checkpoint is an immutable snapshot, not live shared state.
+
+For an interrupted large LFS object, `scripts/ocean_checkpoint.py segment
+--asset-id ASSET_ID` can split its checkpoint transport payload into 16 MiB
+segments. Restore verifies segment and original chunk hashes and reconstructs the
+exact original acquisition layout. Exclude superseded payload paths from the
+delivery tree; if those objects never uploaded, earlier commits referencing them
+cannot be included in the delivery history. Preserve them locally and follow the
+handoff's delivery branch. This does not alter the acquisition budget or offsets.
