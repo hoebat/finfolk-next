@@ -9,6 +9,10 @@ offline support, page models, database declarations, messaging integrations,
 environment tooling, tests and deployment configuration. Some backend features
 remain gated or unreleased; this handoff does not install SQL or enable them.
 
+The same consolidated application is integrated into `main`, which is the
+normal development branch going forward. The handoff branch remains a named
+starting point for the move.
+
 The independent design workspace is `hoebat/finfolk-app`, branch
 `handoff/atelier-goloka-2026-11-07`, checked out locally as `finfolk-atelier`.
 Keep it separate from the application. It contains the current Atelier and its
@@ -50,6 +54,17 @@ archives and verified Git bundles are under
 The Git bundles preserve historical branches and stashes. Working-file archives
 preserve uncommitted source and non-reproducible ignored files, including local
 configuration; treat those archives as private and do not publish them.
+
+Fourteen redundant linked worktrees were removed after verifying those archives
+and source copies. The active local checkouts are `finfolk-next` and the
+independent `finfolk-atelier`. The legacy `depth-explorer` repository is clean on
+its recovery branch and remains a historical source archive. Its `main` and
+production deployment history were retained.
+
+Validation passed for application generation, generated-file parity, the full
+test suite and build. The independent Atelier passed its server/theme tests,
+route/history checks and desktop/mobile product navigation checks. Its current
+LFS objects also passed local integrity verification.
 
 The legacy repository also retains `archive/legacy-workingcopy-2026-11-07` and
 `archive/auth-workingcopy-2026-11-07` for the old main/auth working copies. They
