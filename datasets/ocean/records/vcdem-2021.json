@@ -17,10 +17,23 @@
     "reviewed_at": "2026-11-04"
   },
   "review": {
-    "acquisition_status": "discovered",
+    "acquisition_status": "partial",
     "quality": "mixed",
     "datum_verified": false,
     "blocker": "",
-    "next_action": "Acquire the public full native package and inspect numeric contents, datum and source-quality metadata."
+    "next_action": "Coastal-only acquisition and file integrity checks complete; review vertical datum, source quality and valid-water coverage before runtime raster registration"
+  },
+  "coastal_extracts_reference": "datasets/ocean/coastal/vcdem-500m.json",
+  "coastal_scope": {
+    "state": "complete_integrity_verified",
+    "distance_m": 500,
+    "band_sides": "both sides of mapped coastline",
+    "tile_count": 528,
+    "cog_count": 512,
+    "empty_tiles": 16,
+    "raw_bytes": 2073909683,
+    "cog_bytes": 744464503,
+    "manifest": "datasets/ocean/coastal/vcdem-500m.json",
+    "verification": "datasets/ocean/provenance/vcdem-coast-500m-verification.json"
   }
 }

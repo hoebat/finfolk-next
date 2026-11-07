@@ -1,0 +1,19 @@
+{
+  "etag": "\"f41ea497fed1fcd6a3284d1cbc432489-4657\"",
+  "member": {
+    "name": "VicCoastDEM2021_250cm/Tiled_NoBlend/Z55/VCDEM_GDA2020z55_250cm_Gaps_e5699_n5800.asc",
+    "compression": 8,
+    "crc32": 2142371688,
+    "uncompressed_bytes": 26842274,
+    "compressed_bytes": 2797000,
+    "local_header_offset": 38489830614,
+    "horizontal_crs": "EPSG:7855",
+    "nominal_bounds": [
+      569999.6147534847,
+      5795000.107296828,
+      574999.6147534847,
+      5800000.107296828
+    ]
+  },
+  "data_offset": 38489830727
+}
