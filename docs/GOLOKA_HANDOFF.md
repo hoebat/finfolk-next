@@ -18,6 +18,16 @@ The independent design workspace is `hoebat/finfolk-app`, branch
 Keep it separate from the application. It contains the current Atelier and its
 source artwork, examples and prototype tools. See its `GOLOKA.md`.
 
+The artwork transfer is separate from the completed application handoff. During
+that transfer, the explicitly source-only Atelier branch
+`handoff/atelier-code-goloka-2026-11-07` can be cloned with
+`GIT_LFS_SKIP_SMUDGE=1`. The full Atelier branch is published after its artwork
+upload. A monitor keeps the originating Mac awake during the upload, retries
+failed transfers and verifies the remote LFS objects. Its local receipt is
+`.finfolk-consolidation/2026-11-07/atelier-transfer-status.json`; `state: complete`
+means the full branch and payload were verified. The app on `main` is ready for
+development independently of that prototype artwork transfer.
+
 ## Clone the application
 
 ```sh
@@ -71,6 +81,9 @@ The legacy repository also retains `archive/legacy-workingcopy-2026-11-07` and
 are recovery references, not application deployment branches. The current app
 has its own Clojure source and native React implementation; legacy snapshots
 must be reviewed before reusing any code.
+
+`archive/worktree-history-2026-11-07` also retains all thirteen legacy working-copy
+and retired-worktree tips as Git ancestors, preserving their distinct histories.
 
 ## Production ownership
 
