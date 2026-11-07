@@ -5,5 +5,5 @@ try{
  await migrate(db);await db.query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',false,false),('banned','Banned',true,true);
  INSERT INTO finfolk.members(user_id,profile) VALUES('alice','{"displayName":"Alice"}'),('bob','{"displayName":"Bob"}'),('banned','{}');
  INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney');`);
- await new Promise((resolve,reject)=>{const child=spawn('lein',['test',':with','finfolkdb'],{stdio:'inherit',env:process.env});child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(Error('Clojure database facts failed')));});
+ await new Promise((resolve,reject)=>{const child=spawn('lein',['run','-m','finfolkdb.test','--legacy'],{stdio:'inherit',env:process.env});child.on('error',reject);child.on('exit',code=>code===0?resolve():reject(Error('Clojure database facts failed')));});
 }finally{await db.end();}

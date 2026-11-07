@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import {
   parseCommentCommand as parse,
   checkinDay,
+  commentAllowed, commentRollout, publicStatus,
 } from "../backend/instagram-commands.mjs";
 for (const text of ["/STATUS @finfolk.com.au", "@FinFolk.com.au /status"])
   assert.equal(parse(text).command, "status");
@@ -59,3 +60,22 @@ assert.ok(
   }).confirmation,
 );
 console.log("Instagram comment parser, dates, DST and midnight checks passed.");
+
+const rollout = {INSTAGRAM_COMMAND_REPLIES_ENABLED:'true', INSTAGRAM_COMMENT_MODE:'public', INSTAGRAM_COMMENT_ACTIVE_SINCE:'2026-11-01T00:00:00Z'};
+const fresh = {timestamp:'2026-11-02T00:00:00Z',media:{id:'123'}};
+const clock = new Date('2026-11-03T00:00:00Z');
+assert.equal(commentAllowed(rollout,fresh,clock),true);
+for(const env of [{}, {...rollout,INSTAGRAM_COMMENT_MODE:'paused'}, {...rollout,INSTAGRAM_COMMENT_ACTIVE_SINCE:''}, {...rollout,INSTAGRAM_COMMAND_REPLIES_ENABLED:'false'}]) assert.equal(commentAllowed(env,fresh,clock),false);
+assert.equal(commentAllowed(rollout,{...fresh,timestamp:'2026-10-31T00:00:00Z'},clock),false);
+assert.equal(commentAllowed(rollout,{...fresh,timestamp:'2026-11-04T00:00:00Z'},clock),false);
+assert.equal(commentAllowed({...rollout,INSTAGRAM_COMMENT_MODE:'pilot'},fresh,clock),false);
+assert.equal(commentAllowed({...rollout,INSTAGRAM_COMMENT_MODE:'pilot',INSTAGRAM_COMMENT_TEST_POSTS:'123'},fresh,clock),true);
+assert.deepEqual(commentRollout({}).commands,['help','status']);
+assert.deepEqual(commentRollout({INSTAGRAM_COMMENT_COMMANDS:'unknown'}).commands,[]);
+
+const queries = [];
+assert.match(await publicStatus(async sql=>{queries.push(sql);return [];},'https://www.instagram.com/p/example/'),/has not been published/);
+assert.equal(queries.length,2);
+assert.ok(queries.every(sql=>!sql.includes("state='pending'") && !sql.includes('instagram_connections')));
+assert.match(await publicStatus(async()=>[{id:'public-trip'}],'https://www.instagram.com/p/example/'),/public-trip/);
+assert.equal(await publicStatus(async()=>{throw Error('Should not query without a source');},null),'This post has not been published on FinFolk.');

@@ -1,7 +1,10 @@
+import {registerEnvironmentAdmin} from './environment-admin.mjs';
+import {registerEnvironment} from './environment.mjs';
 import {registerEventsPublic,registerEventsPrivate} from './events.mjs';
 import {registerDirectoryPublic,registerDirectoryPrivate} from './directory.mjs';
 import {discoverPeople} from './people-discovery.mjs';
 import {registerSitesPublic,registerSitesPrivate} from './sites.mjs';
+import {registerSiteNotesPublic,registerSiteNotesPrivate} from './site-notes.mjs';
 import {tiktokActions,tiktokAction,tiktokCallback,tiktokReady} from './tiktok.mjs';
 import {mediaAction,mediaActions,sessionMedia} from './media-imports.mjs';
 import {publicPage} from './public-pages.mjs';
@@ -14,6 +17,7 @@ import { postAction, publicPosts, postsEnabled } from './posts.mjs';
 import { invitationAction } from './invitations.mjs';
 import { instagramAction } from './instagram-actions.mjs';
 import { instagramWebhook } from './instagram-webhook.mjs';
+import {registerFinniesPublic,registerFinniesPrivate,eraseFinnies} from './finnies.mjs';
 import { createShopCheckout } from './shop.mjs';
 import { Hono } from 'hono';
 import { createRemoteJWKSet, jwtVerify } from 'jose';
@@ -53,6 +57,7 @@ export function managedVerifier(env) {
 }
 export function createAPI({
   db,
+  siteNotesDb=null,
   verify,
   origins = [
     'https://finfolk.com.au',
@@ -102,9 +107,12 @@ export function createAPI({
   app.get('/trips/:id', async c=>c.json(await publicTrip(q,c.req.param('id'))));
   app.get('/instagram/webhook', c => instagramWebhook(c.req.raw, c.env || {}, q));
   app.post('/instagram/webhook', c => instagramWebhook(c.req.raw, c.env || {}, q));
+  registerFinniesPublic(app,{db});
   registerSitesPublic(app,{db});
+  registerSiteNotesPublic(app,{db:siteNotesDb});
+  registerEnvironment(app,{db});
   registerDirectoryPublic(app,{db});registerEventsPublic(app,{db});
-  registerMessagingAPI(app,{db,verify,fetcher:messagingFetch,registerPrivate:()=>{registerSitesPrivate(app,{db});registerEventsPrivate(app,{db});registerDirectoryPrivate(app,{db,fetcher:messagingFetch});}});
+  registerMessagingAPI(app,{db,verify,fetcher:messagingFetch,registerPrivate:()=>{registerSiteNotesPrivate(app,{db:siteNotesDb});registerFinniesPrivate(app,{db});registerEnvironmentAdmin(app,{db});registerSitesPrivate(app,{db});registerEventsPrivate(app,{db});registerDirectoryPrivate(app,{db,fetcher:messagingFetch});}});
   app.get('/health', (c) =>
     c.json({ ok: true, service: 'FinFolk account API' }),
   );
@@ -602,6 +610,7 @@ export function createAPI({
         await tq('UPDATE finfolk.site_imports SET owner_id=NULL WHERE owner_id=$1',[uid]);
         await tq('DELETE FROM finfolk.trips WHERE owner_id=$1',[uid]);
         await tq("UPDATE finfolk.instagram_discoveries SET state='hidden',owner_id=NULL,author_id=NULL,author=NULL,caption='',updated_at=now() WHERE owner_id=$1",[uid]);
+        await eraseFinnies(tq,uid);
         await tq('DELETE FROM finfolk.points_ledger WHERE user_id=$1',[uid]);
         await tq('DELETE FROM finfolk.instagram_actions WHERE owner_id=$1',[uid]);
         await tq('DELETE FROM finfolk.instagram_connect_codes WHERE consumed_by=$1 OR (provider_scope,sender_id) IN (SELECT provider_scope,sender_id FROM finfolk.instagram_connections WHERE user_id=$1)',[uid]);

@@ -1,3 +1,4 @@
+import {secondsLabel} from './trip-model.js';
 import {publicOperation} from './app-backbone.js';
 import { socialGallery } from "./media.js";
 import { tripURL } from "./trip-model.js";
@@ -7,14 +8,7 @@ const el = (tag, text, cls) => {
   if (cls) n.className = cls;
   return n;
 };
-export const secondsLabel = (value) =>
-  value === null || value === undefined
-    ? "—"
-    : value >= 3600
-      ? `${Math.floor(value / 3600)}h ${Math.floor((value % 3600) / 60)}m ${Math.round(value % 60)}s`
-      : value >= 60
-        ? `${Math.floor(value / 60)}m ${Math.round(value % 60)}s`
-        : `${Math.round(value)}s`;
+export {secondsLabel} from './trip-model.js';
 const depth = (value) => (value === null ? "—" : `${value} m`);
 export function reportBody(report) {
   const root = el("article", undefined, "trip-report"),

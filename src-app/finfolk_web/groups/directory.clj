@@ -1,6 +1,7 @@
 (ns finfolk-web.groups.directory)
 (def OPERATIONS
- {"pageAccess" {"name" "pageAccess" "path" "/v1/me/directory/access" "method" "POST" "transport" "rest" "auth" true "write" false "domain" "directoryOwner"}
+ {"directoryCreate" {"name" "directoryCreate" "path" "/v1/me/directory/create" "method" "POST" "transport" "rest" "auth" true "write" true "domain" "directoryOwner"}
+ "pageAccess" {"name" "pageAccess" "path" "/v1/me/directory/access" "method" "POST" "transport" "rest" "auth" true "write" false "domain" "directoryOwner"}
 "pageInvite" {"name" "pageInvite" "path" "/v1/me/directory/invite" "method" "POST" "transport" "rest" "auth" true "write" true "domain" "directoryOwner"}
 "pageInviteRedeem" {"name" "pageInviteRedeem" "path" "/v1/me/directory/invite-redeem" "method" "POST" "transport" "rest" "auth" true "write" true "domain" "directoryOwner"}
 "pageInviteRevoke" {"name" "pageInviteRevoke" "path" "/v1/me/directory/invite-revoke" "method" "POST" "transport" "rest" "auth" true "write" true "domain" "directoryOwner"}

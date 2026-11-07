@@ -114,11 +114,13 @@ causing raced counters and suspect partials. A conservative historical debit of
 in `datasets/ocean/provenance/accounting-recovery/`. Later reservations are atomic
 and shared across up to four worker threads. Failed reads may overcount safely.
 
-About 8.925 GB of suspect quarantined chunks remain in the originating machine's
-ignored cache. They are not exported and must not be treated as usable partials.
-Reconstructed files and local reports are also disposable, ignored cache outputs.
-The original forensic process/log files remain local; the portable evidence is
-an accounting summary, not a replacement for that complete forensic cache.
+On 7 November 2026 the user requested local cleanup and a lean transfer to Goloka.
+The two temporary ocean verification worktrees, reconstructed inspection originals,
+unusable quarantined buffers and superseded checkpoint copies were removed after
+retaining checksums and audit metadata under `.cache/ocean-cleanup-evidence/`.
+All completed dataset parts, current checkpoint transport segments, valid partial
+downloads, source reviews, Git history and uncommitted application work remain.
+The historical conservative budget debit and live ledger were not reduced.
 
 Completed originals have per-part and whole-file SHA-256 checks. All six completed
 ZIP containers passed full member CRC checks. These are locally computed integrity

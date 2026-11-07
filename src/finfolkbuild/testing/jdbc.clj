@@ -1,7 +1,8 @@
 (ns finfolkbuild.testing.jdbc
   "Disposable local PostgreSQL fixture access for code.test facts."
   (:require [clojure.string :as str]))
-(defn connection []
+(def ^:dynamic *connection-fn* nil)
+(defn local-connection []
   (let [url (or (System/getenv "FINFOLK_TEST_DATABASE_URL") (throw (ex-info "Run make test-db" {})))
         uri (java.net.URI. url)
         [user password] (str/split (.getUserInfo uri) #":" 2)]
@@ -11,6 +12,7 @@
     (Class/forName "org.postgresql.Driver")
     (java.sql.DriverManager/getConnection
       (str "jdbc:postgresql://" (.getHost uri) ":" (.getPort uri) (.getPath uri)) user password)))
+(defn connection [] (if *connection-fn* (*connection-fn*) (local-connection)))
 (defn scalar [connection sql & args]
   (with-open [statement (.prepareStatement connection sql)]
     (doseq [[i value] (map-indexed vector args)] (.setObject statement (inc i) value))

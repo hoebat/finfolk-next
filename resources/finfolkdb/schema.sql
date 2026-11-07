@@ -8,6 +8,8 @@ CREATE TABLE finfolk.blocks (owner_id text NOT NULL, target_id text NOT NULL, CH
 CREATE TABLE finfolk.checkins (user_id text NOT NULL, beach_id text NOT NULL, visit_day date NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), checked_in_at timestamptz, checked_out_at timestamptz, PRIMARY KEY (user_id, beach_id, visit_day), CHECK (((checked_out_at IS NULL) OR ((checked_in_at IS NOT NULL) AND (checked_out_at >= checked_in_at)))));
 CREATE TABLE finfolk.community_referrals (day date NOT NULL DEFAULT ((now() AT TIME ZONE 'Australia/Sydney'::text))::date, platform text NOT NULL, clicks bigint NOT NULL DEFAULT 0, PRIMARY KEY (day, platform), CHECK ((platform = ANY (ARRAY['instagram'::text, 'tiktok'::text]))));
 CREATE TABLE finfolk.connections (a text NOT NULL, b text NOT NULL, requested_by text NOT NULL, status text NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), CHECK ((a < b)), CHECK (((requested_by = a) OR (requested_by = b))), PRIMARY KEY (a, b), CHECK ((status = ANY (ARRAY['pending'::text, 'accepted'::text, 'declined'::text, 'removed'::text]))));
+CREATE TABLE finfolk.data_sources (id text NOT NULL, metadata jsonb NOT NULL, enabled boolean NOT NULL DEFAULT false, PRIMARY KEY (id));
+CREATE TABLE finfolk.depth_datasets (id text NOT NULL, source_id text NOT NULL, upstream_id text NOT NULL, version text NOT NULL, checksum text NOT NULL, status text NOT NULL DEFAULT 'staged'::text, metadata jsonb NOT NULL, PRIMARY KEY (id), UNIQUE (source_id, upstream_id, version), CHECK ((status = ANY (ARRAY['staged'::text, 'published'::text, 'superseded'::text]))));
 CREATE TABLE finfolk.directory_audit (id uuid NOT NULL DEFAULT gen_random_uuid(), listing_id uuid, actor text, event text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id));
 CREATE TABLE finfolk.directory_claims (id uuid NOT NULL DEFAULT gen_random_uuid(), listing_id uuid NOT NULL, user_id text, challenge text NOT NULL, expires_at timestamptz NOT NULL DEFAULT (now() + '7 days'::interval), state text NOT NULL DEFAULT 'pending'::text, evidence text NOT NULL DEFAULT ''::text, reviewed_by text, created_at timestamptz NOT NULL DEFAULT now(), CHECK ((state = ANY (ARRAY['pending'::text, 'approved'::text, 'rejected'::text]))), PRIMARY KEY (id));
 CREATE TABLE finfolk.directory_listings (id uuid NOT NULL DEFAULT gen_random_uuid(), document jsonb NOT NULL, status text NOT NULL DEFAULT 'candidate'::text, owner_id text, revision integer NOT NULL DEFAULT 1, reviewed_at timestamptz, outreach text NOT NULL DEFAULT 'Not contacted'::text, notes text NOT NULL DEFAULT ''::text, updated_at timestamptz NOT NULL DEFAULT now(), CHECK ((status = ANY (ARRAY['candidate'::text, 'published'::text, 'rejected'::text, 'archived'::text, 'suppressed'::text]))), PRIMARY KEY (id));
@@ -16,6 +18,9 @@ CREATE TABLE finfolk.directory_page_invites (token_hash text NOT NULL, page_id u
 CREATE TABLE finfolk.directory_reports (id uuid NOT NULL DEFAULT gen_random_uuid(), listing_id uuid NOT NULL, user_id text, message text NOT NULL, resolved boolean NOT NULL DEFAULT false, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id));
 CREATE TABLE finfolk.directory_runs (id uuid NOT NULL DEFAULT gen_random_uuid(), query text NOT NULL, state text NOT NULL DEFAULT 'running'::text, error text NOT NULL DEFAULT ''::text, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id));
 CREATE TABLE finfolk.directory_socials (identity text NOT NULL, listing_id uuid NOT NULL, PRIMARY KEY (identity));
+CREATE TABLE finfolk.environment_jobs (target_id text NOT NULL, next_attempt_at timestamptz NOT NULL DEFAULT now(), lease_token uuid, lease_until timestamptz, attempts integer NOT NULL DEFAULT 0, last_success timestamptz, error_code text, PRIMARY KEY (target_id), CHECK ((attempts >= 0)), CHECK (((lease_token IS NULL) = (lease_until IS NULL))));
+CREATE TABLE finfolk.environment_snapshots (id uuid NOT NULL DEFAULT gen_random_uuid(), target_id text NOT NULL, issued_at timestamptz, retrieved_at timestamptz NOT NULL DEFAULT now(), valid_from timestamptz NOT NULL, valid_to timestamptz NOT NULL, fresh_until timestamptz NOT NULL, delete_after timestamptz NOT NULL, checksum text NOT NULL, schema_version integer NOT NULL DEFAULT 1, payload jsonb NOT NULL, PRIMARY KEY (id), CHECK ((valid_to > valid_from)), CHECK ((delete_after >= retrieved_at)), CHECK ((schema_version > 0)));
+CREATE TABLE finfolk.environment_targets (id text NOT NULL, source_id text NOT NULL, product text NOT NULL, configuration jsonb NOT NULL, last_requested_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id), CHECK ((product = ANY (ARRAY['weather'::text, 'marine'::text, 'tides'::text]))));
 CREATE TABLE finfolk.event_audit (id uuid NOT NULL DEFAULT gen_random_uuid(), event_id uuid, actor text, event text NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id));
 CREATE TABLE finfolk.event_invites (token_hash text NOT NULL, event_id uuid NOT NULL, email text NOT NULL, expires_at timestamptz NOT NULL, accepted_by text, revoked boolean NOT NULL DEFAULT false, PRIMARY KEY (token_hash));
 CREATE TABLE finfolk.event_rsvps (event_id uuid NOT NULL, user_id text NOT NULL, state text NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), CHECK ((state = ANY (ARRAY['going'::text, 'cancelled'::text]))), PRIMARY KEY (event_id, user_id));
@@ -54,10 +59,13 @@ CREATE TABLE finfolk.request_limits (user_id text NOT NULL, minute timestamptz N
 CREATE TABLE finfolk.sessions (id uuid NOT NULL DEFAULT gen_random_uuid(), owner_id text NOT NULL, beach_id text, data jsonb NOT NULL, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id));
 CREATE TABLE finfolk.site_access_points (id uuid NOT NULL DEFAULT gen_random_uuid(), revision_id uuid NOT NULL, mode text NOT NULL, payload jsonb NOT NULL, PRIMARY KEY (id), CHECK ((mode = ANY (ARRAY['shore'::text, 'departure'::text]))));
 CREATE TABLE finfolk.site_catalog (id integer NOT NULL, revision bigint NOT NULL DEFAULT 0, metadata jsonb NOT NULL DEFAULT '{}'::jsonb, PRIMARY KEY (id), CHECK ((id = 1)), CHECK ((revision >= 0)));
+CREATE TABLE finfolk.site_depth_datasets (revision_id uuid NOT NULL, dataset_id text NOT NULL, relationship text NOT NULL, evidence jsonb NOT NULL, PRIMARY KEY (revision_id, dataset_id), CHECK ((relationship = ANY (ARRAY['candidate'::text, 'confirmed'::text]))));
 CREATE TABLE finfolk.site_depth_evidence (id uuid NOT NULL DEFAULT gen_random_uuid(), revision_id uuid NOT NULL, kind text NOT NULL, payload jsonb NOT NULL, PRIMARY KEY (id), CHECK ((kind = ANY (ARRAY['surveyed'::text, 'reported'::text]))));
 CREATE TABLE finfolk.site_imports (id uuid NOT NULL DEFAULT gen_random_uuid(), owner_id text, preview jsonb NOT NULL DEFAULT '{}'::jsonb, status text NOT NULL DEFAULT 'draft'::text, created_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id), CHECK ((status = ANY (ARRAY['draft'::text, 'published'::text]))));
 CREATE TABLE finfolk.site_profiles (id text NOT NULL, revision bigint NOT NULL, waterbody text NOT NULL, access_mode text NOT NULL, status text NOT NULL, payload jsonb NOT NULL, updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id), CHECK ((waterbody = ANY (ARRAY['ocean'::text, 'lake'::text, 'river'::text, 'quarry'::text, 'sinkhole'::text, 'pool'::text, 'unknown'::text]))), CHECK ((access_mode = ANY (ARRAY['shore'::text, 'boat_only'::text, 'shore_or_boat'::text, 'unknown'::text]))), CHECK ((status = ANY (ARRAY['published'::text, 'archived'::text]))));
 CREATE TABLE finfolk.site_revisions (id uuid NOT NULL DEFAULT gen_random_uuid(), site_id text NOT NULL, owner_id text, import_id uuid, base_revision bigint NOT NULL DEFAULT 0, version bigint NOT NULL DEFAULT 1, status text NOT NULL, payload jsonb NOT NULL, reason text NOT NULL DEFAULT ''::text, reviewed_by text, created_at timestamptz NOT NULL DEFAULT now(), updated_at timestamptz NOT NULL DEFAULT now(), PRIMARY KEY (id), CHECK ((status = ANY (ARRAY['draft'::text, 'submitted'::text, 'published'::text, 'rejected'::text, 'withdrawn'::text]))));
+CREATE TABLE finfolk.site_tide_stations (revision_id uuid NOT NULL, station_id text NOT NULL, evidence jsonb NOT NULL, PRIMARY KEY (revision_id));
+CREATE TABLE finfolk.tide_stations (id text NOT NULL, source_id text NOT NULL, upstream_id text NOT NULL, metadata jsonb NOT NULL, active boolean NOT NULL DEFAULT true, PRIMARY KEY (id), UNIQUE (source_id, upstream_id));
 CREATE TABLE finfolk.tiktok_connections (user_id text NOT NULL, app_id text NOT NULL, open_id text, display_name text NOT NULL DEFAULT ''::text, status text NOT NULL DEFAULT 'pending'::text, credential_ciphertext text, access_expires_at timestamptz, refresh_expires_at timestamptz, oauth_hash text, oauth_expires_at timestamptz, oauth_nonce_hash text, last_success timestamptz, next_at timestamptz NOT NULL DEFAULT now(), lease_until timestamptz, cursor text, failures integer NOT NULL DEFAULT 0, updated_at timestamptz NOT NULL DEFAULT now(), UNIQUE (app_id, open_id), PRIMARY KEY (user_id), CHECK ((status = ANY (ARRAY['pending'::text, 'connected'::text, 'disconnected'::text, 'reconnect'::text]))));
 CREATE TABLE finfolk.trip_dives (import_id uuid NOT NULL, ordinal integer NOT NULL, day date NOT NULL, data jsonb NOT NULL, PRIMARY KEY (import_id, ordinal));
 CREATE TABLE finfolk.trip_import_batches (import_id uuid NOT NULL, batch_index integer NOT NULL, rows jsonb NOT NULL, CHECK (((batch_index >= 0) AND (batch_index <= 9999))), PRIMARY KEY (import_id, batch_index));
@@ -70,6 +78,7 @@ ALTER TABLE finfolk.checkins ADD FOREIGN KEY (beach_id) REFERENCES finfolk.beach
 ALTER TABLE finfolk.checkins ADD FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE;
 ALTER TABLE finfolk.connections ADD FOREIGN KEY (a) REFERENCES finfolk.members(user_id) ON DELETE CASCADE;
 ALTER TABLE finfolk.connections ADD FOREIGN KEY (b) REFERENCES finfolk.members(user_id) ON DELETE CASCADE;
+ALTER TABLE finfolk.depth_datasets ADD FOREIGN KEY (source_id) REFERENCES finfolk.data_sources(id);
 ALTER TABLE finfolk.directory_audit ADD FOREIGN KEY (listing_id) REFERENCES finfolk.directory_listings(id);
 ALTER TABLE finfolk.directory_claims ADD FOREIGN KEY (listing_id) REFERENCES finfolk.directory_listings(id);
 ALTER TABLE finfolk.directory_claims ADD FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE;
@@ -83,6 +92,9 @@ ALTER TABLE finfolk.directory_page_invites ADD FOREIGN KEY (redeemed_by) REFEREN
 ALTER TABLE finfolk.directory_reports ADD FOREIGN KEY (listing_id) REFERENCES finfolk.directory_listings(id);
 ALTER TABLE finfolk.directory_reports ADD FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE SET NULL;
 ALTER TABLE finfolk.directory_socials ADD FOREIGN KEY (listing_id) REFERENCES finfolk.directory_listings(id) ON DELETE CASCADE;
+ALTER TABLE finfolk.environment_jobs ADD FOREIGN KEY (target_id) REFERENCES finfolk.environment_targets(id) ON DELETE CASCADE;
+ALTER TABLE finfolk.environment_snapshots ADD FOREIGN KEY (target_id) REFERENCES finfolk.environment_targets(id) ON DELETE CASCADE;
+ALTER TABLE finfolk.environment_targets ADD FOREIGN KEY (source_id) REFERENCES finfolk.data_sources(id);
 ALTER TABLE finfolk.event_audit ADD FOREIGN KEY (event_id) REFERENCES finfolk.events(id);
 ALTER TABLE finfolk.event_invites ADD FOREIGN KEY (event_id) REFERENCES finfolk.events(id);
 ALTER TABLE finfolk.event_invites ADD FOREIGN KEY (accepted_by) REFERENCES finfolk.members(user_id) ON DELETE CASCADE;
@@ -125,12 +137,17 @@ ALTER TABLE finfolk.request_limits ADD FOREIGN KEY (user_id) REFERENCES finfolk.
 ALTER TABLE finfolk.sessions ADD FOREIGN KEY (beach_id) REFERENCES finfolk.beaches(id);
 ALTER TABLE finfolk.sessions ADD FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE;
 ALTER TABLE finfolk.site_access_points ADD FOREIGN KEY (revision_id) REFERENCES finfolk.site_revisions(id) ON DELETE CASCADE;
+ALTER TABLE finfolk.site_depth_datasets ADD FOREIGN KEY (revision_id) REFERENCES finfolk.site_revisions(id) ON DELETE CASCADE;
+ALTER TABLE finfolk.site_depth_datasets ADD FOREIGN KEY (dataset_id) REFERENCES finfolk.depth_datasets(id);
 ALTER TABLE finfolk.site_depth_evidence ADD FOREIGN KEY (revision_id) REFERENCES finfolk.site_revisions(id) ON DELETE CASCADE;
 ALTER TABLE finfolk.site_imports ADD FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE SET NULL;
 ALTER TABLE finfolk.site_profiles ADD FOREIGN KEY (id) REFERENCES finfolk.beaches(id);
 ALTER TABLE finfolk.site_revisions ADD FOREIGN KEY (owner_id) REFERENCES finfolk.members(user_id) ON DELETE SET NULL;
 ALTER TABLE finfolk.site_revisions ADD FOREIGN KEY (reviewed_by) REFERENCES finfolk.members(user_id) ON DELETE SET NULL;
 ALTER TABLE finfolk.site_revisions ADD FOREIGN KEY (import_id) REFERENCES finfolk.site_imports(id) ON DELETE CASCADE;
+ALTER TABLE finfolk.site_tide_stations ADD FOREIGN KEY (revision_id) REFERENCES finfolk.site_revisions(id) ON DELETE CASCADE;
+ALTER TABLE finfolk.site_tide_stations ADD FOREIGN KEY (station_id) REFERENCES finfolk.tide_stations(id);
+ALTER TABLE finfolk.tide_stations ADD FOREIGN KEY (source_id) REFERENCES finfolk.data_sources(id);
 ALTER TABLE finfolk.tiktok_connections ADD FOREIGN KEY (user_id) REFERENCES finfolk.members(user_id) ON DELETE CASCADE;
 ALTER TABLE finfolk.trip_dives ADD FOREIGN KEY (import_id) REFERENCES finfolk.trip_imports(id) ON DELETE CASCADE;
 ALTER TABLE finfolk.trip_import_batches ADD FOREIGN KEY (import_id) REFERENCES finfolk.trip_imports(id) ON DELETE CASCADE;
@@ -143,6 +160,9 @@ CREATE INDEX checkins_beach_recent ON finfolk.checkins USING btree (beach_id, vi
 CREATE INDEX directory_owner ON finfolk.directory_listings USING btree (owner_id);
 CREATE UNIQUE INDEX directory_pending_claim ON finfolk.directory_claims USING btree (listing_id, user_id) WHERE (state = 'pending'::text);
 CREATE INDEX directory_public ON finfolk.directory_listings USING btree (status, lower((document ->> 'name'::text)), id);
+CREATE INDEX environment_job_due ON finfolk.environment_jobs USING btree (next_attempt_at);
+CREATE INDEX environment_snapshot_retention ON finfolk.environment_snapshots USING btree (delete_after);
+CREATE INDEX environment_snapshot_target ON finfolk.environment_snapshots USING btree (target_id, retrieved_at DESC);
 CREATE INDEX instagram_actions_owner ON finfolk.instagram_actions USING btree (owner_id, created_at DESC);
 CREATE INDEX instagram_commands_owner ON finfolk.instagram_commands USING btree (owner_id, received_at DESC);
 CREATE INDEX instagram_commands_post ON finfolk.instagram_commands USING btree (media_id, received_at DESC);

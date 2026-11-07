@@ -1,8 +1,12 @@
 # Fresh-install schema
 
-`make generate` writes `resources/finfolkdb/schema.sql` through the `def.make`
-configuration in `finfolkdb.schema.publication`. It also regenerates the index
-inventory used by database tests. Generation uses only repository sources and
+This page describes the historical compatibility schema. The active standalone
+entity database and database-only commands are documented in
+[DATABASE_REBUILD.md](DATABASE_REBUILD.md).
+
+`make generate` copies `resources/finfolkdb/schema.sql` and the historical index
+inventory from frozen fixtures under `resources/finfolkbuild/legacy/`, using
+`finfolkbuild.db.legacy`. Generation uses only repository sources and
 does not connect to or install anything in a database. `make check-generated`
 verifies these artifacts, including generation into a temporary output root.
 
@@ -20,12 +24,13 @@ schemas must be empty. Installation is transactional and rejects an existing
 application schema instead of attempting an upgrade.
 
 This is a generated and verified artifact, not a new supported installation
-command. Continue using the existing migration workflow. No migration-ledger
-baseline or production release-marker changes are introduced by this feature.
+command. The existing serving release continues to use its historical workflow. The
+replacement follows the [fresh rebuild/import plan](DATABASE_REBUILD.md#fresh-rebuild-and-data-import-plan),
+with no migration replay or new migration-ledger baseline.
 
 `make test-db` compares separate migrated and fresh databases for table columns,
 constraints, indexes, functions, sequences, effective privileges and required
 rows, and exercises representative member/directory operations. It tests missing
 prerequisites, rejection of an existing schema and rollback of failed installs.
-Changes to database structure require matching finfolkdb declarations and
-migrations; the parity test detects omissions in either path.
+Historical parity tests compare the frozen release contracts and migrations.
+Active entity changes are checked separately by `make test-db-types`.

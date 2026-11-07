@@ -2,3 +2,4 @@
 export {createBackbone,stableKey} from './backbone.js';
 export {createApplicationBackbone} from './application.js';
 export {operations,operation,restOperation} from './operations.js';
+export {pages,definition,resolveModel,runAction,runModel,runPage,runAuthAction,runSdkAction,bindPageClient,createPageAdapter,runLocalEffect,runPageResource,runCompatibility} from './page-models.js';

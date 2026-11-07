@@ -212,10 +212,6 @@ export async function receive(ctx,message){
     return;
   }
   if(type == "cached"){
-    announce(
-      "finfolk:cache-status",
-      {"cached":true,"savedAt":message["savedAt"]}
-    );
     return;
   }
   let facade = ctx["scopes"].get(message["scope"]);
@@ -283,6 +279,13 @@ export async function receive(ctx,message){
   }
   if(type == "cleared"){
     markClosed(facade);
+    if(ctx["cachedReads"]){
+      for(let key of ctx["cachedReads"].keys()){
+        if(JSON.parse(key)[0] == message["scope"]){
+          ctx["cachedReads"].delete(key);
+        }
+      };
+    }
     announce("finfolk:member-cleared",{"actor":message["actor"]});
     return;
   }
@@ -307,11 +310,21 @@ export async function receive(ctx,message){
         console.error("Cache subscriber failed.");
       }
     }
-    if(state["cached"]){
-      announce(
-        "finfolk:cache-status",
-        {"cached":true,"savedAt":state["savedAt"]}
-      );
+    if(state["status"] == "ready"){
+      if(!ctx["cachedReads"]){
+        ctx["cachedReads"] = new Map();
+      }
+      let key = JSON.stringify([message["scope"],message["key"]]);
+      if(state["cached"]){
+        ctx["cachedReads"].set(key,state["savedAt"]);
+      }
+      else{
+        ctx["cachedReads"].delete(key);
+      }
+      announce("finfolk:cache-status",{
+        "cached":ctx["cachedReads"]["size"] > 0,
+        "savedAt":Array.from(ctx["cachedReads"].values())[0]
+      });
     }
   }
 }
@@ -408,6 +421,49 @@ export function createScope(ctx,actor,transport){
         }
         return request(ctx,{"type":"clear-cache","scope":facade["id"]},null);
       },
+    "hydrate":async function (name,values,data,stamp){
+        let spec = registry.operation(name);
+        if((actor != "public") || spec["auth"] || spec["write"] || spec["admin"] || (spec["cache"] == false)){
+          throw new Error("Only cacheable public reads can be hydrated.");
+        }
+        await facade["ready"];
+        if(facade["closed"]){
+          throw new Error("Account context closed.");
+        }
+        if(facade["local"]){
+          return facade["local"].hydrate(name,values,data,stamp);
+        }
+        try{
+          let result = await request(ctx,{
+            "type":"hydrate",
+            "scope":facade["id"],
+            "name":name,
+            "values":values,
+            "data":data,
+            "stamp":stamp
+          },null);
+          if(facade["closed"]){
+            throw new Error("Account context closed.");
+          }
+          if(result["state"] && (result["state"]["status"] == "ready")){
+            facade["snapshots"].set(
+              name + ":" + backbone.stableKey(values || {}),
+              result["state"]["data"]
+            );
+          }
+          return result;
+        }
+        catch(error){
+          if(error["message"] == "Unknown worker operation."){
+            return {
+              "applied":false,
+              "legacy":true,
+              "data":await api.call(name,values)
+            };
+          }
+          throw error;
+        }
+      },
     "invalidate":async function (domains){
         await facade["ready"];
         facade["snapshots"].clear();
@@ -501,7 +557,9 @@ export function createWorkerBridge(config){
     "http":new Map(),
     "sequence":0,
     "client":crypto.randomUUID(),
-    "environment":JSON.stringify([config["authUrl"],config["apiUrl"]])
+    "environment":JSON.stringify(
+        [config["authUrl"],config["cacheApiUrl"] || config["apiUrl"]]
+      )
   };
   let channel = new MessageChannel();
   let worker = null;

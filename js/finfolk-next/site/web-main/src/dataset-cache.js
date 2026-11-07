@@ -31,7 +31,7 @@ export class DatasetCache {
     this.manifestPromise = (async () => {
       let cached = await this.store.meta('manifest:' + this.base.href);
       if (globalThis.navigator?.onLine === false) {
-        const saved = (await this.store.meta('saved')) || [],
+        const saved = await this.availableSaved(),
           last = await this.store.meta('lastRegion'),
           item =
             saved.find((p) => p.id === last && p.complete && p.manifest) ||
@@ -228,12 +228,19 @@ export class DatasetCache {
       this.pending.delete(requestKey);
     }
   }
+  async availableSaved() {
+    const records = await this.store.meta('saved'), saved = Array.isArray(records) ? records : [];
+    const keys = new Set(this.store.keys ? await this.store.keys() : (await this.store.all()).map(row => row.key));
+    return saved.filter(item => item?.complete && item.manifest?.version === 1 && item.manifest.regions?.[item.id] && Array.isArray(item.keys) && item.keys.length && item.keys.every(key => typeof key==='string' && key.startsWith(this.base.href) && keys.has(key)));
+  }
   async useRegion(id) {
     if (globalThis.navigator?.onLine !== false) return;
-    const saved = ((await this.store.meta('saved')) || []).find(
-      (p) => p.id === id && p.complete && p.manifest,
-    );
-    if (saved) this.manifestPromise = Promise.resolve(saved.manifest);
+    const generation=this.regionRequest=(this.regionRequest||0)+1;
+    const saved = (await this.availableSaved()).find(item => item.id === id);
+    if (saved && generation===this.regionRequest && globalThis.navigator?.onLine===false) {
+      this.manifestPromise = Promise.resolve(saved.manifest);
+      this.offlineRegion = id;
+    }
   }
   async saveRegion(id) {
     if (this.latestManifest) {

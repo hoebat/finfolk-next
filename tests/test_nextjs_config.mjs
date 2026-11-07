@@ -1,0 +1,15 @@
+import assert from 'node:assert/strict';
+import config from '../js/finfolk-next/site/web-main/next.config.mjs';
+import {readFile} from 'node:fs/promises';
+const {beforeFiles}=await config.rewrites();
+assert.equal(beforeFiles.find(x=>x.source==='/v1/:path*').destination,'https://api.finfolk.com.au/v1/:path*');
+assert.ok(!beforeFiles.some(x=>x.source==='/app'));
+const legacyRoute=await readFile('js/finfolk-next/site/web-main/app/app/route.js','utf8');assert.match(legacyRoute,/force-static/);assert.match(legacyRoute,/public\/legacy\/app.html/);
+assert.ok(!beforeFiles.some(x=>['/profiles','/events/new','/events/my','/events/invitation'].includes(x.source)));
+assert.ok(!beforeFiles.some(x=>x.source==='/:path*'));
+const prepare=await readFile('scripts/prepare_nextjs.mjs','utf8');
+const worker=await readFile('scripts/nextjs_sw_template.js','utf8');
+assert.doesNotMatch(prepare,/unregister\(|skipWaiting\(|indexedDB.deleteDatabase|localStorage.clear/);
+assert.match(worker,/finfolk-next-shell-/);assert.match(worker,/finfolk-shell-/);
+assert.doesNotMatch(worker,/indexedDB.deleteDatabase|localStorage.clear|skipWaiting\(/);
+console.log('NEXTJS_CONFIG_PASS: explicit API/legacy routing and native shell upgrade without saved-data deletion or forced activation.');

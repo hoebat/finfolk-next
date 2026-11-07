@@ -1,0 +1,13 @@
+import assert from 'node:assert/strict';
+import {createNextWorker} from '../backend/next-api-worker.mjs';
+const env={ENVIRONMENT:'next',HYPERDRIVE:{connectionString:'legacy'},NEON_AUTH_BASE_URL:'https://isolated.auth.test/auth',NEON_AUTH_JWKS_URL:'https://isolated.auth.test/jwks',DB_BACKBONE_ENABLED:'true',DB_SQL_SHA:'sha'},request=new Request('https://api.finfolk.com.au/v1/sites/bondi/notes');
+let opened=[],closed=[],bound=[],installed=true;
+const worker=createNextWorker({openDatabase:key=>{opened.push(key);return {query:async()=>key==='legacy'?[{database:'finfolk_next',sql_sha:'sha'}]:[{database:'finfolk_entities',installed}],pool:{end:async()=>closed.push(key)}};},apiFactory:({siteNotesDb})=>({fetch:async()=>{bound.push(siteNotesDb);return Response.json({enabled:!!siteNotesDb});}})});
+assert.equal((await(await worker.fetch(request,env)).json()).enabled,false);assert.deepEqual(opened,['legacy']);
+const enabled={...env,ENTITY_SITE_NOTES_ENABLED:'true',ENTITY_SITE_NOTES_HYPERDRIVE:{connectionString:'native'},ENTITY_SITE_NOTES_DATABASE_NAME:'finfolk_entities'};
+assert.equal((await(await worker.fetch(request,enabled)).json()).enabled,true);assert.ok(bound.at(-1));assert.deepEqual(opened.slice(-2),['legacy','native']);
+for(const invalid of [{...enabled,ENTITY_SITE_NOTES_DATABASE_NAME:'finfolk_next'},{...enabled,ENTITY_SITE_NOTES_HYPERDRIVE:{connectionString:'legacy'}},{...enabled,ENTITY_SITE_NOTES_DATABASE_NAME:'wrong-database'}])assert.equal((await worker.fetch(request,invalid)).status,503);
+installed=false;assert.equal((await worker.fetch(request,enabled)).status,503);
+const before=opened.length;await worker.fetch(new Request('https://api.finfolk.com.au/v1/me'),enabled);assert.deepEqual(opened.slice(before),['legacy']);assert.equal(bound.at(-1),null);
+assert.equal(opened.length,closed.length);
+console.log('SITE_NOTES_WORKER_PASS: explicit enablement, separate native binding, schema/database gates, unrelated-route isolation and connection cleanup.');

@@ -30,7 +30,7 @@ export function stableKey(value){
 
 export function publish(ctx,entry,state){
   entry["state"] = Object.assign({},entry["state"],state);
-  if(!entry["spec"]["write"] && (entry["state"]["status"] == "ready")){
+  if(!entry["spec"]["write"] && (entry["spec"]["cache"] != false) && (entry["state"]["status"] == "ready")){
     ctx["onPublish"](entry["key"],entry["state"]);
   }
   events.set_output(
@@ -85,7 +85,7 @@ export function ensureModel(ctx,name,values){
       "state":{"status":"idle"},
       "listeners":new Set()
     };
-    if(!spec["write"]){
+    if(!spec["write"] && (spec["cache"] != false)){
       let saved = ctx["storage"]["get"](key);
       if(saved){
         entry["state"] = {
@@ -122,6 +122,34 @@ export function ensureModel(ctx,name,values){
     },null,null);
   }
   return entry;
+}
+
+export function hydrate(ctx,name,values,data,stamp){
+  ensureOpen(ctx);
+  let spec = registry.operation(name);
+  if((ctx["actor"] != "public") || spec["auth"] || spec["write"] || spec["admin"] || (spec["cache"] == false)){
+    throw new Error("Only cacheable public reads can be hydrated.");
+  }
+  if(!Number.isFinite(stamp) || (stamp <= 0) || (data == null) || ((typeof data) != "object")){
+    throw new Error("Invalid public hydration payload.");
+  }
+  values = (values || {});
+  let entry = ensureModel(ctx,name,values);
+  let state = entry["state"];
+  if(ctx["pending"].has(entry["key"]) || (entry["revision"] > 0) || ((state["status"] == "ready") && ((state["origin"] != "ssr") || ((state["hydratedAt"] || 0) >= stamp)))){
+    return {"applied":false,"state":state};
+  }
+  ctx["storage"]["put"](entry["key"],data,spec);
+  publish(ctx,entry,{
+    "status":"ready",
+    "data":data,
+    "error":null,
+    "cached":false,
+    "savedAt":Date.now(),
+    "origin":"ssr",
+    "hydratedAt":stamp
+  });
+  return {"applied":true,"state":entry["state"]};
 }
 
 export function invalidateEntry(ctx,entry){
@@ -164,13 +192,17 @@ export async function run(ctx,name,values,options){
     }
     result = output;
     if(!spec["write"] && (revision == entry["revision"])){
-      ctx["storage"]["put"](entry["key"],result,spec);
+      if(spec["cache"] != false){
+        ctx["storage"]["put"](entry["key"],result,spec);
+      }
       publish(ctx,entry,{
         "status":"ready",
         "data":result,
         "error":null,
         "cached":false,
-        "savedAt":Date.now()
+        "savedAt":Date.now(),
+        "origin":"network",
+        "hydratedAt":null
       });
     }
     if(spec["write"]){
@@ -221,7 +253,7 @@ export async function run(ctx,name,values,options){
         error["mutationOutcomeUnknown"] = true;
       }
     }
-    if(!ctx["closed"] && !spec["write"] && ctx["offlineReads"] && !error["status"] && (error["name"] != "AbortError")){
+    if(!ctx["closed"] && !spec["write"] && ctx["offlineReads"] && (spec["cache"] != false) && !error["status"] && (error["name"] != "AbortError")){
       let saved = ctx["storage"]["get"](entry["key"]);
       if(saved){
         ctx["onCached"](saved);
@@ -417,6 +449,9 @@ export function createBackbone(actor,transport,opts){
     "space":space,
     "call":ctx["call"],
     "read":function (name,values){
+        if(registry.operation(name)["cache"] == false){
+          return undefined;
+        }
         let entry = storage["get"](name + ":" + stableKey(values || {}));
         return entry ? entry["data"] : undefined;
       },
@@ -427,6 +462,9 @@ export function createBackbone(actor,transport,opts){
           entry["revision"] = (1 + entry["revision"]);
           publish(ctx,entry,{"status":"idle","data":undefined,"cached":false});
         };
+      },
+    "hydrate":function (name,values,data,stamp){
+        return hydrate(ctx,name,values,data,stamp);
       },
     "invalidate":function (domains){
         return invalidate(ctx,domains);

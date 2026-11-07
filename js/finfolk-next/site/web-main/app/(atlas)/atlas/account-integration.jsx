@@ -1,0 +1,2 @@
+'use client';
+export default function AccountIntegrationStatus({integration}){const system=integration.record?.data;return system?<div id="instagram-system-status"><h4>Instagram discovery</h4><p>{system.collection?'Collecting':'Collection paused'} · {system.publication?'Publication enabled':'Publication paused'} · {system.hashtags?'Hashtags enabled':'Hashtags unavailable'} · {system.pending} awaiting review</p></div>:null;}

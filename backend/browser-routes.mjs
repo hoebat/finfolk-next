@@ -4,5 +4,5 @@ export function isBrowserAPIPath(path){
  return path==='/privacy' || path==='/data-deletion' || path==='/instagram/webhook' || path==='/api' || path==='/health' || path.startsWith('/v1/') ||
   /^\/trips(?:\/[^/]+)?$/.test(path) ||
   /^\/community\/(?:posts|referral)$/.test(path) ||
-  /^\/instagram\/posts(?:\/[^/]+\/report)?$/.test(path) || path==='/shop/checkout';
+  /^\/instagram\/posts(?:\/[^/]+\/report)?$/.test(path) || (path==='/shop/checkout'||path==='/shop/items');
 }

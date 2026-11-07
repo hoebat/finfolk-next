@@ -5,16 +5,7 @@
   "compatibility_date": "2026-10-30",
   "account_id": "b048221dbe18365ea667373f6fda1f73",
   "workers_dev": false,
-  "routes": [
-    {
-      "pattern": "finfolk.com.au",
-      "custom_domain": true
-    },
-    {
-      "pattern": "www.finfolk.com.au",
-      "custom_domain": true
-    }
-  ],
+  "routes": [],
   "assets": {
     "directory": ".cache/next-site",
     "binding": "ASSETS",

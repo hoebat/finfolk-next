@@ -145,6 +145,7 @@
         (cond
           (== type "call") (:= result (await (. model (call (. message ["name"]) (. message ["values"])
             (Object.assign {} (. message ["options"]) {"client" (. client ["id"]) "request" (. message ["id"])})))))
+          (== type "hydrate") (:= result (. model (hydrate (. message ["name"]) (. message ["values"]) (. message ["data"]) (. message ["stamp"]))))
           (== type "subscribe")
           (do
             (var sub (. message ["subscription"]))
@@ -164,7 +165,7 @@
           (== type "purge") (-/purge scope)
           :else (throw (new Error "Unknown worker operation.")))))
     (-/send client {"type" "result" "id" (. message ["id"]) "result" result})
-    (when (== type "call")
+    (when (. ["call" "hydrate"] (includes type))
       (for:iter [target -/CLIENTS] (when (== (. target ["environment"]) (. client ["environment"])) (-/send target {"type" "changed"}))))
     (catch error (-/send client {"type" "result" "id" (. message ["id"]) "error" (-/errorData error)}))))
 (defn.js ^{:- [:async]} accept [port ephemeral]

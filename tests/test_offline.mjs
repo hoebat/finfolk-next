@@ -88,6 +88,25 @@ try {
     regions: [1],
   });
   assert.equal(cold.offlineRegion, 'a');
+  const originalSaved = await store.meta('saved');
+  const damaged = {...originalSaved[0], id:'damaged', keys:['https://example.test/atlas/missing#hash'], manifest:{...manifest,regions:{damaged:manifest.regions.a}}};
+  await store.meta('saved',[null,{...damaged,keys:[17]},damaged,...originalSaved]);
+  await store.meta('lastRegion','damaged');
+  const recovered = new DatasetCache('https://example.test/atlas/', async()=>{throw Error('Offline');}, store);
+  await recovered.manifest();
+  assert.equal(recovered.offlineRegion,'a');
+  assert.deepEqual((await recovered.availableSaved()).map(item=>item.id),['a']);
+  await recovered.useRegion('a');
+  assert.equal(recovered.offlineRegion,'a');
+  await store.meta('saved',originalSaved);
+  const racing = new DatasetCache('https://example.test/atlas/', fetcher, store), resolvers=[];
+  const a=originalSaved[0], b={...a,id:'b',manifest:{...a.manifest,revision:'b'}};
+  racing.availableSaved=()=>new Promise(resolve=>resolvers.push(resolve));
+  const earlier=racing.useRegion('a'),later=racing.useRegion('b');
+  resolvers[1]([a,b]);await later;resolvers[0]([a,b]);await earlier;
+  assert.equal(racing.offlineRegion,'b');assert.equal((await racing.manifest()).revision,'b');
+
+
 } finally {
   if (oldNavigator)
     Object.defineProperty(globalThis, 'navigator', oldNavigator);

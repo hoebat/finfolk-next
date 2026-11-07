@@ -1,3 +1,4 @@
+import {randomUUID} from 'node:crypto';
 import assert from 'node:assert/strict';
 import {mkdir,writeFile,readFile} from 'node:fs/promises';
 import {connect,migrate,schema,quote,savepoint} from './harness.mjs';
@@ -43,6 +44,11 @@ try{
      else if(c.definition.includes('media_id'))changes={media_id:'not-a-media-id'};
      else if(c.definition.includes('length(reason)'))changes={reason:''};
      else if(c.definition.includes('length(body)'))changes={body:'x'.repeat(2001)};
+     else if(table==='environment_snapshots'&&c.definition.includes('valid_to'))changes={valid_to:'2020-01-01T00:00:00Z'};
+     else if(table==='environment_snapshots'&&c.definition.includes('delete_after'))changes={delete_after:'2020-01-01T00:00:00Z'};
+     else if(c.definition.includes('schema_version'))changes={schema_version:0};
+     else if(c.definition.includes('attempts'))changes={attempts:-1};
+     else if(c.definition.includes('lease_token'))changes={lease_token:randomUUID()};
      else if(table==='site_catalog'&&c.definition.includes('id = 1'))changes={id:2};
      else if(table==='site_catalog'&&c.definition.includes('revision'))changes={revision:-1};
      else if(c.definition.includes('expected_rows'))changes={expected_rows:0};

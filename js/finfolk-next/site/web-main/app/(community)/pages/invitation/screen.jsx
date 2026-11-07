@@ -1,0 +1,7 @@
+'use client';
+import {useEffect,useRef,useState} from 'react';
+import {pageActions} from '../../../../lib/page-models.js';
+import {useSession} from '../../../../lib/use-session.js';
+import {PageNavigation} from '../screen.jsx';
+export default function Invitation({token}){const session=useSession();return <InvitationBody key={session.user?.uid||'guest'} session={session} token={token}/>;}
+function InvitationBody({session,token}){const [busy,setBusy]=useState(false),[error,setError]=useState(''),alive=useRef(true);useEffect(()=>{alive.current=true;return()=>{alive.current=false;};},[]);return <><h1>Freediving directory</h1><PageNavigation signedIn={!!session.user}/>{session.status==='loading'?<p role="status">Restoring your session…</p>:session.error?<p role="alert">{session.error.message}<button onClick={session.retry}>Try again</button></p>:!session.user?<p>Sign in to manage listings.</p>:<><h2>Accept page admin invitation</h2><p>Accepting lets you edit this page. The owner retains control of administrator access.</p><button className="profile-action" disabled={busy} onClick={async()=>{const actor=session.user.uid;setBusy(true);setError('');try{await pageActions(session.client,'page-invitation',{token}).accept();if(alive.current&&session.client.user?.uid===actor)window.location.replace('/pages');}catch(e){if(alive.current&&session.client.user?.uid===actor)setError(e.message);}finally{if(alive.current)setBusy(false);}}}>Accept invitation</button>{error&&<p role="alert">{error}</p>}</>}</>}

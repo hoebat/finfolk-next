@@ -1,0 +1,9 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "finfolk-reference-assets",
+  "main": "backend/reference-assets-worker.mjs",
+  "compatibility_date": "2026-11-05",
+  "account_id": "b048221dbe18365ea667373f6fda1f73",
+  "workers_dev": true,
+  "r2_buckets": [{"binding": "REFERENCE", "bucket_name": "finfolk-reference"}]
+}

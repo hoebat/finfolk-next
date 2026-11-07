@@ -36,6 +36,16 @@ export var operations = {
     "write":false,
     "domain":"discovery"
   },
+  "environmentImportPreview":{
+    "name":"environmentImportPreview",
+    "path":"/v1/admin/environment/imports/preview",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":true,
+    "domain":"siteAdmin"
+  },
   "siteAdmin":{
     "name":"siteAdmin",
     "path":"/v1/admin/sites",
@@ -58,6 +68,17 @@ export var operations = {
     "domain":"instagram",
     "name":"instagramReviewPost",
     "transport":"action",
+    "write":true
+  },
+  "finniesSave":{
+    "transport":"rest",
+    "method":"POST",
+    "auth":true,
+    "admin":true,
+    "path":"/v1/admin/finnies/items",
+    "cache":false,
+    "name":"finniesSave",
+    "domain":"finnies",
     "write":true
   },
   "tripImportConfirm":{
@@ -122,6 +143,17 @@ export var operations = {
     "write":true,
     "domain":"directoryOwner"
   },
+  "finniesComplete":{
+    "transport":"rest",
+    "method":"POST",
+    "auth":true,
+    "admin":true,
+    "path":"/v1/admin/finnies/complete",
+    "cache":false,
+    "name":"finniesComplete",
+    "domain":"finnies",
+    "write":true
+  },
   "tiktokSync":{
     "auth":true,
     "domain":"logbook",
@@ -137,6 +169,16 @@ export var operations = {
     "auth":true,
     "write":true,
     "domain":"directoryOwner"
+  },
+  "siteNoteModerate":{
+    "name":"siteNoteModerate",
+    "path":"/v1/admin/sites/:site/notes/moderate",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":true,
+    "domain":"siteNotes"
   },
   "instagramClaimRead":{
     "auth":true,
@@ -186,6 +228,16 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "siteNotes":{
+    "name":"siteNotes",
+    "path":"/v1/me/sites/:site/notes",
+    "method":"GET",
+    "transport":"rest",
+    "auth":true,
+    "write":false,
+    "cache":false,
+    "domain":"siteNotes"
+  },
   "instagramAccount":{
     "auth":true,
     "domain":"instagram",
@@ -194,6 +246,16 @@ export var operations = {
     "path":"/v1/me/instagram",
     "transport":"rest",
     "write":false
+  },
+  "publicSiteNotes":{
+    "name":"publicSiteNotes",
+    "path":"/v1/sites/:site/notes",
+    "method":"GET",
+    "transport":"rest",
+    "auth":false,
+    "write":false,
+    "cache":false,
+    "domain":"siteNotesPublic"
   },
   "sessions":{
     "auth":true,
@@ -339,6 +401,15 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "siteNoteWithdraw":{
+    "name":"siteNoteWithdraw",
+    "path":"/v1/me/sites/:site/notes/withdraw",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":true,
+    "domain":"siteNotes"
+  },
   "instagramMyPosts":{
     "auth":true,
     "domain":"instagram",
@@ -355,6 +426,15 @@ export var operations = {
     "domain":"eventsPublic",
     "transport":"rest",
     "cache":true
+  },
+  "siteConditions":{
+    "name":"siteConditions",
+    "path":"/v1/sites/:id/conditions",
+    "method":"GET",
+    "transport":"rest",
+    "auth":false,
+    "write":false,
+    "domain":"conditions"
   },
   "tripUnpublish":{
     "auth":true,
@@ -408,6 +488,15 @@ export var operations = {
     "domain":"eventsMember",
     "transport":"rest",
     "cache":false
+  },
+  "siteNoteVote":{
+    "name":"siteNoteVote",
+    "path":"/v1/me/sites/:site/notes/vote",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":true,
+    "domain":"siteNotes"
   },
   "instagramReversePoints":{
     "admin":true,
@@ -566,6 +655,17 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "finniesGrant":{
+    "transport":"rest",
+    "method":"POST",
+    "auth":true,
+    "admin":true,
+    "path":"/v1/admin/finnies/grant",
+    "cache":false,
+    "name":"finniesGrant",
+    "domain":"finnies",
+    "write":true
+  },
   "tripSave":{
     "auth":true,
     "domain":"trips",
@@ -626,6 +726,17 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "finniesRedeem":{
+    "transport":"rest",
+    "method":"POST",
+    "auth":true,
+    "admin":false,
+    "path":"/v1/me/finnies/redeem",
+    "cache":false,
+    "name":"finniesRedeem",
+    "domain":"finnies",
+    "write":true
+  },
   "siteDraftReject":{
     "name":"siteDraftReject",
     "path":"/v1/admin/sites/drafts/:id/reject",
@@ -678,6 +789,15 @@ export var operations = {
     "name":"posts",
     "transport":"action",
     "write":false
+  },
+  "siteNoteReport":{
+    "name":"siteNoteReport",
+    "path":"/v1/me/sites/:site/notes/report",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":true,
+    "domain":"siteNotes"
   },
   "tripDives":{
     "auth":true,
@@ -735,6 +855,15 @@ export var operations = {
     "write":false,
     "auth":true,
     "domain":"siteSubmissions"
+  },
+  "siteNoteSave":{
+    "name":"siteNoteSave",
+    "path":"/v1/me/sites/:site/notes/save",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":true,
+    "domain":"siteNotes"
   },
   "siteDraftPublish":{
     "name":"siteDraftPublish",
@@ -816,6 +945,16 @@ export var operations = {
     "name":"tripPreview",
     "transport":"action",
     "write":false
+  },
+  "environmentSiteLinks":{
+    "name":"environmentSiteLinks",
+    "path":"/v1/admin/environment/site-links/:id",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":true,
+    "domain":"siteAdmin"
   },
   "tripGet":{
     "auth":true,
@@ -918,6 +1057,15 @@ export var operations = {
     "name":"instagramConfirm",
     "transport":"action",
     "write":true
+  },
+  "directoryCreate":{
+    "name":"directoryCreate",
+    "path":"/v1/me/directory/create",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "write":true,
+    "domain":"directoryOwner"
   },
   "instagramDisconnect":{
     "auth":true,
@@ -1049,6 +1197,15 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "siteDepthDatasets":{
+    "name":"siteDepthDatasets",
+    "path":"/v1/sites/:id/depth-datasets",
+    "method":"GET",
+    "transport":"rest",
+    "auth":false,
+    "write":false,
+    "domain":"sites"
+  },
   "tiktokStatus":{
     "auth":true,
     "domain":"logbook",
@@ -1071,6 +1228,16 @@ export var operations = {
     "auth":true,
     "write":true,
     "domain":"directoryOwner"
+  },
+  "environmentImportPublish":{
+    "name":"environmentImportPublish",
+    "path":"/v1/admin/environment/imports/publish",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":true,
+    "write":true,
+    "domain":"siteAdmin"
   },
   "messagingClaimReviews":{
     "admin":true,
@@ -1185,11 +1352,33 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "finniesAdmin":{
+    "transport":"rest",
+    "method":"GET",
+    "auth":true,
+    "admin":true,
+    "path":"/v1/admin/finnies",
+    "cache":false,
+    "name":"finniesAdmin",
+    "domain":"finnies",
+    "write":false
+  },
   "connections":{
     "auth":true,
     "domain":"community",
     "name":"connections",
     "transport":"action",
+    "write":false
+  },
+  "finniesWallet":{
+    "transport":"rest",
+    "method":"GET",
+    "auth":true,
+    "admin":false,
+    "path":"/v1/me/finnies",
+    "cache":false,
+    "name":"finniesWallet",
+    "domain":"finnies",
     "write":false
   },
   "preferences":{
@@ -1223,8 +1412,9 @@ export function restOperation(path,method){
 }
 
 export var RELATED = {
-  "siteAdmin":["sites","siteSubmissions"],
+  "siteAdmin":["sites","siteSubmissions","conditions"],
   "member":["community","logbook","posts","trips"],
+  "siteNotes":["siteNotesPublic"],
   "admin":["instagram","posts","member"],
   "eventsMember":["eventsPublic","directoryPublic"],
   "directoryOwner":["directoryPublic","directoryAdmin"],
@@ -1234,6 +1424,7 @@ export var RELATED = {
   "posts":["member"],
   "invitations":["member"],
   "community":["member","logbook","posts","trips"],
+  "siteNotesPublic":["siteNotes"],
   "siteSubmissions":["siteAdmin"]
 };
 

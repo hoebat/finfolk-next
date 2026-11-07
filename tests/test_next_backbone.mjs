@@ -14,3 +14,6 @@ await assert.rejects(()=>partial.call('preferences',{}),error=>error.mutationCom
 await assert.rejects(()=>partial.call('preferences',{}),/Reload before/);
 assert.deepEqual(mutationCalls,['preferences','me'],'A successful write must not be replayed after its refresh fails');partial.close();
 console.log('NEXT_SUBSTRATE_PASS: actual substrate models, xt.db cache, dependent refresh, errors, sign-out and stale responses.');
+
+const persisted=[];let offline=false;const cash=createBackbone('shopper',async()=>{if(offline)throw Error('offline');return {balance:100};},{offlineReads:true,storage:{get:()=>({data:{balance:999},savedAt:Date.now()}),put:(...args)=>persisted.push(args),remove:()=>{},clear:()=>{}}});
+assert.equal((await cash.call('finniesWallet')).balance,100);assert.equal(cash.read('finniesWallet'),undefined);assert.deepEqual(persisted,[],'Spendable balances must never be persisted for offline reads');offline=true;await assert.rejects(()=>cash.call('finniesWallet'),/offline/,'A wallet must fail closed instead of returning an old balance');cash.close();

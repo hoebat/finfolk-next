@@ -161,6 +161,10 @@ export function installOfflineUI(
       if(!notice){notice=el('p');notice.id='application-cache-notice';notice.setAttribute('role','status');document.getElementById('app-main')?.prepend(notice);}
       notice.textContent=status.textContent;
     }
+    else if(event.detail?.cached===false){
+      if(document.getElementById('application-cache-notice'))status.textContent='';
+      document.getElementById('application-cache-notice')?.remove();
+    }
     else if(event.detail?.message)status.textContent=event.detail.message;
     draw();
   });

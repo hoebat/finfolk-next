@@ -1,3 +1,4 @@
+import {friendlyError} from './logbook-model.js';
 import {mediaInbox,linkedMedia} from './media-inbox.js';
 import {tripCards} from './trip-report.js';
 import { getInstagramFeed } from './instagram-discovery.js';
@@ -29,26 +30,7 @@ const link = (text, url) => {
   a.rel = "noopener noreferrer";
   return a;
 };
-export function friendlyError(error) {
-  const code = error?.code || "";
-  if (/permission-denied|unauthorized/.test(code))
-    return "This session is private or unavailable. Sign in with its owner account to open it.";
-  if (/invalid-credential|wrong-password|user-not-found/.test(code))
-    return "Check your email and password and try again.";
-  if (
-    /email-already-in-use|account-exists-with-different-credential/.test(code)
-  )
-    return "An account already uses this email. Sign in with its existing method, then link the other method in Account.";
-  if (/popup-blocked|popup-closed/.test(code))
-    return "The Google sign-in window was closed or blocked. Allow popups and try again.";
-  if (/network|unavailable/.test(code))
-    return "The connection failed. Your form is still here; try again when online.";
-  if (/requires-recent-login|failed-precondition/.test(code))
-    return error.message || "Sign in again and retry.";
-  if (/weak-password/.test(code))
-    return "Choose a stronger password with at least 8 characters.";
-  return error.message || "Something went wrong. Please try again.";
-}
+export {friendlyError} from './logbook-model.js';
 export function installLogbook({
   shell,
   getBeaches = () => [],

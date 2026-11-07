@@ -13,7 +13,7 @@ export function installDiscoverPreferences({catalog,refresh}){
  const status=doc.createElement('p');status.setAttribute('role','status');bar.append(locate);select.closest('label').hidden=true;doc.getElementById('suggested-panel').prepend(bar,status);
  select.addEventListener('change',()=>{manual=true;paint();});index.addEventListener('change',()=>{manual=true;select.value=index.value;paint();refresh();});
  doc.getElementById('discover-surprise')?.addEventListener('click',()=>{shuffle=true;});
- fetch('/_next/location',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(!manual&&!locationResolved&&data?.country==='AU'&&[...select.options].some(o=>o.value===data.state))choose(data.state,false);}).catch(()=>{});
+ fetch('/api/location',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(data=>{if(!manual&&!locationResolved&&data?.country==='AU'&&[...select.options].some(o=>o.value===data.state))choose(data.state,false);}).catch(()=>{});
  applicationBackbone().then(app=>app?.public.call('discoverPopular',{})).then(data=>{popular=data?.places||[];refresh();}).catch(()=>{});if(new URL(location.href).searchParams.has('all_states'))choose('',false);paint();
  return {rank(items){if(shuffle)return null;return [...items].sort((a,b)=>{if(position)return distance(position,a.point)-distance(position,b.point);const rank=row=>{const i=popular.indexOf(row.id);if(i>=0)return i;const h=highlights.findIndex(name=>(row.name+' '+row.area_name).toLowerCase().includes(name));return popular.length+(h<0?highlights.length:h);};return rank(a)-rank(b)||a.name.localeCompare(b.name);}).slice(0,6);}};
 }

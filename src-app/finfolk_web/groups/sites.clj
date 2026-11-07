@@ -1,7 +1,12 @@
 (ns finfolk-web.groups.sites
  "Site catalog and review operations; authorization is server-owned.")
 (def OPERATIONS
- {"discoverPopular" {"name" "discoverPopular" "path" "/v1/discover/popular" "method" "GET" "transport" "rest" "auth" false "write" false "domain" "discovery"}
+ {"environmentSiteLinks" {"name" "environmentSiteLinks" "path" "/v1/admin/environment/site-links/:id" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "siteAdmin"}
+ "environmentImportPublish" {"name" "environmentImportPublish" "path" "/v1/admin/environment/imports/publish" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "siteAdmin"}
+ "environmentImportPreview" {"name" "environmentImportPreview" "path" "/v1/admin/environment/imports/preview" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "siteAdmin"}
+ "siteConditions" {"name" "siteConditions" "path" "/v1/sites/:id/conditions" "method" "GET" "transport" "rest" "auth" false "write" false "domain" "conditions"}
+ "siteDepthDatasets" {"name" "siteDepthDatasets" "path" "/v1/sites/:id/depth-datasets" "method" "GET" "transport" "rest" "auth" false "write" false "domain" "sites"}
+ "discoverPopular" {"name" "discoverPopular" "path" "/v1/discover/popular" "method" "GET" "transport" "rest" "auth" false "write" false "domain" "discovery"}
  "siteImportDetail" {"name" "siteImportDetail" "path" "/v1/admin/sites/imports/:id" "method" "GET" "transport" "rest" "auth" true "admin" true "write" false "domain" "siteAdmin"}
  "siteCatalog" {"name" "siteCatalog"
  "path" "/v1/sites/catalog"

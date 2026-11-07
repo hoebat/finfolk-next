@@ -83,6 +83,9 @@ export class AtlasStore {
       tx.oncomplete = tx.onabort = tx.onerror = resolve;
     });
   }
+  async keys() {
+    try { return (await this.run('files', 'readonly', s => s.getAllKeys())) || []; } catch { return []; }
+  }
   async all() {
     try {
       return (await this.run('files', 'readonly', (s) => s.getAll())) || [];

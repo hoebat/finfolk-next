@@ -6,7 +6,7 @@ import {socialResponse} from './social-metadata.mjs';
 export default {
   async fetch(request, env) {
     const route=new URL(request.url);
-    if(route.pathname==='/_next/location')return Response.json({country:request.cf?.country||null,state:request.cf?.country==='AU'?request.cf?.regionCode||null:null},{headers:{'Cache-Control':'private, no-store','Vary':'*'}});
+    if(['/_next/location','/api/location'].includes(route.pathname))return Response.json({country:request.cf?.country||null,state:request.cf?.country==='AU'?request.cf?.regionCode||null:null},{headers:{'Cache-Control':'private, no-store','Vary':'*'}});
     if(route.hostname==='www.finfolk.com.au' || (route.hostname==='finfolk.com.au' && route.protocol==='http:')){
       route.hostname='finfolk.com.au';route.protocol='https:';route.port='';
       return new Response(null,{status:308,headers:{Location:route.href}});

@@ -3,6 +3,7 @@ import {readdir,stat,readFile,writeFile,mkdir,unlink} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 import {resolve,relative,dirname} from 'node:path';
 import {createHash} from 'node:crypto';
+import {buildExploreContours} from './build_explore_contours.mjs';
 import {addSocialMetadata} from '../backend/social-metadata.mjs';
 const environment=JSON.parse(await readFile('next.environment.json','utf8'));
 if(environment.environment!=='next' || environment.database!=='finfolk_next' || environment.authUrl.includes('crimson-queen') || !environment.authUrl.includes('.neonauth.'))throw Error('Refusing non-isolated Next build.');
@@ -13,6 +14,8 @@ if(sqlSha!==environment.sqlSha || apiConfig.vars.DB_SQL_SHA!==sqlSha)throw Error
 execFileSync(process.execPath,['scripts/bundle_backbone.mjs'],{stdio:'inherit'});
 const root=resolve('.cache/next-site');
 execFileSync(process.env.PYTHON || '.venv/bin/python',['-m','depth_explorer','build-static','--output',root],{stdio:'inherit',env:{...process.env,NEON_AUTH_BASE_URL:environment.authUrl,NEON_API_URL:'https://finfolk.com.au/'}});
+const depthManifest=execFileSync(process.execPath,['scripts/environment_inventory.mjs','datasets',root],{encoding:'utf8',maxBuffer:8*1024*1024});
+await writeFile(resolve(root,'data/depth-manifest.json'),depthManifest);
 await writeFile(resolve(root,'CNAME'),'finfolk.com.au\n');
 await writeFile(resolve(root,'robots.txt'),'User-agent: *\nAllow: /\nSitemap: https://finfolk.com.au/sitemap.xml\n');
 await writeFile(resolve(root,'sitemap.xml'),'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"><url><loc>https://finfolk.com.au/</loc></url><url><loc>https://finfolk.com.au/directory</loc></url></urlset>');
@@ -43,6 +46,7 @@ async function compress(directory) {
   await mkdir(dirname(target),{recursive:true});await writeFile(target,packed);await unlink(path);
  }
 }
+await buildExploreContours(root);
 await compress(root);
 const config=JSON.parse(await readFile(resolve(root,'neon-config.json'),'utf8'));
 if(!config.enabled || config.authUrl!==environment.authUrl || config.apiUrl!=='https://finfolk.com.au/')throw Error('Production binding verification failed.');

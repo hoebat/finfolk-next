@@ -42,7 +42,7 @@
              "onMutation" (fn [domains] (return (. (. ctx ["public"]) (invalidate domains))))}))))
   (return (. ctx ["member"])))
 (defn.js createApplicationBackbone [config]
-  (var key (JSON.stringify [(or (. config ["authUrl"]) "") (or (. config ["apiUrl"]) "") (. config ["cacheBackend"])]))
+  (var key (JSON.stringify [(or (. config ["authUrl"]) "") (or (. config ["cacheApiUrl"]) (. config ["apiUrl"]) "") (. config ["cacheBackend"])]))
   (when (. -/APPLICATIONS (has key)) (return (. -/APPLICATIONS (get key))))
   (var ctx {"node" (substrate/node-create {"id" "finfolk-app"})
             "bridge" (-/createBridge config)

@@ -4,6 +4,16 @@
   "private": true,
   "type": "module",
   "dependencies": {
-    "@finfolk/edge": "workspace:*"
+    "@finfolk/edge": "workspace:*",
+    "maplibre-gl": "5.12.0",
+    "next": "16.4.4",
+    "polygon-clipping": "0.15.7",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build --webpack && node ../../../../scripts/build_nextjs_offline.mjs",
+    "start": "next start"
   }
 }

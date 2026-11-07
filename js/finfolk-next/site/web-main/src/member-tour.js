@@ -1,3 +1,4 @@
+import {memberTourSteps as steps} from './member-tour-model.js';
 const VERSION = '3';
 const seen = new Set();
 const node = (tag, text, cls) => { const n = document.createElement(tag); if (text !== undefined) n.textContent = text; if (cls) n.className = cls; return n; };
@@ -59,19 +60,6 @@ export function showMemberTour({ userId, shell, force = false } = {}) {
     dialog.close(); dialog.remove(); previous?.focus?.();
     if (destination) shell?.navigate(destination);
   }
-  const steps = [
-    ['Welcome to your water community', 'FinFolk brings your beach research, dive log and local diving community together. Try these interface examples, then use the shortcuts at the end.'],
-    ['Find a beach worth returning to', 'Open Discover to search beaches and regions, or use search at the top of Map. Open a beach for depth references, access notes, nearby stays and the folk there. Survey coverage varies; the map is a research tool, not live conditions.'],
-    ['Pick your favourite spots', 'Open Check In → Profile & privacy. Under “Beaches you’re interested in”, search and select up to 20 beaches, then Save profile. These choices help buddy compatibility; they do not count as visits.'],
-    ['Save a session', 'Open My sessions, then the new-session form. Choose the beach or location, date, duration, maximum depth and notes, then save. Sessions start private. A saved session and a beach check-in are separate records.'],
-    ['Check in and become a regular', 'At the beach, open its details and “The folk here”, then Check in. Visits are self-reported. Eight distinct visit days in the last 30 days make you a regular. The window keeps moving, so regular status expires when visits fall outside it.'],
-    ['Meet people at your spots', 'Open “The folk here” for regulars and suggested buddies. Suggestions use shared interests and preferences, not a safety qualification. Send a buddy request; they choose whether to accept. Manage requests in Your buddies.'],
-    ['Choose what you share', 'Profiles start Closed. Open lets you appear in discovery. Shared statistics require both Open divers to have eight separate visit days in the last 30 days. Accepted buddies bypass visit gates, but only see statistics you permit. Closed pauses discovery; it does not revoke accepted buddies.'],
-    ['Connect Instagram', 'Follow @finfolk.com.au and send /connect in Instagram. Enter the code from its reply in Your FinFolk → Instagram. Codes expire after ten minutes.'],
-    ['Turn mentions into actions', 'On a public Instagram post, mention @finfolk.com.au with a request such as log Bondi Beach depth 8m duration 30min. FinFolk prepares an action. Confirm your own dive details or exact public stats reply in My actions. Administrators review replies and awards. Private-post mentions are unavailable.'],
-    ['Invite your people', 'Open Invite friends to copy your invite link and see joins and verified connections. A new member can accept your invitation and verify Instagram to unlock a referral point for you. These are FinFolk referrals, not verified Instagram mutuals. Public points are opt-in.'],
-    ['Take it into the water', 'Your setup is yours to control. Keep photos and videos on Instagram or TikTok and add profile links in Profile & privacy. Those links do not verify ownership or grant follower-only access. Ready to make FinFolk yours?'],
-  ];
   function demo(host) {
     const label = node('small', 'INTERACTIVE EXAMPLE · nothing here is saved', 'tour-demo-label'); host.append(label);
     if (step === 1) {

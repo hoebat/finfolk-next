@@ -49,6 +49,10 @@ Public survey sources are stored in Git LFS. The independent [ocean dataset cata
 
 `make test` runs Clojure contract/release checks, Python atlas tests, and the existing generated-runtime, SQL/API and desktop/mobile UI tests. Tests cover cache keys, concurrency, invalidation, committed-write refresh failures, authentication changes, navigation/history, public forwarding, member actions and admin restrictions. External Meta messaging remains governed by its existing feature switches.
 
+`make neon-test-setup` provisions/reuses the dedicated `finfolkdb-test` Neon branch and `finfolkdb_test` database in the FinFolk project. Run `make test-db-common` for the direct TLS JDBC runtime tests, or `lein test :only finfolkdb.common.type-user-test` for one namespace (use the Makefile's JAVA_HOME on macOS). Each common namespace uses `l/script-`, typed PostgreSQL calls and `fact:global` lifecycle hooks. The harness verifies the branch/endpoint identity, locks the test database and rebuilds only its application schemas; it retains the branch. Connection credentials stay in ignored `.cache/neon-test/config.json` with mode 0600. No bridge or managed Auth login is required for these SQL tests. Missing Neon configuration is an error, with no local fallback.
+
+`make scaffold-db-common` uses `code.manage` to add linked write/read facts and preserve authored application scenarios. Common tests exercise directory publication/privacy, event rollback and RSVP changes, owner-only logbooks, post consent/blocking, trip upload/publication protocols, provider messaging delivery, reward and request state, environment lease consistency, and foreign-key failures without partial writes. Catalog assertions remain in the independent local `--common-contracts` suite.
+
 `make test-db` requires a running Docker engine and owns a disposable PostgreSQL 18 container/database for every run. It never uses cloud credentials. CI uses the same pinned image. `FINFOLK_TEST_POSTGRES_URL` may point to a local test server; cloud hosts are rejected and each suite creates/removes a distinct `finfolk_test_*` database. The test fixture reproduces Next's provisioned API schema grant and a minimal synthetic Neon Auth table. Provider calls remain simulated.
 
 `make generate` also publishes a complete fresh-install `resources/finfolkdb/schema.sql` through `def.make`. Its structure, permissions and required defaults are compared with the migrated database by `make test-db`. See [fresh-schema publication](docs/FRESH_SCHEMA.md); migrations remain the supported installation and upgrade path.
@@ -58,6 +62,11 @@ Database coverage includes domain-organized Clojure facts, all 47 table declarat
 `make test-browser` runs Chromium, Firefox and WebKit against real SQLite/WASM and IndexedDB, including browser restarts, multiple tabs, writer handoff, offline reads, account erasure and saved-map preservation. CI installs the browsers and OS dependencies and publishes test reports/traces. These tests use synthetic identities; they do not sign in to the deployed site.
 
 ## Production deployment
+
+The native Next frontend is now published on Netlify; see the current commands
+and domain ownership in [the cutover runbook](docs/MAIN_SITE_CUTOVER.md).
+The Worker frontend deployment notes below are historical. The API remains on
+Cloudflare and is released separately.
 
 The product uses the Slow melt identity with four device-local appearance choices: Yellow (default), Cobalt, Muted light and Muted dark. Account settings and the signed-out account screen offer the same choices. Existing Coastal/Sand preferences migrate to Muted light; Night swim migrates to Muted dark. Appearance initializes before styles load, and branding assets are fingerprinted and included in the offline shell. Map and depth rendering retain their existing colours.
 
@@ -101,3 +110,10 @@ People opens with a varied mix of Open profiles instead of a search form. “Ref
 Instagram linking and the code connection dialog live in Profile (`/profiles?screen=me#instagram-claim`). Logbook and legacy Account entry points link there. Instagram tools and administration remain available in Account, without a second connection form.
 
 The illustrated Alex/Maya/Kai diver portraits are the standard avatar set for People, Profile and the landing walkthroughs. An account’s default is stable across screens and display-name edits. Uploaded portraits take precedence; “Use standard illustration” restores the default, and unavailable uploads fall back to it. Session-sharing walkthroughs use themed freediver silhouettes instead of sample photographs. Avatar art and silhouette masks are versioned and included in the offline shell.
+
+The opt-in native messaging gateway supports signed Instagram/TikTok ingress and
+authenticated app chat through the Clojure-authored entity schema. Its Worker
+feature flag remains disabled. See [Messaging rollout](docs/MESSAGING_ROLLOUT.md)
+for separate database provisioning, server-only grants, OAuth, queue/cron setup,
+provider acceptance and rollback. Local tests use injected provider HTTP; live
+provider activation is not verified.

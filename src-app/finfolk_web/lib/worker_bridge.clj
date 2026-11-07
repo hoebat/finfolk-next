@@ -95,7 +95,7 @@
     (var controller (. (. ctx ["http"]) (get (. message ["id"]))))
     (when controller (. controller (abort))) (return))
   (when (== type "changed") (-/announce "finfolk:cache-changed" {}) (return))
-  (when (== type "cached") (-/announce "finfolk:cache-status" {"cached" true "savedAt" (. message ["savedAt"])}) (return))
+  (when (== type "cached") (return))
   (var facade (. (. ctx ["scopes"]) (get (. message ["scope"]))))
   (when (== type "http")
     (var controller (new AbortController))
@@ -126,6 +126,10 @@
     (return))
   (when (== type "cleared")
     (-/markClosed facade)
+    (when (. ctx ["cachedReads"])
+      (for:iter [key (. (. ctx ["cachedReads"]) (keys))]
+        (when (== (. (JSON.parse key) [0]) (. message ["scope"]))
+          (. (. ctx ["cachedReads"]) (delete key)))))
     (-/announce "finfolk:member-cleared" {"actor" (. message ["actor"])}) (return))
   (when (== type "evicted") (. (. facade ["snapshots"]) (clear)) (return))
   (when (or (== type "state") (== type "snapshot"))
@@ -135,7 +139,14 @@
       (. (. facade ["snapshots"]) (delete (. message ["key"]))))
     (var entry (. (. facade ["subscriptions"]) (get (. message ["subscription"]))))
     (when entry (try ((. entry ["callback"]) state) (catch error (console.error "Cache subscriber failed."))))
-    (when (. state ["cached"]) (-/announce "finfolk:cache-status" {"cached" true "savedAt" (. state ["savedAt"])}))))
+    (when (== (. state ["status"]) "ready")
+      (when (not (. ctx ["cachedReads"])) (:= (. ctx ["cachedReads"]) (new Map)))
+      (var key (JSON.stringify [(. message ["scope"]) (. message ["key"])]))
+      (if (. state ["cached"])
+        (. (. ctx ["cachedReads"]) (set key (. state ["savedAt"])))
+        (. (. ctx ["cachedReads"]) (delete key)))
+      (-/announce "finfolk:cache-status" {"cached" (> (. ctx ["cachedReads"] ["size"]) 0)
+        "savedAt" (. (Array.from (. (. ctx ["cachedReads"]) (values))) [0])}))))
 
 (defn.js createScope [ctx actor transport]
   (var facade {"actor" actor "transport" transport "snapshots" (new Map) "revisions" (new Map) "subscriptions" (new Map) "blocked" (new Set) "closed" false})
@@ -173,6 +184,25 @@
        (when (and (not (. (registry/operation name) ["write"])) (== revision (or (. (. facade ["revisions"]) (get key)) 0)))
          (. (. facade ["snapshots"]) (set (+ name ":" (backbone/stableKey values)) result)))
        (return result)))
+     "hydrate" (async (fn [name values data stamp]
+       (var spec (registry/operation name))
+       (when (or (not= actor "public") (. spec ["auth"]) (. spec ["write"]) (. spec ["admin"]) (== (. spec ["cache"]) false))
+         (throw (new Error "Only cacheable public reads can be hydrated.")))
+       (await (. facade ["ready"]))
+       (when (. facade ["closed"]) (throw (new Error "Account context closed.")))
+       (when (. facade ["local"]) (return (. (. facade ["local"]) (hydrate name values data stamp))))
+       (try
+         (var result (await (-/request ctx {"type" "hydrate" "scope" (. facade ["id"]) "name" name "values" values "data" data "stamp" stamp} nil)))
+         (when (. facade ["closed"]) (throw (new Error "Account context closed.")))
+         (when (and (. result ["state"]) (== (. result ["state"] ["status"]) "ready"))
+           (. (. facade ["snapshots"]) (set (+ name ":" (backbone/stableKey (or values {}))) (. result ["state"] ["data"]))))
+         (return result)
+         (catch error
+           ;; An already-running older kernel retains its existing read behavior
+           ;; until its tabs close. Current kernels never fetch during hydration.
+           (when (== (. error ["message"]) "Unknown worker operation.")
+             (return {"applied" false "legacy" true "data" (await (. api (call name values)))}))
+           (throw error)))))
      "read" (fn [name values]
        (when (. facade ["closed"]) (return undefined))
        (when (. facade ["local"]) (return (. (. facade ["local"]) (read name values))))
@@ -215,7 +245,7 @@
 (defn.js createWorkerBridge [config]
   (when (or (== (typeof Worker) "undefined") (== (typeof MessageChannel) "undefined")) (return nil))
   (var ctx {"scopes" (new Map) "pending" (new Map) "http" (new Map) "sequence" 0
-            "client" (. crypto (randomUUID)) "environment" (JSON.stringify [(. config ["authUrl"]) (. config ["apiUrl"])])})
+            "client" (. crypto (randomUUID)) "environment" (JSON.stringify [(. config ["authUrl"]) (or (. config ["cacheApiUrl"]) (. config ["apiUrl"]))])})
   (var channel (new MessageChannel))
   (var worker nil)
   (var shared (not= (typeof SharedWorker) "undefined"))

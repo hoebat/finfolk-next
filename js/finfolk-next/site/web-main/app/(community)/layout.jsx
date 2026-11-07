@@ -1,0 +1,11 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {usePathname} from 'next/navigation';
+import CommunityNavigation from '../community-navigation.jsx';
+import {PrimaryNavigation,UtilityMenu} from '../app-navigation.jsx';
+export default function CommunityLayout({children}){
+ const path=usePathname(),themeOptions=[['yellow','Acid Club'],['cobalt','Blue Hour'],['navy-light','Salt Paper'],['navy','Night Swim']],[ready,setReady]=useState(false),[theme,setTheme]=useState('yellow'),[signedIn,setSignedIn]=useState(false);
+ useEffect(()=>{setReady(true);let live=true,stop;const sync=()=>setTheme(document.documentElement.dataset.theme||'yellow');sync();document.addEventListener('finfolk:appearance',sync);import('../../lib/browser-client.js').then(x=>x.browserClient()).then(api=>{if(live)stop=api.observe(user=>{if(live)setSignedIn(!!user);});}).catch(()=>{});return()=>{live=false;stop?.();document.removeEventListener('finfolk:appearance',sync);};},[]);
+ function change(e){const value=e.target.value;setTheme(value);const url='/theme.js';import(/* webpackIgnore: true */ url).then(x=>x.setTheme(value));}
+ return <>{['instagram-connect','profiles','identity','navigation','profiles-theme'].map(name=><link rel="stylesheet" href={'/'+name+'.css'} key={name}/>)}<div className={'next-community profile-demo finfolk-navigation-enabled'+(!signedIn?' finfolk-guest-navigation':'')}><a className="profile-skip" href="#profile-main">Skip to content</a><aside className="profile-rail"><a className="profile-home" href="/" aria-label="FinFolk home"><span className="navigation-logo" aria-hidden="true"/></a><PrimaryNavigation className="profile-nav"/><UtilityMenu signedIn={signedIn}/></aside><div className="profile-workspace"><header className="profile-topbar"><span>FINFOLK / FREEDIVING &amp; TRAINING</span><div className="profile-topbar-actions"><label>Theme<select aria-label="Theme" disabled={!ready} value={theme} onChange={change}>{themeOptions.map(([id,name])=><option value={id} key={id}>{name}</option>)}</select></label></div></header><p className="profile-status" role="status"/><main className="profile-main" id="profile-main" data-screen={path==='/people'?'people':undefined} tabIndex={-1}><CommunityNavigation/>{children}</main><footer className="profile-footer"><span>FinFolk / Freediving &amp; training</span></footer></div></div></>
+}

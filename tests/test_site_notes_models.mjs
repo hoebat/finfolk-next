@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {definition,resolveModel,runPage,runAction,bindPageClient} from '../js/finfolk-next/packages/edge/page-models.js';
+const calls=[],inputs={site:'bondi',query:{sort:'helpful',topic:'all',offset:0}},publicClient={call:async(name,value)=>{calls.push({name,value});return {notes:[],next:null};}};
+await runPage({user:null},'site-notes',inputs,{publicClient});assert.equal(calls[0].name,'publicSiteNotes');assert.equal(calls[0].value.site,'bondi');
+const member={user:{uid:'alice'},request:async(path,options)=>{calls.push({path,options});return {notes:[],next:null};}};await runPage(member,'site-notes',inputs,{publicClient});
+assert.match(calls.at(-1).path,/^\/v1\/me\/sites\/bondi\/notes\?/);
+assert.equal(resolveModel('site-notes','public',inputs).spec.cache,false);
+assert.equal(definition('site-notes').topics.conditions,'Conditions');
+await assert.rejects(()=>runPage({user:null},'site-notes',{query:{}},{publicClient}),/Missing page binding: site/);
+const writes=[],sdk={request:async(...args)=>{writes.push(args);return {};}};
+await runAction(sdk,'site-notes','vote',{site:'bondi'},{site:'foreign',id:'note-id',upvoted:true});assert.equal(writes[0][0],'/v1/me/sites/bondi/notes/vote');assert.equal(writes[0][1].body.site,undefined);assert.equal(writes[0][1].body.upvoted,true);
+assert.throws(()=>bindPageClient('site-notes',publicClient).call('myCheckins',{}),/Undeclared/);
+const actor=member.user;let release;member.request=()=>new Promise(resolve=>release=resolve);const pending=runPage(member,'site-notes',inputs,{publicClient});await Promise.resolve();member.user={uid:'bob'};release({notes:[{text:'OLD_ACTOR'}]});await assert.rejects(pending,/Account changed/);member.user=actor;
+console.log('SITE_NOTES_MODELS_PASS: public/member composition, mandatory site identity, mutation binding, no feed persistence and late-account fences.');

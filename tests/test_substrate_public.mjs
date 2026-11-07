@@ -21,5 +21,10 @@ try {
  await assert.rejects(()=>publicOperation('unknown',{},'https://next.public.test/',()=>assert.fail()),/Unknown/);
  await assert.rejects(()=>publicOperation('publicTrips',{},'https://production.test/',()=>assert.fail()),/environment mismatch/);
  app.member('private-user',async()=>({private:true}));app.clearMember();assert.equal(app.public.actor,'public');assert.equal(app.state('auth').status,'signed-out');
- console.log('SUBSTRATE_PUBLIC_PASS: shared anonymous models, existing feed interface, query serialization, environment binding and keepalive mutations.');
+ const proxied=await applicationBackbone({backbone:true,apiUrl:'https://native.proxy.test/',cacheApiUrl:'https://next.public.test/',authUrl:'https://auth.public.test'});
+ assert.equal(proxied,app,'A same-backend proxy keeps the original application/cache identity');
+ await proxied.public.call('publicEvents',{q:'proxy'});assert.equal(requests.at(-1).url.origin,'https://native.proxy.test');
+ const different=await applicationBackbone({backbone:true,apiUrl:'https://native.proxy.test/',cacheApiUrl:'https://other.backend.test/',authUrl:'https://auth.public.test'});assert.notEqual(different,app,'A different logical backend remains isolated');
+ const otherAuth=await applicationBackbone({backbone:true,apiUrl:'https://native.proxy.test/',cacheApiUrl:'https://next.public.test/',authUrl:'https://other.auth.test'});assert.notEqual(otherAuth,app,'A different identity environment remains isolated');
+ console.log('SUBSTRATE_PUBLIC_PASS: shared anonymous models, existing feed interface, query serialization, environment binding, stable cache identity across same-backend proxies and keepalive mutations.');
 } finally {globalThis.fetch=oldFetch;}

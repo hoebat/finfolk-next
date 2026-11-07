@@ -1,3 +1,5 @@
+import {createWorkerMessaging,assertMessagingDrain} from './messaging-worker.mjs';
+import {scheduleEnvironment} from './environment.mjs';
 import {tiktokReady,scheduleTikTok} from './tiktok.mjs';
 import {publicPage} from './public-pages.mjs';
 import {createAPI,managedVerifier} from './api.mjs';
@@ -7,7 +9,7 @@ import {processInstagramDM,sendOutbox,reconcileInstagramDM} from './messaging-en
 import {sendCommandReply} from './instagram-commands.mjs';
 import {collectInstagramSource,scheduleInstagramDiscovery} from './instagram-collector.mjs';
 
-export function createNextWorker({openDatabase=database,apiFactory=createAPI,databaseName='finfolk_next'}={}) {
+export function createNextWorker({openDatabase=database,apiFactory=createAPI,databaseName='finfolk_next',messagingFactory=createWorkerMessaging,verifierFactory=managedVerifier}={}) {
  const verifiers=new Map();
  const configured=env=>env.ENVIRONMENT==='next' && env.HYPERDRIVE && env.NEON_AUTH_BASE_URL &&
   !env.NEON_AUTH_BASE_URL.includes('ep-crimson-queen') && env.DB_BACKBONE_ENABLED==='true';
@@ -20,9 +22,26 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
    return await run(db);
   }finally{await db.pool.end();}
  }
+ async function withMessaging(env,run){
+  if(env.ENTITY_MESSAGING_ENABLED!=='true'||!env.ENTITY_MESSAGING_HYPERDRIVE?.connectionString||
+     !env.ENTITY_MESSAGING_DATABASE_NAME||env.ENTITY_MESSAGING_DATABASE_NAME===databaseName||
+     env.ENTITY_MESSAGING_HYPERDRIVE.connectionString===env.HYPERDRIVE?.connectionString)
+   throw Error('Entity messaging requires its separate, explicitly enabled database.');
+  const db=openDatabase(env.ENTITY_MESSAGING_HYPERDRIVE.connectionString);
+  try{
+   const verifierKey=JSON.stringify([env.ENTITY_MESSAGING_AUTH_BASE_URL,env.ENTITY_MESSAGING_AUTH_JWKS_URL]);
+   let verify=verifiers.get(verifierKey);
+   if(!verify){verify=verifierFactory({NEON_AUTH_BASE_URL:env.ENTITY_MESSAGING_AUTH_BASE_URL,NEON_AUTH_JWKS_URL:env.ENTITY_MESSAGING_AUTH_JWKS_URL});verifiers.set(verifierKey,verify);}
+   return await run(messagingFactory({db,env,verify}));
+  }finally{await db.pool.end();}
+ }
  return {
   async fetch(request,env,ctx){
    const path=new URL(request.url).pathname;
+   if(path.startsWith('/v1/messaging/')){
+    try{return await withMessaging(env,gateway=>gateway.fetch(request));}
+    catch{return Response.json({error:'Messaging is unavailable.'},{status:503,headers:{'Cache-Control':'no-store'}});}
+   }
    if(['GET','HEAD'].includes(request.method)){const publication=path==='/v1/integrations/tiktok/oauth/callback'&&tiktokReady(env)&&request.method==='GET'?null:publicPage(path);if(publication)return request.method==='HEAD'?new Response(null,{status:publication.status,headers:publication.headers}):publication;}
    if(path==='/instagram/webhook' && request.method==='GET' && env.ENVIRONMENT==='next')
     return instagramWebhook(request,env,()=>{throw Error('Verification must be database independent');});
@@ -32,15 +51,36 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
     if(path==='/health')return Response.json({environment:'next',backbone:'Clojure/Postgres + xt.substrate + xt.db',ready:true,sqlSha:env.DB_SQL_SHA},{headers:{'Cache-Control':'no-store'}});
     let verify=verifiers.get(env.NEON_AUTH_BASE_URL);
     if(!verify){verify=managedVerifier(env);verifiers.set(env.NEON_AUTH_BASE_URL,verify);}
-    return apiFactory({db,verify,origins:['https://finfolk.com.au','https://www.finfolk.com.au','https://old.finfolk.com.au','http://localhost:8000','http://127.0.0.1:8000']}).fetch(request,env,ctx);
+    const run=siteNotesDb=>apiFactory({db,siteNotesDb,verify,origins:['https://finfolk.com.au','https://www.finfolk.com.au','https://old.finfolk.com.au','http://localhost:8000','http://127.0.0.1:8000']}).fetch(request,env,ctx);
+    const notesPath=/^\/v1\/(?:me\/|admin\/)?sites\/[^/]+\/notes(?:\/|$)/.test(path);
+    if(!notesPath||env.ENTITY_SITE_NOTES_ENABLED!=='true')return run(null);
+    if(!env.ENTITY_SITE_NOTES_HYPERDRIVE?.connectionString||!env.ENTITY_SITE_NOTES_DATABASE_NAME||
+       env.ENTITY_SITE_NOTES_DATABASE_NAME===databaseName||env.ENTITY_SITE_NOTES_HYPERDRIVE.connectionString===env.HYPERDRIVE.connectionString)
+      throw Error('Native site notes require their separate database binding.');
+    const notes=openDatabase(env.ENTITY_SITE_NOTES_HYPERDRIVE.connectionString);
+    try{
+     const installed=(await notes.query('SELECT current_database() AS database,to_regclass(\'finfolk."SiteNote"\') IS NOT NULL AS installed'))[0];
+     if(installed?.database!==env.ENTITY_SITE_NOTES_DATABASE_NAME||!installed.installed)throw Error('Native site notes are not provisioned.');
+     return await run(notes);
+    }finally{await notes.pool.end();}
    });}catch(error){
     console.error(JSON.stringify({service:'finfolk-next',code:error.code || 'next_backend_unavailable'}));
     return Response.json({error:'Next backend is not isolated and ready.'},{status:503,headers:{'Cache-Control':'no-store'}});
    }
   },
   async queue(batch,env){
+   const native=batch.messages.filter(message=>message.body?.kind==='entity-messaging');
+   for(const message of native){
+    try{
+     if(typeof message.body.connectionKey!=='string')throw Error('Invalid connection wakeup.');
+     await withMessaging(env,async gateway=>assertMessagingDrain(await gateway.drain({connectionKeys:[message.body.connectionKey]})));
+     message.ack();
+    }catch{message.retry({delaySeconds:300});}
+   }
+   const legacy=batch.messages.filter(message=>message.body?.kind!=='entity-messaging');
+   if(!legacy.length&&native.length)return;
    await withDatabase(env,async db=>{
-    for(const message of batch.messages){
+    for(const message of legacy){
      try{
       const {kind,id,key}=message.body;
       if(kind==='instagram-dm')await processInstagramDM(String(id),env,db);
@@ -54,10 +94,15 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
    });
   },
   async scheduled(event,env){
-   await withDatabase(env,async db=>{
+   const tasks=[];
+   if(env.ENTITY_MESSAGING_ENABLED==='true')tasks.push(withMessaging(env,async gateway=>assertMessagingDrain(await gateway.drain())));
+   if(configured(env))tasks.push(withDatabase(env,async db=>{
     if(event.cron==='* * * * *')await reconcileInstagramDM(env,db.query);
-    else{await reconcileInstagram(env,db.query);await scheduleInstagramDiscovery(env,db.query);await scheduleTikTok(env,db);}
-   });
+    else{await scheduleEnvironment(db,env);await reconcileInstagram(env,db.query);await scheduleInstagramDiscovery(env,db.query);await scheduleTikTok(env,db);}
+   }));
+   if(!tasks.length)throw Error('No configured background database.');
+   const results=await Promise.allSettled(tasks);
+   const failure=results.find(result=>result.status==='rejected');if(failure)throw failure.reason;
   }
  };
 }

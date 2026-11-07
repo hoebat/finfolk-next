@@ -83,7 +83,7 @@ export function member(ctx,actor,transport){
 export function createApplicationBackbone(config){
   let key = JSON.stringify([
     config["authUrl"] || "",
-    config["apiUrl"] || "",
+    config["cacheApiUrl"] || config["apiUrl"] || "",
     config["cacheBackend"]
   ]);
   if(APPLICATIONS.has(key)){

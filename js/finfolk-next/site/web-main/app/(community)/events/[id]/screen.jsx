@@ -1,0 +1,15 @@
+'use client';
+import {useState} from 'react';
+import {useSession} from '../../../../lib/use-session.js';
+import {usePageData} from '../../../../lib/use-page-data.js';
+import {EventNavigation,EventGate,useEventAction} from '../tools.jsx';
+export default function EventDetail({id,publicEvent}){
+ const session=useSession(),{record,refresh}=usePageData(session,'event',{id});
+ const data=session.user?record?.data:{event:publicEvent};
+ return <>{data?.event?<Detail key={session.user?.uid||'guest'} session={session} {...data} refresh={refresh}/>:<><h1>Events</h1><EventNavigation/>{session.user||session.status==='loading'?<EventGate session={session} record={record} retry={refresh}/>:<><p>This event is unavailable. Private events require an invitation and the invited account.</p><a className="profile-action" href="/account">Sign in</a></>}</>}</>;
+}
+function Detail({session,event:e,roster,refresh}){
+ const {run,busy,error}=useEventAction(session,'event',{id:e.id}),[invitation,setInvitation]=useState(''),[email,setEmail]=useState('');
+ const action=(label,op,body={},done=refresh)=><button type="button" className="profile-action" disabled={busy} onClick={()=>run(op,{id:e.id,...body},done).catch(()=>{})}>{label}</button>;
+ return <><h1>{e.document.title}</h1><EventNavigation/><p>{e.organiser} · {e.document.location}</p><p>{new Date(e.starts_at).toLocaleString(undefined,{timeZone:e.timezone})} to {new Date(e.ends_at).toLocaleString(undefined,{timeZone:e.timezone})} · {e.timezone}</p><p>{e.document.description}</p><p>{e.state} · {e.visibility} · {e.going} going{e.capacity?' / '+e.capacity+' places':''}</p>{session.user?<><p>Your RSVP: {e.myRsvp||'Not registered'}</p>{e.state==='published'&&new Date(e.starts_at)>new Date()&&action('RSVP · Going','rsvp',{state:'going'})}{e.myRsvp==='going'&&action('Cancel my RSVP','rsvp',{state:'cancelled'})}</>:<a className="profile-action" href="/account">Sign in to RSVP</a>}{e.canManage&&<><a className="profile-action" href={'/events/new?id='+e.id}>Edit event</a><a className="profile-action" href={'/events/new?duplicate='+e.id+'&page='+e.page_id}>Duplicate event</a>{action('Cancel event','cancel')}<section><h2>Attendees</h2>{roster.attendees.map(a=><p key={a.id}>{a.name||a.id}</p>)}{e.visibility==='private'&&<><label>Invite email<input aria-label="Invite email" type="email" value={email} onChange={ev=>setEmail(ev.target.value)}/></label><button type="button" className="profile-action" disabled={busy} onClick={()=>{run('invite',{id:e.id,email},result=>setInvitation(new URL('/events/invitation?token='+encodeURIComponent(result.token),window.location.origin).href)).catch(()=>{});}}>Create private invitation</button>{invitation&&<label>Share this link with the invited person<input readOnly value={invitation}/></label>}{roster.invitations.map(i=><span key={i.id}><p>{i.email} · {i.revoked?'Revoked':new Date(i.expires).toLocaleString()}</p>{!i.revoked&&action('Revoke '+i.email,'revoke',{invite:i.id})}</span>)}</>}</section></>}{e.canModerate&&action('Superadmin · Hide event','moderate')}{error&&<p role="alert">{error}</p>}</>;
+}

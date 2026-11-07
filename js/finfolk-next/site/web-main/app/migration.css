@@ -1,0 +1,9 @@
+.finfolk-landing{display:block;min-height:100dvh;background:var(--account-bg);color:var(--account-ink);font-family:var(--atelier-body);line-height:1.5}
+.next-community.profile-demo{grid-template-columns:200px minmax(0,1fr)}
+.next-community .profile-main::before{right:0}
+.account-screen-title{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.next-account .signin-form{display:grid;gap:12px}.next-account .signin-form label{display:grid;gap:6px}.next-account .signin-form input{padding:12px;border:1px solid var(--account-line);border-radius:14px}
+.next-account nav[aria-label="Sign-in options"]{display:flex;flex-wrap:wrap;gap:12px;margin:14px 0}.next-account nav button{background:none;border:0;color:inherit;cursor:pointer}
+.next-account .signin-card>.brand-wordmark{width:360px;max-width:100%}
+@media(max-width:900px){.next-community{display:block}}
+@media(max-width:900px){.next-community.finfolk-navigation-enabled nav.ff-primary-nav{padding-left:64px}}

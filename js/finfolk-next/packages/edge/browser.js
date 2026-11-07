@@ -56,9 +56,15 @@ export async function httpOperation(config,name,input,options){
     "signal":options["signal"]
   };
   if(spec["write"]){
+    let body = Object.assign({},input);
+    Object.keys(body).forEach(function (key){
+      if(spec["path"].includes(":" + key)){
+        delete(body[key]);
+      }
+    });
     Object.assign(init,{
       "headers":{"Content-Type":"application/json"},
-      "body":JSON.stringify(input),
+      "body":JSON.stringify(body),
       "keepalive":name == "publicReferral"
     });
   }

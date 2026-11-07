@@ -28,7 +28,7 @@ for(const origin of ['http://finfolk.com.au','http://www.finfolk.com.au','https:
 }
 assert.equal(forwarded.length,0,'Insecure or noncanonical requests redirect before reaching the API');
 assert.equal(assets,0,'Insecure or noncanonical requests redirect before loading assets');
-assert.deepEqual(config.routes.map(r=>r.pattern),['finfolk.com.au','www.finfolk.com.au']);
+assert.deepEqual(config.routes,[],'The historical frontend Worker must not reclaim the Netlify production hostnames');
 for(const spec of Object.values(operations).filter(o=>o.transport==='rest')){
  const path=spec.path.replace(':id','fixture')+'?cursor=two';
  assert.ok(config.assets.run_worker_first.some(pattern=>pattern.endsWith('*')?path.split('?')[0].startsWith(pattern.slice(0,-1)):path.split('?')[0]===pattern),path+' must run Worker first');

@@ -1,3 +1,4 @@
+import {importChunks} from './trip-model.js';
 import {
   parseDiveCSV,
   mapDiveCSV,
@@ -49,26 +50,7 @@ const button = (title, fn, status) => {
   };
   return b;
 };
-export function importChunks(records) {
-  const chunks = [];
-  let rows = [];
-  for (const record of records) {
-    if (new TextEncoder().encode(JSON.stringify(record)).length > 40000)
-      throw Error(
-        "A dive row is too large to upload. Remove unneeded long-text CSV columns.",
-      );
-    if (
-      rows.length >= 200 ||
-      new TextEncoder().encode(JSON.stringify([...rows, record])).length > 45000
-    ) {
-      chunks.push(rows);
-      rows = [];
-    }
-    rows.push(record);
-  }
-  if (rows.length) chunks.push(rows);
-  return chunks;
-}
+export {importChunks} from './trip-model.js';
 export async function renderTripManager({ host, api, beaches, refresh }) {
   const section = el("section", undefined, "account-card trip-manager"),
     status = el("p");

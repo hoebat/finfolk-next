@@ -1,0 +1,15 @@
+// Synthetic member sessions; public site catalog reads only. No account/provider writes.
+import assert from 'node:assert/strict';
+import {chromium} from '@playwright/test';
+const base=process.env.NEXTJS_TEST_URL||'http://localhost:3201';assert.ok(['localhost','127.0.0.1'].includes(new URL(base).hostname));
+const browser=await chromium.launch({headless:true});
+try{const page=await browser.newPage({serviceWorkers:'block'});const errors=[];page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/neon-config.json*',r=>r.fulfill({json:{enabled:true,authUrl:'https://auth.invalid'}}));
+ await page.route('**/neon-client.js',r=>r.fulfill({contentType:'text/javascript',body:`let user={uid:'alice',emailVerified:true},listeners=new Set();window.peopleCalls=[];window.testPeopleSignOut=()=>{user=null;listeners.forEach(fn=>fn(null));};const api={get user(){return user},observe(fn){listeners.add(fn);fn(user);return()=>listeners.delete(fn)},async call(action,values){window.peopleCalls.push({action,values});if(action==='me')return {profile:{open:false}};if(action==='community'){if(window.delayPeople)await new Promise(resolve=>window.releasePeople=resolve);return {people:[{id:'maya',displayName:'Maya',bio:'A diver at Bondi.',regular:true,beaches:['bondi'],connection:null}],cursor:'next'};}if(action==='connection')return {};throw Error('Unexpected operation '+action);}};export async function createLogbookClient(){return api}` }));
+ await page.goto(base+'/people',{waitUntil:'domcontentloaded'});await page.getByRole('heading',{name:'Maya',exact:true}).waitFor();await page.getByText('Your profile is Closed and does not appear in People.').waitFor();
+ await page.getByRole('button',{name:'Connect',exact:true}).click();await page.getByRole('button',{name:'Request pending',exact:true}).waitFor();assert.equal(await page.getByRole('button',{name:'Request pending'}).isDisabled(),true);assert.equal(await page.evaluate(()=>window.peopleCalls.filter(x=>x.action==='connection').length),1);
+ await page.getByRole('button',{name:'Meet more people'}).click();await page.waitForFunction(()=>window.peopleCalls.filter(x=>x.action==='community').length===2);assert.equal(await page.locator('[data-person=maya]').count(),1);
+ await page.getByText('Refine the mix',{exact:true}).click();await page.getByLabel('Experience',{exact:true}).selectOption('comfortable');await page.waitForFunction(()=>window.peopleCalls.some(x=>x.action==='community'&&x.values.experience==='comfortable'));
+ await page.evaluate(()=>window.delayPeople=true);await page.getByLabel('Experience',{exact:true}).selectOption('experienced');await page.waitForFunction(()=>typeof window.releasePeople==='function');await page.evaluate(()=>{window.testPeopleSignOut();window.releasePeople();});await page.getByRole('heading',{name:'Meet the divers at your spot.'}).waitFor();assert.equal(await page.locator('[data-person]').count(),0);assert.deepEqual(errors,[]);
+ console.log('NEXTJS_PEOPLE_PASS: native cards, Closed-profile note, connection mutation, duplicate-free pagination, filters and sign-out member-data removal.');
+}finally{await browser.close();}

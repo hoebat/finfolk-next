@@ -35,7 +35,7 @@ export function installCommunity({
   loadClient = () => import('./neon-client.js'),
 } = {}) {
   const root = document.getElementById('account-page');
-  const requestedAccountTab = () => { const tab = new URL(location.href).searchParams.get('tab'); return ['checkin', 'posts', 'instagram', 'profile', 'settings', 'sites'].includes(tab) ? tab : 'checkin'; };
+  const requestedAccountTab = () => { const tab = new URL(location.href).searchParams.get('tab'); return ['checkin', 'posts', 'instagram', 'profile', 'settings', 'sites', 'admin'].includes(tab) ? tab : 'checkin'; };
   let config,
     client,
     pending,

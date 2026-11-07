@@ -275,6 +275,14 @@ export async function handle(client,message){
           {"client":client["id"],"request":message["id"]}
         ));
       }
+      else if(type == "hydrate"){
+        result = model.hydrate(
+          message["name"],
+          message["values"],
+          message["data"],
+          message["stamp"]
+        );
+      }
       else if(type == "subscribe"){
         let sub = message["subscription"];
         let stop = model.subscribe(message["name"],message["values"],function (state){
@@ -320,7 +328,7 @@ export async function handle(client,message){
       }
     }
     send(client,{"type":"result","id":message["id"],"result":result});
-    if(type == "call"){
+    if(["call","hydrate"].includes(type)){
       for(let target of CLIENTS){
         if(target["environment"] == client["environment"]){
           send(target,{"type":"changed"});

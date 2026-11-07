@@ -1,5 +1,31 @@
 # Main-site production ownership
 
+## Current frontend hosting (7 November 2026)
+
+The native Next frontend is published on Netlify project `finfolk`
+(`fe66fb45-09ab-4e37-8474-3a4f2e162123`). Cloudflare remains the authoritative
+DNS provider and hosts `api.finfolk.com.au`; frontend publishing does not deploy
+the API or install SQL. The apex uses a DNS-only flattened CNAME to
+`apex-loadbalancer.netlify.com`; `www` uses a DNS-only CNAME to
+`finfolk.netlify.app`. Netlify owns frontend HTTPS and the www redirect.
+
+For a local frontend publish, run from this repository:
+
+```sh
+netlify deploy --filter @finfolk/web-main --site fe66fb45-09ab-4e37-8474-3a4f2e162123 --context production --prod
+```
+
+The CLI builds the project, including the Next adapter and server functions.
+Verify generated-source checks, tests, the packaged server, browser acceptance,
+the production pointer, public routes and exact offline assets. Keep the built
+Netlify artifact as the asset-verification baseline if another local build runs.
+The historical `wrangler.next.jsonc` has no domain routes so it cannot reclaim
+the frontend hostnames. The older Worker release instructions below describe
+the previous hosting arrangement; use `make deploy-api` only for an intentional,
+separate API release.
+
+## Historical Worker hosting
+
 `hoebat/finfolk-next` owns the production frontend at `finfolk.com.au` and API at `api.finfolk.com.au`. The internal Next Worker/database names and immutable SQL release are retained. Plain HTTP on the main site and all `www.finfolk.com.au` requests return a 308 redirect to `https://finfolk.com.au`, preserving the path and query. The former preview hostname is removed, without a redirect.
 
 The frontend enables the Clojure-authored `xt.substrate` application backbone and SQLite/WASM workers. Production uses the existing Next Better Auth realm and database; legacy accounts and histories are not imported. Google sign-in remains enabled. Instagram keeps its two-account pilot and existing links; this change does not enable public rollout or TikTok messaging.

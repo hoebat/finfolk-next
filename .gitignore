@@ -19,3 +19,11 @@ test-results/
 .yarn/unplugged/
 .yarn/cache/
 metadata/*.local.json
+
+.netlify/
+**/.next/
+js/finfolk-next/site/web-main/public/
+
+# Emacs lock and autosave files
+**/.#*
+**/#*#

@@ -21,7 +21,7 @@
 
 (defn.js publish [ctx entry state]
   (:= (. entry ["state"]) (Object.assign {} (. entry ["state"]) state))
-  (when (and (not (. entry ["spec"] ["write"])) (== (. entry ["state"] ["status"]) "ready"))
+  (when (and (not (. entry ["spec"] ["write"])) (not= (. entry ["spec"] ["cache"]) false) (== (. entry ["state"] ["status"]) "ready"))
     ((. ctx ["onPublish"]) (. entry ["key"]) (. entry ["state"])))
   (events/set-output (. entry ["model"]) (. entry ["state"]) (not (not (. entry ["state"] ["error"]))) nil nil nil))
 
@@ -49,7 +49,7 @@
     (var group (:? (. spec ["admin"]) "admin" (. spec ["domain"])))
     (:= entry {"key" key "name" name "values" (:? (. spec ["write"]) {} values)
                "spec" spec "id" id "group" group "listeners" (new Set) "state" {"status" "idle"} "revision" 0})
-    (when (not (. spec ["write"]))
+    (when (and (not (. spec ["write"])) (not= (. spec ["cache"]) false))
       (var saved ((. ctx ["storage"] ["get"]) key))
       (when saved (:= (. entry ["state"]) {"status" "stale" "data" (. saved ["data"]) "cached" true "savedAt" (. saved ["savedAt"])})))
     (. entries (set key entry))
@@ -66,6 +66,26 @@
           (try (callback (. entry ["state"]))
                (catch error (console.error "Substrate view subscriber failed."))))) nil nil))
   (return entry))
+
+(defn.js hydrate [ctx name values data stamp]
+  (-/ensureOpen ctx)
+  (var spec (registry/operation name))
+  (when (or (not= (. ctx ["actor"]) "public") (. spec ["auth"]) (. spec ["write"]) (. spec ["admin"]) (== (. spec ["cache"]) false))
+    (throw (new Error "Only cacheable public reads can be hydrated.")))
+  (when (or (not (Number.isFinite stamp)) (<= stamp 0) (== data nil) (not= (typeof data) "object"))
+    (throw (new Error "Invalid public hydration payload.")))
+  (:= values (or values {}))
+  (var entry (-/ensureModel ctx name values))
+  (var state (. entry ["state"]))
+  (when (or (. (. ctx ["pending"]) (has (. entry ["key"])))
+            (> (. entry ["revision"]) 0)
+            (and (== (. state ["status"]) "ready")
+                 (or (not= (. state ["origin"]) "ssr") (>= (or (. state ["hydratedAt"]) 0) stamp))))
+    (return {"applied" false "state" state}))
+  ((. ctx ["storage"] ["put"]) (. entry ["key"]) data spec)
+  (-/publish ctx entry {"status" "ready" "data" data "error" nil "cached" false "savedAt" (Date.now)
+                       "origin" "ssr" "hydratedAt" stamp})
+  (return {"applied" true "state" (. entry ["state"])}))
 
 (defn.js invalidateEntry [ctx entry]
   (:= (. entry ["revision"]) (+ 1 (. entry ["revision"])))
@@ -95,8 +115,8 @@
     (when (. acc ["error"]) (throw (or output (new Error "Request failed."))))
     (:= result output)
     (when (and (not (. spec ["write"])) (== revision (. entry ["revision"])))
-      ((. ctx ["storage"] ["put"]) (. entry ["key"]) result spec)
-      (-/publish ctx entry {"status" "ready" "data" result "error" nil "cached" false "savedAt" (Date.now)}))
+      (when (not= (. spec ["cache"]) false) ((. ctx ["storage"] ["put"]) (. entry ["key"]) result spec))
+      (-/publish ctx entry {"status" "ready" "data" result "error" nil "cached" false "savedAt" (Date.now) "origin" "network" "hydratedAt" nil}))
     (when (. spec ["write"])
       (-/publish ctx entry {"status" "ready" "data" undefined "error" nil})
       (var domains (registry/affectedDomains spec))
@@ -127,7 +147,7 @@
         (. (. ctx ["blocked"]) (add (. spec ["domain"])))
         ((. ctx ["onBlocked"]) (. spec ["domain"]))
         (when (not (. error ["mutationCommitted"])) (:= (. error ["mutationOutcomeUnknown"]) true)))
-      (when (and (not (. ctx ["closed"])) (not (. spec ["write"])) (. ctx ["offlineReads"]) (not (. error ["status"])) (not= (. error ["name"]) "AbortError"))
+      (when (and (not (. ctx ["closed"])) (not (. spec ["write"])) (. ctx ["offlineReads"]) (not= (. spec ["cache"]) false) (not (. error ["status"])) (not= (. error ["name"]) "AbortError"))
         (var saved ((. ctx ["storage"] ["get"]) (. entry ["key"])))
         (when saved
           ((. ctx ["onCached"]) saved)
@@ -207,7 +227,9 @@
   (return {"kind" "xt.substrate+xt.db" "actor" actor "node" node "cache" (. ctx ["cache"]) "space" space
            "supports" (fn [name] (return (not (not (. registry/operations [name])))))
            "call" (. ctx ["call"])
+           "hydrate" (fn [name values data stamp] (return (-/hydrate ctx name values data stamp)))
            "read" (fn [name values]
+                    (when (== (. (registry/operation name) ["cache"]) false) (return undefined))
                     (var entry ((. storage ["get"]) (+ name ":" (-/stableKey (or values {})))))
                     (return (:? entry (. entry ["data"]) undefined)))
            "subscribe" (fn [name values callback]

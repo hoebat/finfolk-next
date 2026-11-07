@@ -1,0 +1,461 @@
+[
+  {
+    "key": "brisbane-freedivers",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Brisbane Freedivers",
+      "category": "Club",
+      "state": "QLD",
+      "country": "Australia",
+      "locality": "Brisbane",
+      "description": "Brisbane Freedivers: freediving club serving Brisbane. Visit the linked source for current activities and contact details.",
+      "website": "",
+      "socials": [],
+      "sources": [
+        "https://australianfreediving.org/clubs/"
+      ]
+    }
+  },
+  {
+    "key": "brisbane-bullsharks",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Brisbane Bullsharks",
+      "category": "Club",
+      "state": "QLD",
+      "country": "Australia",
+      "locality": "Brisbane",
+      "description": "Brisbane Bullsharks: freediving club serving Brisbane. Visit the linked source for current activities and contact details.",
+      "website": "",
+      "socials": [],
+      "sources": [
+        "https://australianfreediving.org/clubs/"
+      ]
+    }
+  },
+  {
+    "key": "cairns-coast-freedivers-club",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Cairns Coast Freedivers Club",
+      "category": "Club",
+      "state": "QLD",
+      "country": "Australia",
+      "locality": "Cairns",
+      "description": "Cairns Coast Freedivers Club: freediving club serving Cairns. Visit the linked source for current activities and contact details.",
+      "website": "",
+      "socials": [],
+      "sources": [
+        "https://australianfreediving.org/clubs/"
+      ]
+    }
+  },
+  {
+    "key": "melbourne-freedivers",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Melbourne Freedivers",
+      "category": "Club",
+      "state": "VIC",
+      "country": "Australia",
+      "locality": "Melbourne",
+      "description": "Melbourne Freedivers: freediving club serving Melbourne. Visit the linked source for current activities and contact details.",
+      "website": "",
+      "socials": [],
+      "sources": [
+        "https://australianfreediving.org/clubs/"
+      ]
+    }
+  },
+  {
+    "key": "south-australian-freedivers",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "South Australian Freedivers",
+      "category": "Club",
+      "state": "SA",
+      "country": "Australia",
+      "locality": "Adelaide",
+      "description": "South Australian Freedivers: freediving club serving Adelaide. Visit the linked source for current activities and contact details.",
+      "website": "",
+      "socials": [],
+      "sources": [
+        "https://australianfreediving.org/clubs/"
+      ]
+    }
+  },
+  {
+    "key": "sunshine-coast-freedivers-club",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Sunshine Coast Freedivers Club",
+      "category": "Club",
+      "state": "QLD",
+      "country": "Australia",
+      "locality": "Sunshine Coast",
+      "description": "Sunshine Coast Freedivers Club: freediving club serving Sunshine Coast. Visit the linked source for current activities and contact details.",
+      "website": "",
+      "socials": [],
+      "sources": [
+        "https://australianfreediving.org/clubs/"
+      ]
+    }
+  },
+  {
+    "key": "sydney-seals-freediving-club",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Sydney Seals Freediving Club",
+      "category": "Club",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Sydney",
+      "description": "Sydney Seals Freediving Club: freediving club serving Sydney. Visit the linked source for current activities and contact details.",
+      "website": "",
+      "socials": [],
+      "sources": [
+        "https://australianfreediving.org/clubs/"
+      ]
+    }
+  },
+  {
+    "key": "legasea-freediving",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "LegaSea Freediving",
+      "category": "School",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Shellharbour",
+      "description": "LegaSea Freediving: freediving school serving Shellharbour. Visit the linked source for current activities and contact details.",
+      "website": "https://legaseafreediving.com.au/courses/",
+      "socials": [],
+      "sources": [
+        "https://legaseafreediving.com.au/courses/"
+      ]
+    }
+  },
+  {
+    "key": "freediving-australia",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Freediving Australia",
+      "category": "School",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Sydney",
+      "description": "Freediving Australia: freediving school serving Sydney. Visit the linked source for current activities and contact details.",
+      "website": "https://www.freedivingaustralia.com/",
+      "socials": [],
+      "sources": [
+        "https://www.freedivingaustralia.com/"
+      ]
+    }
+  },
+  {
+    "key": "apnea-australia",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Apnea Australia",
+      "category": "School",
+      "state": "WA",
+      "country": "Australia",
+      "locality": "Perth",
+      "description": "Apnea Australia: freediving school serving Perth. Visit the linked source for current activities and contact details.",
+      "website": "https://apneaaustralia.com.au/freediving/",
+      "socials": [],
+      "sources": [
+        "https://apneaaustralia.com.au/freediving/"
+      ]
+    }
+  },
+  {
+    "key": "salt-sessions-freediving",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Salt Sessions Freediving",
+      "category": "School",
+      "state": "VIC",
+      "country": "Australia",
+      "locality": "Melbourne",
+      "description": "Salt Sessions Freediving: freediving school serving Melbourne. Visit the linked source for current activities and contact details.",
+      "website": "https://saltsessions.com.au/",
+      "socials": [],
+      "sources": [
+        "https://saltsessions.com.au/"
+      ]
+    }
+  },
+  {
+    "key": "freediving-gold-coast",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Freediving Gold Coast",
+      "category": "School",
+      "state": "QLD",
+      "country": "Australia",
+      "locality": "Gold Coast",
+      "description": "Freediving Gold Coast: freediving school serving Gold Coast. Visit the linked source for current activities and contact details.",
+      "website": "https://freedivinggoldcoast.com.au/",
+      "socials": [],
+      "sources": [
+        "https://freedivinggoldcoast.com.au/"
+      ]
+    }
+  },
+  {
+    "key": "oceansense-freediving",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "OceanSense Freediving",
+      "category": "School",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Sydney",
+      "description": "OceanSense Freediving: freediving school serving Sydney. Visit the linked source for current activities and contact details.",
+      "website": "https://oceansense.com.au/instructors/",
+      "socials": [],
+      "sources": [
+        "https://oceansense.com.au/instructors/"
+      ]
+    }
+  },
+  {
+    "key": "shellharbour-scuba",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Shellharbour Scuba",
+      "category": "School",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Shellharbour",
+      "description": "Shellharbour Scuba: freediving school serving Shellharbour. Visit the linked source for current activities and contact details.",
+      "website": "https://www.shellharbourscuba.com.au/freediver-course",
+      "socials": [],
+      "sources": [
+        "https://www.shellharbourscuba.com.au/freediver-course"
+      ]
+    }
+  },
+  {
+    "key": "freedivefnq",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "FreediveFNQ",
+      "category": "School",
+      "state": "QLD",
+      "country": "Australia",
+      "locality": "Cairns",
+      "description": "FreediveFNQ: freediving school serving Cairns. Visit the linked source for current activities and contact details.",
+      "website": "https://www.freedivefnq.com/",
+      "socials": [],
+      "sources": [
+        "https://www.freedivefnq.com/"
+      ]
+    }
+  },
+  {
+    "key": "dive-free-academy",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Dive Free Academy",
+      "category": "School",
+      "state": "QLD",
+      "country": "Australia",
+      "locality": "Cairns",
+      "description": "Dive Free Academy: freediving school serving Cairns. Visit the linked source for current activities and contact details.",
+      "website": "https://www.divefreeacademycairns.com/",
+      "socials": [],
+      "sources": [
+        "https://www.divefreeacademycairns.com/"
+      ]
+    }
+  },
+  {
+    "key": "bubbles-freediving-academy",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Bubbles Freediving Academy",
+      "category": "School",
+      "state": "WA",
+      "country": "Australia",
+      "locality": "Perth",
+      "description": "Bubbles Freediving Academy: freediving school serving Perth. Visit the linked source for current activities and contact details.",
+      "website": "https://www.bubblesfreediving.com.au/en/service-page/aida2-freediver-course-english-course",
+      "socials": [],
+      "sources": [
+        "https://www.bubblesfreediving.com.au/en/service-page/aida2-freediver-course-english-course"
+      ]
+    }
+  },
+  {
+    "key": "deepsouth-freediving",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "DeepSouth Freediving",
+      "category": "School",
+      "state": "TAS",
+      "country": "Australia",
+      "locality": "Tasmania",
+      "description": "DeepSouth Freediving: freediving school serving Tasmania. Visit the linked source for current activities and contact details.",
+      "website": "https://www.deepsouthfreediving.com.au/",
+      "socials": [],
+      "sources": [
+        "https://www.deepsouthfreediving.com.au/"
+      ]
+    }
+  },
+  {
+    "key": "freedive-tasmania",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Freedive Tasmania",
+      "category": "School",
+      "state": "TAS",
+      "country": "Australia",
+      "locality": "Tasmania",
+      "description": "Freedive Tasmania: freediving school serving Tasmania. Visit the linked source for current activities and contact details.",
+      "website": "https://www.freedivetasmania.com/",
+      "socials": [],
+      "sources": [
+        "https://www.freedivetasmania.com/"
+      ]
+    }
+  },
+  {
+    "key": "apnea-art",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Apnea Art",
+      "category": "School",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Byron Bay",
+      "description": "Apnea Art: freediving school serving Byron Bay. Visit the linked source for current activities and contact details.",
+      "website": "https://www.apneaart.com.au/service-page/wave-1-course-byron-bay",
+      "socials": [],
+      "sources": [
+        "https://www.apneaart.com.au/service-page/wave-1-course-byron-bay"
+      ]
+    }
+  },
+  {
+    "key": "the-pressure-project",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "The Pressure Project",
+      "category": "School",
+      "state": "QLD",
+      "country": "Australia",
+      "locality": "Mooloolaba",
+      "description": "The Pressure Project: freediving school serving Mooloolaba. Visit the linked source for current activities and contact details.",
+      "website": "https://www.thepressureproject.com.au/event/two-day-freediver-course-duplicate/",
+      "socials": [],
+      "sources": [
+        "https://www.thepressureproject.com.au/event/two-day-freediver-course-duplicate/"
+      ]
+    }
+  },
+  {
+    "key": "deep-sensations-freediving",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Deep Sensations Freediving",
+      "category": "School",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Central Coast",
+      "description": "Deep Sensations Freediving: freediving school serving Central Coast. Visit the linked source for current activities and contact details.",
+      "website": "https://www.deepsensationsfreediving.com/centralcoast",
+      "socials": [],
+      "sources": [
+        "https://www.deepsensationsfreediving.com/centralcoast"
+      ]
+    }
+  },
+  {
+    "key": "salty-pilgrims-freediving",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Salty Pilgrims Freediving",
+      "category": "School",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Nelson Bay",
+      "description": "Salty Pilgrims Freediving: freediving school serving Nelson Bay. Visit the linked source for current activities and contact details.",
+      "website": "https://saltypilgrimsfreediving.com/products/wave1freedivingcourse",
+      "socials": [],
+      "sources": [
+        "https://saltypilgrimsfreediving.com/products/wave1freedivingcourse"
+      ]
+    }
+  },
+  {
+    "key": "woebegone-dive",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Woebegone Dive",
+      "category": "School",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Jervis Bay",
+      "description": "Woebegone Dive: freediving school serving Jervis Bay. Visit the linked source for current activities and contact details.",
+      "website": "https://www.woebegone.com.au/courses",
+      "socials": [],
+      "sources": [
+        "https://www.woebegone.com.au/courses"
+      ]
+    }
+  },
+  {
+    "key": "blueback-freediving-and-yoga",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Blueback Freediving and Yoga",
+      "category": "School",
+      "state": "WA",
+      "country": "Australia",
+      "locality": "Perth",
+      "description": "Blueback Freediving and Yoga: freediving school serving Perth. Visit the linked source for current activities and contact details.",
+      "website": "https://www.bluebackfreedivingandyoga.com/home",
+      "socials": [],
+      "sources": [
+        "https://www.bluebackfreedivingandyoga.com/home"
+      ]
+    }
+  },
+  {
+    "key": "michaela-werner",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Michaela Werner",
+      "category": "Instructor",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Newcastle",
+      "description": "Michaela Werner: freediving instructor serving Newcastle. Visit the linked source for current activities and contact details.",
+      "website": "https://www.michaelawerner.com/stage-a-freediving",
+      "socials": [],
+      "sources": [
+        "https://www.michaelawerner.com/stage-a-freediving"
+      ]
+    }
+  },
+  {
+    "key": "jervis-bay-freedivers",
+    "researchedAt": "2026-11-03",
+    "document": {
+      "name": "Jervis Bay Freedivers",
+      "category": "Group",
+      "state": "NSW",
+      "country": "Australia",
+      "locality": "Jervis Bay",
+      "description": "Jervis Bay Freedivers: freediving community serving Jervis Bay. Visit the linked source for current activities and contact details.",
+      "website": "https://www.woebegone.com.au/blog/summer-is-in-the-air",
+      "socials": [],
+      "sources": [
+        "https://www.woebegone.com.au/blog/summer-is-in-the-air"
+      ]
+    }
+  }
+]

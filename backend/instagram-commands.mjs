@@ -18,9 +18,24 @@ const fail = (message, status = 400) => {
 };
 const namespace = (env) =>
   "facebook-comments:" + env.INSTAGRAM_APP_ID + ":" + env.INSTAGRAM_ACCOUNT_ID;
-export const commentHelp =
-  "Mention @finfolk.com.au with /help, /status (this post), /me (your profile), /publish Beach or /checkin [YYYY-MM-DD] Beach. Check-ins are self-reported visits within the last 30 days. Manage privately: " +
-  account;
+export const commentHelp = "FinFolk helps you discover freediving locations and keep a logbook. Mention @finfolk.com.au with /help or /status (this post). Explore: https://finfolk.com.au";
+export function commentRollout(env) {
+  const mode = ['pilot','public'].includes(env.INSTAGRAM_COMMENT_MODE) ? env.INSTAGRAM_COMMENT_MODE : 'paused';
+  const since = Date.parse(env.INSTAGRAM_COMMENT_ACTIVE_SINCE || '');
+  return { mode, since: Number.isFinite(since) ? new Date(since).toISOString() : null,
+    commands: String(env.INSTAGRAM_COMMENT_COMMANDS || 'help,status').split(',').map(s=>s.trim()).filter(s=>['help','status','me','checkin','publish'].includes(s)),
+    posts: String(env.INSTAGRAM_COMMENT_TEST_POSTS || '').split(',').map(s=>s.trim()).filter(Boolean) };
+}
+export function commentAllowed(env, row, now = new Date()) {
+  const rollout = commentRollout(env), at = Date.parse(row.comment_at || row.timestamp || '');
+  return env.INSTAGRAM_COMMAND_REPLIES_ENABLED === 'true' && rollout.mode !== 'paused' &&
+    rollout.since !== null && Number.isFinite(at) && at >= Date.parse(rollout.since) && at <= now.getTime() &&
+    (rollout.mode === 'public' || rollout.posts.includes(String(row.media_id || row.media?.id || '')));
+}
+function publicHelp(env) {
+  const commands = commentRollout(env).commands.map(c=>'/' + c + (c==='status' ? ' (this post)' : '')).join(' or ');
+  return commands ? commentHelp.replace('/help or /status (this post)', commands) : 'Comment commands are paused. Explore FinFolk: https://finfolk.com.au';
+}
 export function parseCommentCommand(text = "") {
   if (
     typeof text !== "string" ||
@@ -88,7 +103,7 @@ async function member(q, actor, ns) {
     )
   )[0];
 }
-async function publicStatus(q, url, owner) {
+export async function publicStatus(q, url) {
   if (!url) return "This post has not been published on FinFolk.";
   const trips = await q(
     "SELECT t.id FROM finfolk.trips t JOIN finfolk.members m ON m.user_id=t.owner_id WHERE t.published IS NOT NULL AND NOT m.deleted AND (t.published->'links') ? $1 ORDER BY t.published_at DESC LIMIT 1",
@@ -107,22 +122,12 @@ async function publicStatus(q, url, owner) {
       "Published on FinFolk: https://finfolk.com.au/?view=maps&site=" +
       encodeURIComponent(published[0].beach_id)
     );
-  if (
-    owner &&
-    (
-      await q(
-        "SELECT 1 FROM finfolk.instagram_discoveries WHERE url=$1 AND owner_id=$2 AND state='pending' UNION ALL SELECT 1 FROM finfolk.posts WHERE url=$1 AND owner_id=$2 AND status='pending' LIMIT 1",
-        [url, owner],
-      )
-    ).length
-  )
-    return "Your post is awaiting review. " + account;
   return "This post has not been published on FinFolk.";
 }
 async function execute(q, row, env, identity, media, now, proof) {
-  if (row.command === "help") return { reply: commentHelp };
+  if (row.command === "help") return { reply: publicHelp(env) };
   if (row.command === "status")
-    return { reply: await publicStatus(q, row.source_url, identity?.user_id) };
+    return { reply: await publicStatus(q, row.source_url) };
   if (!identity)
     return {
       reply:
@@ -210,10 +215,13 @@ export async function processCommentCommand(
   db,
   { fetcher = fetch, now = new Date() } = {},
 ) {
-  const parsed = parseCommentCommand(comment.text);
+  let parsed = parseCommentCommand(comment.text);
   if (!parsed) return false;
   // Consume slash commands even while gated; never pass them to discovery or legacy actions.
-  if (env.INSTAGRAM_COMMAND_REPLIES_ENABLED !== "true") return true;
+  if (!commentAllowed(env, comment, now)) return true;
+  const enabled = commentRollout(env).commands;
+  if (!enabled.length) return true;
+  if (!enabled.includes(parsed.command)) parsed = { command: 'help', args: {} };
   const actor = String(comment.from?.id || ""),
     id = String(comment.id || "");
   if (!numeric(actor) || !numeric(id) || actor === env.INSTAGRAM_ACCOUNT_ID)
@@ -308,7 +316,7 @@ export async function processCommentCommand(
         [id],
       );
     }
-    const identity = await member(q, actor, ns),
+    const identity = personal ? await member(q, actor, ns) : null,
       row = (
         await q("SELECT * FROM finfolk.instagram_commands WHERE id=$1", [id])
       )[0];
@@ -343,11 +351,15 @@ export async function sendCommandReply(id, env, db, fetcher = fetch) {
     return;
   const candidate = (
     await db.query(
-      "SELECT owner_id,command FROM finfolk.instagram_commands WHERE id=$1 AND send_state='pending'",
+      "SELECT * FROM finfolk.instagram_commands WHERE id=$1 AND send_state='pending'",
       [id],
     )
   )[0];
   if (!candidate) return;
+  if (!commentAllowed(env, candidate) || !commentRollout(env).commands.includes(candidate.command)) {
+    await db.query("UPDATE finfolk.instagram_commands SET send_state='skipped',updated_at=now() WHERE id=$1 AND send_state='pending'", [id]);
+    return;
+  }
   // Resolve authorization before claiming a send. Missing permissions or a
   // provider outage must leave pending replies recoverable, not uncertain.
   const client = await instagramContentClient(env, db.query, { capability: "comments", fetcher });
@@ -375,6 +387,9 @@ export async function sendCommandReply(id, env, db, fetcher = fetch) {
       )
     )[0];
     if (!pending) return null;
+    if (!commentAllowed(env, pending) || !commentRollout(env).commands.includes(pending.command)) return null;
+    if (pending.command === 'help') pending.reply = instagramLinks(publicHelp(env), env);
+    if (pending.command === 'status') pending.reply = instagramLinks(await publicStatus(q, pending.source_url), env);
     if (pending.namespace !== 'facebook-comments:' + client.appId + ':' + client.accountId) {
       await q("UPDATE finfolk.instagram_commands SET send_state='skipped',updated_at=now() WHERE id=$1", [id]);
       return null;
@@ -460,7 +475,8 @@ export async function commentCommandAction({
 }) {
   if (action === "instagramCommandStatus")
     return {
-      enabled: env.INSTAGRAM_COMMAND_REPLIES_ENABLED === "true",
+      enabled: env.INSTAGRAM_COMMAND_REPLIES_ENABLED === "true" && commentRollout(env).mode !== "paused",
+      rollout: commentRollout(env),
       checkins: env.INSTAGRAM_COMMAND_CHECKINS_ENABLED === "true",
       commands: await q(
         "SELECT id,command,state,result,send_state,received_at FROM finfolk.instagram_commands WHERE owner_id=$1 ORDER BY received_at DESC LIMIT 30",

@@ -1,0 +1,16 @@
+[build]
+  command = "bash scripts/netlify_build.sh"
+  publish = "js/finfolk-next/site/web-main/.next"
+[build.environment]
+  NODE_VERSION = "22"
+  PYTHON_VERSION = "3.12"
+  NETLIFY_NEXT_SKEW_PROTECTION = "true"
+[functions]
+  directory = "netlify/functions"
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

@@ -22,7 +22,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: '27'
+          java-version: '25'
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
@@ -45,7 +45,14 @@ jobs:
       - run: make test-db
       - run: corepack yarn playwright install --with-deps chromium firefox webkit
       - run: make test-browser
-      - run: make build
+      - name: Build native Next app with Netlify adapter (no deployment)
+        run: npx --yes netlify-cli build --offline --context deploy-preview --filter @finfolk/web-main
+        env:
+          NETLIFY_TELEMETRY_DISABLED: '1'
+          NETLIFY_SKEW_PROTECTION_TOKEN: finfolk-ci-${{ github.sha }}
+      - run: node scripts/check_netlify_output.mjs
+      - name: Validate packaged SSR in the Lambda filesystem with local Blobs
+        run: npx --yes --package netlify-cli -c 'node tests/test_netlify_lambda_bundle.mjs'
       - run: corepack yarn deploy:next:api --dry-run --outdir .cache/api-check
       - uses: actions/upload-artifact@v4
         if: always()
@@ -58,5 +65,13 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: finfolk-next-site
-          path: .cache/next-site
+          path: |
+            .cache/next-site
+            js/finfolk-next/site/web-main/.netlify/static
+            js/finfolk-next/site/web-main/.netlify/functions
+            js/finfolk-next/site/web-main/.netlify/deploy-config
+            js/finfolk-next/site/web-main/.netlify/deploy
+            js/finfolk-next/site/web-main/.netlify/edge-functions-dist
+            js/finfolk-next/site/web-main/.netlify/edge-functions-import-map.json
+            js/finfolk-next/site/web-main/.netlify/netlify.toml
           include-hidden-files: true

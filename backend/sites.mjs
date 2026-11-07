@@ -27,6 +27,9 @@ export function siteDocument(input){
   source_url:url(input.source_url),source_id:text(input.source_id,128)||'finfolk-reviewed-sites',reference_label:text(input.reference_label,200)||name,
   detail_file:/^data\/areas\/[a-z0-9_-]+\.json$/.test(input.detail_file||'')?input.detail_file:undefined,nearby_checked_stays:Number.isSafeInteger(input.nearby_checked_stays)?input.nearby_checked_stays:0,nearest_checked_stay_km:Number.isFinite(input.nearest_checked_stay_km)?input.nearest_checked_stay_km:undefined,reviewed_at:text(input.reviewed_at,10),requirements:text(input.requirements),booking_url:input.booking_url?url(input.booking_url):'',activity_status:['documented','unknown'].includes(input.activity_status)?input.activity_status:'unknown',
   access_points,depth_evidence,facts,restrictions,archived:input.archived===true,region:text(input.region,128),group:area};
+ doc.coordinate_purpose=['reference','entry','dive'].includes(input.coordinate_purpose)?input.coordinate_purpose:'reference';
+ doc.coordinate_provenance=text(input.coordinate_provenance);doc.timezone_provenance=text(input.timezone_provenance);if(input.marine_point)doc.marine_point=point(input.marine_point);
+ doc.depth_evidence=doc.depth_evidence.map((d,i)=>({...d,datum:text(input.depth_evidence[i].datum,160)||'unknown',survey_date:text(input.depth_evidence[i].survey_date,160),...(input.depth_evidence[i].point?{point:point(input.depth_evidence[i].point)}:{}),uncertainty_m:Number.isFinite(input.depth_evidence[i].uncertainty_m)&&input.depth_evidence[i].uncertainty_m>=0?input.depth_evidence[i].uncertainty_m:null}));
  doc.has_access_facts=facts.some(f=>['Access','Entry'].includes(f.label));doc.fact_categories=facts.filter(f=>f.label==='Habitat').map(f=>f.text);doc.restricted_activities=restrictions.filter(r=>['restricted','closed'].includes(r.status)).map(r=>r.activity);
  doc.entry_documented=access_points.some(a=>a.mode==='shore'&&a.verified);const entry=access_points.find(a=>a.mode==='shore'&&a.verified);
  if(entry)doc.entry={point:entry.point,verified:true,label:entry.name};
@@ -55,7 +58,14 @@ export function registerSitesPrivate(app,{db}){
  const identity=c=>{const v=c.get('messagingIdentity');if(!v?.verified)fail(403,'Verify your email before submitting sites.');return {...v,admin:isInstagramAdmin(v.uid,c.env||{})};};
  const admin=c=>{const v=identity(c);if(!v.admin)fail(403,'Administrator access required.');return v;};
  const body=async c=>{const raw=await c.req.text();if(raw.length>2*1024*1024)fail(413,'The import is too large.');try{return JSON.parse(raw);}catch{fail(400,'The request could not be read.');}};
- const save=async(q,who,v,importID=null)=>{try{return (await q('SELECT finfolk_rpc.site_draft_save($1,$2,$3::jsonb,$4,$5,$6) AS value',[who.uid,who.admin,JSON.stringify(siteDocument(v.site)),v.id?uuid(v.id):randomUUID(),version(v.version??0),importID]))[0].value;}catch(e){mapError(e);}};
+ const save=async(q,who,v,importID=null)=>{
+  if(q===db.query)return db.transaction(tx=>save(tx,who,v,importID));
+  try{const saved=(await q('SELECT finfolk_rpc.site_draft_save($1,$2,$3::jsonb,$4,$5,$6) AS value',[who.uid,who.admin,JSON.stringify(siteDocument(v.site)),v.id?uuid(v.id):randomUUID(),version(v.version??0),importID]))[0].value;
+   if(!v.id){
+    for(const [table,columns]of [['site_depth_datasets','dataset_id,relationship,evidence'],['site_tide_stations','station_id,evidence']])await q(`INSERT INTO finfolk.${table}(revision_id,${columns}) SELECT $1,${columns.split(',').map(c=>'l.'+c).join(',')} FROM finfolk.${table} l JOIN finfolk.site_revisions r ON r.id=l.revision_id JOIN finfolk.site_profiles p ON p.id=r.site_id AND r.base_revision=p.revision-1 WHERE p.id=$2 AND r.status='published' ON CONFLICT DO NOTHING`,[saved.id,v.site.id]);
+   }return saved;
+  }catch(e){mapError(e);}
+ };
  app.get('/v1/me/site-submissions',async c=>{const who=identity(c);return reply(c,{submissions:await db.query('SELECT * FROM finfolk.site_revisions WHERE owner_id=$1 ORDER BY updated_at DESC LIMIT 100',[who.uid]),admin:who.admin});});
  app.post('/v1/me/site-submissions',async c=>{const who=identity(c),v=await body(c);return reply(c,await save(db.query,{...who,admin:false},v));});
  app.post('/v1/me/site-submissions/:id/withdraw',async c=>{const who=identity(c),v=await body(c);const row=(await db.query("UPDATE finfolk.site_revisions SET status='withdrawn',version=version+1,updated_at=now() WHERE id=$1 AND owner_id=$2 AND status='submitted' AND version=$3 RETURNING id",[uuid(c.req.param('id')),who.uid,version(v.version)]))[0];if(!row)fail(409,'Submission changed or is no longer pending.');return reply(c,{ok:true});});

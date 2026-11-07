@@ -1,0 +1,1 @@
+export default function robots(){return {rules:{userAgent:'*',allow:['/','/directory','/events'],disallow:['/account','/app','/profiles','/legacy/','/offline-app/']},sitemap:'https://finfolk.com.au/sitemap.xml'}}

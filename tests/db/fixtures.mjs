@@ -1,6 +1,7 @@
 import {randomUUID} from 'node:crypto';
 import {quote,schema} from './harness.mjs';
 export const overrides={
+ depth_datasets:{status:'published'},site_depth_datasets:{relationship:'candidate'},environment_targets:{product:'weather'},environment_snapshots:{valid_to:'2027-01-01T00:00:00Z',delete_after:'2028-01-01T00:00:00Z'},
  events:{starts_at:"2027-01-01T10:00:00Z",ends_at:"2027-01-01T12:00:00Z"},event_rsvps:{state:"going"},
  media_imports:{platform:'instagram'},tiktok_connections:{status:'pending'},
  site_profiles:{waterbody:'unknown',access_mode:'unknown',status:'published'},site_revisions:{status:'draft'},site_imports:{status:'draft'},site_access_points:{mode:'shore'},site_depth_evidence:{kind:'reported'},

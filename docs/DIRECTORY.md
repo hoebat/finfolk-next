@@ -7,9 +7,11 @@ Verified members use `screen=my-listings`. Existing administrators access
 `INSTAGRAM_ADMIN_IDS` allowlist, not client UI flags.
 
 Apply immutable migration `0022_directory.sql` using the guarded database
-release workflow. Its table contracts are authored in
-`src/finfolkdb/common/type_directory.clj`; the database suite verifies migration
-columns, constraints, defaults and indexes against those declarations.
+release workflow. Its historical table contracts are frozen in
+`resources/finfolkbuild/legacy/catalog.json`; the database suite verifies migration
+columns, constraints, defaults and indexes against that fixture. The standalone
+entity model is authored in `src/finfolkdb/common/type_directory_base.clj` and
+`type_user_access.clj`; see [the database model](DATABASE_REBUILD.md).
 The directory functions ship in `0023_backbone_directory.sql` with an updated
 backbone SQL hash. Deploy the matching API and frontend together.
 Set `BRAVE_SEARCH_API_KEY` as a Worker secret to enable candidate discovery.
@@ -43,7 +45,7 @@ synthetic identities; no external provider or production database is contacted.
 Pilot real Brave searches and sender verification before public launch.
 
 Directory persistence now goes through generated `finfolk_rpc.directory_operation`
-functions authored in `src/finfolkdb/fn/directory/operations.clj`. The HTTP adapter
+functions preserved in `resources/finfolkbuild/legacy/pilot.sql`. The HTTP adapter
 sets actor and administrator context within each transaction. Direct directory
 table access is revoked from `finfolk_api`; only the generated entry point is
 executable. Brave calls happen between short database transactions.
@@ -70,3 +72,63 @@ Finfolk account. Revoking ownership also clears delegated access and invitations
 
 Release the new page functionality with migrations 0024–0026, then deploy the
 matching API and frontend. These changes have not been installed in production.
+
+## Australian launch listings
+
+`config/directory-australia.json` contains 27 public-source Australian clubs,
+schools, instructors and groups researched on 3 November 2026. Each has source
+links; research dates stay in the private operator notes. Source summaries do
+not assert certification or affiliation. These pages were published, unclaimed,
+on finfolk.com.au through the existing `admin-save` operation.
+
+The repeatable content release is `scripts/release_directory.mjs`. Set
+`DIRECTORY_RELEASE_CONTEXT` to an ignored operator JSON file containing
+`nextDatabase` and `nextEnv.INSTAGRAM_ADMIN_IDS`. Run `node
+scripts/release_directory.mjs rehearse` to validate in a rolled-back transaction,
+then `node scripts/release_directory.mjs publish` to commit. The script checks
+the dedicated endpoint/database and deployed SQL release, uses an existing
+administrator, serializes release runs, and preserves every existing matching
+record, including archived or owned pages. It never changes schema or sends
+outreach. Rehearsing again after publication reports 27 skipped records.
+
+Browse https://finfolk.com.au/directory, or open Discover and choose Directory.
+Public name, category, state and locality filters work without signing in.
+
+## Native site-to-community journey (local candidate)
+
+Site details now include a locality-filtered directory panel, links to broader
+state results, and contextual page creation. Locality text matches are browsing
+aids, not verified site affiliations. Group pages direct visitors to organisers
+through the listed website/social links; FinFolk group membership and chat are
+not implemented by these contact links.
+
+`/pages?create=1&state=NSW&locality=Bondi&site=bondi` restores the creation context
+after sign-in. A verified member creates an owned candidate page, edits it in My
+pages, and waits for administrator publication review. A stable request UUID
+prevents duplicate pages when retrying an uncertain response. New social
+identities require separate review. Existing published listings still use
+sender-evidence claim verification.
+
+Native lifecycle SQL is authored in `src/finfolkdb/schema/directory.clj`, generated
+into the fresh entity schema, and uses `DirectoryListing`, shared Access roles
+and requests, revision streams, audit streams, and the existing typed creation
+helper. This introduces no migration or production schema changes. The trusted
+`finfolk_directory` role is separate from browser/API roles.
+`backend/native-directory-api.mjs` provides an isolated authenticated HTTP factory
+for the native candidate, requires an explicit DatabaseRelease pin, and checks it
+in each transaction. It does not change serving Worker bindings. The old API
+returns an explicit unavailable error for creation until native rollout is ready.
+
+Validate with `node scripts/test_database.mjs --directory-native` (disposable live
+PostgreSQL) and `NEXTJS_TEST_URL=http://localhost:<port> node
+tests/test_nextjs_directory_journey.mjs` (local production Next build with synthetic
+UI fixtures). Database tests cover creation/retry, private candidates, publication,
+locality reads, ownership isolation, revisions, claims and privileges. UI tests
+cover map discovery, contextual sign-in, retry and pending-review presentation.
+
+This native adapter is a staged subset. Delegated invitations, admin discovery,
+merge, ownership revocation, and editing a document during publication review
+still need native parity. Publication currently reviews the saved document;
+owners edit through My pages first. Production cutover also requires the broader
+API/auth/member-content acceptance described in DATABASE_REBUILD.md. These changes
+have not been published to finfolk.com.au or the previously shared Netlify deploy.

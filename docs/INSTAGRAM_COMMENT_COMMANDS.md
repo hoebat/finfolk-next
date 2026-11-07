@@ -1,3 +1,34 @@
+# Public comment release on Next
+
+The default release enables only `/help @finfolk.com.au` and `/status @finfolk.com.au`. Membership and following are not required. Status returns public records only. Unsupported slash commands return help without creating member actions. Ordinary mentions do not receive automatic replies.
+
+Runtime controls in `wrangler.next-api.jsonc` default to paused:
+
+- `INSTAGRAM_COMMAND_REPLIES_ENABLED`: master switch.
+- `INSTAGRAM_COMMENT_MODE`: `paused`, `pilot`, or `public` (unknown/missing means paused).
+- `INSTAGRAM_COMMENT_COMMANDS`: comma-separated enabled commands, default `help,status`.
+- `INSTAGRAM_COMMENT_TEST_POSTS`: provider media IDs allowed in pilot mode.
+- `INSTAGRAM_COMMENT_ACTIVE_SINCE`: required ISO timestamp; only comments created at or after this boundary are eligible.
+
+Before pilot activation, verify the managed Page grant, linked FinFolk account, actual `instagram_manage_comments` permission and both `mentions` and `comments` subscriptions. Set a fresh activation timestamp and designated test media IDs. Prove both owned-comment and external-mention retrieval and visible replies from the brand, including help/status for an unregistered nonfollower. Record comment IDs, context, command record, reply ID and operator-observed thread in the acceptance record. Never record credentials. Provider acceptance alone does not prove a visible reply.
+
+For public activation retain `help,status`, set mode `public` and use a fresh activation boundary. On pause, disable the master switch or set mode `paused`. Re-activation must advance the boundary to prevent replaying accumulated comments. Old pending sends encountered outside the current rollout become skipped. Ambiguous sends remain uncertain and require inspecting the actual thread; never automatically resend them.
+
+Authorization diagnostics include safe comment rollout settings alongside permission and subscription evidence. No new schema or SQL-release hash is needed for this Instagram stage. Existing member commands remain available only through explicit command configuration and their independent identity, follower and action gates; do not enable them for this release.
+
+TikTok is the subsequent phase after Instagram live acceptance. It needs a separately verified Mentions API authorization and live webhook/retrieval/reply contracts; the Business Messaging questionnaire does not prove comment permissions. No TikTok comment delivery adapter has been activated by this change.
+
+## Deployment and live inspection — 6 November 2026
+
+- Deployed paused release `88575f4f-a9c6-4d29-94f2-2a6472ca9657` to `finfolk-next-api` / `api.finfolk.com.au`. Previous version: `4e170f70-f999-4eb2-a58f-be372e0dfa7f`.
+- Reconstructed the published Worker source from its source map and overlaid only the comment-command and diagnostic modules; retained live bindings and variables, adding paused comment rollout controls. Unrelated checkout changes were excluded.
+- Live HTTPS database inspection confirmed `finfolk_next`, Facebook Page provider, pilot mode and a valid token bound to the expected Meta app, Page and Instagram account.
+- The live grant lacks `instagram_manage_comments`. Neither `comments` nor `mentions` was present in the account subscription lookup. Authorization for DMs does not establish these capabilities.
+- The authorized account media lookup returned no posts. No live comment was created or replied to, and no live-delivery acceptance was recorded.
+- Next: add the comment permission to the Meta login configuration and complete account authorization; verify both account webhook fields; designate a brand-owned test post and a consenting external public test post; then activate pilot-only replies with a fresh timestamp. Keep public access paused until actual thread evidence passes.
+
+---
+
 # Instagram comment commands
 
 Comments must mention `@finfolk.com.au`. Either mention-first or command-first works; commands are case insensitive. One slash command per comment. Ordinary mentions retain the discovery/review workflow.

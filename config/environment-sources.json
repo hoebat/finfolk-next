@@ -1,0 +1,15 @@
+{
+  "version": 1,
+  "sources": [{
+    "id": "open-meteo",
+    "enabled": false,
+    "metadata": {
+      "url": "https://open-meteo.com/",
+      "licence": "CC BY 4.0 data; API access subject to Open-Meteo terms",
+      "attribution": "Open-Meteo and upstream weather and marine model providers",
+      "cacheAllowed": true,
+      "redistributionAllowed": true,
+      "retentionSeconds": 604800
+    }
+  }]
+}

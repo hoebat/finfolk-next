@@ -67,7 +67,7 @@ try {
     await pg.exec(await readFile('backend/migrations/' + name, 'utf8'));
   await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; SET ROLE finfolk_api');
   f = make();
-  Object.assign(f.env, { INSTAGRAM_COMMAND_REPLIES_ENABLED: 'true', INSTAGRAM_DISCOVERY_ENABLED: 'true' });
+  Object.assign(f.env, { INSTAGRAM_COMMAND_REPLIES_ENABLED: 'true', INSTAGRAM_COMMENT_MODE: 'public', INSTAGRAM_COMMENT_ACTIVE_SINCE: new Date(Date.now()-60000).toISOString(), INSTAGRAM_DISCOVERY_ENABLED: 'true' });
   await q(`UPDATE finfolk.messaging_accounts SET account_id='333',provider_scope=$1,credential_ciphertext=$2,mode='pilot',generation=1,checks=$3::jsonb`,
     [f.scope, f.row.credential_ciphertext, JSON.stringify(f.row.checks)]);
   let posts = 0, ambiguous = false;
@@ -76,7 +76,7 @@ try {
     if (authorization) return authorization;
     if (options.method === 'POST') {
       posts++;
-      assert.ok(new URL(url).pathname.endsWith('/123/replies'));
+      assert.ok(new URL(url).pathname.endsWith('/123/replies') || new URL(url).pathname.endsWith('/333/mentions'));
       assert.ok(options.body.get('message').includes('/help'));
       if (ambiguous) throw Error('fixture-page-token must never appear in diagnostics');
       return Response.json({ id: '444' });
@@ -99,6 +99,21 @@ try {
   assert.equal((await q("SELECT send_state FROM finfolk.instagram_commands WHERE id='123'"))[0].send_state, 'uncertain');
   await sendCommandReply('123', f.env, db, fetcher);
   assert.equal(posts, 2, 'Uncertain replies are never automatically resent');
+  ambiguous = false;
+  await processCommentCommand({...comment,id:'124'}, 'mention', f.env, db, {fetcher});
+  assert.equal((await q("SELECT send_state,owner_id,reply FROM finfolk.instagram_commands WHERE id='124'"))[0].send_state,'sent');
+  const publicRow = (await q("SELECT owner_id,reply FROM finfolk.instagram_commands WHERE id='124'"))[0];
+  assert.equal(publicRow.owner_id,null);
+  assert.ok(!publicRow.reply.includes('/checkin'));
+  await processCommentCommand({...comment,id:'125',text:'/publish Bondi @finfolk.com.au'},'owned',f.env,db,{fetcher});
+  assert.equal((await q("SELECT command FROM finfolk.instagram_commands WHERE id='125'"))[0].command,'help');
+  const beforePause = posts;
+  await q("UPDATE finfolk.instagram_commands SET send_state='pending' WHERE id='124'");
+  f.env.INSTAGRAM_COMMENT_MODE='paused';
+  await sendCommandReply('124',f.env,db,fetcher);
+  assert.equal(posts,beforePause);
+  assert.equal((await q("SELECT send_state FROM finfolk.instagram_commands WHERE id='124'"))[0].send_state,'skipped');
+  f.env.INSTAGRAM_COMMENT_MODE='public';
   globalThis.fetch = fetcher;
   await q("UPDATE finfolk.instagram_sources SET status='queued',lease_until=now()+interval '5 minutes' WHERE key='tags'");
   await collectInstagramSource('tags', f.env, q);

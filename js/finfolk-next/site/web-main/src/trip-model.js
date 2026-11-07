@@ -330,3 +330,32 @@ export const tripURL = (id, base = globalThis.location?.href) => {
   u.searchParams.set("trip", id);
   return u.href;
 };
+
+export function importChunks(records) {
+  const chunks = [];
+  let rows = [];
+  for (const record of records) {
+    if (new TextEncoder().encode(JSON.stringify(record)).length > 40000)
+      throw Error(
+        "A dive row is too large to upload. Remove unneeded long-text CSV columns.",
+      );
+    if (
+      rows.length >= 200 ||
+      new TextEncoder().encode(JSON.stringify([...rows, record])).length > 45000
+    ) {
+      chunks.push(rows);
+      rows = [];
+    }
+    rows.push(record);
+  }
+  if (rows.length) chunks.push(rows);
+  return chunks;
+}
+export const secondsLabel = (value) =>
+  value === null || value === undefined
+    ? "—"
+    : value >= 3600
+      ? `${Math.floor(value / 3600)}h ${Math.floor((value % 3600) / 60)}m ${Math.round(value % 60)}s`
+      : value >= 60
+        ? `${Math.floor(value / 60)}m ${Math.round(value % 60)}s`
+        : `${Math.round(value)}s`;

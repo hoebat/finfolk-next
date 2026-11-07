@@ -1,0 +1,46 @@
+import assert from 'node:assert/strict';
+import {readFile} from 'node:fs/promises';
+import vm from 'node:vm';
+import {legacyRedirects,legacyDestination,homeDestination,profileDestination} from '../js/finfolk-next/site/web-main/lib/legacy-redirects.js';
+import {offlineDocumentPath} from '../js/finfolk-next/site/web-main/lib/offline-documents.js';
+import {webcrypto,createHash} from 'node:crypto';
+const template=await readFile(new URL('../scripts/nextjs_sw_template.js',import.meta.url),'utf8');
+const hash=value=>createHash('sha256').update(value).digest('hex');
+async function worker({version='new',bad=false,redirect=false,stores=new Map()}={}){
+ const listeners={},network=[],removed=[];
+ const caches={async keys(){return[...stores.keys()]},async delete(name){removed.push(name);return stores.delete(name)},async open(name){if(!stores.has(name))stores.set(name,new Map());const store=stores.get(name);return{async put(path,response){store.set(path,response)},async match(path){return store.get(path)?.clone()},async keys(){return [...store.keys()].map(path=>({url:'https://finfolk.invalid'+path}))},async delete(request){return store.delete(new URL(request.url).pathname)}}}};
+ const document=JSON.stringify({buildId:'fixture-current',html:'<html>native</html>'});
+ const pagesDocument=JSON.stringify({buildId:'fixture-current',html:'<html>pages</html>'});
+ const manifest={version,buildId:'fixture-current',deploymentId:'fixture-deployment',documents:{'/map':'/offline/map.json','/pages':'/offline/pages.json','/events/new':'/offline/pages.json'},documentPatterns:{'/directory/:id':'/offline/pages.json','/events/:id':'/offline/map.json'},assets:[{path:'/offline/map.json',hash:hash(document)},{path:'/offline/pages.json',hash:hash(pagesDocument)},{path:'/map.js',hash:hash('export {}')},{path:'/workers/finfolk.sharedworker.js',hash:hash('export {}')},{path:'/workers/kernel.js',hash:hash('export {}')},{path:'/workers/sqlite3.wasm',hash:hash('export {}')},{path:'/_next/static/chunks/app.js',hash:hash('export {}')}]};
+ const self={location:{origin:'https://finfolk.invalid'},clients:{claim:async()=>{}},addEventListener:(name,fn)=>listeners[name]=fn};
+ vm.runInNewContext(template.replace('__MANIFEST__',JSON.stringify(manifest)).replace('__COMPATIBILITY__',()=>`const legacyRedirects=${JSON.stringify(legacyRedirects)},legacyDestination=${legacyDestination.toString()},homeDestination=${homeDestination.toString()},profileDestination=${profileDestination.toString()},offlineDocumentPath=${offlineDocumentPath.toString()};`),{self,caches,URL,URLSearchParams,Response,Headers,Uint8Array,crypto:webcrypto,AbortSignal,fetch:async(path)=>{network.push(path);if(typeof path!=='string')throw Error('Offline');const response=new Response(path==='/offline/pages.json'?pagesDocument:path==='/offline/map.json'?document:bad?'wrong version':'export {}');if(redirect)Object.defineProperty(response,'redirected',{value:true});return response;}});
+ const run=async name=>{let task;listeners[name]({waitUntil:value=>task=value});await task};
+ const request=async(path,{mode,method='GET',clientId='fixture-client',destination='',resultingClientId=clientId}={})=>{let response;listeners.fetch({clientId,resultingClientId,request:{url:'https://finfolk.invalid'+path,method,mode,destination},respondWith:value=>response=value});return response&&await response};
+ return{run,request,stores,removed,network};
+}
+const stores=new Map([['finfolk-shell-old',new Map([['old','legacy']])],['finfolk-next-shell-old',new Map()],['unrelated-app',new Map([['data','keep']])]]);
+const failed=await worker({stores,bad:true});await assert.rejects(failed.run('install'),/version mismatch/);assert.ok(!stores.has('finfolk-next-shell-new'));assert.ok(stores.has('finfolk-shell-old'));assert.ok(stores.has('finfolk-next-shell-old'));
+const redirected=await worker({stores,redirect:true});await assert.rejects(redirected.run('install'),/unavailable/);assert.ok(stores.has('finfolk-shell-old'));
+const fresh=await worker({stores});await fresh.run('install');assert.ok(stores.has('finfolk-shell-old'),'installation must retain the currently active shell');await fresh.run('activate');assert.ok(!stores.has('finfolk-shell-old'));assert.ok(!stores.has('finfolk-next-shell-old'));assert.ok(stores.has('unrelated-app'));
+const response=await fresh.request('/map?site=bondi&depth=20',{mode:'navigate'});assert.equal(await response.text(),'<html>native</html>');assert.equal(response.headers.get('x-finfolk-offline'),'1');assert.equal(await(await fresh.request('/map.js')).text(),'export {}');
+assert.match(response.headers.get('content-type'),/^text\/html/);
+assert.equal(await(await fresh.request('/pages?tab=mine',{mode:'navigate'})).text(),'<html>pages</html>');
+for(const [path,body]of [['/directory/school','<html>pages</html>'],['/events/public-event','<html>native</html>'],['/events/new','<html>pages</html>']])assert.equal(await(await fresh.request(path,{mode:'navigate'})).text(),body);
+for(const path of ['/directory/','/directory/school/extra','/events/public-event/roster'])await assert.rejects(fresh.request(path,{mode:'navigate'}),/Offline/);
+for(const [path,target] of [['/app?view=maps&site=bondi','/map?site=bondi'],['/app?view=discover&section=index','/discover?view=discover&section=index'],['/?view=logbook&session=one','/logbook?session=one'],['/landing.html','/'],['/profiles?screen=listing&id=school','/directory/school'],['/events/new/','/events/new']]){const response=await fresh.request(path,{mode:'navigate'});assert.equal(response.status,307);assert.equal(response.headers.get('location'),'https://finfolk.invalid'+target);}
+const saved=stores.get('finfolk-next-shell-new').get('/offline/map.json');stores.get('finfolk-next-shell-new').set('/offline/map.json',new Response(JSON.stringify({buildId:'older-build',html:'<html>old</html>'})));
+assert.equal((await fresh.request('/map',{mode:'navigate',clientId:'wrong-document'})).status,503);await assert.rejects(fresh.request('/map.js',{clientId:'wrong-document'}),/Offline/);stores.get('finfolk-next-shell-new').set('/offline/map.json',saved);
+const restarted=await worker({stores});assert.equal(await(await restarted.request('/workers/finfolk.sharedworker.js?protocol=2')).text(),'export {}');await assert.rejects(restarted.request('/workers/finfolk.sharedworker.js?protocol=2',{clientId:'other-build'}),/Offline/);assert.equal(await restarted.request('/workers/finfolk.sharedworker.js?protocol=3'),undefined);assert.equal(await restarted.request('/workers/finfolk.sharedworker.js?protocol=2&other=1'),undefined);assert.equal(await(await restarted.request('/map.js')).text(),'export {}','compatible document remains recognized after a worker restart');
+await assert.rejects(restarted.request('/workers/sqlite3.wasm',{clientId:'cold-kernel'}),/Offline/);
+assert.equal(await(await restarted.request('/workers/kernel.js',{destination:'worker',resultingClientId:'cold-kernel'})).text(),'export {}');
+assert.equal(await(await restarted.request('/workers/sqlite3.wasm',{clientId:'cold-kernel'})).text(),'export {}','a verified worker can load its dependencies under its own client ID');
+const workerRestart=await worker({stores});assert.equal(await(await workerRestart.request('/workers/sqlite3.wasm',{clientId:'cold-kernel'})).text(),'export {}','worker compatibility survives service-worker termination');
+await assert.rejects(restarted.request('/workers/kernel.js',{clientId:'other-build',destination:'worker',resultingClientId:'untrusted-kernel'}),/Offline/);
+await assert.rejects(restarted.request('/workers/sqlite3.wasm',{clientId:'untrusted-kernel'}),/Offline/);
+assert.equal(await(await restarted.request('/_next/static/chunks/app.js?dpl=fixture-deployment')).text(),'export {}','deployment-tagged chunks from the saved build remain available offline');
+assert.equal(await restarted.request('/_next/static/chunks/app.js?dpl=another-deployment'),undefined);
+assert.equal(await restarted.request('/_next/static/chunks/app.js?dpl=fixture-deployment&other=1'),undefined);
+for(const path of ['/api','/v1/profile','/neon-config.json','/data/catalog.json','/map?_rsc=private','/map.js?other=1'])assert.equal(await fresh.request(path),undefined,path+' must bypass cache');
+assert.equal(await fresh.request('/map',{method:'POST'}),undefined);await assert.rejects(fresh.request('/account',{mode:'navigate'}),/Offline/);
+await assert.rejects(fresh.request('/map.js',{clientId:'other-build'}),/Offline/);
+console.log('NEXT_OFFLINE_WORKER_PASS: exact-asset integrity, redirect rejection, failed-install rollback, legacy/native upgrade boundaries, protocol-versioned coordinator and inherited worker build fences, fresh map and other static native document fallbacks and API/auth/RSC/dataset bypass.');

@@ -37,7 +37,10 @@
         (. (. url ["searchParams"]) (set key (String value))))))
   (var init {"method" (. spec ["method"]) "cache" "no-store" "referrerPolicy" "no-referrer" "signal" (. options ["signal"])})
   (when (. spec ["write"])
-    (Object.assign init {"headers" {"Content-Type" "application/json"} "body" (JSON.stringify input) "keepalive" (== name "publicReferral")}))
+    (var body (Object.assign {} input))
+    (. (Object.keys body) (forEach (fn [key]
+      (when (. (. spec ["path"]) (includes (+ ":" key))) (delete (. body [key]))))))
+    (Object.assign init {"headers" {"Content-Type" "application/json"} "body" (JSON.stringify body) "keepalive" (== name "publicReferral")}))
   (var response (await (fetch url init)))
   (var result (await (. response (json))))
   (when (not (. response ["ok"]))

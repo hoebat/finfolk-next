@@ -1,0 +1,14 @@
+import assert from 'node:assert/strict';
+import {messagingPreflight} from '../scripts/messaging_preflight.mjs';
+const env={ENTITY_MESSAGING_ENABLED:'true',ENTITY_MESSAGING_DATABASE_NAME:'native',ENTITY_MESSAGING_DATABASE_URL:'postgresql://private:secret@localhost/native',ENTITY_MESSAGING_AUTH_BASE_URL:'https://auth.test/auth',ENTITY_MESSAGING_AUTH_JWKS_URL:'https://auth.test/jwks',ENTITY_MESSAGING_CONFIG:JSON.stringify({applications:[{id:'finfolk',administrators:['admin']}],apps:[],connections:[{key:'chat',application:'finfolk',handler:'finfolk'}],allowedOrigins:['https://finfolk.com.au']})};
+let opened=0,closed=0,received;
+const dependencies={env,openDatabase:()=>{opened++;return {pool:{end:async()=>closed++}};},createGateway:()=>({preflight:async options=>{received=options;return {liveDeliveryVerified:false,results:[{key:'chat',status:'app_configured'}]};}})};
+for(const args of [['--send'],['--connection=other'],['--connection=chat','--connection=chat'],['--connection='],['--verify-providers','--verify-providers']])assert.equal((await messagingPreflight({...dependencies,args})).exitCode,1);
+assert.equal(opened,0,'Unknown flags and keys are rejected before connecting');
+assert.equal((await messagingPreflight({...dependencies,env:{...env,ENTITY_MESSAGING_DATABASE_NAME:'wrong'},args:[]})).exitCode,1);assert.equal(opened,0);
+assert.equal((await messagingPreflight({...dependencies,args:[]})).exitCode,0);assert.deepEqual(received,{verifyProviders:false});
+assert.equal((await messagingPreflight({...dependencies,args:['--connection=chat','--verify-providers']})).exitCode,0);assert.deepEqual(received,{connectionKeys:['chat'],verifyProviders:true});
+const failed=await messagingPreflight({...dependencies,args:[],createGateway:()=>({preflight:async()=>{throw Error(env.ENTITY_MESSAGING_DATABASE_URL);}})});
+assert.equal(failed.exitCode,1);assert.ok(!JSON.stringify(failed).includes('secret'));assert.equal(closed,opened);
+const unavailable=await messagingPreflight({...dependencies,args:[],createGateway:()=>({preflight:async()=>({liveDeliveryVerified:false,results:[{key:'chat',status:'unavailable'}]})})});assert.equal(unavailable.exitCode,1);
+console.log('MESSAGING_PREFLIGHT_PASS: explicit provider probes, registered-key/database guards, safe errors, reliable exit codes and connection cleanup.');

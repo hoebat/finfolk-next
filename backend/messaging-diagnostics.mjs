@@ -1,3 +1,4 @@
+import { commentRollout } from './instagram-commands.mjs';
 import { messagingConfig, messagingError } from "./messaging-config.mjs";
 import { InstagramProvider } from "./instagram-provider.mjs";
 import { instagramContentCapabilities } from "./instagram-content.mjs";
@@ -111,6 +112,7 @@ export async function authorizationDiagnostics(db, env, fetcher = fetch) {
           .flatMap(a => Array.isArray(a.subscribed_fields) ? a.subscribed_fields : []);
       } catch { output.contentSubscriptionError = 'subscription_lookup_failed'; }
     }
+    output.commentRollout = commentRollout(env);
     output.contentCapabilities = instagramContentCapabilities({
       authorized: output.valid && output.appMatches && output.tokenType === 'PAGE' && output.pageBinding.expectedAccountFound &&
         (!output.expiresAt || new Date(output.expiresAt) > new Date()) &&
