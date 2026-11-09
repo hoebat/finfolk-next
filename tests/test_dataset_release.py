@@ -1,4 +1,5 @@
 import hashlib
+import base64
 import gzip
 import json
 from pathlib import Path
@@ -12,6 +13,8 @@ class DatasetReleaseTest(unittest.TestCase):
     def fixture(self, root, rasters=None):
         site = root / "site"
         (site / "data/contours").mkdir(parents=True)
+        (site / "data/explore-contours").mkdir()
+        (site / "data/explore-contours/manifest.json").write_text('{"version":1,"sources":[]}')
         catalog = {"built_at": "2026-11-10T00:00:00Z", "regions": [{"id": "pilot", "rasters": rasters or [],
                    "contour_file": "data/contours/pilot.geojson", "contours": {"count": 1}, "tiles": {}}]}
         bodies = {"data/catalog.json": json.dumps(catalog).encode(),
@@ -53,6 +56,24 @@ class DatasetReleaseTest(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "checksum mismatch"):
                 package(site, root / "out")
             self.assertFalse((root / "out").exists())
+
+    def test_vector_tiles_pack_and_reconstruct_without_changes(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            site = self.fixture(root)
+            tile = site / "data/explore-contours/pilot/10/12/14.pbf"
+            tile.parent.mkdir(parents=True)
+            tile.write_bytes(b"\x1a\x04\x12\x02\x00\x01")
+            (site / "data/explore-contours/manifest.json").write_text(json.dumps({"version": 1, "sources": [
+                {"tiles": ["/data/explore-contours/pilot/{z}/{x}/{y}.pbf"], "tile_count": 1}]}))
+            release = package(site, root / "out")
+            self.assertEqual(release["tileArchives"], {"pilot/10": "data/explore-contours/pilot/10.tiles.json"})
+            meta = release["files"][release["tileArchives"]["pilot/10"]]
+            archive = json.loads(gzip.decompress((root / "out" / release["id"] / "files" / meta["storage"]["path"]).read_bytes()))
+            entry = archive["tiles"]["12/14"]
+            self.assertEqual(base64.b64decode(entry["data"]), tile.read_bytes())
+            self.assertEqual(entry["hash"], hashlib.sha256(tile.read_bytes()).hexdigest())
+            self.assertEqual(package(site, root / "out"), release)
 
     def test_unverified_raster_cannot_be_published(self):
         with tempfile.TemporaryDirectory() as temp:

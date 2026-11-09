@@ -5,6 +5,7 @@ their numeric values, source metadata, or attribution. The input build and its
 source inventory remain available for reconstruction.
 """
 import argparse
+import base64
 import gzip
 import hashlib
 import json
@@ -34,6 +35,7 @@ def package(site, destination):
             if raster.get("datum_verified") is not True or raster.get("units") != "m":
                 raise ValueError("Numeric rasters require verified datum and metre units")
     files = {}
+    generated = {}
     for name, meta in sorted(original["files"].items()):
         safe_path(name)
         if not (name.startswith("data/") or name in ("beaches.json", "guides.json", "social.json")):
@@ -45,6 +47,35 @@ def package(site, destination):
         if digest != meta["hash"] or len(body) != meta["bytes"]:
             raise ValueError("Build checksum mismatch: " + name)
         files[name] = {"hash": digest, "bytes": len(body), "label": meta.get("label", name)}
+    explore_path = "data/explore-contours/manifest.json"
+    if not (site / explore_path).is_file():
+        raise ValueError("Build Explore contour tiles before packaging the map release")
+    explore = json.loads((site / explore_path).read_text())
+    generated[explore_path] = (site / explore_path).read_bytes()
+    archives = {}
+    for source in explore["sources"]:
+        template = source["tiles"][0]
+        if not template.startswith("/data/explore-contours/") or not template.endswith("/{z}/{x}/{y}.pbf"):
+            raise ValueError("Unexpected vector tile template")
+        directory = safe_path(template.removesuffix("/{z}/{x}/{y}.pbf").lstrip("/"))
+        groups = {}
+        for path in sorted((site / directory).rglob("*.pbf")):
+            z, x, y = path.relative_to(site / directory).parts
+            if not z.isdigit() or not x.isdigit() or not y.removesuffix(".pbf").isdigit():
+                raise ValueError("Unexpected vector tile path")
+            body = path.read_bytes()
+            groups.setdefault(z, {})[x + "/" + y.removesuffix(".pbf")] = {
+                "data": base64.b64encode(body).decode(), "hash": hashlib.sha256(body).hexdigest(), "bytes": len(body)}
+        if sum(len(g) for g in groups.values()) != source["tile_count"]:
+            raise ValueError("Vector tile count differs from source manifest")
+        for z, tiles in groups.items():
+            name = (directory / (z + ".tiles.json")).as_posix()
+            generated[name] = encoded({"version": 1, "tiles": tiles})
+            archives[directory.name + "/" + z] = name
+    for name, body in generated.items():
+        files[name] = {"hash": hashlib.sha256(body).hexdigest(), "bytes": len(body), "label": "Explore contour tiles"}
+    def read_body(name):
+        return generated[name] if name in generated else (site / name).read_bytes()
     for region in catalog["regions"]:
         refs = [region.get("contour_file"), *region.get("tiles", {}).values()]
         for raster in region.get("rasters", []):
@@ -60,13 +91,13 @@ def package(site, destination):
     # HTTP gzip keeps large GeoJSON transfers small. The browser verifies the
     # original decoded bytes; pre-compressed numeric chunks retain their encoding.
     for name, meta in files.items():
-        body = downloads if name == "data/downloads.json" else (site / name).read_bytes()
+        body = downloads if name == "data/downloads.json" else read_body(name)
         compressed = name.endswith((".json", ".geojson"))
         stored = gzip.compress(body, mtime=0) if compressed else body
         meta["storage"] = {"path": name + ".gz" if compressed else name,
                            "hash": hashlib.sha256(stored).hexdigest(), "bytes": len(stored),
                            "encoding": "gzip" if compressed else None}
-    manifest = {"schemaVersion": 1, "files": files, "regions": len(catalog["regions"]),
+    manifest = {"schemaVersion": 1, "files": files, "tileArchives": archives, "regions": len(catalog["regions"]),
                 "rasterCount": sum(len(r.get("rasters", [])) for r in catalog["regions"]),
                 "contourRegions": sum(bool((r.get("contours") or {}).get("count")) for r in catalog["regions"]),
                 "sourceBuiltAt": catalog["built_at"], "storage": "Git LFS"}
@@ -88,7 +119,7 @@ def package(site, destination):
         for name, meta in files.items():
             path = stage / "files" / meta["storage"]["path"]
             path.parent.mkdir(parents=True, exist_ok=True)
-            body = downloads if name == "data/downloads.json" else (site / name).read_bytes()
+            body = downloads if name == "data/downloads.json" else read_body(name)
             path.write_bytes(gzip.compress(body, mtime=0) if meta["storage"]["encoding"] else body)
         (stage / "manifest.json").write_bytes(encoded(manifest))
         stage.rename(target)
@@ -104,4 +135,4 @@ if __name__ == "__main__":
     parser.add_argument("--output", type=Path, default=Path("datasets/runtime/releases"))
     args = parser.parse_args()
     result = package(args.site, args.output)
-    print(json.dumps({k: v for k, v in result.items() if k != "files"}))
+    print(json.dumps({**{k: v for k, v in result.items() if k not in ("files", "tileArchives")}, "tileArchiveCount": len(result["tileArchives"])}))

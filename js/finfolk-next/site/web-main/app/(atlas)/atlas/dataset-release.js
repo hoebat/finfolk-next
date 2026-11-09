@@ -1,3 +1,3 @@
 // Pin the catalog and every region download to the same immutable release.
 // Roll back by selecting a previously published release, then rebuilding the app.
-export const DATASET_RELEASE_BASE = 'https://datasets.finfolk.com.au/v1/map/releases/6e3939c86e5436974ee07f00a5fec1a1c4ef7d5bb7cf7e1c79e1d30eb15ae79e/';
+export const DATASET_RELEASE_BASE = 'https://datasets.finfolk.com.au/v1/map/releases/a772a9ac76155293b12e688e32ddc1a83a483b420da385756fbcd5b71b706bf4/';
