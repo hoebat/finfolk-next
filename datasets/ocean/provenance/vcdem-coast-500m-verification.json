@@ -1,0 +1,20 @@
+{
+  "status": "verified",
+  "checked_at": "2026-11-07T22:15:03Z",
+  "plan_sha256": "ea11973d778b13e7ce8e2dbf0db1a1c9a08376020113bdeff898fab42a5cc769",
+  "tiles_verified": 528,
+  "source_member_bytes": 2073909683,
+  "cog_count": 512,
+  "cog_bytes": 744464503,
+  "empty_tiles": 16,
+  "mask_distance_samples": 8701,
+  "checks": [
+    "Every compressed source SHA256 and size",
+    "Every inflated source CRC32, SHA256 and size",
+    "Every output SHA256 and size",
+    "Every numeric COG header and valid-cell count",
+    "Up to 17 valid pixel centres per COG independently within 500m of Vicmap coastline"
+  ],
+  "scientific_datum_and_source_quality": "unverified",
+  "band_sides": "both sides of mapped shoreline; no seaward-only classification"
+}
