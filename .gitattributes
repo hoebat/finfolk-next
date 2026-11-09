@@ -20,3 +20,6 @@ resources/finfolkdb/*.sql whitespace=-blank-at-eol
 
 # Bathymetric Attributed Grids retain numeric depths and uncertainty in LFS.
 *.bag filter=lfs diff=lfs merge=lfs -text
+
+# Published runtime copies stay authoritative in Git LFS; manifests stay readable.
+datasets/runtime/releases/*/files/** filter=lfs diff=lfs merge=lfs -text
