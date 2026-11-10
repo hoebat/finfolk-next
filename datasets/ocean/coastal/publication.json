@@ -1,0 +1,66 @@
+{
+  "published_at": "2026-11-10",
+  "coastal_release": "coastal-be9c384d2dbf443f",
+  "runtime_release": "2516bb06d60b2aa1c996eab623880173dedd8bd5616f3f958fb9f7ae2df893dc",
+  "data_source_commit": "a8999d27add37d996c1d237c65257c3b2f970e7c",
+  "data_source_tag": "ocean-nationwide-2026-11-10-jbt",
+  "dataset_service_version": 10,
+  "dataset_service_source_commit": "5ca6e247bdf7b1146806980e431afc89667f8ef9",
+  "frontend_deploy": "6af2be96dfc22ab8ca33dd52",
+  "map_url": "https://finfolk.com.au/map",
+  "catalog_url": "https://datasets.finfolk.com.au/v1/coastal/coastal-be9c384d2dbf443f/catalog.json",
+  "native_cogs": 821,
+  "source_groups": 64,
+  "coastal_contour_sources": 48,
+  "total_map_sources": 130,
+  "unique_lfs_objects": 2884,
+  "stored_release_bytes": 1943326605,
+  "retained_numeric_rasters": 1,
+  "nationwide_complete": false,
+  "states": {
+    "NSW": 77,
+    "QLD": 6,
+    "SA": 0,
+    "TAS": 135,
+    "WA": 49,
+    "NT": 41,
+    "JBT": 1,
+    "VIC": 512
+  },
+  "verified": {
+    "all_public_cog_urls": 821,
+    "download_checksum_jurisdictions": [
+      "VIC",
+      "NSW",
+      "QLD",
+      "TAS",
+      "WA",
+      "NT",
+      "JBT"
+    ],
+    "production_browser_sites": [
+      "edithvale",
+      "bondi",
+      "ga-wa-100141447"
+    ],
+    "coverage_archive_checksum": true,
+    "required_project_checks": true,
+    "prior_numeric_file_descriptors_unchanged": true
+  },
+  "baseline_issue": "/directory returns HTTP 500 in both pre-existing production and hosted preview; remaining hosted HTTP acceptance checks passed.",
+  "limitations": [
+    "Whole-jurisdiction inventories and reference gaps remain under review.",
+    "Native source vertical references remain separate; no datum or tide conversion.",
+    "VIC retains its documented integrity and sampled-distance scope; new non-VIC crops passed full-cell ellipsoidal distance checks.",
+    "Later verified WA, Beagle and unique Sydney crops remain outside this immutable snapshot."
+  ],
+  "native_only_sources": [
+    "Jervis JBT",
+    "Jervis NSW"
+  ],
+  "previous_runtime_release": "94cf6f2c5ae62daa3780ccdee144a3ab80af3edc9545f595718a96b6b922ff82",
+  "previous_publications": [
+    "datasets/ocean/coastal/publication-709-20261110.json",
+    "datasets/ocean/coastal/publication-nationwide-20261110.json"
+  ]
+}
