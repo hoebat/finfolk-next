@@ -2,7 +2,7 @@
 import {readFileSync,writeFileSync,mkdirSync,readdirSync,copyFileSync,existsSync} from 'node:fs';
 import {resolve,dirname,relative} from 'node:path';
 import {createHash} from 'node:crypto';
-import {gzipSync} from 'node:zlib';
+import {gzipSync,gunzipSync} from 'node:zlib';
 import {pathToFileURL} from 'node:url';
 import {VectorTile} from '@mapbox/vector-tile';
 import Pbf from 'pbf';
@@ -32,11 +32,24 @@ export function packageCoastal(checkout,publication,baselineId){
  const add=(name,body,label)=>{const compressed=name.endsWith('.json')||name.endsWith('.geojson'),stored=compressed?gzipSync(body,{mtime:0}):body;
   manifest.files[name]={hash:sha(body),bytes:body.length,label,storage:{path:name+(compressed?'.gz':''),hash:sha(stored),bytes:stored.length,encoding:compressed?'gzip':null}};bodies.set(name,stored);};
  const explore=JSON.parse(rewrite(readFileSync(resolve(publication,'map/data/explore-contours/manifest.json'),'utf8')));
- const previous=JSON.parse(readFileSync(resolve(publication,'../ocean-release/live-dataset-manifest.json'),'utf8'));
- if(JSON.stringify(explore.sources.slice(0,previous.sources.length))!==JSON.stringify(previous.sources))throw Error('Existing live contour sources changed');
+ const readBaseline=name=>{
+  const file=manifest.files[name],stored=readFileSync(resolve(base,'files',file.storage.path));
+  if(sha(stored)!==file.storage.hash)throw Error('Baseline LFS object is unresolved or changed: '+name);
+  const body=file.storage.encoding==='gzip'?gunzipSync(stored):stored;
+  if(sha(body)!==file.hash)throw Error('Baseline decoded checksum changed: '+name);return body;
+ };
+ const previous=JSON.parse(readBaseline('data/explore-contours/manifest.json'));
+ const currentById=new Map(explore.sources.map(source=>[source.id,source]));
+ for(const source of previous.sources){
+  const next=currentById.get(source.id);if(!next)throw Error('Existing source removed: '+source.id);
+  if(JSON.stringify(next)!==JSON.stringify(source)&&(!source.id.startsWith('coastal-')||!plan.sources.some(s=>s.id===source.id&&!s.reuse_contours)))throw Error('Unreviewed existing source replacement');
+ }
+ const changed=explore.sources.filter(source=>{
+  const old=previous.sources.find(s=>s.id===source.id);return !old||JSON.stringify(old)!==JSON.stringify(source);
+ });
  add('data/explore-contours/manifest.json',json(explore),'Survey contour catalogue');
  const cache=new Map();let tiles=0;
- for(const source of explore.sources.slice(previous.sources.length)){
+ for(const source of changed){
   const prefix=source.tiles[0].replace('/{z}/{x}/{y}.pbf','').replace(/^\//,''),folder=resolve(publication,'map',prefix);
   for(const z of readdirSync(folder))for(const x of readdirSync(resolve(folder,z))){
    const entries={};
@@ -57,16 +70,26 @@ export function packageCoastal(checkout,publication,baselineId){
  }
  manifest.coastalRelease=plan.release;manifest.nativeCoastalCogCount=plan.native_cog_count;
  manifest.coastalSources=plan.sources.map(s=>JSON.parse(rewrite(JSON.stringify(s.metadata))));
- manifest.coastalContourSources=explore.sources.length-previous.sources.length;
+ manifest.coastalContourSources=explore.sources.filter(s=>s.id.startsWith('coastal-')).length;
+ const downloads=JSON.parse(readBaseline('data/downloads.json'));
+ for(const [name,file]of Object.entries(manifest.files))if(name!=='data/downloads.json'){
+  downloads.files[name]={...(downloads.files[name]||{}),hash:file.hash,bytes:file.bytes,label:file.label};
+ }
+ add('data/downloads.json',json(downloads),'Download manifest');
  delete manifest.id;manifest.id=sha(json(manifest));
  const target=resolve(checkout,'datasets/runtime/releases',manifest.id);
  if(existsSync(target))throw Error('Release already exists; inspect before replacing');
  for(const [name,file]of Object.entries(manifest.files)){
   const path=resolve(target,'files',file.storage.path);mkdirSync(dirname(path),{recursive:true});
   if(bodies.has(name))writeFileSync(path,bodies.get(name));else{
-   const pointer=readFileSync(resolve(base,'files',file.storage.path));
-   if(!pointer.toString().includes('oid sha256:'+file.storage.hash+'\n'))throw Error('Baseline LFS pointer changed');
-   copyFileSync(resolve(base,'files',file.storage.path),path);
+   const body=readFileSync(resolve(base,'files',file.storage.path));
+   if(body.subarray(0,43).toString().startsWith('version https://git-lfs.github.com/spec/v1')){
+    if(!body.toString().includes('oid sha256:'+file.storage.hash+'\n')||!body.toString().includes('size '+file.storage.bytes+'\n'))throw Error('Baseline LFS pointer changed');
+    writeFileSync(path,body);
+   }else{
+    if(sha(body)!==file.storage.hash||body.length!==file.storage.bytes)throw Error('Baseline materialized bytes changed');
+    writeFileSync(path,'version https://git-lfs.github.com/spec/v1\noid sha256:'+file.storage.hash+'\nsize '+file.storage.bytes+'\n');
+   }
   }
  }
  writeFileSync(resolve(target,'manifest.json'),json(manifest));
