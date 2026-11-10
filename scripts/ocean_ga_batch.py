@@ -145,6 +145,8 @@ def run(root, url):
             with c.processing_lock(root,plan):
                 result=c.process(root,plan);receipt=c.verify(root,plan)
                 a.save(c.run_directory(root,plan)/'non-vic-verification.json',receipt)
+                from scripts.ocean_audit_storage import compact_run
+                compact_run(root,plan)
             plans.append({'plan':str(path.relative_to(root)),'rasters':sum(not r.get('empty') for r in result['outputs'].values()),'receipt':receipt})
             print('Native-only GA crop verified',state,member,plans[-1]['rasters'],flush=True)
     a.save(directory/'ga-native-headers'/(ident+'.json'),{'asset':asset,'zip_crc':'all_members_passed',
