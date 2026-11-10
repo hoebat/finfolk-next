@@ -1,5 +1,39 @@
 # FinFolkDB
 
+## Production cutover implementation — in progress
+
+The approved production direction is a native-only application database, with
+application data reset rather than copied. Retain real managed-auth identities
+and the verified brand authorization, regenerate reference content, and require
+fresh sign-in. Use a maintenance window. The serving database must contain no
+legacy application tables or compatibility views; the former serving branch may
+remain isolated for seven days as recovery storage.
+
+The native schema now includes typed Finnies account, item, redemption and ledger
+entities. The fresh installer no longer installs the legacy shop publication.
+`node scripts/native_cutover_status.mjs` reports generated table inventory and
+remaining backend legacy references; `--candidate` also checks the isolated
+candidate's actual relations after verifying its endpoint/branch identity.
+This command is read-only and fails when the relation/source gates are unmet.
+It does not certify full RPC, auth, permissions or browser acceptance.
+
+The HTTP API and integration workers still require porting before promotion.
+Production has not been reset or switched by these preparatory changes. Do not
+run the old migration-backed release commands against the native candidate.
+
+Native typed RPC signatures are published as `rpc-catalog.json` by
+`finfolkdb.schema.rpc-catalog`. The trusted server caller in `backend/native-rpc.mjs`
+checks function names and arity against that artifact and parameterizes values.
+It is not a public arbitrary-function dispatcher. The live PostgreSQL regression
+executes generated user creation and rejects unknown calls before database access.
+
+Cloud validation is currently blocked: the native candidate returns Neon HTTP
+402 (account/project quota exceeded), including with a freshly retrieved connection
+URI. Restore project capacity before cloud inspection or promotion. This does not
+remove the separate requirement to complete the API/worker port; the source audit
+still reports legacy dependencies. No database drop or auth-disable operation has
+been executed as part of this implementation.
+
 The current work is the standalone database model. Frontend and HTTP API migration
 are outside this cleanup. The existing application database has not been changed
 or deployed; historical migrations remain immutable.

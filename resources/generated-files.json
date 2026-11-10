@@ -74,6 +74,7 @@
   "resources/finfolkdb/pilot.sql",
   "resources/finfolkdb/rebuild-contract.json",
   "resources/finfolkdb/rebuild.sql",
+  "resources/finfolkdb/rpc-catalog.json",
   "resources/finfolkdb/schema.sql",
   "resources/finfolkdb/shop.sql",
   "resources/finfolkdb/site-notes-grants.sql",

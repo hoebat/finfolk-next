@@ -4615,6 +4615,72 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_event(
 
 $$ LANGUAGE 'plpgsql';
 
+-- finfolkdb.common.type-shop-base/EnumFinnieRedemptionStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumFinnieRedemptionStatus" AS ENUM ('claimed','fulfilled','refunded');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-shop-base/FinnieAccount 
+CREATE TABLE IF NOT EXISTS "finfolk"."FinnieAccount" (
+  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "user_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "imported_points" BIGINT NOT NULL DEFAULT 0,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE ("user_id")
+);
+
+-- finfolkdb.common.type-shop-base/FinnieItem 
+CREATE TABLE IF NOT EXISTS "finfolk"."FinnieItem" (
+  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "title" TEXT NOT NULL,
+  "outlet" TEXT NOT NULL,
+  "description" TEXT NOT NULL DEFAULT '',
+  "instructions" TEXT NOT NULL DEFAULT '',
+  "cost" INTEGER NOT NULL,
+  "stock" INTEGER,
+  "revision" INTEGER NOT NULL DEFAULT 1,
+  "active" BOOLEAN NOT NULL DEFAULT false,
+  "expires_at" TIMESTAMPTZ,
+  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  CONSTRAINT positive_cost CHECK ("cost" > 0),
+  CONSTRAINT positive_revision CHECK ("revision" > 0),
+  CONSTRAINT valid_stock CHECK ("stock" IS NULL OR ("stock" >= 0)),
+  CONSTRAINT valid_title CHECK ((length("title") >= 1) AND (length("title") <= 160)),
+  CONSTRAINT valid_outlet CHECK ((length("outlet") >= 1) AND (length("outlet") <= 160))
+);
+
+-- finfolkdb.common.type-shop-base/FinnieRedemption 
+CREATE TABLE IF NOT EXISTS "finfolk"."FinnieRedemption" (
+  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."FinnieAccount"("id"),
+  "item_id" UUID NOT NULL REFERENCES "finfolk"."FinnieItem"("id"),
+  "request_key" UUID NOT NULL,
+  "code" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "cost" INTEGER NOT NULL,
+  "item_snapshot" JSONB NOT NULL,
+  "status" "finfolk"."EnumFinnieRedemptionStatus" NOT NULL DEFAULT 'claimed',
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "completed_at" TIMESTAMPTZ,
+  UNIQUE ("account_id","request_key"),
+  UNIQUE ("code"),
+  CONSTRAINT positive_cost CHECK ("cost" > 0)
+);
+
+-- finfolkdb.common.type-shop-base/FinnieEntry 
+CREATE TABLE IF NOT EXISTS "finfolk"."FinnieEntry" (
+  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."FinnieAccount"("id"),
+  "amount" BIGINT NOT NULL,
+  "reference" TEXT NOT NULL,
+  "reason" TEXT NOT NULL,
+  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE ("account_id","reference"),
+  CONSTRAINT nonzero_amount CHECK ("amount" != 0)
+);
+
 -- finfolkdb.common.type-user-report/UserReport 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserReport" (
   "id" BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,

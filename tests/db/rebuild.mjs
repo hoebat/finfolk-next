@@ -56,12 +56,12 @@ try{
  await db.query('CREATE SCHEMA finfolk_shop; CREATE TABLE finfolk_shop.existing(id integer)');
  await assert.rejects(installFreshDatabase(db,{root,manifest}),/empty finfolk_shop/);
  assert.equal((await db.query("SELECT to_regclass('finfolk.\"Beach\"') AS t")).rows[0].t,null);
- await db.query('DROP SCHEMA finfolk_shop CASCADE');
+ await db.query('DROP SCHEMA IF EXISTS finfolk_shop CASCADE');
  // A failure late in installation also rolls the entire native schema back.
- const shop=await readFile(join(root,'resources/finfolkdb/shop.sql'),'utf8');await put('resources/finfolkdb/shop.sql',shop+'\nINVALID INSTALL STATEMENT;');
+ const grants=await readFile(join(root,'resources/finfolkdb/site-notes-grants.sql'),'utf8');await put('resources/finfolkdb/site-notes-grants.sql',grants+'\nINVALID INSTALL STATEMENT;');
  await assert.rejects(installFreshDatabase(db,{root}),/syntax error/);
  assert.equal((await db.query("SELECT to_regclass('finfolk.\"Beach\"') AS t")).rows[0].t,null);
- await put('resources/finfolkdb/shop.sql',shop);await installFreshDatabase(db,{root,manifest});
+ await put('resources/finfolkdb/site-notes-grants.sql',grants);await installFreshDatabase(db,{root,manifest});
  await assert.rejects(installFreshDatabase(db,{root,manifest}),/requires empty application schemas/);
  await assert.rejects(importReferenceRelease(db,manifest,{root,onBatch:()=>{throw Error('Injected batch failure');}}),/Injected batch failure/);
  assert.equal((await db.query('SELECT count(*)::int AS n FROM finfolk."DataSource"')).rows[0].n,0,'Failed import rolls back earlier batches');
@@ -81,7 +81,7 @@ try{
  await db.query('SET ROLE finfolk_api');await assert.rejects(db.query("SELECT finfolk_rpc.import_reference_batch('DataSource','[]')"),e=>e.code==='42501');await db.query('RESET ROLE');
  // This explicit destructive reset is restricted by harness.connect to a local
  // randomly named disposable database. Production orchestration has no reset.
- await db.query('DROP SCHEMA finfolk_rpc CASCADE; DROP SCHEMA finfolk CASCADE; DROP SCHEMA finfolk_shop CASCADE');
+ await db.query('DROP SCHEMA finfolk_rpc CASCADE; DROP SCHEMA finfolk CASCADE; DROP SCHEMA IF EXISTS finfolk_shop CASCADE');
  await installFreshDatabase(db,{root,manifest});await importReferenceRelease(db,manifest,{root});assert.deepEqual(await projection(),snapshot,'A second fresh rebuild reproduces the same semantic records');
  // Bad geometry and missing files fail preparation, before database writes.
  await put(path,{...features,features:[{...features.features[0],geometry:{type:'Point',coordinates:[500,-33]}}]});
@@ -90,7 +90,7 @@ try{
  await assert.rejects(prepareReferenceRelease({root}),/WGS84/);await rm(join(root,path));await assert.rejects(prepareReferenceRelease({root}),/ENOENT/);
  if(process.env.FINFOLK_REBUILD_REAL_DATA==='1'){
   const real=JSON.parse(await readFile('.cache/rebuild/manifest.json','utf8'));
-  await db.query('DROP SCHEMA finfolk_rpc CASCADE; DROP SCHEMA finfolk CASCADE; DROP SCHEMA finfolk_shop CASCADE');
+  await db.query('DROP SCHEMA finfolk_rpc CASCADE; DROP SCHEMA finfolk CASCADE; DROP SCHEMA IF EXISTS finfolk_shop CASCADE');
   console.log('REAL_REBUILD: validating pinned source files and installing fresh native schema');
   await installFreshDatabase(db,{manifest:real});let batches=0;
   const result=await importReferenceRelease(db,real,{onBatch:kind=>{if(++batches%100===0)console.log('REAL_REBUILD batches',batches,kind);}});
@@ -100,7 +100,7 @@ try{
   console.log('REAL_REBUILD: replaying the same release');
   await importReferenceRelease(db,real);assert.deepEqual(await fingerprints(),first,'Real-data replay is semantically unchanged');
   console.log('REAL_REBUILD: installing and importing a second clean database schema');
-  await db.query('DROP SCHEMA finfolk_rpc CASCADE; DROP SCHEMA finfolk CASCADE; DROP SCHEMA finfolk_shop CASCADE');
+  await db.query('DROP SCHEMA finfolk_rpc CASCADE; DROP SCHEMA finfolk CASCADE; DROP SCHEMA IF EXISTS finfolk_shop CASCADE');
   await installFreshDatabase(db,{manifest:real});await importReferenceRelease(db,real);
   assert.deepEqual(await fingerprints(),first,'Two complete real-data rebuilds have identical semantic fingerprints');
   const verified=await verifyReferenceDatabase(db,real);

@@ -24,6 +24,7 @@
              [finfolkdb.fn.messaging.messaging-oauth :as messaging-oauth]
              [finfolkdb.fn.messaging.messaging-chat :as messaging-chat]
              [finfolkdb.common.type-user-reward :as reward]
+             [finfolkdb.common.type-shop-base :as shop]
              [finfolkdb.fn.site.site-notes :as site-notes]]
    :static {:application ["finfolk-entity"]
             :all         {:schema ["finfolk_rpc"]}}})

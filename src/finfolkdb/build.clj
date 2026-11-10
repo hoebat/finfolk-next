@@ -9,6 +9,7 @@
             [finfolkdb.schema.site-notes :as site-notes]
             [finfolkdb.schema.rebuild :as rebuild]
             [finfolkdb.schema.namespaces :as namespaces]
+            [finfolkdb.schema.rpc-catalog :as rpc]
             [std.json :as json]
             [finfolkdb.shop :as shop]))
 
@@ -22,6 +23,7 @@
      "resources/finfolkdb/messaging-grants.sql" (messaging/grants-sql)
      "resources/finfolkdb/site-notes-grants.sql" (site-notes/grants-sql)
      "resources/finfolkdb/entity-schema.sql" (entity/sql)
+     "resources/finfolkdb/rpc-catalog.json" (str (json/write (rpc/declarations)) "\n")
      "resources/finfolkdb/entity-catalog.json" (str (json/write (catalog/portable (catalog/declarations))) "\n")
      "resources/finfolkdb/entity-coverage.json" (str (json/write (coverage/current)) "\n")
      "resources/finfolkdb/type-namespaces.json" (str (json/write (into (sorted-map) (map (fn [[ns path]] [(str ns) path]) (namespaces/declarations)))) "\n")

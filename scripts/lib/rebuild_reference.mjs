@@ -169,7 +169,7 @@ export async function prepareReferenceRelease({root=process.cwd(),siteRoot='.cac
  }
  const {beaches,revision,...metadata}=catalog;
  add('SiteCatalog',{id:1,revision:1,metadata});
- const schemaFiles=['entity-schema.sql','rebuild.sql','rebuild-contract.json','messaging-grants.sql','site-notes-grants.sql','shop.sql'];
+ const schemaFiles=['entity-schema.sql','rebuild.sql','rebuild-contract.json','messaging-grants.sql','site-notes-grants.sql'];
  for(const file of schemaFiles)await pin('resources/finfolkdb/'+file);
  const counts=Object.fromEntries(Object.entries(rows).map(([k,v])=>[k,v.length]));counts.GeoFeature=features.filter(f=>!f.kind).reduce((n,f)=>n+f.count,0);counts.GeoBoundary=features.filter(f=>f.kind==='GeoBoundary').reduce((n,f)=>n+f.count,0);
  const manifest={version:1,implementation:await implementation(),inputs:[...inputs.values()].sort((a,b)=>a.path.localeCompare(b.path)),rows,features,counts,warnings,asset_scope:Object.values(assetUris).length?'explicit_asset_uris':'local_files',unavailable_sources:sourceRecords.filter(s=>!(s.observed?.assets?.length||s.acquisitions?.length)).map(s=>({id:s.id,review:s.review}))};
@@ -228,7 +228,7 @@ export async function installFreshDatabase(db,{root=process.cwd(),manifest}={}){
  // There is deliberately no DROP, reset, fake auth provisioning or migration replay here.
  await db.query('BEGIN');
  try{
-  for(const file of ['entity-schema.sql','rebuild.sql','messaging-grants.sql','site-notes-grants.sql','shop.sql']){
+  for(const file of ['entity-schema.sql','rebuild.sql','messaging-grants.sql','site-notes-grants.sql']){
    const sql=await readFile(resolve(root,'resources/finfolkdb/'+file),'utf8');
    // These generated publications own outer BEGIN/COMMIT only. Compose them in
    // one transaction so failure in a later grant leaves an empty candidate.

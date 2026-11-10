@@ -21,6 +21,7 @@ test:
 	corepack yarn test
 	node tests/test_reference_assets.mjs
 	node tests/test_account_return.mjs
+	node tests/test_native_cutover.mjs
 test-db:
 	node scripts/test_database.mjs
 

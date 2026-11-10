@@ -7,7 +7,7 @@ import {installEntities,user,diveSession} from './fixtures/entities.mjs';
 const db=await connect();
 const catalog=JSON.parse(await readFile('resources/finfolkdb/entity-catalog.json','utf8'));
 const modules=JSON.parse(await readFile('resources/finfolkdb/type-namespaces.json','utf8'));
-const domainModules=new Set(['import-base','environment-base','site-base','social-instagram','social-tiktok','messaging-base','user-reward'].map(name=>'finfolkdb.common.type-'+name));
+const domainModules=new Set(['import-base','environment-base','site-base','social-instagram','social-tiktok','messaging-base','user-reward','shop-base'].map(name=>'finfolkdb.common.type-'+name));
 const table=name=>'finfolk.'+quote(name);
 try{
  await installEntities(db);
@@ -53,7 +53,7 @@ try{
   rows.set(name,result.rows[0]);return result.rows[0];
  }
  const newTables=Object.entries(catalog).filter(([,spec])=>domainModules.has(spec.module)).map(([name])=>name);
- assert.equal(newTables.length,51);
+ assert.equal(newTables.length,55);
  for(const name of newTables)await insert(name);
  // Exercise every authored reference and enum on every new table, including
  // nullable links. PostgreSQL must reject missing parents and unknown labels.
@@ -76,8 +76,11 @@ try{
   ['EnvironmentSnapshot','valid_to=valid_from'],['EnvironmentSnapshot',"delete_after='2000-01-01'"],['EnvironmentSnapshot','schema_version=0'],
   ['InstagramDiscovery',"media_id='invalid'"],['UserInvitationJoin',"inviter_id=invitee_id"],
   ['MessagingAccount',"generation=0"],['MessagingOutbox',"body=repeat('x',2001)"],
-  ['UserPointsEntry','points=2'],['SiteCatalog','id=2'],['SiteCatalog','revision=-1']
+  ['UserPointsEntry','points=2'],['SiteCatalog','id=2'],['SiteCatalog','revision=-1'],
+  ['FinnieItem','cost=0'],['FinnieItem','stock=-1'],['FinnieItem','revision=0'],
+  ['FinnieItem',"title=''"],['FinnieItem',"outlet=repeat('x',161)"],
+  ['FinnieEntry','amount=0'],['FinnieRedemption','cost=0']
  ])await assert.rejects(db.query(`UPDATE ${table(name)} SET ${assignment}`),error=>error.code==='23514',name+' enforces '+assignment);
  for(const name of newTables)assert.equal((await db.query(`SELECT count(*)::int AS n FROM ${table(name)}`)).rows[0].n,1,name+' has a valid live row');
- console.log(`TYPE_NAMESPACES_PASS: ${Object.keys(modules).length} modules; ${live.length} live tables; all ${newTables.length} domain tables accept rows; ${referenceChecks} FK checks, ${enumChecks} enum checks and 12 business checks.`);
+ console.log(`TYPE_NAMESPACES_PASS: ${Object.keys(modules).length} modules; ${live.length} live tables; all ${newTables.length} domain tables accept rows; ${referenceChecks} FK checks, ${enumChecks} enum checks and 19 business checks.`);
 }finally{await db.end();}
