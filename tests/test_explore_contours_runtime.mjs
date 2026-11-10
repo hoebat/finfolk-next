@@ -8,4 +8,15 @@ const map=new MapStub(),statuses=[],loader=createContourLayers(map,{}, {fetcher:
 map.zoom=11.5;map.events.get('moveend')();assert.equal(map.sources.size,2);const s=map.sources.get('ff-contour-survey-fixture');assert.equal(s.tiles[0],DATASET_RELEASE_BASE+'data/explore-contours/test/{z}/{x}/{y}.pbf');assert.equal(s.attribution,'Source &lt;authority&gt;');assert.equal(map.layers.get('ff-contour-survey-fixture-labels').layout['text-field'][2],' m');assert.ok(map.layers.get('ff-contour-regional-fixture-line').paint['line-dasharray']);assert.equal(map.layers.get('ff-contour-survey-fixture-line').paint['line-dasharray'],undefined);
 map.zoom=13;map.events.get('moveend')();assert.equal(map.sources.size,1,'Coarse regional contours must disappear at local zoom');map.zoom=11.5;map.events.get('moveend')();loader.setEnabled({survey:false});assert.equal(map.sources.size,1);map.extent=[150,-35,153,-32];map.events.get('moveend')();assert.equal(map.sources.size,0);assert.equal(map.layers.size,1);loader.destroy();assert.equal(map.events.size,0);
 let resolveLate;const lateMap=new MapStub();lateMap.zoom=13;const late=createContourLayers(lateMap,{}, {fetcher:()=>new Promise(resolve=>resolveLate=resolve)});late.destroy();resolveLate(Response.json({version:1,sources:[fixture]}));await new Promise(resolve=>setTimeout(resolve,0));assert.equal(lateMap.sources.size,0);
+const nativeMap=new MapStub();nativeMap.zoom=16;let inspected;
+const oldDocument=globalThis.document;globalThis.document={createElement:tag=>({tag,children:[],append(...children){this.children.push(...children);}})};
+class Popup{setLngLat(){return this;}setDOMContent(value){inspected=value;return this;}addTo(){return this;}remove(){}}
+const native=createContourLayers(nativeMap,{Popup},{fetcher:async()=>Response.json({version:1,sources:[{...fixture,archive_release:'coastal-fixture'}]})});
+try{
+ await new Promise(resolve=>setTimeout(resolve,0));assert.equal(nativeMap.layers.get('ff-contour-survey-fixture-labels').layout['text-field'][2],' m ref');
+ nativeMap.queryRenderedFeatures=()=>[{source:'ff-contour-survey-fixture',properties:{depth_m:4,source_elevation_m:-4,derivation:'native-grid iso-elevation contour',source_title:'Native survey',datum:'Unverified source reference'}}];
+ nativeMap.events.get('click')({point:{x:1,y:1},lngLat:[145,-38]});
+ assert.equal(inspected.children[0].textContent,'4 m below source reference');assert.equal(inspected.children[1].textContent,'Native survey elevation contour · vertical review pending');
+ assert(inspected.children.some(e=>e.textContent==='Source reference elevation; not a tide-adjusted water depth.'));
+}finally{native.destroy();if(oldDocument===undefined)delete globalThis.document;else globalThis.document=oldDocument;}
 console.log('EXPLORE_CONTOURS_RUNTIME_PASS: no country-scale loading, visible-source lifetime, intact tile templates, independent layers, metre labels and destroyed-map fences.');
