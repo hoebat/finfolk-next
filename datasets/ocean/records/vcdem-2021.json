@@ -17,10 +17,32 @@
     "reviewed_at": "2026-11-04"
   },
   "review": {
-    "acquisition_status": "discovered",
+    "acquisition_status": "partial",
     "quality": "mixed",
     "datum_verified": false,
-    "blocker": "",
-    "next_action": "Acquire the public full native package and inspect numeric contents, datum and source-quality metadata."
+    "blocker": "Whole-compilation vertical reconciliation and remaining source footprints are not verified; the Pope’s Eye subset has a separate bounded review.",
+    "next_action": "Retain the reviewed Pope’s Eye subset for numeric AHD-relative queries; review remaining source footprints individually before further raster registration.",
+    "verified_subsets": [
+      {
+        "id": "vcdem-popes-eye-2018-ahd-v1",
+        "evidence": "datasets/ocean/provenance/vcdem-popes-eye-review.json",
+        "valid_cells": 6665,
+        "reference": "AHD",
+        "scope": "Only the inset Pope’s Eye 2018 survey footprint intersected with the acquired coastal band"
+      }
+    ]
+  },
+  "coastal_extracts_reference": "datasets/ocean/coastal/vcdem-500m.json",
+  "coastal_scope": {
+    "state": "complete_integrity_verified",
+    "distance_m": 500,
+    "band_sides": "both sides of mapped coastline",
+    "tile_count": 528,
+    "cog_count": 512,
+    "empty_tiles": 16,
+    "raw_bytes": 2073909683,
+    "cog_bytes": 744464503,
+    "manifest": "datasets/ocean/coastal/vcdem-500m.json",
+    "verification": "datasets/ocean/provenance/vcdem-coast-500m-verification.json"
   }
 }

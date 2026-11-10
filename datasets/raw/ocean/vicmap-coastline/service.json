@@ -1,0 +1,12 @@
+{
+  "source_url": "https://corp-gis.mapshare.vic.gov.au/arcgis/rest/services/VicmapBasemap/VicmapBasemapScaleUpTo800/MapServer/18/query",
+  "where": "FEATURE_TYPE_CODE='coast'",
+  "attribution": "Vicmap / State of Victoria",
+  "licence": "CC BY 4.0; Vicmap Index publisher terms",
+  "retrieved_at": "2026-11-08",
+  "feature_count": 10342,
+  "bytes": 45852528,
+  "sha256": "f98bb152a2e3668b0410ff14927e89562255f1027e161a2427f8afccf2f48ae1",
+  "crs": "EPSG:4326",
+  "role": "Detailed shoreline used for tile selection and 500m coastal mask"
+}
