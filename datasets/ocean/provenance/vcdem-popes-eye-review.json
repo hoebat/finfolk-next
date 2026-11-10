@@ -1,0 +1,448 @@
+{
+  "schema_version": 1,
+  "id": "vcdem-popes-eye-2018-ahd-v1",
+  "reviewed_at": "2026-11-10",
+  "scope": "Only the inset Pope’s Eye footprint intersected with the existing 500 m coastal acquisition; the rest of VCDEM remains unverified.",
+  "metadata_archive": "datasets/ocean/provenance/vcdem-package-review/source.json",
+  "source_member": {
+    "name": "VicCoastDEM2021_250cm/Tiled_NoBlend/Z55/VCDEM_GDA2020z55_250cm_Gaps_e2949_n5765.asc",
+    "compression": 8,
+    "crc32": 1798912580,
+    "uncompressed_bytes": 23840047,
+    "compressed_bytes": 4515362,
+    "local_header_offset": 36314177094,
+    "horizontal_crs": "EPSG:7855",
+    "nominal_bounds": [
+      294999.6147534847,
+      5760000.107296828,
+      299999.6147534847,
+      5765000.107296828
+    ]
+  },
+  "source_cog": {
+    "state": "acquired",
+    "path": "datasets/processed/vcdem-coastal-500m/00b1f37e30c8611b16b946ae.tif",
+    "bytes": 3385805,
+    "sha256": "83012ef35746879d405f430cd370823a9f453cd651a9e5f6f364c7cff302bdcf",
+    "bounds": [
+      294999.6147534847,
+      5760000.107296828,
+      299359.6147534847,
+      5765000.107296828
+    ],
+    "valid_cells": 1903291,
+    "horizontal_crs": "EPSG:7855"
+  },
+  "source_ascii_sha256": "15db44fe3a5f55b51330be7f49b0ed95bc1b46ff6d0f61201450413f78ff7572",
+  "footprint": {
+    "type": "Feature",
+    "id": 18,
+    "properties": {
+      "Dataset": "popeseye_2mbathy_gda2020_mga55_ahd",
+      "Survey_Region": "Popes eye",
+      "File_Format": "Raster (ASCII)",
+      "Sensor_Type": "MBES",
+      "Resolution": "2m",
+      "Source_1": "Deakin",
+      "Date_1": "20/01/2018",
+      "Horizontal_uncertainty": "0.1m",
+      "Vertical_uncertainty": "0.1m",
+      "Shape_Length": "0.012913275914740405",
+      "Shape_Area": "4.941003310208162e-06"
+    },
+    "geometry": {
+      "type": "MultiPolygon",
+      "coordinates": [
+        [
+          [
+            [
+              144.69972855100002,
+              -38.276034170999935
+            ],
+            [
+              144.69981198200003,
+              -38.27628810899995
+            ],
+            [
+              144.69992110200008,
+              -38.27645244299998
+            ],
+            [
+              144.6999371280001,
+              -38.27666901599997
+            ],
+            [
+              144.6999105860001,
+              -38.27678563499995
+            ],
+            [
+              144.69988063200003,
+              -38.27701031699996
+            ],
+            [
+              144.69982959300012,
+              -38.27717871799996
+            ],
+            [
+              144.69964306000008,
+              -38.27729400199996
+            ],
+            [
+              144.69950199400012,
+              -38.27741738499998
+            ],
+            [
+              144.699290678,
+              -38.27759345499993
+            ],
+            [
+              144.6990582210001,
+              -38.27771504399993
+            ],
+            [
+              144.69878120400006,
+              -38.27779971699994
+            ],
+            [
+              144.69857329900003,
+              -38.27786772299993
+            ],
+            [
+              144.6982174420001,
+              -38.27784271699994
+            ],
+            [
+              144.6978890030001,
+              -38.27781824799996
+            ],
+            [
+              144.69761710600005,
+              -38.27774082499997
+            ],
+            [
+              144.6974828650001,
+              -38.27764808099994
+            ],
+            [
+              144.69739432000006,
+              -38.27755623499996
+            ],
+            [
+              144.6972349550001,
+              -38.277535083999965
+            ],
+            [
+              144.69711900900006,
+              -38.27758687099998
+            ],
+            [
+              144.6970527420001,
+              -38.27751348399994
+            ],
+            [
+              144.69698932300003,
+              -38.277350044999935
+            ],
+            [
+              144.69704928700003,
+              -38.27726111499993
+            ],
+            [
+              144.69708640600004,
+              -38.27717173599996
+            ],
+            [
+              144.69704431500008,
+              -38.27705677299997
+            ],
+            [
+              144.69700218700007,
+              -38.27694301099996
+            ],
+            [
+              144.69695956600003,
+              -38.27684485799995
+            ],
+            [
+              144.69689386900006,
+              -38.27675345999995
+            ],
+            [
+              144.69690185800005,
+              -38.27668152999996
+            ],
+            [
+              144.6969669660001,
+              -38.276610722999976
+            ],
+            [
+              144.69703778400003,
+              -38.27654002799994
+            ],
+            [
+              144.69710993,
+              -38.27642730799994
+            ],
+            [
+              144.69716112800006,
+              -38.276254104999964
+            ],
+            [
+              144.697258776,
+              -38.27605778599997
+            ],
+            [
+              144.69744895200006,
+              -38.275827239999956
+            ],
+            [
+              144.69770766800002,
+              -38.27559803999998
+            ],
+            [
+              144.6981246040001,
+              -38.27542600899994
+            ],
+            [
+              144.69853926300004,
+              -38.27532601799993
+            ],
+            [
+              144.69888367400006,
+              -38.27527871199993
+            ],
+            [
+              144.6990892970001,
+              -38.27528274699995
+            ],
+            [
+              144.6992486580001,
+              -38.27530389499998
+            ],
+            [
+              144.69947314800004,
+              -38.27543444999998
+            ],
+            [
+              144.69965308200005,
+              -38.27552808699994
+            ],
+            [
+              144.69971650600007,
+              -38.27569152499996
+            ],
+            [
+              144.69968967900002,
+              -38.275817149999966
+            ],
+            [
+              144.69972855100002,
+              -38.276034170999935
+            ]
+          ],
+          [
+            [
+              144.69866686900002,
+              -38.27707661199997
+            ],
+            [
+              144.6987828130001,
+              -38.27702482299998
+            ],
+            [
+              144.69903868500012,
+              -38.276885670999945
+            ],
+            [
+              144.6992048730001,
+              -38.27669069399997
+            ],
+            [
+              144.6992785330001,
+              -38.27652994599998
+            ],
+            [
+              144.69928194400006,
+              -38.276421882999955
+            ],
+            [
+              144.69926364700007,
+              -38.276277351999966
+            ],
+            [
+              144.69917453200003,
+              -38.27620351699994
+            ],
+            [
+              144.6990071680001,
+              -38.27614616899996
+            ],
+            [
+              144.69878840400008,
+              -38.27612385499998
+            ],
+            [
+              144.69865131900008,
+              -38.27612116499995
+            ],
+            [
+              144.6985102320001,
+              -38.27610037399995
+            ],
+            [
+              144.69814412900007,
+              -38.27625538299998
+            ],
+            [
+              144.69802534100006,
+              -38.276397223999936
+            ],
+            [
+              144.6979533860001,
+              -38.27650394099993
+            ],
+            [
+              144.69792785100003,
+              -38.27658854099997
+            ],
+            [
+              144.697923553,
+              -38.276724618999936
+            ],
+            [
+              144.69796542200004,
+              -38.27684658599998
+            ],
+            [
+              144.69807567700002,
+              -38.27697490099996
+            ],
+            [
+              144.69825618200002,
+              -38.27705052899995
+            ],
+            [
+              144.69841497700008,
+              -38.27708968999997
+            ],
+            [
+              144.69866686900002,
+              -38.27707661199997
+            ]
+          ]
+        ]
+      ]
+    }
+  },
+  "footprint_crs": "EPSG:7844",
+  "inset_m": 5,
+  "mask_rule": "Native cell centres inside the footprint inset by 5 m in EPSG:7855 AND valid in the existing coastal COG. Original nodata is retained. No interpolation or sign conversion in the imported raster.",
+  "datum_decision": {
+    "reference": "AHD (Australian Height Datum 1971)",
+    "units": "m",
+    "value_kind": "elevation",
+    "evidence": [
+      {
+        "url": "https://www.marineandcoasts.vic.gov.au/__data/assets/pdf_file/0033/691791/Victorian_Bathymetric_Dataset_Update_2022_Report.pdf",
+        "pages": [
+          5,
+          6,
+          7,
+          8
+        ],
+        "finding": "Table 1 identifies the AHD Pope’s Eye input. The non-blended mosaic layers new surveys over the 2017 base with the First operator; the metadata footprint identifies the 20 January 2018 Deakin input.",
+        "sha256": "a4c85e9b6ba90245f58a06946b40c8f1617e69e0091688bc6ce8caca74f082e6",
+        "bytes": 2590517
+      },
+      {
+        "file": "datasets/ocean/provenance/vcdem-package-review/source.json",
+        "finding": "Pinned workbook and geodatabase agree on the Pope’s Eye survey name, date, source and nominal uncertainties."
+      }
+    ],
+    "inference": "The 2018 AHD input supplies the non-blended mosaic inside its footprint: the only overlapping source footprints are older base inputs (2008–2009 LADS and 2012 Great Sands lidar). No newer competing project footprint intersects it. This establishes the subset reference, not a whole-compilation vertical reconciliation.",
+    "overlapping_base_inputs": [
+      {
+        "dataset": "cep05-2008-09 zone 55 LADS",
+        "date": "Nov 2008 - April 2009"
+      },
+      {
+        "dataset": "greatsands_lidar_average_6m_2012_dem_extract",
+        "date": "2012"
+      }
+    ],
+    "quality": "mixed",
+    "excluded_claims": [
+      "No whole-VCDEM datum verification",
+      "No tide adjustment",
+      "No chart-datum conversion",
+      "No new per-pixel accuracy guarantee",
+      "No water mask inferred from sign"
+    ]
+  },
+  "reconstruction": {
+    "original_full_tile": "datasets/raw/ocean/vcdem-2021-coastal-500m/00b1f37e30c8611b16b946ae/000000.bin",
+    "full_coastal_cog": "datasets/processed/vcdem-coastal-500m/00b1f37e30c8611b16b946ae.tif",
+    "footprint_metadata_retained": true,
+    "loss": "Pixels outside the declared subset are omitted from this runtime import; full source inputs remain in Git LFS."
+  },
+  "registration": {
+    "title": "Pope’s Eye — VCDEM non-blended 2018 survey subset",
+    "datum": "AHD (Australian Height Datum 1971)",
+    "datum_verified": true,
+    "units": "m",
+    "value_kind": "elevation",
+    "quality": "mixed",
+    "resolution_m": 2.5,
+    "survey_date": "2018-01-20",
+    "source_url": "https://cl-isd-prd-datashare-s3-delivery.s3.amazonaws.com/PrePackages/VicCoastDEM2021_250cm.zip",
+    "licence": "CC BY 4.0",
+    "attribution": "State of Victoria (DEECA); Veris Australia; Deakin University multibeam survey, 20 January 2018",
+    "review_id": "vcdem-popes-eye-2018-ahd-v1",
+    "review_evidence": "datasets/ocean/provenance/vcdem-popes-eye-review.json",
+    "source_footprint": "popeseye_2mbathy_gda2020_mga55_ahd",
+    "source_resolution_m": 2,
+    "source_vertical_uncertainty_m": 0.1,
+    "limitation": "Elevation relative to AHD, not tide-adjusted water depth. AHD is not chart datum. This 2.5 m VCDEM compilation subset retains source values and gaps; source survey uncertainty is not a guarantee for every compiled pixel. No land/water classification is inferred from sign.",
+    "native_crs": "EPSG:7855",
+    "native_resolution": [
+      2.5,
+      2.5
+    ],
+    "valid_cells": 6665,
+    "total_cells": 11536,
+    "id": "port-phillip-e3ebeb0223fe",
+    "region": "port-phillip",
+    "imported_at": "2026-11-10T02:01:05.157769+00:00",
+    "originals": [
+      {
+        "file": "raw/port-phillip-e3ebeb0223fe/000-popes-eye-2018.tif",
+        "original_name": "popes-eye-2018.tif",
+        "sha256": "ed0a49296ccdf64eb787bcb960602e109f8a1ccae499329b580283b5ae594171",
+        "bytes": 17790
+      }
+    ],
+    "bounds": [
+      144.69690815982602,
+      -38.27785981895067,
+      144.6999293977911,
+      -38.275280634406634
+    ],
+    "file": "processed/port-phillip-e3ebeb0223fe/raster.tif",
+    "sha256": "ed0a49296ccdf64eb787bcb960602e109f8a1ccae499329b580283b5ae594171"
+  },
+  "verification": {
+    "valid_cells": 6665,
+    "minimum_elevation_m": -12.329999923706055,
+    "maximum_elevation_m": -1.9299999475479126,
+    "every_valid_cell_equals_raw_ascii": true,
+    "imported_mask_equals_subset_mask": true,
+    "native_grid_preserved": true,
+    "example": {
+      "longitude": 144.69747314916566,
+      "latitude": -38.27665304238617,
+      "elevation_m": -7.75,
+      "depth_below_ahd_m": 7.75
+    }
+  },
+  "runtime_release": "eb24dd8f4af55847ee3972be950b4946441c672a5cc5bde7b723826041feb6b9"
+}

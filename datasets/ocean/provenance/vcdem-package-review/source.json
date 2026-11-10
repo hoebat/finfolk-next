@@ -1,0 +1,704 @@
+{
+  "schema_version": 1,
+  "source_url": "https://cl-isd-prd-datashare-s3-delivery.s3.amazonaws.com/PrePackages/VicCoastDEM2021_250cm.zip",
+  "source_identity": {
+    "bytes": 39062003888,
+    "etag": "\"f41ea497fed1fcd6a3284d1cbc432489-4657\"",
+    "last_modified": "Wed, 25 Sep 2024 01:50:54 GMT"
+  },
+  "members": [
+    {
+      "member": {
+        "name": "VicCoastDEM2021_250cm/Metadata_VCDEM_2022.xlsx",
+        "compression": 8,
+        "crc32": 1490626666,
+        "uncompressed_bytes": 21964,
+        "compressed_bytes": 18987,
+        "local_header_offset": 7347193
+      },
+      "data_offset": 7347269,
+      "compressed_file": "metadata.bin",
+      "compressed_sha256": "a070d4d8794cda167d6a9ca21d642bf7397fac8d3ada12743605bee365a1f91a",
+      "uncompressed_sha256": "24868a134bc5cf5a7e844302655b271636530ee0fdb539a9043098a98a903edd",
+      "crc32_verified": true
+    },
+    {
+      "member": {
+        "name": "VicCoastDEM2021_250cm/readme.txt",
+        "compression": 8,
+        "crc32": 2583274509,
+        "uncompressed_bytes": 2372,
+        "compressed_bytes": 730,
+        "local_header_offset": 7366256
+      },
+      "data_offset": 7366318,
+      "compressed_file": "readme.bin",
+      "compressed_sha256": "e514ae07fccab18c8157d13920645bdd36d620f4b2089162d37bb78eb31de07c",
+      "uncompressed_sha256": "52ca639e1b6dce76c313e43810f7422cc88f3e37cda2079db32f1de1232b8ba5",
+      "crc32_verified": true
+    }
+  ],
+  "retrieved_at": "2026-11-10",
+  "disk_reserve_exception": "User authorized required review downloads despite the disk reserve. Bounded metadata ranges only; the bulk collector remains stopped.",
+  "geodatabase": {
+    "compressed_file": "geodatabase-prefix.bin",
+    "range": [
+      0,
+      7347192
+    ],
+    "bytes": 7347193,
+    "sha256": "1e23932d31a730a7b573c653c5303a526c13fac402edfa5962a4c78014ff4753",
+    "members": [
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000001.gdbindexes",
+          "compression": 8,
+          "crc32": 2529943236,
+          "uncompressed_bytes": 110,
+          "compressed_bytes": 82,
+          "local_header_offset": 117
+        },
+        "data_offset": 202,
+        "compressed_sha256": "05e1cf1906ab1cba443215e7c9862515c3bf1874478db86c366c49635fad4c43",
+        "uncompressed_sha256": "80ba95b873e151074244f7655f9e29ce8967aab1bd57ff4c06a329b723a3d46c",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000001.gdbtable",
+          "compression": 8,
+          "crc32": 2602139456,
+          "uncompressed_bytes": 355,
+          "compressed_bytes": 232,
+          "local_header_offset": 284
+        },
+        "data_offset": 367,
+        "compressed_sha256": "acc20e85a45050838b93f6bd3b7881d2a8ea8d906167e54bb0f0dee345dca54d",
+        "uncompressed_sha256": "ade5d0208cd31de63fa3d3e6ae9ee183d6a5ca07f653f910a1819e59d742924b",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000001.gdbtablx",
+          "compression": 8,
+          "crc32": 4242999043,
+          "uncompressed_bytes": 5152,
+          "compressed_bytes": 67,
+          "local_header_offset": 599
+        },
+        "data_offset": 682,
+        "compressed_sha256": "ab655aa8f8a407d3d6644887ee3b0f2944224dc0923b0dc9c831714d8ef2dc20",
+        "uncompressed_sha256": "b65d6bdd23b973033884654531d2ed75d5c4e55fd260bf23631bbecf9f7edab5",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000001.TablesByName.atx",
+          "compression": 8,
+          "crc32": 1515354634,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 216,
+          "local_header_offset": 749
+        },
+        "data_offset": 840,
+        "compressed_sha256": "3289a9854985efc128ce34aa610c99c8403f99c323e3841800133bdb3b430245",
+        "uncompressed_sha256": "3518b08bed18ed1f89d54f9411c0df17d99ac8305a779511de196b2341bfbf82",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000002.gdbtable",
+          "compression": 8,
+          "crc32": 1868924595,
+          "uncompressed_bytes": 2055,
+          "compressed_bytes": 642,
+          "local_header_offset": 1056
+        },
+        "data_offset": 1139,
+        "compressed_sha256": "664dfec6c6e3ef65b918f2cf62fdb3ce87cd89a9f24eb1b1615c82a1344d2adb",
+        "uncompressed_sha256": "9efa50dc62a40e109a546054943ae5ad4b3d41aa81ece0dfa026b7b23cb09da8",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000002.gdbtablx",
+          "compression": 8,
+          "crc32": 2165908499,
+          "uncompressed_bytes": 5152,
+          "compressed_bytes": 133,
+          "local_header_offset": 1781
+        },
+        "data_offset": 1864,
+        "compressed_sha256": "52f4c2aa07ca9999f886ac0579adf8d4fbac77e52aafe20aa266a40964061937",
+        "uncompressed_sha256": "f3ac9865dec6ab40e73d91dd1f5c2eef0248e66e359d4abb1d97edba92b5df88",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000003.gdbindexes",
+          "compression": 8,
+          "crc32": 279189289,
+          "uncompressed_bytes": 42,
+          "compressed_bytes": 40,
+          "local_header_offset": 1997
+        },
+        "data_offset": 2082,
+        "compressed_sha256": "7be03c5f3fa27c3a1e650432c40cce684c322e955897cdd76c33d2214e8797bc",
+        "uncompressed_sha256": "de0911d18e2f304380c04ae123ea18057d262d788301f7cc3148298231c7c618",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000003.gdbtable",
+          "compression": 8,
+          "crc32": 1709796171,
+          "uncompressed_bytes": 750,
+          "compressed_bytes": 364,
+          "local_header_offset": 2122
+        },
+        "data_offset": 2205,
+        "compressed_sha256": "bf54590e6d535b31a0355e1922546e26bb4cc0bf85be966f618e093f97b77fa2",
+        "uncompressed_sha256": "3d01b9fd76d8e74bd7bbf01c499dc264afff2bea8932df19261aaeb5b0506bc8",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000003.gdbtablx",
+          "compression": 8,
+          "crc32": 788637825,
+          "uncompressed_bytes": 5152,
+          "compressed_bytes": 41,
+          "local_header_offset": 2569
+        },
+        "data_offset": 2652,
+        "compressed_sha256": "c21fdb18221336ab6bbf7a074bfa5757ae66ccd43017ec7b269141664f9c59e7",
+        "uncompressed_sha256": "d63fd5f8a490aa6aeffde1336e80ce35b5399af5752a72b316570a670b09d167",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000004.CatItemsByPhysicalName.atx",
+          "compression": 8,
+          "crc32": 1841793295,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 116,
+          "local_header_offset": 2693
+        },
+        "data_offset": 2794,
+        "compressed_sha256": "0e87bee09e4c863abe1a43fc79635ba9b914afb6128ed0335cf1a9c0840403ce",
+        "uncompressed_sha256": "cff035fc0ee556fefe5260b5456c48b83115f9aacee771d84c661bcb2f2ea816",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000004.CatItemsByType.atx",
+          "compression": 8,
+          "crc32": 784392502,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 129,
+          "local_header_offset": 2910
+        },
+        "data_offset": 3003,
+        "compressed_sha256": "60d04270e3e8a962090b9bbc95b182fd14f78e2217334d95b2886f06496ffbd9",
+        "uncompressed_sha256": "cffffae84219f406a5c19bf1be66bc0f803180ba954587f3aaa9a466d951f278",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000004.FDO_UUID.atx",
+          "compression": 8,
+          "crc32": 166049034,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 127,
+          "local_header_offset": 3132
+        },
+        "data_offset": 3219,
+        "compressed_sha256": "6ab5e13ea58712329ef4549d0c191554929ee9147402afa18983a4d2ce971f09",
+        "uncompressed_sha256": "3efde0c5742412b659ee3e5f5216777c758f1f7afec276388eae3856e90af7e2",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000004.gdbindexes",
+          "compression": 8,
+          "crc32": 548459433,
+          "uncompressed_bytes": 310,
+          "compressed_bytes": 132,
+          "local_header_offset": 3346
+        },
+        "data_offset": 3431,
+        "compressed_sha256": "06b7100478b4bcd68e83504987ac5716f99f6a3f8739317d16cd7203992802d9",
+        "uncompressed_sha256": "f29887c93b126a3feb0e20958cd73cc774f76ab79284b9c7286dc12eb05db858",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000004.gdbtable",
+          "compression": 8,
+          "crc32": 1355283292,
+          "uncompressed_bytes": 59809,
+          "compressed_bytes": 7719,
+          "local_header_offset": 3563
+        },
+        "data_offset": 3646,
+        "compressed_sha256": "b39ed6d67f518131a5b3b78c20580a528b60f05f4bd8ad5be166783ec4bcc35d",
+        "uncompressed_sha256": "36d0549c73cda7cedda1ef5caefa8898164ea235c5ebf96145da77a24a5ec25f",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000004.gdbtablx",
+          "compression": 8,
+          "crc32": 3496073333,
+          "uncompressed_bytes": 5152,
+          "compressed_bytes": 44,
+          "local_header_offset": 11365
+        },
+        "data_offset": 11448,
+        "compressed_sha256": "959b8335a9b40511b41fd15e21b425a3442ba527dc7d518629694bc7903b39e2",
+        "uncompressed_sha256": "a0398b957bd0ce48f4de7e4504da3d4a006a5abb17f8ca5b81c123bacbcc3f08",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000004.horizon",
+          "compression": 8,
+          "crc32": 810610692,
+          "uncompressed_bytes": 32,
+          "compressed_bytes": 30,
+          "local_header_offset": 11492
+        },
+        "data_offset": 11574,
+        "compressed_sha256": "36b0114c273257ff462f626cf2b1b1e73ff4c69dd537b08913a0aeb6a83a5d76",
+        "uncompressed_sha256": "9fab34115b351a30fb6adb5818d8f08e4dd3a024b7247dbbc61c56929ab6e223",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000004.spx",
+          "compression": 8,
+          "crc32": 2251296991,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 33,
+          "local_header_offset": 11604
+        },
+        "data_offset": 11682,
+        "compressed_sha256": "20b35748385de0e2206e936064b3ff87608a0300e08f64aa4537a7caf38a83e6",
+        "uncompressed_sha256": "027866f78134de031571290fab2599ab7879bd7df84030ee324b233b891058aa",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000005.CatItemTypesByName.atx",
+          "compression": 8,
+          "crc32": 1956271410,
+          "uncompressed_bytes": 12310,
+          "compressed_bytes": 590,
+          "local_header_offset": 11715
+        },
+        "data_offset": 11812,
+        "compressed_sha256": "3d8daf57e815ce36bbfbdde72bc0cffb92f0ccc2e0a1effdde7e1944fd2c76c5",
+        "uncompressed_sha256": "5e901522888a8153c398e005ac61c7352e3fe920bf2b7a84d76d2b4caeee9817",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000005.CatItemTypesByParentTypeID.atx",
+          "compression": 8,
+          "crc32": 4121490029,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 285,
+          "local_header_offset": 12402
+        },
+        "data_offset": 12507,
+        "compressed_sha256": "32fe37e9f49b17a3bfd9267cfe321f8b5ad8489ed3dc7fa67cc0ce6dea0b4898",
+        "uncompressed_sha256": "d8ba35a73b3e10a55caae8ccf875f10ca3288d1c0d18aad51bf52182b322ec0e",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000005.CatItemTypesByUUID.atx",
+          "compression": 8,
+          "crc32": 2464174986,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 981,
+          "local_header_offset": 12792
+        },
+        "data_offset": 12889,
+        "compressed_sha256": "565465d958d3ab67d9c6ba9d87923f0f866e625f58e5187495c95d019654cd35",
+        "uncompressed_sha256": "480f1f90818c3dc361c6e9ffc09330781a1c55ba52f7cb1a1925b2d791beba5e",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000005.gdbindexes",
+          "compression": 8,
+          "crc32": 2175196442,
+          "uncompressed_bytes": 296,
+          "compressed_bytes": 119,
+          "local_header_offset": 13870
+        },
+        "data_offset": 13955,
+        "compressed_sha256": "02af86288f104a806d074131d96bd38cf437fa5b52aa6c121e752c39d02f3948",
+        "uncompressed_sha256": "c21e650994b48cc72d174b3caf2ac1bd19e2d7305c8087aaae97e24caecf98a5",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000005.gdbtable",
+          "compression": 8,
+          "crc32": 270753825,
+          "uncompressed_bytes": 2071,
+          "compressed_bytes": 1255,
+          "local_header_offset": 14074
+        },
+        "data_offset": 14157,
+        "compressed_sha256": "b6a44843ad811cf37169200a2aa3d9395ce374698dffccab47136c8492fcad37",
+        "uncompressed_sha256": "457b2ef15090d858e7c3e88d41131d1054b241836d2f4cc6d61d082bbf7e6aa3",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000005.gdbtablx",
+          "compression": 8,
+          "crc32": 3890823955,
+          "uncompressed_bytes": 5152,
+          "compressed_bytes": 137,
+          "local_header_offset": 15412
+        },
+        "data_offset": 15495,
+        "compressed_sha256": "0e303ddb242276dc3d839fb1a985d9e590d37214294918b04e28c92ff7ce87ef",
+        "uncompressed_sha256": "fbe2191ecb633ff3a4c3d449dd4dcd964389c72dc6686aa02f6ce6fcea31cc6f",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000006.CatRelsByDestinationID.atx",
+          "compression": 8,
+          "crc32": 548412532,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 76,
+          "local_header_offset": 15632
+        },
+        "data_offset": 15733,
+        "compressed_sha256": "848c6f3177cd9c2a6ce1b86d3e2ac8637b3d66db7934be30de1b891e96fa414f",
+        "uncompressed_sha256": "dc43737143dea144e0f10a273e730cd7699a72f8a09cdb06158224c6ed42932d",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000006.CatRelsByOriginID.atx",
+          "compression": 8,
+          "crc32": 535943769,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 76,
+          "local_header_offset": 15809
+        },
+        "data_offset": 15905,
+        "compressed_sha256": "9a77736866dcf48b3c90363d073eaf143a59c8d61b903df57b75f6564b306722",
+        "uncompressed_sha256": "071cbb3e22f7f9ebedd0d40203fd938ac646ef9747978688f49f25f4ad242154",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000006.CatRelsByType.atx",
+          "compression": 8,
+          "crc32": 2931433685,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 75,
+          "local_header_offset": 15981
+        },
+        "data_offset": 16073,
+        "compressed_sha256": "f1a3a976fb81e954e477aa3c2cfd15ee1fe84b478dc99c3a7bd396d532c356ab",
+        "uncompressed_sha256": "977cbde080bcdb9a2b35b955610e57cfb4c3790bc657c01c61d89362d5d82b7d",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000006.FDO_UUID.atx",
+          "compression": 8,
+          "crc32": 3004541441,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 77,
+          "local_header_offset": 16148
+        },
+        "data_offset": 16235,
+        "compressed_sha256": "f5ccc0540cf6cb83f46dae44635c9af06c9db9d0e572bd8984d8c0b08884c9e4",
+        "uncompressed_sha256": "df44cdb69ec2ae52fd0c7f97431d2e411c50ba8e7ca63db66f60cdd7da7dbba5",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000006.gdbindexes",
+          "compression": 8,
+          "crc32": 297724318,
+          "uncompressed_bytes": 318,
+          "compressed_bytes": 129,
+          "local_header_offset": 16312
+        },
+        "data_offset": 16397,
+        "compressed_sha256": "c1754bfe5f8f48788af6e1807e92bf11cb9656aa72bfb00bd6214aa4656f635a",
+        "uncompressed_sha256": "1919a00326f198a90dc97545ec448c10b2b90d367020222212f7b00433fe09b5",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000006.gdbtable",
+          "compression": 8,
+          "crc32": 487823084,
+          "uncompressed_bytes": 263,
+          "compressed_bytes": 212,
+          "local_header_offset": 16526
+        },
+        "data_offset": 16609,
+        "compressed_sha256": "d583b68e4ab7bd110adab469bb000fc4f012e4317fdf63f457c695ab28d1646c",
+        "uncompressed_sha256": "8763090169133789ccbfd199c74b4a97b75ee2cafe56714973d2ace46637f65f",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000006.gdbtablx",
+          "compression": 8,
+          "crc32": 1249071046,
+          "uncompressed_bytes": 5152,
+          "compressed_bytes": 34,
+          "local_header_offset": 16821
+        },
+        "data_offset": 16904,
+        "compressed_sha256": "063ae8cda26273df69eeea87ca8cac11e68de9112118a0aa5e4bec5f783feca9",
+        "uncompressed_sha256": "d9c498cb200741d86e8fd4adbd17f8b5dd4f35abf4dfad3f88239c84ac999d0e",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000007.CatRelTypesByBackwardLabel.atx",
+          "compression": 8,
+          "crc32": 3543266175,
+          "uncompressed_bytes": 12310,
+          "compressed_bytes": 449,
+          "local_header_offset": 16938
+        },
+        "data_offset": 17043,
+        "compressed_sha256": "28a3bee6b75ff67d52ff18d275b4c201ddffd58b5902e753fc7bd9c96e96f933",
+        "uncompressed_sha256": "1d51717d5b9de760d2488edb544637d875f131ad96483b96bf95aecff7f679d5",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000007.CatRelTypesByDestItemTypeID.atx",
+          "compression": 8,
+          "crc32": 574607566,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 318,
+          "local_header_offset": 17492
+        },
+        "data_offset": 17598,
+        "compressed_sha256": "b526dce79e425b890591a74b176b9ae4733e33554f48395f2e525611e26787b0",
+        "uncompressed_sha256": "655a5548325b8adf939e69851f9f52ae3b61244d998df60811169142a1a77648",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000007.CatRelTypesByForwardLabel.atx",
+          "compression": 8,
+          "crc32": 2627710260,
+          "uncompressed_bytes": 12310,
+          "compressed_bytes": 337,
+          "local_header_offset": 17916
+        },
+        "data_offset": 18020,
+        "compressed_sha256": "63c2a3ce9be702ec3b8d492a2d00915c99df0c68a414c6fb99ce17a3ab4f1bc4",
+        "uncompressed_sha256": "c3471d1b80a6cc2ac1a094743a52f72a6dd6bbcca787604cacaa0ba409a9b583",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000007.CatRelTypesByName.atx",
+          "compression": 8,
+          "crc32": 1514706285,
+          "uncompressed_bytes": 12310,
+          "compressed_bytes": 483,
+          "local_header_offset": 18357
+        },
+        "data_offset": 18453,
+        "compressed_sha256": "03557245c862af047df48d4a8353bc82321323640a2c3386c2e03cd10cb9115f",
+        "uncompressed_sha256": "3e4d57cabb14dc7b1f3510441e0b5ebd94f01e7412f272993b98502eea3d9577",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000007.CatRelTypesByOriginItemTypeID.atx",
+          "compression": 8,
+          "crc32": 4216641027,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 491,
+          "local_header_offset": 18936
+        },
+        "data_offset": 19044,
+        "compressed_sha256": "7bbda6645af7eaa8c830999e82d92b02ba4c2141d8be3d33aac60a27adae1201",
+        "uncompressed_sha256": "9c7f665eb045df2a910a6800d0919af507bed2a42d2e9547a4004ba235fec5de",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000007.CatRelTypesByUUID.atx",
+          "compression": 8,
+          "crc32": 1011060428,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 670,
+          "local_header_offset": 19535
+        },
+        "data_offset": 19631,
+        "compressed_sha256": "f5c43ecc966802174a6237387c3423a9f95761db6dce9ca3bf57737c3a66fddc",
+        "uncompressed_sha256": "209099cc5bdb713a603488740c831b805af7138397499f5d946a2c8aed69d446",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000007.gdbindexes",
+          "compression": 8,
+          "crc32": 3251437668,
+          "uncompressed_bytes": 602,
+          "compressed_bytes": 172,
+          "local_header_offset": 20301
+        },
+        "data_offset": 20386,
+        "compressed_sha256": "6a54be5825f518783daf1935fc9540f36b8b95e92eaaf7cae7f8a2850ea41797",
+        "uncompressed_sha256": "dc98e24d04eddd7f38905d176c1ea43c547a3a2daa0c80091a20d3443c726621",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000007.gdbtable",
+          "compression": 8,
+          "crc32": 3116799455,
+          "uncompressed_bytes": 3626,
+          "compressed_bytes": 1662,
+          "local_header_offset": 20558
+        },
+        "data_offset": 20641,
+        "compressed_sha256": "beecd5ab742124cf59738cdb2a89f5ac35c5e0632516da0965cf2371995ccd7f",
+        "uncompressed_sha256": "f6cc24256e330ab468b5c594309b1493c2028fe072c9f13e5fe41b2084ce9a16",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000007.gdbtablx",
+          "compression": 8,
+          "crc32": 632490471,
+          "uncompressed_bytes": 5152,
+          "compressed_bytes": 121,
+          "local_header_offset": 22303
+        },
+        "data_offset": 22386,
+        "compressed_sha256": "19a6d39f1af73ca70ebaa2cfc10ea4c14d7e63d47efdf089d6f5c3355359df12",
+        "uncompressed_sha256": "1d81aa3c399da5feba68a24ae6461edfca18cfaa9d81a1f1dab9b8b8a64e590c",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000009.gdbindexes",
+          "compression": 8,
+          "crc32": 1731915611,
+          "uncompressed_bytes": 116,
+          "compressed_bytes": 70,
+          "local_header_offset": 22507
+        },
+        "data_offset": 22592,
+        "compressed_sha256": "bdc57f6d12ba31b072044ab3aba4bc950f7223092f3d9a461519c6cadd5d2015",
+        "uncompressed_sha256": "760bd4864717c60d5e7c0c6461a622062680e6f79f51250f49456aa609b43774",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000009.gdbtable",
+          "compression": 8,
+          "crc32": 329785001,
+          "uncompressed_bytes": 24395833,
+          "compressed_bytes": 7323112,
+          "local_header_offset": 22662
+        },
+        "data_offset": 22745,
+        "compressed_sha256": "3549bec6a4fd5b452dd79d7ccc98cebaabc9ebe98dfeee0e1ebcae8c25b9a87c",
+        "uncompressed_sha256": "95796825e946539932765fea0aaa784dfc05e5a0ead3c98c734599b36a7a7dbd",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000009.gdbtablx",
+          "compression": 8,
+          "crc32": 2209162939,
+          "uncompressed_bytes": 5152,
+          "compressed_bytes": 577,
+          "local_header_offset": 7345857
+        },
+        "data_offset": 7345940,
+        "compressed_sha256": "1f682795f099869109a028498ee13e8a601708e6f25f36c3b20f30c0badc7815",
+        "uncompressed_sha256": "cbfbce866374db6268808bf613b8c9a444b4cdc08070e15926f17b349900374c",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000009.horizon",
+          "compression": 8,
+          "crc32": 810610692,
+          "uncompressed_bytes": 32,
+          "compressed_bytes": 30,
+          "local_header_offset": 7346517
+        },
+        "data_offset": 7346599,
+        "compressed_sha256": "36b0114c273257ff462f626cf2b1b1e73ff4c69dd537b08913a0aeb6a83a5d76",
+        "uncompressed_sha256": "9fab34115b351a30fb6adb5818d8f08e4dd3a024b7247dbbc61c56929ab6e223",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/a00000009.spx",
+          "compression": 8,
+          "crc32": 2531352540,
+          "uncompressed_bytes": 4118,
+          "compressed_bytes": 308,
+          "local_header_offset": 7346629
+        },
+        "data_offset": 7346707,
+        "compressed_sha256": "796da5bd9a44e98f7ce8d42502712ea1b385319968480232e7ed1bf0eea9f742",
+        "uncompressed_sha256": "13807ecf1fa13f40c4f48dd67cb255d8c68616dbdb5abffe2eaa2287ed144af7",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/gdb",
+          "compression": 0,
+          "crc32": 379203374,
+          "uncompressed_bytes": 4,
+          "compressed_bytes": 4,
+          "local_header_offset": 7347015
+        },
+        "data_offset": 7347083,
+        "compressed_sha256": "2594b6a92ebfb1c3312deb7d01c015fb95e9fbe9bd7bc6b527af07813ec7b910",
+        "uncompressed_sha256": "2594b6a92ebfb1c3312deb7d01c015fb95e9fbe9bd7bc6b527af07813ec7b910",
+        "crc32_verified": true
+      },
+      {
+        "member": {
+          "name": "VicCoastDEM2021_250cm/Metadata.gdb/timestamps",
+          "compression": 8,
+          "crc32": 1672739145,
+          "uncompressed_bytes": 400,
+          "compressed_bytes": 31,
+          "local_header_offset": 7347087
+        },
+        "data_offset": 7347162,
+        "compressed_sha256": "112882cdf4a0aa148084eef24a5f129cd5d51a4b350ea258125c267c02294885",
+        "uncompressed_sha256": "622f83c6864b4589e488458f83fce2eafdda89faf15cc9fcda425dfe19d0c8e2",
+        "crc32_verified": true
+      }
+    ]
+  },
+  "official_catalogue_metadata": {
+    "file": "datavic-metadata.bin",
+    "url": "https://metashare.maps.vic.gov.au/geonetwork/srv/api/records/8ea2cdd5-864d-4c66-8e03-55a9d31d8329/formatters/xml",
+    "sha256": "d83d0d17d3fa68aa0aac0c5200f6b5da963dffde19ead8519f9c24ca40738c92",
+    "bytes": 33356
+  }
+}

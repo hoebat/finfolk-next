@@ -7,6 +7,7 @@ const routes=await json('.next/routes-manifest.json');assert.equal(routes.rewrit
 assert.ok((await readFile(new URL('.next/server/app/app.body',site),'utf8')).includes('<base href="/">'),'staged /app must be prerendered independently of unsupported rewrites');
 const worker=await readFile(new URL('sw.js',staticRoot),'utf8'),manifest=JSON.parse(worker.match(/^const manifest=(.*),CACHE=/m)[1]);
 assert.equal(manifest.buildId,(await readFile(new URL('.next/BUILD_ID',site),'utf8')).trim(),'Offline assets must come from this Next build');
+assert.ok(manifest.assets.some(asset=>asset.path==='/vendor/proj4.js'),'Numeric raster projection library must be available after an offline reload');
 for(const asset of manifest.assets){const body=await readFile(new URL(asset.path.slice(1),staticRoot));assert.equal(createHash('sha256').update(body).digest('hex'),asset.hash,'Netlify published a mismatched offline asset: '+asset.path);}
 const required=await json('.next/required-server-files.json');assert.equal(manifest.deploymentId,required.config.deploymentId||null);
 for(const route of Object.keys(offlineTemplates))assert.ok(manifest.documents[route],'Missing public offline template: '+route);

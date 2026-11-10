@@ -20,6 +20,10 @@ allowlisted Git commit, without introducing another authoritative data store.
    the Explore map's bounded vector tiles before packaging.
 3. Package its data:
    `.venv/bin/python scripts/build_dataset_release.py --site .cache/dataset-site`.
+   When extending the current coastal publication, add
+   `--baseline datasets/runtime/releases/<current-id>` so the published native
+   COGs, extra contour sources and exact vector archives remain available. The
+   extension rejects changed vector sources and removal of existing numeric rasters.
 4. Run `make generate`, `make check-generated`, `make test` and `make build`.
    The client release check loads real contours, saves a region, restarts offline,
    and rejects valid JSON whose hash differs from its manifest.
@@ -53,7 +57,23 @@ Existing saved-region bytes remain intact and are keyed by release URL and file 
 ## Initial release coverage
 
 The first release preserves 79 regions and 16 regions with published contours.
-Numeric rasters remain excluded: VCDem's datum/source-quality review is incomplete;
+The initial release excluded numeric rasters: VCDem's whole-compilation review is incomplete;
 the NSW mosaic's horizontal CRS evidence does not verify its vertical reference;
 some WA BAG vertical references conflict with the publisher's index. Acquisition and
 checksum verification alone do not establish those missing scientific contracts.
+
+## Reviewed Pope’s Eye subset
+
+The 20 January 2018 Deakin survey footprint now has a bounded AHD review in
+`datasets/ocean/provenance/vcdem-popes-eye-review.json`. It registers 6,665 native
+2.5 m cells inside a 5 m inset of that footprint and the acquired coastal band.
+Every included value matches the original non-blended ASCII tile. Its float32
+runtime chunks retain gaps and negate elevations exactly to express metres below
+AHD; they do not provide tide-adjusted or chart-datum water depths.
+
+The workbook and source-footprint geodatabase are retained as checksum-verified
+archive fragments under `datasets/ocean/provenance/vcdem-package-review`. The review
+records the source overlap analysis and inference from the publisher's non-blended
+mosaic ordering. Source survey uncertainty is not a compiled-pixel accuracy promise.
+Other VCDEM tiles remain unverified. The original full tile, full coastal COG and
+footprint geometry remain available to reconstruct the prior representation.
