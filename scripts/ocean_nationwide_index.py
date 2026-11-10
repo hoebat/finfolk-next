@@ -13,6 +13,27 @@ from scripts import ocean_acquisition as a
 from scripts.ocean_coastal_archive import combine
 
 
+def coverage_evidence(root, path):
+    """Cache native coverage only; retain and rehash the complete original audit."""
+    checksum=c.digest(path);cache=root/'.cache/ocean-coastal-index'/(checksum+'.json')
+    if cache.exists():
+        stored=a.load(cache);evidence=stored['evidence']
+        if stored.get('source_sha256')!=checksum or stored.get('evidence_sha256')!=c.fingerprint(evidence):
+            raise ValueError('Derived coverage cache checksum changed')
+        return evidence,checksum
+    audit=a.load(path)
+    evidence={'properties':audit['properties'],'features':[f for f in audit['features']
+        if f['properties']['tier'] in ('preferred','fallback')]}
+    a.save(cache,{'source_sha256':checksum,'evidence_sha256':c.fingerprint(evidence),'evidence':evidence})
+    return evidence,checksum
+
+
+def reset_coverage_cache(root):
+    """Idempotent reset; source audits are never removed or changed."""
+    import shutil
+    shutil.rmtree(root/'.cache/ocean-coastal-index',ignore_errors=True)
+
+
 def build(root):
     directory=root/'datasets/ocean/coastal'
     index_path=directory/'non-vic-archive-index.json';previous=a.load(index_path)
@@ -25,17 +46,16 @@ def build(root):
         receipt_path=run/'non-vic-verification.json';result_path=run/'non-vic-results.json';coverage_path=run/'non-vic-coverage.json'
         if not all(p.exists() for p in [receipt_path,result_path,coverage_path]):
             pending.append({'run_id':plan['run_id'],'plan':name});continue
-        receipt=a.load(receipt_path);result=a.load(result_path);coverage=a.load(coverage_path);signature=c.fingerprint(plan)
+        receipt=a.load(receipt_path);result=a.load(result_path)
+        coverage,coverage_checksum=coverage_evidence(root,coverage_path);signature=c.fingerprint(plan)
         if receipt.get('status') not in ('verified_rasters','complete') or receipt.get('plan_sha256')!=signature or result.get('plan_sha256')!=signature or result.get('state')!='processed' or coverage['properties'].get('plan_sha256')!=signature:
             raise ValueError('Run verification evidence disagrees: '+plan['run_id'])
-        # Keep the complete gap audit on disk, but do not retain a repeated
-        # whole-jurisdiction geometry in memory for every individual survey.
-        coverage['features']=[f for f in coverage['features'] if f['properties']['tier'] in ('preferred','fallback')]
         for entry in result['outputs'].values():
             if not entry.get('empty') and c.digest(c.safe(root,entry['path']))!=entry['sha256']:raise ValueError('Verified COG changed')
         verified.append({'plan':plan,'path':name,'receipt':receipt,'receipt_path':str(receipt_path.relative_to(root)),
                          'result':result,'coverage':coverage})
-        for p in [path,receipt_path,result_path,coverage_path]:inputs[str(p.relative_to(root))]=c.digest(p)
+        for p in [path,receipt_path,result_path]:inputs[str(p.relative_to(root))]=c.digest(p)
+        inputs[str(coverage_path.relative_to(root))]=coverage_checksum
     # The complete native-grid rescreen deliberately replaces the old Bondi AOI
     # only after verification. The old plan, files and public release remain.
     full_nsw=[v for v in verified if v['plan']['run_id'].startswith('nationwide-nsw-')]

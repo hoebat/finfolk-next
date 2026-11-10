@@ -7,12 +7,20 @@ from types import SimpleNamespace
 import unittest
 from unittest.mock import patch
 
-from scripts.ocean_wa_batch import candidates, run, c
+from scripts.ocean_wa_batch import candidates, spacing_allowed, run, c
 
 URL='https://dotazprdauegisextpubst01.blob.core.windows.net/transport-wa-public/bathymetry/rasters/test.bag'
 
 
 class BatchTests(unittest.TestCase):
+    def test_exact_spacing_never_rounds_coarser_grids_into_the_preferred_tier(self):
+        self.assertTrue(spacing_allowed(1))
+        for spacing in [1.00009,1.00629,2.00447,5]:
+            self.assertFalse(spacing_allowed(spacing))
+            self.assertTrue(spacing_allowed(spacing,allow_fallback=True))
+        for spacing in [None,0,-1,5.00001,float('nan')]:
+            self.assertFalse(spacing_allowed(spacing,allow_fallback=True))
+
     def test_full_disk_stops_without_reclassifying_source(self):
         with tempfile.TemporaryDirectory() as tmp:
             root=Path(tmp);folder=root/'datasets/ocean/coastal/nationwide';folder.mkdir(parents=True)

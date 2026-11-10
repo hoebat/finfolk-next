@@ -3,10 +3,25 @@ import tempfile
 import unittest
 from unittest.mock import patch
 
-from scripts.ocean_nationwide_index import build, a, c
+from scripts.ocean_nationwide_index import build, coverage_evidence, reset_coverage_cache, a, c
 
 
 class IndexTests(unittest.TestCase):
+    def test_cache_preserves_original_and_rejects_corruption_with_repeatable_reset(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);path=root/'audit.json'
+            native={'properties':{'tier':'preferred'},'geometry':{'type':'Point','coordinates':[150,-35]}}
+            gap={'properties':{'tier':'gap'},'geometry':{'type':'Point','coordinates':[151,-35]}}
+            original={'properties':{'plan_sha256':'plan'},'features':[gap,native]};a.save(path,original)
+            first,checksum=coverage_evidence(root,path)
+            self.assertEqual(first,{'properties':original['properties'],'features':[native]})
+            self.assertEqual(coverage_evidence(root,path),(first,checksum));self.assertEqual(a.load(path),original)
+            cache=root/'.cache/ocean-coastal-index'/(checksum+'.json');stored=a.load(cache)
+            stored['evidence']['features'][0]['geometry']['coordinates'][0]=0;a.save(cache,stored)
+            with self.assertRaisesRegex(ValueError,'cache checksum changed'):coverage_evidence(root,path)
+            reset_coverage_cache(root);reset_coverage_cache(root)
+            self.assertEqual(coverage_evidence(root,path),(first,checksum));self.assertEqual(a.load(path),original)
+
     def fixture(self,root,run_id,path,parts='original'):
         source={'id':'nsw-original','states':['NSW'],'parts':[{'identity':parts}]}
         plan={'run_id':run_id,'sources':[source]};signature=c.fingerprint(plan)

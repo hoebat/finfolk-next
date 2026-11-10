@@ -38,6 +38,10 @@ def candidates(features):
     return sorted(unique.values(),key=lambda f:(-(f['properties'].get('StartDate') or 0),f['properties']['Survey_download']))
 
 
+def spacing_allowed(spacing, allow_fallback=False):
+    return spacing is not None and 0<spacing<=(5 if allow_fallback else 1)
+
+
 def prepare_queue(root):
     from shapely import make_valid
     from pyproj import Transformer
@@ -89,8 +93,7 @@ def prepare_queue(root):
     print('WA pinned queue',len(entries),'sources',sum(r['bytes'] for r in entries),'bytes',len(blocked),'blocked',flush=True)
 
 
-def run(root, limit):
-    c.RESERVE_OVERRIDE.set(0)
+def run(root, limit, allow_fallback=False):
     directory=root/'datasets/ocean/coastal/nationwide'
     leads=directory/'wa-fine-coastal-leads.geojson';coast=directory/'WA-shoreline-reviewed.geojson'
     checkpoint=directory/'wa-batch-progress.json'
@@ -100,7 +103,14 @@ def run(root, limit):
     if state.get('stop_reason'):
         state.setdefault('stop_history',[]).append({'reason':state.pop('stop_reason'),
             'resumed_at':datetime.now(timezone.utc).isoformat()})
+    reusable=set()
     for ident,entry in state['assets'].items():
+        if allow_fallback and entry.get('status')=='native_review_required' and entry.get('header'):
+            header=a.load(c.safe(root,entry['header']))
+            if header.get('source_crs_wkt') and spacing_allowed(header.get('native_spacing_m'),True) and header.get('dtype') in ('float32','float64') and header.get('scales')==[1.0] and header.get('offsets')==[0.0]:
+                entry.setdefault('native_review_history',[]).append({'header':entry['header'],'previous_status':'native_review_required'})
+                entry.update(status='retry_pending',review_scope='Explicit native fallback <=5m; exact spacing retained, never labelled <=1m')
+                reusable.add(ident)
         reason=entry.get('reason','')
         if entry.get('status')=='review_required' and ('[Errno 35]' in reason or
                 reason=='Missing raster CRS' and (directory/'native-headers'/(ident+'.json')).exists() and
@@ -115,6 +125,8 @@ def run(root, limit):
         if ranked['inputs']!={k:identity[k] for k in ('leads_sha256','coast_sha256')}:raise ValueError('Ranked queue belongs to different references')
         order={r['url']:i for i,r in enumerate(ranked['sources'])}
         queue=sorted([f for f in queue if f['properties']['Survey_download'] in order],key=lambda f:order[f['properties']['Survey_download']])
+    if reusable:
+        queue.sort(key=lambda feature:hashlib.sha256(feature['properties']['Survey_download'].encode()).hexdigest()[:24] not in reusable)
     published=set()
     for run in a.load(root/'datasets/ocean/coastal/archive-index.json')['runs']:
         if run.get('plan'):
@@ -158,7 +170,7 @@ def run(root, limit):
                         'width':ds.width,'height':ds.height,'scales':ds.scales,'offsets':ds.offsets,
                         'dtype':ds.dtypes[0],'source_sha256':sha,'publisher':p}
                 a.save(directory/'native-headers'/(ident+'.json'),header)
-                if not ds.crs or spacing>1 or ds.dtypes[0] not in ('float32','float64') or ds.scales[0]!=1 or ds.offsets[0]!=0:
+                if not ds.crs or not spacing_allowed(spacing,allow_fallback) or ds.dtypes[0] not in ('float32','float64') or ds.scales[0]!=1 or ds.offsets[0]!=0:
                     state['assets'][ident]={'status':'native_review_required','header':str((directory/'native-headers'/(ident+'.json')).relative_to(root))}
                     a.save(checkpoint,state);continue
                 source={**source,'parts':parts,'format':'BAG','states':['WA'],'survey_derived':True,
@@ -210,10 +222,11 @@ def run(root, limit):
 if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--limit',type=int,default=12)
     parser.add_argument('--prepare-queue',action='store_true')
+    parser.add_argument('--allow-fallback',action='store_true',help='Reuse eligible originals at their exact native spacing up to 5 m; preferred tier remains strictly <=1 m')
     parser.add_argument('--root',type=Path,default=Path(__file__).resolve().parents[1]);args=parser.parse_args()
     if args.limit<1:parser.error('limit must be positive')
     token=c.RESERVE_OVERRIDE.set(0)
     try:
         if args.prepare_queue:prepare_queue(args.root.resolve())
-        else:run(args.root.resolve(),args.limit)
+        else:run(args.root.resolve(),args.limit,args.allow_fallback)
     finally:c.RESERVE_OVERRIDE.reset(token)
