@@ -112,10 +112,12 @@ def run(root, limit, allow_fallback=False, reuse_only=False):
             'resumed_at':datetime.now(timezone.utc).isoformat()})
     reusable=set()
     for ident,entry in state['assets'].items():
-        if allow_fallback and entry.get('status')=='native_review_required' and entry.get('header'):
+        if allow_fallback and entry.get('header') and (entry.get('status')=='native_review_required' or
+                entry.get('status')=='retry_pending' and entry.get('review_scope')):
             header=a.load(c.safe(root,entry['header']))
             if reusable_fallback(header):
-                entry.setdefault('native_review_history',[]).append({'header':entry['header'],'previous_status':'native_review_required'})
+                if entry.get('status')=='native_review_required':
+                    entry.setdefault('native_review_history',[]).append({'header':entry['header'],'previous_status':'native_review_required'})
                 entry.update(status='retry_pending',review_scope='Explicit native fallback <=5m; exact spacing retained, never labelled <=1m')
                 reusable.add(ident)
         reason=entry.get('reason','')

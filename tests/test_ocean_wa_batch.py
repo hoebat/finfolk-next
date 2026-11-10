@@ -28,7 +28,7 @@ class BatchTests(unittest.TestCase):
             (folder/'WA-shoreline-reviewed.geojson').write_text('{}');(folder.parent/'archive-index.json').write_text('{"runs":[]}')
             ident=hashlib.sha256(URL.encode()).hexdigest()[:24];header=folder/'header.json'
             header.write_text(json.dumps({'source_crs_wkt':'checked','native_spacing_m':1.003,'dtype':'float32','scales':[1.0,1.0],'offsets':[0.0,0.0]}))
-            checkpoint={'inputs':{'leads_sha256':c.digest(folder/'wa-fine-coastal-leads.geojson'),'coast_sha256':c.digest(folder/'WA-shoreline-reviewed.geojson'),'pipeline':1},'assets':{ident:{'status':'native_review_required','header':str(header.relative_to(root))}}}
+            checkpoint={'inputs':{'leads_sha256':c.digest(folder/'wa-fine-coastal-leads.geojson'),'coast_sha256':c.digest(folder/'WA-shoreline-reviewed.geojson'),'pipeline':1},'assets':{ident:{'status':'retry_pending','review_scope':'Explicit native fallback <=5m','header':str(header.relative_to(root))}}}
             (folder/'wa-batch-progress.json').write_text(json.dumps(checkpoint))
             with patch('scripts.ocean_wa_batch.c.lock',return_value=contextlib.nullcontext()),patch('scripts.ocean_wa_batch.a.request',return_value=contextlib.nullcontext(SimpleNamespace(headers={'Content-Length':'10','ETag':'fixed'}))),patch('scripts.ocean_wa_batch.c.capacity',return_value={'planned_transfer_bytes':10,'budget_shortfall_bytes':0,'storage_shortfall_bytes':0}),patch('scripts.ocean_wa_batch.c.acquire') as acquire:
                 run(root,1,allow_fallback=True,reuse_only=True);acquire.assert_not_called()
