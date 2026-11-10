@@ -1,4 +1,5 @@
 import contextlib
+import errno
 import json
 from pathlib import Path
 import tempfile
@@ -12,6 +13,21 @@ URL='https://dotazprdauegisextpubst01.blob.core.windows.net/transport-wa-public/
 
 
 class BatchTests(unittest.TestCase):
+    def test_full_disk_stops_without_reclassifying_source(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root=Path(tmp);folder=root/'datasets/ocean/coastal/nationwide';folder.mkdir(parents=True)
+            (folder/'wa-fine-coastal-leads.geojson').write_text(json.dumps({'features':[self.feature()]}))
+            (folder/'WA-shoreline-reviewed.geojson').write_text('{}')
+            (folder.parent/'archive-index.json').write_text('{"runs":[]}')
+            token=c.RESERVE_OVERRIDE.set(0)
+            try:
+                with patch('scripts.ocean_wa_batch.c.lock',return_value=contextlib.nullcontext()),patch('scripts.ocean_wa_batch.a.request',return_value=contextlib.nullcontext(SimpleNamespace(headers={'Content-Length':'10','ETag':'fixed'}))),patch('scripts.ocean_wa_batch.c.capacity',return_value={'budget_shortfall_bytes':0,'storage_shortfall_bytes':0}),patch('scripts.ocean_wa_batch.c.acquire',side_effect=OSError(errno.ENOSPC,'full disk')):
+                    run(root,1)
+            finally:c.RESERVE_OVERRIDE.reset(token)
+            state=json.loads((folder/'wa-batch-progress.json').read_text())
+            self.assertEqual(state['assets'],{})
+            self.assertIn('filesystem capacity exhausted',state['stop_reason'])
+
     def feature(self,**changes):
         return {'type':'Feature','geometry':None,'properties':{'DataRestri':'NO','GridSize_m':'1.0','Survey_download':URL,'StartDate':1,**changes}}
 
@@ -27,6 +43,10 @@ class BatchTests(unittest.TestCase):
             (folder/'WA-shoreline-reviewed.geojson').write_text('{}')
             (folder.parent/'archive-index.json').write_text('{"runs":[]}')
             forecast={'budget_shortfall_bytes':1,'storage_shortfall_bytes':0}
+            (folder/'wa-batch-progress.json').write_text(json.dumps({'inputs':{
+                'leads_sha256':c.digest(folder/'wa-fine-coastal-leads.geojson'),
+                'coast_sha256':c.digest(folder/'WA-shoreline-reviewed.geojson'),'pipeline':1},
+                'assets':{},'stop_reason':'Previous lock contention'}))
             token=c.RESERVE_OVERRIDE.set(0)
             try:
                 with patch('scripts.ocean_wa_batch.c.lock',return_value=contextlib.nullcontext()),patch('scripts.ocean_wa_batch.a.request',return_value=contextlib.nullcontext(SimpleNamespace(headers={'Content-Length':'10','ETag':'fixed'}))),patch('scripts.ocean_wa_batch.c.capacity',return_value=forecast),patch('scripts.ocean_wa_batch.c.acquire') as acquire:
@@ -34,6 +54,8 @@ class BatchTests(unittest.TestCase):
             finally:c.RESERVE_OVERRIDE.reset(token)
             state=json.loads((folder/'wa-batch-progress.json').read_text())
             self.assertEqual([r['status'] for r in state['assets'].values()],['budget_blocked'])
+            self.assertNotIn('stop_reason',state)
+            self.assertEqual(state['stop_history'][0]['reason'],'Previous lock contention')
 
 
 if __name__=='__main__':unittest.main()

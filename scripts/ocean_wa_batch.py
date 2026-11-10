@@ -4,6 +4,7 @@ Discovery footprints only rank candidates. Original BAG headers and native valid
 cell masks establish raster eligibility; every retained cell is then verified.
 """
 import argparse
+import errno
 from datetime import datetime, timezone
 import hashlib
 from pathlib import Path
@@ -96,6 +97,9 @@ def run(root, limit):
     identity={'leads_sha256':c.digest(leads),'coast_sha256':c.digest(coast),'pipeline':1}
     state=a.load(checkpoint) if checkpoint.exists() else {'inputs':identity,'assets':{}}
     if state['inputs']!=identity:raise ValueError('WA batch inputs changed; retain this checkpoint and review a new batch')
+    if state.get('stop_reason'):
+        state.setdefault('stop_history',[]).append({'reason':state.pop('stop_reason'),
+            'resumed_at':datetime.now(timezone.utc).isoformat()})
     for ident,entry in state['assets'].items():
         reason=entry.get('reason','')
         if entry.get('status')=='review_required' and ('[Errno 35]' in reason or
@@ -142,8 +146,9 @@ def run(root, limit):
                 raw=root/'datasets/raw/ocean/coastal-nonvic'/ident/'original.bin';sha=c.digest(raw)
                 parts=c.catalog_parts(root,'wa-bathymetry-surveys',ident,raw,sha) if size>1024**3 else [{'path':str(raw.relative_to(root)),'bytes':size,'sha256':sha}]
                 record=a.load(record_path)
+                old=next((v for v in record.get('acquisitions',[]) if v['id']==ident),{})
                 row={**source,'state':'acquired','sha256':sha,'parts':parts,
-                     'filename':Path(url).name,'acquired_at':datetime.now(timezone.utc).isoformat(),
+                     'filename':Path(url).name,'acquired_at':old.get('acquired_at',datetime.now(timezone.utc).isoformat()),
                      'publisher_access_evidence':p,'numeric_validation':'original acquired; native coastal verification follows'}
                 record['acquisitions']=[v for v in record.get('acquisitions',[]) if v['id']!=ident]+[row]
                 a.save(record_path,record)
@@ -172,6 +177,8 @@ def run(root, limit):
             with c.processing_lock(root,plan):
                 result=c.process(root,plan);receipt=c.verify(root,plan)
                 a.save(c.run_directory(root,plan)/'non-vic-verification.json',receipt)
+                from scripts.ocean_audit_storage import compact_run
+                compact_run(root,plan)
             rasters=sum(not v.get('empty') for v in result['outputs'].values())
             state['assets'][ident]={'status':'verified' if rasters else 'empty','plan':str(plan_path.relative_to(root)),'rasters':rasters,'verification':receipt}
             a.save(checkpoint,state);completed+=1
@@ -184,7 +191,16 @@ def run(root, limit):
         except BlockingIOError as error:
             state['stop_reason']='Another acquisition or processing runner holds the lock'
             a.save(checkpoint,state);print('Lock contention; batch stopped without reclassifying this source',flush=True);break
-        except (OSError,ValueError) as error:
+        except OSError as error:
+            if error.errno==errno.ENOSPC:
+                state['stop_reason']='Actual filesystem capacity exhausted; original and processing checkpoints retained'
+                try:a.save(checkpoint,state)
+                except OSError:pass
+                print('Storage stop; source eligibility unchanged. Resume after reclaiming duplicate/audit storage.',flush=True)
+                break
+            state['assets'][ident]={'status':'retry_pending','operational_error':str(error)}
+            a.save(checkpoint,state);print('WA operational failure retained for retry',ident,str(error),flush=True)
+        except ValueError as error:
             import traceback
             traceback.print_exc()
             state['assets'][ident]={'status':'review_required','reason':str(error)};a.save(checkpoint,state);print('WA review required',ident,str(error),flush=True)

@@ -28,6 +28,9 @@ def build(root):
         receipt=a.load(receipt_path);result=a.load(result_path);coverage=a.load(coverage_path);signature=c.fingerprint(plan)
         if receipt.get('status') not in ('verified_rasters','complete') or receipt.get('plan_sha256')!=signature or result.get('plan_sha256')!=signature or result.get('state')!='processed' or coverage['properties'].get('plan_sha256')!=signature:
             raise ValueError('Run verification evidence disagrees: '+plan['run_id'])
+        # Keep the complete gap audit on disk, but do not retain a repeated
+        # whole-jurisdiction geometry in memory for every individual survey.
+        coverage['features']=[f for f in coverage['features'] if f['properties']['tier'] in ('preferred','fallback')]
         for entry in result['outputs'].values():
             if not entry.get('empty') and c.digest(c.safe(root,entry['path']))!=entry['sha256']:raise ValueError('Verified COG changed')
         verified.append({'plan':plan,'path':name,'receipt':receipt,'receipt_path':str(receipt_path.relative_to(root)),
