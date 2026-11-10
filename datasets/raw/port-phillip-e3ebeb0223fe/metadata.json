@@ -1,0 +1,45 @@
+{
+  "title": "Pope\u2019s Eye \u2014 VCDEM non-blended 2018 survey subset",
+  "datum": "AHD (Australian Height Datum 1971)",
+  "datum_verified": true,
+  "units": "m",
+  "value_kind": "elevation",
+  "quality": "mixed",
+  "resolution_m": 2.5,
+  "survey_date": "2018-01-20",
+  "source_url": "https://cl-isd-prd-datashare-s3-delivery.s3.amazonaws.com/PrePackages/VicCoastDEM2021_250cm.zip",
+  "licence": "CC BY 4.0",
+  "attribution": "State of Victoria (DEECA); Veris Australia; Deakin University multibeam survey, 20 January 2018",
+  "review_id": "vcdem-popes-eye-2018-ahd-v1",
+  "review_evidence": "datasets/ocean/provenance/vcdem-popes-eye-review.json",
+  "source_footprint": "popeseye_2mbathy_gda2020_mga55_ahd",
+  "source_resolution_m": 2,
+  "source_vertical_uncertainty_m": 0.1,
+  "limitation": "Elevation relative to AHD, not tide-adjusted water depth. AHD is not chart datum. This 2.5 m VCDEM compilation subset retains source values and gaps; source survey uncertainty is not a guarantee for every compiled pixel. No land/water classification is inferred from sign.",
+  "native_crs": "EPSG:7855",
+  "native_resolution": [
+    2.5,
+    2.5
+  ],
+  "valid_cells": 6665,
+  "total_cells": 11536,
+  "id": "port-phillip-e3ebeb0223fe",
+  "region": "port-phillip",
+  "imported_at": "2026-11-10T02:01:05.157769+00:00",
+  "originals": [
+    {
+      "file": "raw/port-phillip-e3ebeb0223fe/000-popes-eye-2018.tif",
+      "original_name": "popes-eye-2018.tif",
+      "sha256": "ed0a49296ccdf64eb787bcb960602e109f8a1ccae499329b580283b5ae594171",
+      "bytes": 17790
+    }
+  ],
+  "bounds": [
+    144.69690815982602,
+    -38.27785981895067,
+    144.6999293977911,
+    -38.275280634406634
+  ],
+  "file": "processed/port-phillip-e3ebeb0223fe/raster.tif",
+  "sha256": "ed0a49296ccdf64eb787bcb960602e109f8a1ccae499329b580283b5ae594171"
+}

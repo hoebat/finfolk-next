@@ -11,6 +11,7 @@ import hashlib
 import json
 from pathlib import Path
 import shutil
+import tempfile
 
 
 def encoded(value):
@@ -26,7 +27,110 @@ def safe_path(value):
     return path
 
 
-def package(site, destination):
+def read_release_file(root, manifest, name):
+    meta = manifest["files"][name]
+    body = (root / "files" / safe_path(meta["storage"]["path"])).read_bytes()
+    if len(body) != meta["storage"]["bytes"] or hashlib.sha256(body).hexdigest() != meta["storage"]["hash"]:
+        raise ValueError("Materialize intact release metadata: " + name)
+    decoded = gzip.decompress(body) if meta["storage"]["encoding"] == "gzip" else body
+    if hashlib.sha256(decoded).hexdigest() != meta["hash"] or len(decoded) != meta["bytes"]:
+        raise ValueError("Release metadata checksum mismatch: " + name)
+    return decoded
+
+
+def extend_release(baseline, candidate, destination):
+    """Retain published coastal/vector assets while replacing generated map data."""
+    baseline, candidate, destination = map(Path, (baseline, candidate, destination))
+    old, new = [json.loads((p / "manifest.json").read_text()) for p in (baseline, candidate)]
+    explore = "data/explore-contours/"
+    previous = json.loads(read_release_file(baseline, old, explore + "manifest.json"))
+    proposed = json.loads(read_release_file(candidate, new, explore + "manifest.json"))
+    if previous["sources"][:len(proposed["sources"])] != proposed["sources"]:
+        raise ValueError("Existing Explore sources changed; reconcile before extending")
+    for name, meta in new["files"].items():
+        if name.startswith(explore) and name != explore + "manifest.json":
+            prior = old["files"].get(name, {})
+            if (prior.get("hash"), prior.get("bytes")) != (meta["hash"], meta["bytes"]):
+                raise ValueError("Existing vector archive changed: " + name)
+    catalogs = [json.loads(read_release_file(p, m, "data/catalog.json")) for p, m in ((baseline, old), (candidate, new))]
+    regions = [{r["id"]: r for r in c["regions"]} for c in catalogs]
+    if regions[0].keys() != regions[1].keys():
+        raise ValueError("Existing browsing regions changed")
+    for key, region in regions[0].items():
+        previous_ids = {r["id"] for r in region.get("rasters", [])}
+        proposed_ids = {r["id"] for r in regions[1][key].get("rasters", [])}
+        if not previous_ids <= proposed_ids:
+            raise ValueError("Existing numeric raster removed: " + key)
+    inherited = {name: meta for name, meta in old["files"].items()
+                 if name.startswith(explore) or name not in new["files"]}
+    files = {**inherited, **{name: meta for name, meta in new["files"].items() if not name.startswith(explore)}}
+    downloads = json.loads(read_release_file(candidate, new, "data/downloads.json"))
+    for name, meta in inherited.items():
+        if name.startswith(explore):
+            downloads["files"][name] = {k: meta[k] for k in ("hash", "bytes", "label")}
+    downloads["revision"] = hashlib.sha256(encoded(downloads["files"])).hexdigest()
+    for region in downloads["regions"].values():
+        region["bytes"] = sum(downloads["files"][p]["bytes"] for p in region["files"])
+    body = encoded(downloads)
+    stored = gzip.compress(body, mtime=0)
+    files["data/downloads.json"] = {"hash": hashlib.sha256(body).hexdigest(), "bytes": len(body),
+        "label": "Download manifest", "storage": {"path": "data/downloads.json.gz", "encoding": "gzip",
+        "hash": hashlib.sha256(stored).hexdigest(), "bytes": len(stored)}}
+    manifest = {**old, **new, "files": files, "tileArchives": old["tileArchives"], "extends": old["id"]}
+    del manifest["id"]
+    manifest["id"] = hashlib.sha256(encoded(manifest)).hexdigest()
+    target = destination / manifest["id"]
+    # Each inherited object is already owned by the baseline release. Keep its
+    # exact LFS identity rather than downloading/recompressing bulk coastal COGs.
+    payloads = {}
+    for name, meta in files.items():
+        if name in inherited:
+            payloads[name] = ("version https://git-lfs.github.com/spec/v1\n"
+                              f"oid sha256:{meta['storage']['hash']}\nsize {meta['storage']['bytes']}\n").encode()
+            source = baseline / "files" / safe_path(meta["storage"]["path"])
+            with source.open("rb") as stream:
+                prefix = stream.read(128)
+                if prefix.startswith(b"version https://git-lfs.github.com/spec/v1"):
+                    if prefix + stream.read() != payloads[name]:
+                        raise ValueError("Inherited LFS identity differs: " + name)
+                else:
+                    digest = hashlib.sha256(prefix)
+                    for chunk in iter(lambda: stream.read(1024 * 1024), b""):
+                        digest.update(chunk)
+                    if source.stat().st_size != meta["storage"]["bytes"] or digest.hexdigest() != meta["storage"]["hash"]:
+                        raise ValueError("Inherited release object is corrupt: " + name)
+        elif name == "data/downloads.json":
+            payloads[name] = stored
+        else:
+            payloads[name] = (candidate / "files" / safe_path(meta["storage"]["path"])).read_bytes()
+    if target.exists():
+        if (target / "manifest.json").read_bytes() != encoded(manifest):
+            raise ValueError("Immutable extended release differs")
+        for name, meta in files.items():
+            actual = (target / "files" / safe_path(meta["storage"]["path"])).read_bytes()
+            if actual != payloads[name] and hashlib.sha256(actual).hexdigest() != meta["storage"]["hash"]:
+                raise ValueError("Existing extended release is corrupt: " + name)
+        return manifest
+    stage = destination / ("." + manifest["id"] + ".partial")
+    stage.mkdir(parents=True, exist_ok=False)
+    try:
+        for name, meta in files.items():
+            path = stage / "files" / safe_path(meta["storage"]["path"])
+            path.parent.mkdir(parents=True, exist_ok=True)
+            path.write_bytes(payloads[name])
+        (stage / "manifest.json").write_bytes(encoded(manifest))
+        stage.rename(target)
+    except BaseException:
+        shutil.rmtree(stage)
+        raise
+    return manifest
+
+
+def package(site, destination, baseline=None):
+    if baseline is not None:
+        with tempfile.TemporaryDirectory() as temp:
+            candidate = package(site, temp)
+            return extend_release(baseline, Path(temp) / candidate["id"], destination)
     site, destination = Path(site).resolve(), Path(destination).resolve()
     original = json.loads((site / "data/downloads.json").read_text())
     catalog = json.loads((site / "data/catalog.json").read_text())
@@ -133,6 +237,7 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--site", type=Path, required=True)
     parser.add_argument("--output", type=Path, default=Path("datasets/runtime/releases"))
+    parser.add_argument("--baseline", type=Path, help="Retain published coastal and vector assets from this release directory")
     args = parser.parse_args()
-    result = package(args.site, args.output)
+    result = package(args.site, args.output, args.baseline)
     print(json.dumps({**{k: v for k, v in result.items() if k not in ("files", "tileArchives")}, "tileArchiveCount": len(result["tileArchives"])}))

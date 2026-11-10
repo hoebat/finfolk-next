@@ -5,7 +5,7 @@
   "attribution": "Lucieer, V.L. (2007), SeaMap Tasmania Bathymetric Data. Tasmanian Aquaculture and Fisheries Institute, University of Tasmania. Accessed 28 October 2026.",
   "licence": "CC BY 4.0",
   "observed": {
-    "inventory_sha256": "fc9245660a8b8099d140e15beea0f6271311a809d189120667cd6d8aaa04bf5c",
+    "inventory_sha256": "1e7cd0f49034d82756c562ead9da278a12292bb813f7eb8126d1aee7e5ae1d64",
     "packages": [
       {
         "region": "tas-southeast",
