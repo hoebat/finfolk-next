@@ -170,8 +170,31 @@ class StaticBuildTests(FixtureCase):
         from depth_explorer.static import build
         self.store.root.mkdir(parents=True)
         (self.store.root / "missing.tif").write_text("version https://git-lfs.github.com/spec/v1\noid sha256:fake\nsize 123\n")
-        with self.assertRaisesRegex(ValueError, "Unresolved Git LFS pointer"):
-            build(self.store, self.root / "site")
+        for inventory in (
+            {"rasters": [{"file": "missing.tif"}], "contours": {}},
+            {"rasters": [], "contours": {"bondi": {"file": "missing.tif"}}},
+            {"rasters": [], "contours": {}, "context_contours": {
+                "context": {"areas": {"bondi": {"file": "missing.tif", "count": 1}}}}},
+        ):
+            with self.subTest(inventory=inventory):
+                self.store.save(inventory)
+                with self.assertRaisesRegex(ValueError, "Unresolved Git LFS pointer.*missing.tif"):
+                    build(self.store, self.root / "site")
+
+    def test_unregistered_acquisition_pointers_do_not_block_build(self):
+        from depth_explorer.static import build
+        self.ingest()
+        pointer = self.store.root / "raw/ocean/vicmap-coastline/original.geojson"
+        pointer.parent.mkdir(parents=True)
+        body = b"version https://git-lfs.github.com/spec/v1\noid sha256:fake\nsize 123\n"
+        pointer.write_bytes(body)
+        site = self.root / "site"
+        build(self.store, site, max_zoom=5)
+        catalog = json.loads((site / "data/catalog.json").read_text())
+        bondi = next(region for region in catalog["regions"] if region["id"] == "bondi")
+        self.assertEqual(bondi["rasters"][0]["title"], "SYNTHETIC TEST GRID")
+        self.assertEqual(pointer.read_bytes(), body)
+        self.assertFalse((site / "raw").exists())
 
     def test_build_budget_failure_preserves_previous_artifact(self):
         from depth_explorer.static import build
