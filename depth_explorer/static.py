@@ -118,10 +118,17 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
         raise ValueError("Choose a dedicated build output directory")
     if output.exists() and not (output / ".depth-atlas-build").is_file():
         raise ValueError("Refusing to replace a directory without a Depth Atlas build marker")
-    if store.root.exists():
-        for path in store.root.rglob("*"):
-            if path.is_file() and is_pointer(path):
-                raise ValueError(f"Unresolved Git LFS pointer: {path}. Run git lfs pull; Actions checkout must use lfs: true")
+    # Bulk acquisitions and old releases may intentionally remain LFS pointers.
+    # Only registered inputs are consumed by this publication.
+    inventory = store.load()
+    inputs = [meta["file"] for meta in inventory["rasters"]]
+    inputs.extend(meta["file"] for meta in inventory["contours"].values())
+    inputs.extend(meta["file"] for source in inventory.get("context_contours", {}).values()
+                  for meta in source.get("areas", {}).values() if meta.get("count", 0))
+    for relative in sorted(set(inputs)):
+        path = store.root / relative
+        if path.is_file() and is_pointer(path):
+            raise ValueError(f"Unresolved Git LFS pointer: {path}. Materialize this registered input with git lfs pull")
     if max_zoom is not None and not 5 <= max_zoom <= 17:
         raise ValueError("--max-zoom must be between 5 and 17")
     if not 0 < budget_mb <= 950:

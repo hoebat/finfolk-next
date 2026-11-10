@@ -8,7 +8,10 @@ allowlisted Git commit, without introducing another authoritative data store.
 
 ## Build
 
-1. Materialize the source repository's LFS objects. Register only reviewed numeric
+1. Materialize the LFS inputs registered in `datasets/inventory.json`. Bulk ocean
+   acquisitions excluded by `.lfsconfig` can remain pointers; the static build
+   checks registered raster, contour and regional context inputs before publishing.
+   Register only reviewed numeric
    rasters through `python -m depth_explorer import-raster`; its datum and unit checks
    are mandatory. Preserve source metadata, masks, sign, grid alignment and licences.
 2. Build the existing static artifact:
