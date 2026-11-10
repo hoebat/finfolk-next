@@ -16,7 +16,7 @@ try{
  function fixture(name,value){const body=Buffer.from(JSON.stringify(value)),stored=gzipSync(body),path=sha(body)+'.gz';writeFileSync(resolve(base,'files',path),stored);files[name]={hash:sha(body),bytes:body.length,storage:{path,hash:sha(stored),bytes:stored.length,encoding:'gzip'}};}
  fixture('data/explore-contours/manifest.json',explore);fixture('data/downloads.json',{files:{}});fixture('data/numeric.json',{value:17});
  writeFileSync(resolve(base,'manifest.json'),JSON.stringify({id:'baseline',rasterCount:1,files,tileArchives:{}}));
- writeFileSync(resolve(publication,'map/data/explore-contours/manifest.json'),JSON.stringify(explore));
+ writeFileSync(resolve(publication,'map/data/explore-contours/manifest.json'),JSON.stringify({sources:[{tiles:old.tiles,id:old.id}]}));
  writeFileSync(resolve(publication,'publication-plan.json'),JSON.stringify({release:'new',native_cog_count:0,sources:[]}));
  writeFileSync(resolve(publication,'site/coastal/new/catalog.json'),'{}');
  const result=packageCoastal(root,publication,'baseline'),target=resolve(root,'datasets/runtime/releases',result.id);

@@ -1,0 +1,43 @@
+{
+  "published_at": "2026-11-10",
+  "coastal_release": "coastal-c47b919957525ff9",
+  "runtime_release": "9c8eed2d09c42080c775a46df8f4006af3b9f15f3edde042c8fcbfc0d4303eca",
+  "data_source_commit": "5bec816eb38b28b772e9e9d181a7f6f019118a79",
+  "data_source_tag": "ocean-coastal-2026-11-10",
+  "dataset_service_version": 7,
+  "dataset_service_source_commit": "f8508f07c3de27a084da05ec779145e90c6b75a6",
+  "frontend_deploy": "6af271fc312c60cf8dadee1c",
+  "map_url": "https://finfolk.com.au/map",
+  "catalog_url": "https://datasets.finfolk.com.au/v1/coastal/coastal-c47b919957525ff9/catalog.json",
+  "native_cogs": 709,
+  "source_groups": 25,
+  "new_contour_sources": 20,
+  "total_map_sources": 102,
+  "unique_lfs_objects": 2050,
+  "stored_release_bytes": 1635241094,
+  "verified": {
+    "all_public_cog_urls": 709,
+    "download_checksum_jurisdictions": [
+      "VIC",
+      "NSW",
+      "QLD",
+      "TAS",
+      "WA",
+      "NT"
+    ],
+    "production_browser_sites": [
+      "edithvale",
+      "bondi"
+    ],
+    "coverage_archive_checksum": true,
+    "required_project_checks": true
+  },
+  "limitations": [
+    "Source vertical references remain separate and unverified for reconciliation.",
+    "Native COGs are acquisition downloads; numeric water-depth sampling remains excluded.",
+    "Victoria uses its documented integrity and sampled-distance verification; non-Victorian crops passed full-cell coastal checks.",
+    "This publishes the acquired coastal selection, not a complete jurisdiction survey inventory."
+  ],
+  "source_pr": "https://github.com/hoebat/finfolk-next/pull/38",
+  "source_merge_commit": "8099178da72e7f840ca1fb6fe95cf028b681410b"
+}

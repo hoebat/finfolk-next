@@ -66,3 +66,28 @@ Production browser verification passed in VIC, NSW and WA. Hosted directory SSR
 returns HTTP 500 on both the previous production deployment and this candidate;
 the permanent acceptance test retains its failure, and other hosted route checks
 passed separately.
+
+## Second verified publication
+
+The next immutable snapshot is live: **821 COGs**, 64 source groups and 130 map
+sources. Counts: VIC 512, NSW 77, QLD 6, TAS 135, WA 49, NT 41, JBT 1, SA 0.
+Jervis contributes native-only downloads, with contours/numeric depth withheld
+because vertical units remain unstated. All 821 public native URLs passed access,
+size and ETag checks; download checksum samples passed in all seven represented
+jurisdictions. Production map/browser checks passed in VIC, NSW and WA. Previous
+reviewed numeric file descriptors remain unchanged. Receipt:
+`datasets/ocean/coastal/publication-nationwide-jbt-20261110.json`.
+
+GA acquisition now supports an explicitly selected URL from the official coastal
+footprint screen: `python -m scripts.ocean_ga_batch --url URL`. It reuses verified
+registered parts before making requests and canonicalizes only exact native
+grid/pixel/mask equivalents, while retaining both original archive members.
+Beagle Marine Park 2018 yielded three verified native 1 m coastal crops. Sydney
+Harbour 2004 yielded two unique crops; its identical alternate representation
+and run are retained outside the accepted-plan registry. These later products
+are not yet part of the 821-COG release. WA acquisition has resumed.
+
+The additional official WCS snapshot contains 1,057 coverage discovery records.
+The four Adelaide 1 m HS/OV records did not intersect the reviewed SA shoreline
+with the conservative discovery margin; these display-layer names do not approve
+native numeric data. SA inventories and reference gaps remain unresolved.
