@@ -42,10 +42,10 @@ export function packageCoastal(checkout,publication,baselineId){
  const currentById=new Map(explore.sources.map(source=>[source.id,source]));
  for(const source of previous.sources){
   const next=currentById.get(source.id);if(!next)throw Error('Existing source removed: '+source.id);
-  if(JSON.stringify(next)!==JSON.stringify(source)&&(!source.id.startsWith('coastal-')||!plan.sources.some(s=>s.id===source.id&&!s.reuse_contours)))throw Error('Unreviewed existing source replacement');
+  if(!json(next).equals(json(source))&&(!source.id.startsWith('coastal-')||!plan.sources.some(s=>s.id===source.id&&!s.reuse_contours)))throw Error('Unreviewed existing source replacement');
  }
  const changed=explore.sources.filter(source=>{
-  const old=previous.sources.find(s=>s.id===source.id);return !old||JSON.stringify(old)!==JSON.stringify(source);
+  const old=previous.sources.find(s=>s.id===source.id);return !old||!json(old).equals(json(source));
  });
  add('data/explore-contours/manifest.json',json(explore),'Survey contour catalogue');
  const cache=new Map();let tiles=0;
