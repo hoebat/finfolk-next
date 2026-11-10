@@ -91,3 +91,44 @@ The additional official WCS snapshot contains 1,057 coverage discovery records.
 The four Adelaide 1 m HS/OV records did not intersect the reviewed SA shoreline
 with the conservative discovery margin; these display-layer names do not approve
 native numeric data. SA inventories and reference gaps remain unresolved.
+
+## Continued publication and recoverable acquisition
+
+The current map now uses **885 native coastal COGs**, 122 source groups and 170
+map sources. Counts: VIC 512, NSW 79, QLD 6, TAS 138, WA 106, NT 43, JBT 1, SA 0.
+The 64-COG increase from the previous production snapshot includes the verified
+Beagle, unique Sydney and Bynoe Harbour crops. Five source groups remain explicitly
+native-only: Jervis NSW/JBT, Beagle, Sydney and Bynoe. No new numeric water-depth
+eligibility was introduced; the reviewed Pope's Eye raster remains unchanged.
+
+All 885 public native URLs passed size, hash-ETag, MIME and CORS checks. Exact
+download samples passed in seven jurisdictions and for all seven new-source
+crops in NT/TAS/Sydney. The coverage archive hash matched. Hosted preview and
+production browser checks passed in VIC, NSW and WA. The prior directory HTTP
+500 persists on both baseline and candidate; other hosted routes passed.
+Receipt: `datasets/ocean/coastal/publication-nationwide-885-20261110.json`.
+
+The previous runner exhausted actual space while writing repeated statewide gap
+audits. Transparent filesystem compression reclaimed 28,364,943,360 allocated
+bytes, with every logical SHA checked before replacement. Reversible eviction of
+verified isolated-checkout runtime copies retained their originals and LFS CAS
+objects. Originals and the original dirty app/database checkout were preserved.
+Future WA/GA runs optionally compact immutable audit JSON on macOS. Index assembly
+keeps only native coverage evidence in memory and caches it against the original
+audit SHA; corruption is rejected and the cache has an idempotent reset.
+
+A bounded run may reconsider retained BAGs with actual spacing above 1 m and at
+most 5 m as fallbacks. It preserves exact spacing and never rounds these into the
+preferred <=1 m tier. Use `--allow-fallback --reuse-only` to refuse all forecast
+new source bytes. The BAG eligibility check examines elevation-band scale/offset,
+allowing the separate uncertainty band. The first selection attempt incorrectly
+expected a single scale entry and acquired additional candidates; that was fixed
+and the retained-only run subsequently showed zero received/charged-byte change.
+Its later products require coverage review and another immutable publication.
+
+The source cap remains cumulative 100 GB. The user's waived historical reserve
+remains waived; actual filesystem safety checks remain active. NSW's official
+2018 marine LiDAR metadata states 5 m published grids and 3.4 m marine sounding
+spacing; 0.5 m terrestrial spot spacing is not a native 1 m marine grid. Retain
+the 5 m fallback classification. SA inventories and jurisdiction reference gaps
+remain under review; nationwide completion is still false.
