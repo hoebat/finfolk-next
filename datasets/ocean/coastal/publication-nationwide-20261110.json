@@ -1,0 +1,56 @@
+{
+  "published_at": "2026-11-10",
+  "coastal_release": "coastal-ca1a6854060e9bf5",
+  "runtime_release": "94cf6f2c5ae62daa3780ccdee144a3ab80af3edc9545f595718a96b6b922ff82",
+  "data_source_commit": "fa56ce9487645ab7f66f503d9de086ab63c6fd6f",
+  "data_source_tag": "ocean-nationwide-2026-11-10",
+  "dataset_service_version": 9,
+  "dataset_service_source_commit": "6317ccbf64efa4c70af0426d750742d57dacc1df",
+  "frontend_deploy": "6af2b5ae2d2f0e9bda682cb5",
+  "map_url": "https://finfolk.com.au/map",
+  "catalog_url": "https://datasets.finfolk.com.au/v1/coastal/coastal-ca1a6854060e9bf5/catalog.json",
+  "native_cogs": 793,
+  "source_groups": 38,
+  "coastal_contour_sources": 31,
+  "total_map_sources": 113,
+  "unique_lfs_objects": 2628,
+  "stored_release_bytes": 1849873085,
+  "retained_numeric_rasters": 1,
+  "nationwide_complete": false,
+  "states": {
+    "VIC": 512,
+    "NSW": 74,
+    "QLD": 6,
+    "TAS": 135,
+    "WA": 25,
+    "NT": 41,
+    "SA": 0,
+    "JBT": 0
+  },
+  "verified": {
+    "all_public_cog_urls": 793,
+    "download_checksum_jurisdictions": [
+      "VIC",
+      "NSW",
+      "QLD",
+      "TAS",
+      "WA",
+      "NT"
+    ],
+    "production_browser_sites": [
+      "edithvale",
+      "bondi",
+      "ga-wa-100141447"
+    ],
+    "coverage_archive_checksum": true,
+    "required_project_checks": true,
+    "prior_numeric_file_descriptors_unchanged": true
+  },
+  "baseline_issue": "/directory returns HTTP 500 in both pre-existing production and hosted preview; remaining hosted HTTP acceptance checks passed.",
+  "limitations": [
+    "Whole-jurisdiction inventories and reference gaps remain under review.",
+    "Native source vertical references remain separate; no datum or tide conversion.",
+    "VIC retains its documented integrity and sampled-distance scope; new non-VIC crops passed full-cell ellipsoidal distance checks.",
+    "Later verified WA and native-only Jervis crops are excluded from this immutable publication snapshot."
+  ]
+}
