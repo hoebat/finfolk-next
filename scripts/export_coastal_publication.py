@@ -84,6 +84,9 @@ def collect(root):
                 'survey_date':source['survey_date'],'licence':source['licence'],'attribution':source['attribution'],
                 'upstream_url':source.get('publisher_metadata_url') or source.get('source_url',''),
                 'verification':run},'rasters':rows}
+            if source.get('contour_derivation_approved') is False:
+                sources[ident]['metadata'].update(contour_derivation_approved=False,
+                    contour_review_reason=source.get('contour_review_reason','Native elevation units or sign remain unverified'))
     return index,sources
 
 
@@ -97,6 +100,8 @@ def export(root, output, origin, prior_sources=None):
         meta=entry['metadata'];key='coastal-'+ident;meta.update(id=key,kind='survey',
             source_url=origin+'/'+prefix+'/sources/'+key+'.html',
             limitation='Derived from native survey elevations relative to the source vertical reference. Vertical references are not harmonized; these lines are not tide-adjusted water depths.')
+        if meta.get('contour_derivation_approved') is False:
+            meta['limitation']='Native source download only. '+meta['contour_review_reason']+'. Stored values are unchanged; numeric depth and contour derivation remain unapproved.'
         properties={k:meta[k] for k in ['id','kind','title','datum','survey_date','licence','attribution','source_url','resolution_m']}
         properties['source_id']=properties.pop('id');properties['source_title']=properties.pop('title')
         previous=prior_sources.get(key)
@@ -117,7 +122,7 @@ def export(root, output, origin, prior_sources=None):
             if target.exists():
                 if coastal.digest(target)!=checksum:raise ValueError('Publication target checksum changed')
             else:os.link(source,target)
-            if not reuse and cached is None:
+            if not reuse and cached is None and meta.get('contour_derivation_approved') is not False:
                 shard=work/key/(checksum+'.json.gz')
                 shard_signature=coastal.fingerprint({'pipeline':2,'metadata':meta,'sha256':checksum})
                 if shard.exists():

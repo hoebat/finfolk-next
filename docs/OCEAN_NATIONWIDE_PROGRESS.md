@@ -5,7 +5,7 @@ The nationwide selection remains incomplete. The active runner uses the existing
 100 GiB storage reserve; the downloader retains its actual disk safety margin.
 Do not reset the ledger or start the legacy broad downloader.
 
-The first nationwide publication snapshot contains 793 verified native COGs:
+The first nationwide publication snapshot is live at https://finfolk.com.au/map and contains 793 verified native COGs:
 VIC 512, NSW 74, QLD 6, TAS 135, WA 25, NT 41, SA 0 and JBT 0. NSW's complete
 native-grid rescreen supersedes its three Bondi-only windows. Historical runs and
 public releases are retained. Existing numeric Pope's Eye sampling is preserved.
@@ -45,8 +45,9 @@ or embargoed source is not approved merely because another register lists it.
 
 Jervis Bay's public 2 m archive has been acquired and passed ZIP CRC validation.
 Its header and metadata link are retained in `jervis-native-headers.json`.
-It is a fallback candidate, with native band semantics still under review; it is
-not included in the verified/publication count. Southern Kangaroo Island's
+Four native-only coastal crops have since passed full-cell distance verification
+(one JBT, three NSW); vertical units remain unstated. They are withheld from
+contours/numeric depth and are not included in this publication snapshot. Southern Kangaroo Island's
 expanded reviewed shoreline rescreen retained no valid cells. That result does
 not establish the absence of qualifying surveys elsewhere in SA.
 
@@ -59,3 +60,9 @@ map/download consumers. External territories remain outside this selection.
 The original uncommitted application/database work is preserved. Source validation
 and frontend publication use `.cache/ocean-release/app-release`. Dataset service
 updates reuse the existing public Sites project and retain all prior releases.
+
+Publication receipt: `datasets/ocean/coastal/publication-nationwide-20261110.json`.
+Production browser verification passed in VIC, NSW and WA. Hosted directory SSR
+returns HTTP 500 on both the previous production deployment and this candidate;
+the permanent acceptance test retains its failure, and other hosted route checks
+passed separately.
