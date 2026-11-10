@@ -42,6 +42,12 @@ def spacing_allowed(spacing, allow_fallback=False):
     return spacing is not None and 0<spacing<=(5 if allow_fallback else 1)
 
 
+def reusable_fallback(header):
+    return bool(header.get('source_crs_wkt') and spacing_allowed(header.get('native_spacing_m'),True)
+        and header.get('dtype') in ('float32','float64') and header.get('scales')
+        and header['scales'][0]==1.0 and header.get('offsets') and header['offsets'][0]==0.0)
+
+
 def prepare_queue(root):
     from shapely import make_valid
     from pyproj import Transformer
@@ -93,7 +99,8 @@ def prepare_queue(root):
     print('WA pinned queue',len(entries),'sources',sum(r['bytes'] for r in entries),'bytes',len(blocked),'blocked',flush=True)
 
 
-def run(root, limit, allow_fallback=False):
+def run(root, limit, allow_fallback=False, reuse_only=False):
+    if reuse_only and not allow_fallback:raise ValueError('Reuse-only fallback processing requires explicit fallback mode')
     directory=root/'datasets/ocean/coastal/nationwide'
     leads=directory/'wa-fine-coastal-leads.geojson';coast=directory/'WA-shoreline-reviewed.geojson'
     checkpoint=directory/'wa-batch-progress.json'
@@ -107,7 +114,7 @@ def run(root, limit, allow_fallback=False):
     for ident,entry in state['assets'].items():
         if allow_fallback and entry.get('status')=='native_review_required' and entry.get('header'):
             header=a.load(c.safe(root,entry['header']))
-            if header.get('source_crs_wkt') and spacing_allowed(header.get('native_spacing_m'),True) and header.get('dtype') in ('float32','float64') and header.get('scales')==[1.0] and header.get('offsets')==[0.0]:
+            if reusable_fallback(header):
                 entry.setdefault('native_review_history',[]).append({'header':entry['header'],'previous_status':'native_review_required'})
                 entry.update(status='retry_pending',review_scope='Explicit native fallback <=5m; exact spacing retained, never labelled <=1m')
                 reusable.add(ident)
@@ -127,6 +134,8 @@ def run(root, limit, allow_fallback=False):
         queue=sorted([f for f in queue if f['properties']['Survey_download'] in order],key=lambda f:order[f['properties']['Survey_download']])
     if reusable:
         queue.sort(key=lambda feature:hashlib.sha256(feature['properties']['Survey_download'].encode()).hexdigest()[:24] not in reusable)
+    if reuse_only:
+        queue=[feature for feature in queue if hashlib.sha256(feature['properties']['Survey_download'].encode()).hexdigest()[:24] in reusable]
     published=set()
     for run in a.load(root/'datasets/ocean/coastal/archive-index.json')['runs']:
         if run.get('plan'):
@@ -146,6 +155,9 @@ def run(root, limit, allow_fallback=False):
                 source={'id':ident,'url':url,'bytes':size,'etag':etag,
                         'output_bytes_estimate':size*4,'scratch_bytes_estimate':c.MEMORY_LIMIT}
                 forecast=c.capacity(root,{'sources':[source]})
+                if reuse_only and forecast['planned_transfer_bytes']:
+                    state['assets'][ident].update(status='retained_original_review_required',reason='Reuse-only mode refuses new source bytes',forecast=forecast)
+                    a.save(checkpoint,state);continue
                 if forecast['budget_shortfall_bytes'] or forecast['storage_shortfall_bytes']:
                     state['assets'][ident]={'status':'budget_blocked' if forecast['budget_shortfall_bytes'] else 'storage_blocked','forecast':forecast}
                     a.save(checkpoint,state);continue
@@ -192,7 +204,7 @@ def run(root, limit, allow_fallback=False):
                 from scripts.ocean_audit_storage import compact_run
                 compact_run(root,plan)
             rasters=sum(not v.get('empty') for v in result['outputs'].values())
-            state['assets'][ident]={'status':'verified' if rasters else 'empty','plan':str(plan_path.relative_to(root)),'rasters':rasters,'verification':receipt}
+            state['assets'][ident]={**state['assets'].get(ident,{}),'status':'verified' if rasters else 'empty','plan':str(plan_path.relative_to(root)),'rasters':rasters,'verification':receipt}
             a.save(checkpoint,state);completed+=1
             print('WA verified',ident,rasters,'COGs',flush=True)
         except HTTPError as error:
@@ -223,10 +235,12 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('--limit',type=int,default=12)
     parser.add_argument('--prepare-queue',action='store_true')
     parser.add_argument('--allow-fallback',action='store_true',help='Reuse eligible originals at their exact native spacing up to 5 m; preferred tier remains strictly <=1 m')
+    parser.add_argument('--reuse-only',action='store_true',help='Only reconsider retained fallback candidates; refuse any forecast new source bytes')
     parser.add_argument('--root',type=Path,default=Path(__file__).resolve().parents[1]);args=parser.parse_args()
     if args.limit<1:parser.error('limit must be positive')
+    if args.reuse_only and not args.allow_fallback:parser.error('--reuse-only requires --allow-fallback')
     token=c.RESERVE_OVERRIDE.set(0)
     try:
         if args.prepare_queue:prepare_queue(args.root.resolve())
-        else:run(args.root.resolve(),args.limit,args.allow_fallback)
+        else:run(args.root.resolve(),args.limit,args.allow_fallback,args.reuse_only)
     finally:c.RESERVE_OVERRIDE.reset(token)
