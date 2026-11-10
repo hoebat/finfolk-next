@@ -14,6 +14,7 @@ import zipfile
 import rasterio
 from rasterio.warp import transform_bounds
 from shapely.geometry import box, mapping
+from rasterio.windows import Window
 
 from scripts import ocean_acquisition as a, ocean_coastal as c
 
@@ -44,6 +45,38 @@ def eligible_header(ds, member):
                 ds.tags(1).get('Band_Direction')=='Height')
 
 
+def same_native_grid(left, right):
+    """Only canonicalize exact grid/value/mask equivalents; archives retain both."""
+    def signature(ds):
+        return (ds.width,ds.height,ds.count,ds.dtypes,ds.crs,ds.transform,str(ds.nodata),
+                ds.scales,ds.offsets,ds.units,ds.tags(1).get('Band_Direction'))
+    if signature(left)!=signature(right):return False
+    for row in range(0,left.height,128):
+        for column in range(0,left.width,8192):
+            window=Window(column,row,min(8192,left.width-column),min(128,left.height-row))
+            if left.read(1,window=window).tobytes()!=right.read(1,window=window).tobytes():return False
+            if left.read_masks(1,window=window).tobytes()!=right.read_masks(1,window=window).tobytes():return False
+    return True
+
+
+def retained_asset(root, url):
+    """Verify registered originals before any new source request or allocation."""
+    path=root/'datasets/ocean/records/ausseabed-local-surveys.json'
+    if not path.exists():return None
+    row=next((r for r in a.load(path).get('acquisitions',[]) if r.get('url')==url and r.get('state')=='acquired'),None)
+    if not row:return None
+    if not row.get('parts') or not row.get('sha256'):raise ValueError('Registered original lacks checksum evidence')
+    whole=hashlib.sha256()
+    for part in row['parts']:
+        path=c.safe(root,part['path']);checksum=hashlib.sha256();size=0
+        with path.open('rb') as stream:
+            for data in iter(lambda:stream.read(a.BLOCK),b''):
+                checksum.update(data);whole.update(data);size+=len(data)
+        if size!=part['bytes'] or checksum.hexdigest()!=part['sha256']:raise ValueError('Registered source part changed')
+    if whole.hexdigest()!=row['sha256']:raise ValueError('Registered source concatenation changed')
+    return row
+
+
 def run(root, url):
     directory=root/'datasets/ocean/coastal/nationwide'
     publisher,states=select(a.load(directory/'ga-fine-coastal-leads.geojson')['features'],url)
@@ -52,28 +85,30 @@ def run(root, url):
     # never labels another runner's in-flight source as scientifically invalid.
     with (root/'.cache/ocean-acquisition/run.lock').open('a+') as lock:
         fcntl.flock(lock,fcntl.LOCK_EX)
-        with a.request(url,method='HEAD') as response:
-            size=int(response.headers['Content-Length']);etag=response.headers['ETag']
-        source={'id':ident,'url':url,'bytes':size,'etag':etag,
-                'output_bytes_estimate':size*8,'scratch_bytes_estimate':c.MEMORY_LIMIT}
-        forecast=c.capacity(root,{'sources':[source]})
-        if forecast['budget_shortfall_bytes'] or forecast['storage_shortfall_bytes']:
-            raise InterruptedError('Acquisition exceeds remaining budget or actual disk capacity')
-        c.acquire(root,{'sources':[source]})
-        raw=root/'datasets/raw/ocean/coastal-nonvic'/ident/'original.bin';checksum=c.digest(raw)
-        parts=c.catalog_parts(root,'ausseabed-local-surveys',ident,raw,checksum)
-        record_path=root/'datasets/ocean/records/ausseabed-local-surveys.json';record=a.load(record_path)
-        old=next((r for r in record.get('acquisitions',[]) if r['id']==ident),{})
-        asset={**source,'parts':parts,'sha256':checksum,'state':'acquired','filename':Path(url).name,
-               'acquired_at':old.get('acquired_at',datetime.now(timezone.utc).isoformat()),
-               'publisher_access_evidence':publisher,'numeric_validation':'Native band/unit review pending'}
-        record['acquisitions']=[r for r in record.get('acquisitions',[]) if r['id']!=ident]+[asset]
-        a.save(record_path,record)
-    with zipfile.ZipFile(raw) as archive:
+        asset=retained_asset(root,url)
+        if asset is None:
+            with a.request(url,method='HEAD') as response:
+                size=int(response.headers['Content-Length']);etag=response.headers['ETag']
+            source={'id':ident,'url':url,'bytes':size,'etag':etag,
+                    'output_bytes_estimate':size*8,'scratch_bytes_estimate':c.MEMORY_LIMIT}
+            forecast=c.capacity(root,{'sources':[source]})
+            if forecast['budget_shortfall_bytes'] or forecast['storage_shortfall_bytes']:
+                raise InterruptedError('Acquisition exceeds remaining budget or actual disk capacity')
+            c.acquire(root,{'sources':[source]})
+            raw=root/'datasets/raw/ocean/coastal-nonvic'/ident/'original.bin';checksum=c.digest(raw)
+            parts=c.catalog_parts(root,'ausseabed-local-surveys',ident,raw,checksum)
+            record_path=root/'datasets/ocean/records/ausseabed-local-surveys.json';record=a.load(record_path)
+            old=next((r for r in record.get('acquisitions',[]) if r['id']==ident),{})
+            asset={**source,'parts':parts,'sha256':checksum,'state':'acquired','filename':Path(url).name,
+                   'acquired_at':old.get('acquired_at',datetime.now(timezone.utc).isoformat()),
+                   'publisher_access_evidence':publisher,'numeric_validation':'Native band/unit review pending'}
+            record['acquisitions']=[r for r in record.get('acquisitions',[]) if r['id']!=ident]+[asset]
+            a.save(record_path,record)
+    with zipfile.ZipFile(c.JoinedParts([c.safe(root,p['path']) for p in asset['parts']])) as archive:
         bad=archive.testzip()
         if bad:raise ValueError('ZIP member CRC failed: '+bad)
         members=[n for n in archive.namelist() if n.lower().endswith(('.tif','.tiff'))]
-    headers=[];plans=[]
+    headers=[];plans=[];canonical_members=[]
     for member in members:
         candidate={**asset,'member':member}
         with c.raster(root,candidate) as ds:
@@ -82,7 +117,15 @@ def run(root, url):
                             'resolution':ds.res,'tags':ds.tags(1),'units':ds.units,
                             'scales':ds.scales,'offsets':ds.offsets,'native_crop_eligible':approved})
             if not approved:continue
+            duplicate=None
+            for previous in canonical_members:
+                with c.raster(root,{**asset,'member':previous}) as original:
+                    if same_native_grid(ds,original):duplicate=previous;break
+            if duplicate:
+                headers[-1].update(duplicate_of=duplicate,canonicalization='Exact CRS, grid, stored pixel bytes and masks; both original members retained')
+                continue
             spacing=c.native_spacing(ds);footprint=mapping(box(*transform_bounds(ds.crs,4326,*ds.bounds)))
+            canonical_members.append(member)
         for state in states:
             source={**candidate,'id':ident+'-'+hashlib.sha256(member.encode()).hexdigest()[:8]+'-'+state.lower(),
                     'states':[state],'survey_derived':True,'resolution_m':spacing,'horizontal_crs_verified':True,

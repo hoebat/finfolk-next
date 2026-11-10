@@ -1,4 +1,5 @@
 import io
+import hashlib
 import json
 import tempfile
 import unittest
@@ -9,6 +10,18 @@ from scripts import ocean_coastal_sources as s
 
 
 class SourceTests(unittest.TestCase):
+    def test_xml_metadata_retains_exact_bytes_checksum_and_budget_debit(self):
+        body=b'<Coverage name="native">\r\n  unchanged\r\n</Coverage>'
+        archive=self.root/'metadata'
+        with patch.object(s.acq,'request',return_value=io.BytesIO(body)):
+            actual,checksum=s.fetch_bytes(self.root,'https://example.test/wcs',self.guard,archive_directory=archive,extension='.xml')
+        self.assertEqual(actual,body)
+        self.assertEqual(checksum,hashlib.sha256(body).hexdigest())
+        self.assertEqual((archive/(checksum+'.xml')).read_bytes(),body)
+        self.assertEqual(s.acq.load(self.ledger),{'charged_bytes':len(body),'received_bytes':len(body)})
+        with self.assertRaisesRegex(ValueError,'archive suffix'):
+            s.fetch_bytes(self.root,'https://example.test/wcs',self.guard,extension='/unsafe')
+
     def setUp(self):
         temp=tempfile.TemporaryDirectory();self.addCleanup(temp.cleanup)
         self.root=Path(temp.name)

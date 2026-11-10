@@ -13,8 +13,9 @@ from scripts import ocean_acquisition as acq
 DEA_WFS='https://geoserver.dea.ga.gov.au/geoserver/dea/wfs'
 
 
-def fetch_json(root,url,guard,limit=4*1024**2,archive_directory=None):
+def fetch_bytes(root,url,guard,limit=4*1024**2,archive_directory=None,extension='.bin'):
     """Caller holds the shared acquisition lock; failed reads retain their debit."""
+    if extension not in ('.bin','.json','.xml','.html'):raise ValueError('Unsupported metadata archive suffix')
     guard(root)
     ledger_path=root/'.cache/ocean-acquisition/ledger.json'
     ledger=acq.load(ledger_path)
@@ -34,16 +35,20 @@ def fetch_json(root,url,guard,limit=4*1024**2,archive_directory=None):
             if len(body)>limit: raise ValueError('Publisher metadata response exceeds limit')
             if not data: break
     sha=hashlib.sha256(body).hexdigest()
-    data=json.loads(body)
     if archive_directory is not None:
         guard(root,len(body))
         archive_directory.mkdir(parents=True,exist_ok=True)
-        target=archive_directory/(sha+'.json')
+        target=archive_directory/(sha+extension)
         if not target.exists():
             with tempfile.NamedTemporaryFile(dir=archive_directory,delete=False) as out:
                 out.write(body);out.flush();os.fsync(out.fileno());temporary=out.name
             os.replace(temporary,target)
-    return data,sha
+    return bytes(body),sha
+
+
+def fetch_json(root,url,guard,limit=4*1024**2,archive_directory=None):
+    body,sha=fetch_bytes(root,url,guard,limit,archive_directory,extension='.json')
+    return json.loads(body),sha
 
 
 def shoreline(root,state,bbox,geometry_field,guard,year=2024,page_size=500,response_limit=4*1024**2):
