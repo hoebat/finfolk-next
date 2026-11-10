@@ -21,6 +21,7 @@ test:
 	corepack yarn test
 	node tests/test_reference_assets.mjs
 	node --test tests/test_dataset_release_client.mjs
+	node tests/test_coastal_release.mjs
 	node tests/test_account_return.mjs
 test-db:
 	node scripts/test_database.mjs
