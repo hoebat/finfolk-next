@@ -1,6 +1,6 @@
 import { messagingConfig } from "./messaging-config.mjs";
 import { InstagramProvider } from "./instagram-provider.mjs";
-// Never use a Facebook comment actor ID as an Instagram Login sender ID.
+// Never use a Facebook comment actor ID as an Page-authorized Instagram messaging sender ID.
 export async function instagramFollowerProof(
   uid,
   env,

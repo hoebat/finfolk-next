@@ -166,7 +166,7 @@ try{
   await db.query(`INSERT INTO finfolk."MessagingAccount"(id,application_id,provider,account_id,mode) VALUES('ingress-ig','finfolk','instagram','12345','live')`);
   const ingress=createMessagingDatabase({db:apiDatabase(pool),application:'finfolk',account:'ingress-ig'});
   let wakes=0,providerCalls=0;
-  const provider=new InstagramProvider({provider:'instagram-login',accountId:'12345',graphVersion:'v26.0',token:'TEST_TOKEN'},async(url,init)=>{
+  const provider=new InstagramProvider({provider:'instagram-facebook',accountId:'12345',graphVersion:'v26.0',token:'TEST_TOKEN'},async(url,init)=>{
    providerCalls++;assert.equal(new URL(url).pathname,'/v26.0/12345/messages');assert.equal(init.headers.Authorization,'Bearer TEST_TOKEN');
    assert.deepEqual(JSON.parse(init.body),{recipient:{id:'67890'},message:{text:'Signed webhook reply'}});
    return Response.json({message_id:'graph-reply-1'});

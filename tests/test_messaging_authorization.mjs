@@ -3,47 +3,18 @@ import {InstagramProvider} from '../backend/instagram-provider.mjs';
 import {verifyInstagramMessagingAuthorization,createInstagramMessagingAuthorization} from '../backend/messaging-instagram-authorization.mjs';
 import {createTikTokMessagingAuthorization} from '../backend/messaging-tiktok-authorization.mjs';
 
-const graphConfig={provider:'instagram-login',accountId:'123',appId:'999',metaAppId:'999',clientSecret:'TEST_SECRET',graphVersion:'v26.0',token:'TEST_TOKEN'};
-const igFetcher=async(url,init)=>{
+const graphConfig={provider:'instagram-facebook',accountId:'123',appId:'999',pageId:'321',metaAppId:'999',clientSecret:'TEST_SECRET',graphVersion:'v26.0',token:'TEST_TOKEN'};
+const facebook=new InstagramProvider(graphConfig,async(url)=>{
  const path=new URL(url).pathname;
- if(path.endsWith('/me'))return Response.json({id:'123',username:'another.business'});
- if(path.endsWith('/subscribed_apps'))return Response.json({data:[{id:'999',subscribed_fields:['messages']}]});
- throw Error('Unexpected Graph request');
-};
-const ig=new InstagramProvider(graphConfig,igFetcher);
-assert.equal((await verifyInstagramMessagingAuthorization(ig,{accountId:'123'})).username,'another.business','Reusable verification has no FinFolk brand singleton');
-await assert.rejects(verifyInstagramMessagingAuthorization(ig,{accountId:'123',expectedUsername:'finfolk.com.au'}),/account mismatch/);
-await assert.rejects(verifyInstagramMessagingAuthorization(ig,{accountId:'456'}),/configured connection/);
-const unified=new InstagramProvider({...graphConfig,provider:'instagram-unified'},async(url)=>{
- const parsed=new URL(url);
- if(parsed.pathname.endsWith('/me'))return Response.json({client_business_id:'111'});
- if(parsed.pathname.includes('assigned_instagram_accounts'))return Response.json({data:[{id:'456',username:'elsewhere'},{id:'123',username:'another.business'}],paging:{next:'unused'}});
- if(parsed.pathname.endsWith('/debug_token'))return Response.json({data:{is_valid:true,app_id:'999',expires_at:0}});
- if(parsed.pathname.endsWith('/subscribed_apps'))return Response.json({data:[{id:'999',subscribed_fields:['messages']}]});
- throw Error('Unexpected Graph request');
-});
-assert.equal((await verifyInstagramMessagingAuthorization(unified,{accountId:'123'})).nonExpiring,true,'Configured account is selected from multiple assigned accounts');
-const facebook=new InstagramProvider({...graphConfig,provider:'instagram-facebook',pageId:'321'},async(url)=>{
- const parsed=new URL(url),path=parsed.pathname;
  if(path.endsWith('/debug_token'))return Response.json({data:{is_valid:true,app_id:'999',type:'PAGE',expires_at:0,data_access_expires_at:0}});
  if(path.endsWith('/me'))return Response.json({id:'321'});
  if(path.endsWith('/321'))return Response.json({id:'321',instagram_business_account:{id:'123',username:'another.business'}});
  if(path.endsWith('/subscribed_apps'))return Response.json({data:[{id:'999',subscribed_fields:['messages']}]});
  throw Error('Unexpected Page request');
 });
-assert.equal((await verifyInstagramMessagingAuthorization(facebook,{accountId:'123'})).authorized,true);
-const igAuth=createInstagramMessagingAuthorization({authMethod:'instagram-login',appId:'999',clientSecret:'SECRET',accountId:'123',graphVersion:'v26.0',redirectURI:'https://api.example.test/oauth/ig'},async(url)=>{
- const parsed=new URL(url);
- if(parsed.hostname==='api.instagram.com')return Response.json({access_token:'SHORT'});
- if(parsed.pathname==='/access_token')return Response.json({access_token:'LONG',expires_in:3600});
- if(parsed.pathname==='/refresh_access_token')return Response.json({access_token:'REFRESHED',expires_in:7200});
- return igFetcher(url);
-});
-assert.equal(new URL(igAuth.authorizationURL('STATE')).searchParams.get('state'),'STATE');
-assert.equal((await igAuth.exchangeCode({code:'CODE'})).credential.token,'LONG');
-await assert.rejects(igAuth.refresh({token:'NEW',authMethod:'instagram-login',issuedAt:new Date().toISOString()}),/too new/);
-assert.equal((await igAuth.refresh({token:'OLD',authMethod:'instagram-login',issuedAt:new Date(Date.now()-172800000).toISOString()})).credential.token,'REFRESHED');
-
+assert.equal((await verifyInstagramMessagingAuthorization(facebook,{accountId:'123'})).username,'another.business');
+await assert.rejects(verifyInstagramMessagingAuthorization(facebook,{accountId:'123',expectedUsername:'finfolk.com.au'}),/account mismatch/);
+await assert.rejects(verifyInstagramMessagingAuthorization(facebook,{accountId:'456'}),/configured Facebook Page/);
 const pageAuth=createInstagramMessagingAuthorization({authMethod:'instagram-facebook',appId:'999',clientSecret:'SECRET',accountId:'123',pageId:'321',graphVersion:'v26.0',redirectURI:'https://api.example.test/oauth/page',expectedUsername:'another.business'},async(url)=>{
  const parsed=new URL(url),path=parsed.pathname;
  if(path.endsWith('/oauth/access_token'))return Response.json({access_token:parsed.searchParams.has('fb_exchange_token')?'LONG_USER':'USER',expires_in:3600});
@@ -55,9 +26,7 @@ const pageAuth=createInstagramMessagingAuthorization({authMethod:'instagram-face
 });
 const pageGrant=await pageAuth.exchangeCode({code:'PAGE_CODE'});assert.equal(pageGrant.credential.token,'PAGE_TOKEN');assert.equal(pageGrant.expiresAt,null);
 assert.equal((await pageAuth.verify(pageGrant.credential)).nonExpiring,true);
-const unifiedAuth=createInstagramMessagingAuthorization({authMethod:'instagram-unified',appId:'999',clientSecret:'SECRET',accountId:'123',graphVersion:'v26.0',redirectURI:'https://api.example.test/oauth/unified',loginConfigId:'555'},async()=>Response.json({access_token:'SYSTEM_USER',expires_in:3600}));
-assert.equal(new URL(unifiedAuth.authorizationURL('STATE')).searchParams.get('config_id'),'555');assert.equal((await unifiedAuth.exchangeCode({code:'UNIFIED_CODE'})).credential.authMethod,'instagram-unified');
-
+assert.equal(pageAuth.refresh,undefined,'Page authorization has no user-token refresh pathway');
 const scopes='message.list.manage,message.list.send,user.account.type';
 const ttConfig={appId:'app',appSecret:'SECRET',accountId:'business',callbackURL:'https://api.example.test/webhooks/tt',oauthRedirectURI:'https://api.example.test/oauth/tt'};
 let observed=[];
@@ -86,4 +55,4 @@ for(const [suffix,data,error]of [
  const invalid=createTikTokMessagingAuthorization({...ttConfig,fetcher:async(url,init)=>new URL(url).pathname.endsWith(suffix)?Response.json({code:0,data}):fetcher(url,init)});
  await assert.rejects(invalid.verify(grant.credential),error);
 }
-console.log('MESSAGING_AUTH_PROVIDER_PASS: configured Instagram Login/Page/Unified identities, OAuth and age-safe refresh; TikTok Business token/app/scopes/entitlement/subscription verification, code exchange and refresh.');
+console.log('MESSAGING_AUTH_PROVIDER_PASS: configured Facebook Page identity, OAuth and reauthorization; TikTok Business token/app/scopes/entitlement/subscription verification, code exchange and refresh.');

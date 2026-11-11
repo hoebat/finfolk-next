@@ -33,7 +33,7 @@ const fixture = await messagingFixture(db, env, {
   handle: "test_" + tag,
 });
 globalThis.fetch = async (url, options) =>
-  new URL(url).hostname === "graph.instagram.com"
+  new URL(url).hostname === "graph.facebook.com"
     ? fixture.profileResponse(url)
     : nativeFetch(url, options);
 const act = (action, v = {}, user = uid) =>
@@ -286,7 +286,7 @@ try {
       [sourceKey],
     );
     globalThis.fetch = async (url) => {
-      if (new URL(url).hostname === "graph.instagram.com")
+      if (new URL(url).hostname === "graph.facebook.com")
         return fixture.profileResponse(url);
       pages++;
       const mediaId = author + String(++serial);
@@ -319,7 +319,7 @@ try {
     const captionId = author + String(++serial);
     ids.push(captionId);
     globalThis.fetch = async (url) =>
-      new URL(url).hostname === "graph.instagram.com"
+      new URL(url).hostname === "graph.facebook.com"
         ? fixture.profileResponse(url)
         : Response.json({
             mentioned_media: media(

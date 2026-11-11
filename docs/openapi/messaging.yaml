@@ -527,7 +527,7 @@ paths:
                             targetsReported: {type: boolean}
                             targetCount: {type: integer, nullable: true}
                             includesExpectedAccount: {type: boolean, nullable: true}
-                      provider: {type: string, enum: [instagram-unified, instagram-facebook]}
+                      provider: {type: string, enum: [instagram-facebook]}
                       pageBinding:
                         type: object
                         properties:
@@ -572,7 +572,7 @@ paths:
   /v1/admin/messaging/instagram/authorization:
     post:
       operationId: authorizeMessaging
-      summary: Begin administrator-bound Instagram Login
+      summary: Begin administrator-bound Facebook Page authorization
       tags:
         - Administration
       security:
@@ -1404,7 +1404,7 @@ components:
       properties:
         provider:
           type: string
-          enum: [instagram-login, instagram-unified, instagram-facebook]
+          enum: [instagram-facebook]
         mode:
           type: string
           enum:

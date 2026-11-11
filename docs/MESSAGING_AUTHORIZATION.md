@@ -84,21 +84,7 @@ Pausing preserves the encrypted grant but still fences older message work.
 without the legacy FinFolk username singleton. An optional `expectedUsername`
 retains a particular application's explicit brand policy.
 
-- Instagram Login verifies the token's `/me` account identity.
-- Facebook Page authorization verifies the app-bound Page token, configured Page
-  and linked Instagram account. Page exchange resolves the configured account;
-  it does not select an arbitrary Page or assume a FinFolk username.
-- Unified Login verifies the business token and selects the explicitly configured
-  account from assigned accounts. Multiple assigned accounts do not implicitly
-  select a different tenant. Token metadata establishes app binding and whether
-  the grant is non-expiring.
-
-All variants check the configured app's message subscription. Subscription
-creation requires the explicit `subscribe` option in the trusted setup flow.
-The factory provides connection-bound authorization URLs and code exchange.
-Instagram user-token refresh preserves issuance time and enforces its minimum
-age; Page/system-user grants are not sent to that refresh endpoint.
-Legacy provider validation and the running authorization callbacks are unchanged.
+Only Facebook Page authorization is accepted. Verify the app-bound `PAGE` token, configured Page and linked Instagram account; select no arbitrary assets. The factory uses Facebook authorization and Page-token exchange, with no Instagram user-token refresh. Installation checks the configured app's messaging subscription and derives expiry from provider token metadata. Comment access uses this same connection and requires its extra permission/subscriptions. See [activation](INSTAGRAM_ACTIVATION.md#only-supported-authorization-meta-facebook-page).
 
 ## TikTok Business Messaging verification
 

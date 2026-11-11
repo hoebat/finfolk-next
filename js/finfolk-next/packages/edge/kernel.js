@@ -1,6 +1,8 @@
 // Generated from finfolk-web.lib.kernel; do not edit.
 import * as sqlite from '@finfolk/edge/sqlite.js'
 
+import * as registry from '@finfolk/edge/operations.js'
+
 import * as backbone from '@finfolk/edge/backbone.js'
 
 export var SCOPES = new Map();
@@ -92,12 +94,15 @@ export function transport(scope,name,values,options){
       reject(new Error("Account request timed out."));
     },30000);
     HTTP.set(id,{
+      "values":values,
       "resolve":resolve,
-      "reject":reject,
-      "timer":timer,
-      "client":client,
+      "name":name,
+      "request":options["request"],
       "scope":scope["id"],
-      "request":options["request"]
+      "reject":reject,
+      "client":client,
+      "options":options,
+      "timer":timer
     });
     send(client,{
       "type":"http",
@@ -187,6 +192,32 @@ export function detach(client){
     let scope = SCOPES.get(scope_id);
     if(scope){
       scope["clients"].delete(client);
+    }
+  };
+  for(let [id,task] of HTTP){
+    if(task["client"] == client){
+      clearTimeout(task["timer"]);
+      HTTP.delete(id);
+      send(client,{"type":"http-abort","id":id});
+      let scope = SCOPES.get(task["scope"]);
+      let spec = registry.operations[task["name"]];
+      if(scope && (scope["clients"]["size"] > 0) && spec && !spec["write"]){
+        transport(
+          scope,
+          task["name"],
+          task["values"],
+          Object.assign({},task["options"],{"client":null})
+        ).then(task["resolve"],task["reject"]);
+      }
+      else{
+        task["reject"](Object.assign(new Error(
+          "The page handling this account request closed. Please retry."
+        ),{
+          "name":"AbortError",
+          "code":"account_page_detached",
+          "mutationOutcomeUnknown":!!spec["write"]
+        }));
+      }
     }
   };
   for(let stop of client["subscriptions"].values()){

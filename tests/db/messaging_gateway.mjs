@@ -16,8 +16,8 @@ const api='https://api.example.test',frontend='https://finfolk.example',expected
 const encryptionEnv={MESSAGING_ENCRYPTION_KEY:randomBytes(32).toString('base64')};
 const apps=[{key:'igapp',provider:'instagram',appId:'999',appSecret:'IG_SECRET',verifyToken:'VERIFY'},{key:'ttapp',provider:'tiktok',appId:'tt-app',appSecret:'TT_SECRET'}];
 const connections=[
- {key:'ig',application:'finfolk',account:'ig',providerApp:'igapp',accountId:'12345',authMethod:'instagram-login',graphVersion:'v26.0',replyWindowSeconds:3600,handler:'finfolk',returnURL:frontend+'/account'},
- {key:'ig2',application:'finfolk',account:'ig2',providerApp:'igapp',accountId:'12346',authMethod:'instagram-login',graphVersion:'v26.0',replyWindowSeconds:3600,handler:'finfolk',returnURL:frontend+'/account'},
+ {key:'ig',application:'finfolk',account:'ig',providerApp:'igapp',accountId:'12345',authMethod:'instagram-facebook',pageId:'321',graphVersion:'v26.0',replyWindowSeconds:3600,handler:'finfolk',returnURL:frontend+'/account'},
+ {key:'ig2',application:'finfolk',account:'ig2',providerApp:'igapp',accountId:'12346',authMethod:'instagram-facebook',pageId:'321',graphVersion:'v26.0',replyWindowSeconds:3600,handler:'finfolk',returnURL:frontend+'/account'},
  {key:'tt',application:'finfolk',account:'tt',providerApp:'ttapp',accountId:'tt-business',handler:'finfolk',returnURL:frontend+'/account',accountAuthorizationURL:'https://www.tiktok.com/v2/auth/authorize?client_key=tt-app'},
  {key:'chat',application:'finfolk',account:'chat',provider:'app',accountId:'chat',handler:'finfolk'},
  {key:'other',application:'other',account:'other',provider:'app',accountId:'other',handler:'finfolk'},
@@ -33,10 +33,11 @@ const request=(key,action,{method='POST',actor='admin',body={},origin=frontend,h
 const fetcher=async(url,init={})=>{
  const parsed=new URL(url),path=parsed.pathname;
  providerRequests.push({host:parsed.hostname,path,method:init.method||'GET'});
- if(parsed.hostname==='api.instagram.com'){exchanges++;return Response.json({access_token:'IG_SHORT'});}
- if(parsed.hostname==='graph.instagram.com'){
-  if(path==='/access_token')return Response.json({access_token:'IG_LONG',expires_in:3600});
-  if(path.endsWith('/me'))return Response.json({id:'12345',username:'finfolk.com.au'});
+ if(parsed.hostname==='graph.facebook.com'){
+  if(path.endsWith('/oauth/access_token')){if(parsed.searchParams.has('code'))exchanges++;return Response.json({access_token:'IG_USER',expires_in:3600});}
+  if(path.endsWith('/debug_token'))return Response.json({data:{is_valid:true,app_id:'999',type:'PAGE',expires_at:0,data_access_expires_at:0}});
+  if(path.endsWith('/me'))return Response.json({id:'321'});
+  if(path.endsWith('/321'))return Response.json({id:'321',instagram_business_account:{id:'12345',username:'finfolk.com.au'},access_token:'IG_LONG'});
   if(path.endsWith('/subscribed_apps'))return Response.json({data:[{id:'999',subscribed_fields:['messages']}]});
   if(path.endsWith('/messages')){sends.push({provider:'instagram',...JSON.parse(init.body)});return Response.json({message_id:'ig-reply-'+sends.length});}
  }

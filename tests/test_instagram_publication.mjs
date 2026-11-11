@@ -14,11 +14,11 @@ import { seal } from '../backend/messaging-config.mjs';
 const pg = new PGlite();
 const q = async (sql, values = []) => (await pg.query(sql, values)).rows;
 const db = { query: q, transaction: fn => pg.transaction(tx => fn(async (sql, values = []) => (await tx.query(sql, values)).rows)) };
-const scope = 'instagram-login:777:900';
+const scope = 'instagram-facebook:777:900';
 const env = {
   DB_BACKBONE_ENABLED:'true',
   MESSAGING_ENCRYPTION_KEY: Buffer.alloc(32, 4).toString('base64'),
-  INSTAGRAM_MESSAGING_APP_ID: '777', INSTAGRAM_MESSAGING_ACCOUNT_ID: '900',
+  INSTAGRAM_MESSAGING_META_APP_ID: '777', INSTAGRAM_MESSAGING_ACCOUNT_ID: '900',
   INSTAGRAM_MESSAGING_GRAPH_VERSION: 'v26.0', INSTAGRAM_ADMIN_IDS: 'admin',
   COMMUNITY_POSTS_ENABLED: 'true', INSTAGRAM_PUBLICATION_ENABLED: 'true',
 };

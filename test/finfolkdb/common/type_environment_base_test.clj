@@ -1,19 +1,19 @@
 (ns finfolkdb.common.type-environment-base-test
   (:use code.test)
   (:require [lang.core :as l]
-            [finfolkbuild.testing.neon :as neon]
+            [finfolkbuild.testing.local :as local]
             [finfolkbuild.testing.jdbc :as jdbc]
             [finfolkbuild.testing.common :as common]
             [finfolkbuild.testing.behavior :as fixture]))
 
 (l/script- :postgres
   {:runtime :jdbc.client
-   :config (neon/config)
+   :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main]
              [finfolkdb.common.type-environment-base :as t] [postgres.core :as pg]]})
 
-(fact:global {:setup [(neon/setup!)]
-              :teardown [(neon/teardown!)]})
+(fact:global {:setup [(local/setup!)]
+              :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-environment-base/DataSource :added "0.1"}
 (fact "DataSource persists a linked entity and returns its created values"

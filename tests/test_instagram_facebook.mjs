@@ -4,7 +4,6 @@ import { oauthSettings, oauthFlowKey } from "../backend/messaging-config.mjs";
 import {
   InstagramProvider,
   exchangeOAuth,
-  refreshAuthorization,
 } from "../backend/instagram-provider.mjs";
 const env = {
   INSTAGRAM_MESSAGING_PROVIDER: "instagram-facebook",
@@ -29,6 +28,7 @@ let appId = "111",
   pageSub = [{ id: "111", subscribed_fields: ["messages"] }];
 const calls = [];
 const fetcher = async (input, opts = {}) => {
+  assert.equal(opts.redirect, 'manual', 'Meta requests must use the workerd-supported redirect policy');
   const u = new URL(input);
   calls.push(u);
   assert.equal(u.origin, "https://graph.facebook.com");
@@ -70,6 +70,12 @@ const grant = await exchangeOAuth("code", env, fetcher);
 assert.equal(grant.token, "page-secret");
 assert.equal(grant.tokenKind, "facebook-page");
 assert.equal(grant.expiresAt, new Date(1900000000000).toISOString());
+let redirectCalls = 0;
+await assert.rejects(exchangeOAuth('fixture-code', env, async () => {
+  redirectCalls++;
+  return new Response(JSON.stringify({access_token:'must-not-be-accepted'}), {status:302,headers:{Location:'https://untrusted.invalid/'}});
+}), {code:'oauth_exchange_failed'});
+assert.equal(redirectCalls, 1, 'An OAuth redirect must never be followed or accepted as a grant');
 assert.ok(
   calls.some((u) => u.searchParams.get("grant_type") === "fb_exchange_token"),
 );
@@ -142,17 +148,21 @@ for (const [message, code] of [
     { code, status: 503 },
   );
 }
-let refreshed = false;
-await refreshAuthorization(
-  async () => [
-    { account_id: "333", checks: {}, token_expires_at: "2000-01-01" },
-  ],
-  env,
-  async () => {
-    refreshed = true;
-  },
-);
-assert.equal(refreshed, false);
+// Reauthorizing the single Page pathway preserves existing fields and adds
+// comments/mentions only when the actual token grants comment management.
+const subscriptionsWritten = [];
+const subscriber = new InstagramProvider(p.config, async (input, options = {}) => {
+  const path = new URL(input).pathname;
+  if (path.endsWith('/debug_token')) return Response.json({data:{is_valid:true,app_id:'111',type:'PAGE',scopes:['instagram_manage_comments']}});
+  if (path.endsWith('/me')) return Response.json({id:'222'});
+  if (options.method === 'POST') {subscriptionsWritten.push({path,fields:JSON.parse(options.body).subscribed_fields});return Response.json({success:true});}
+  return Response.json({data:[{id:'111',subscribed_fields:['message_reactions']},{id:'999',subscribed_fields:['unrelated_app_field']}]});
+});
+await subscriber.subscribe();
+assert.deepEqual(subscriptionsWritten,[
+  {path:'/v26.0/222/subscribed_apps',fields:['message_reactions','messages']},
+  {path:'/v26.0/333/subscribed_apps',fields:['message_reactions','messages','comments','mentions']},
+]);
 const actions = new InstagramProvider(p.config, async (input, options) => {
   assert.equal(new URL(input).pathname, '/v26.0/222/messages');
   assert.deepEqual(JSON.parse(options.body), { recipient: { id: '444' }, sender_action: 'mark_seen' });

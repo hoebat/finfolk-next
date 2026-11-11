@@ -3,36 +3,36 @@
   (:require [lang.core :as l]
             [std.json :as json]
             [clojure.string :as str]
-            [finfolkbuild.testing.neon :as neon]
+            [finfolkbuild.testing.local :as local]
             [finfolkbuild.testing.jdbc :as jdbc]
             [finfolkbuild.testing.common :as common]
             [finfolkbuild.testing.behavior :as fixture]))
 
 (l/script- :postgres
   {:runtime :jdbc.client
-   :config (neon/config)
+   :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main]
              [finfolkdb.common.type-messaging-base :as t] [postgres.core :as pg]
              [finfolkdb.fn.messaging.messaging-manage :as messaging]
              [finfolkdb.fn.messaging.messaging-oauth :as oauth]
              [finfolkdb.fn.messaging.messaging-authorization :as authorization]]})
 
-(fact:global {:setup [(neon/setup!)]
-              :teardown [(neon/teardown!)]})
+(fact:global {:setup [(local/setup!)]
+              :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-messaging-base/EnumMessagingProvider :added "0.1"}
-(fact "EnumMessagingProvider labels on Neon"
-  (binding [jdbc/*connection-fn* neon/contract-connection] (common/check! 'finfolkdb.common.type-messaging-base/EnumMessagingProvider))
+(fact "EnumMessagingProvider labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection] (common/check! 'finfolkdb.common.type-messaging-base/EnumMessagingProvider))
   => true)
 
 ^{:refer finfolkdb.common.type-messaging-base/EnumMessagingDirection :added "0.1"}
-(fact "EnumMessagingDirection labels on Neon"
-  (binding [jdbc/*connection-fn* neon/contract-connection] (common/check! 'finfolkdb.common.type-messaging-base/EnumMessagingDirection))
+(fact "EnumMessagingDirection labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection] (common/check! 'finfolkdb.common.type-messaging-base/EnumMessagingDirection))
   => true)
 
 ^{:refer finfolkdb.common.type-messaging-base/EnumMessagingReceiptStatus :added "0.1"}
-(fact "EnumMessagingReceiptStatus labels on Neon"
-  (binding [jdbc/*connection-fn* neon/contract-connection] (common/check! 'finfolkdb.common.type-messaging-base/EnumMessagingReceiptStatus))
+(fact "EnumMessagingReceiptStatus labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection] (common/check! 'finfolkdb.common.type-messaging-base/EnumMessagingReceiptStatus))
   => true)
 
 ^{:refer finfolkdb.common.type-messaging-base/MessagingApplication :added "0.1"}

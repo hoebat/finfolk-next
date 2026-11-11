@@ -34,6 +34,14 @@ Followers and nonfollowers can use public help and ping within the configured ro
 
 Commands are case-insensitive and use one line starting with `/`. Unknown commands return help. Ordinary messages receive at most one help prompt per sender per day. Member commands require a verified connection; check-ins and points keep their separate enablement controls. No free-form AI processing or arbitrary-recipient send API is provided.
 
+## Simple replies
+
+The API Worker handles `/ping`, `/help`, unknown-command help, the daily greeting and retired `/claim` guidance directly after recording the signed webhook. These fixed public replies bypass the normal command queue, member/follower lookups and seen/typing API calls. Member commands retain their existing queue and authorization checks.
+
+Public replies still use the durable event lease and outbox reservation, rollout/account guards, sender rate limit and messaging window. The webhook acknowledges receipt without waiting for Meta to send the reply. If its background task stops, the existing reconciliation cron queues the receipt with `publicCommand:true` so recovery also uses the public executor. Ambiguous sends remain uncertain and are never resent automatically.
+
+Run `node tests/test_instagram_public_fast_path.mjs` to verify signed ingress, routing, recovery, concurrency and delivery guards locally. A fresh `/ping` to the live account is needed to measure actual end-to-end latency after deployment.
+
 ## Security and delivery
 
 The signed webhook records minimal command metadata, not a chat archive. Connection challenges store code hashes; the durable code reply is encrypted with AES-256-GCM and bound to its incoming event. Admin event APIs and operational logs never contain codes. Sending rechecks the active challenge, sender, scope, rollout generation, expiry and current following.
@@ -51,3 +59,33 @@ Enable `connect` through Settings in the existing pilot first, retaining its all
 Run the repository test/build checks, `tests/test_instagram_connect.mjs` and the isolated real-SQL messaging integration. Coverage includes encryption, duplicate delivery, expired/replaced codes, failed follower lookup, email/ownership gates, replay, competing redemption, persistent limits and disconnect/reconnect. Confirm visible replies and the signed-in code dialog with consenting real accounts separately.
 
 Arrival/departure migration `0029_instagram_visit_times.sql` adds nullable private timestamps to existing visit-day records. Historical visit days and Regular counts are retained. Repeated arrivals do not add another day; switching locations requires `/out` first. Late or out-of-order messages cannot overwrite a newer visit update. The old `/checkin` spelling remains a DM compatibility alias for `/in`; help and the website present `/in` and `/out`. Migration updates the enabled command names while preserving the existing mode, pilot audience and rollout generation.
+
+## Shared command implementation
+
+The Instagram handler recognizes `/menu` and bare `help` as help aliases, plus
+`/help account`, `/help diagnostics`, `/site`, `/privacy`, `/cancel` and
+`/disconnect`. Site/privacy/link-management replies use the direct public path;
+these assistance commands inherit the help rollout gate. `/cancel` inherits the
+connect gate, invalidates only this sender's unused, unexpired code within the
+same provider scope, and never unlinks an existing account. `/disconnect` returns
+the existing website management link and does not perform a chat-side deletion.
+
+`/status` now reports sender-scoped connection/pending-code state without a
+follower lookup. `/connect`, visits and points keep their existing follower
+policy. Cancel and status use the transactional account handler; static public
+commands do not perform member or follower lookups. Code issuance and encrypted
+reply delivery are unchanged. Invalid arguments get usage guidance and overlong
+location arguments are rejected instead of silently truncated.
+
+These changes target the existing Instagram handler. The separately gated native
+entity messaging handler is not migrated by this change. Existing greeting
+throttling is retained. See `CHAT_COMMAND_INTERFACE.md` for the broader design;
+future product-specific commands and its proposed greeting cooldown are separate.
+
+Production release: Worker `e0687cf2-9c52-4c9e-afd9-f0b284399b45` deploys the shared
+DM commands and direct public executor. The release was built from the deployed
+source snapshot with only six DM-related modules changed; the comment-handler
+source and all existing bindings were verified unchanged. Existing pilot access
+remains in force. The release manifest, baseline source and isolated release
+configuration are under `.cache/shared-commands-release/`. Health, verification,
+unsigned webhook rejection and protected admin access pass after deployment.

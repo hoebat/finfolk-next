@@ -4,10 +4,11 @@
             [code.test.base.context :as context]
             [code.test.base.executive :as executive]
             [finfolkbuild.testing.scaffold-common :as common]
-            [finfolkbuild.testing.neon :as neon]))
+            [finfolkbuild.testing.local :as local]))
 
 (def TEST_NAMESPACES
-  '[finfolkdb.schema.type-namespaces-test
+  '[finfolkbuild.testing.local-test
+    finfolkdb.schema.type-namespaces-test
     finfolkdb.schema.entity-catalog-test
     finfolkdb.schema.messaging-catalog-test])
 
@@ -39,13 +40,13 @@
                              (some #{(symbol (second args))} (common/test-namespaces)))
                       [(symbol (second args))]
                       (throw (ex-info "Unknown database test selection" {:args args}))))]
-      (when (= "--common" (first args)) (common/check-coverage!) (neon/acquire!))
+      (when (= "--common" (first args)) (common/check-coverage!) (local/acquire!))
       (when-not (= "--common" (first args))
         (binding [context/*eval-mode* false]
           (doseq [module modules] (require module))))
-      (binding [neon/*suite* (= "--common" (first args))]
-        (if neon/*suite*
+      (binding [local/*suite* (= "--common" (first args))]
+        (if local/*suite*
           (do (doseq [module modules] (checked-run! [module]))
-              (println "NEON_BEHAVIOR_PASS:" (count modules) "namespaces"))
+              (println "LOCAL_BEHAVIOR_PASS:" (count modules) "namespaces"))
           (checked-run! modules))))
-    (finally (neon/release!) (shutdown-agents))))
+    (finally (local/release!) (shutdown-agents))))

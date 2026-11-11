@@ -14,8 +14,6 @@ export async function messagingHealth(q, config, { now = Date.now() } = {}) {
     )
   )[0];
   const issues = [];
-  if (config.checks?.tokenRefresh === false)
-    issues.push("token_refresh_failed");
   if (config.token_expires_at && Date.parse(config.token_expires_at) <= now)
     issues.push("token_expired");
   if (config.checks?.authorization && !config.checks?.subscription)

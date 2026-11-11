@@ -10,15 +10,17 @@ export async function messagingFixture(db, env, { senderId, handle }) {
     )
   )[0];
   env.MESSAGING_ENCRYPTION_KEY = randomBytes(32).toString("base64");
-  env.INSTAGRAM_MESSAGING_APP_ID = "797979";
+  env.INSTAGRAM_MESSAGING_PROVIDER = "instagram-facebook";
+  env.INSTAGRAM_MESSAGING_PAGE_ID = "676767";
+  env.INSTAGRAM_MESSAGING_META_APP_ID = "797979";
   env.INSTAGRAM_MESSAGING_ACCOUNT_ID = "898989";
-  const scope = "instagram-login:797979:898989";
+  const scope = "instagram-facebook:797979:898989";
   await db.query(
     `UPDATE finfolk.messaging_accounts SET account_id=$1,provider_scope=$2,credential_ciphertext=$3,mode='pilot',pilot_sender_ids=$4::jsonb,checks=$5::jsonb,token_expires_at=now()+interval '1 day' WHERE id='instagram'`,
     [
       env.INSTAGRAM_MESSAGING_ACCOUNT_ID,
       scope,
-      seal({ accessToken: "mocked-instagram-login-token" }, env, scope),
+      seal({ accessToken: "mocked-instagram-facebook-token" }, env, scope),
       JSON.stringify([senderId]),
       JSON.stringify({
         authorization: true,

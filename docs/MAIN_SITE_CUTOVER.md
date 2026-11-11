@@ -24,6 +24,28 @@ the frontend hostnames. The older Worker release instructions below describe
 the previous hosting arrangement; use `make deploy-api` only for an intentional,
 separate API release.
 
+## Account request lifecycle fix — 8 November 2026
+
+The authored kernel now settles requests owned by a departing page immediately.
+Pending reads can move to another client in the same actor scope; unconfirmed
+writes are never replayed. A page suspended into the back/forward cache detaches
+from the coordinator and rejoins on its next ping. Close every FinFolk tab before
+reopening Settings to reset an existing shared worker.
+
+`tests/test_kernel_transport_lifecycle.mjs` reproduces the former 30-second
+timeout and verifies read recovery, orphan cancellation, write safety and
+suspended-page reconnection. Generated-source checks and the repository test
+suite passed. An isolated source release is retained in ignored
+`.cache/account-timeout-source`; build with `NETLIFY=true` for Netlify routing.
+Its packaged functions and all 355 offline assets passed consistency checks.
+The broader local browser checks stalled on the live catalogue response and
+did not establish authenticated browser acceptance.
+
+Publication remains incomplete: draft `6af01805e1551af19fe0b561` is missing its
+server-function upload after transfer timeouts. Production remains
+`6aee52cbc3ba0e8797b143af`. Do not describe the fix as deployed; finish a fresh
+source-based release and hosted verification before marking this resolved.
+
 ## Historical Worker hosting
 
 `hoebat/finfolk-next` owns the production frontend at `finfolk.com.au` and API at `api.finfolk.com.au`. The internal Next Worker/database names and immutable SQL release are retained. Plain HTTP on the main site and all `www.finfolk.com.au` requests return a 308 redirect to `https://finfolk.com.au`, preserving the path and query. The former preview hostname is removed, without a redirect.

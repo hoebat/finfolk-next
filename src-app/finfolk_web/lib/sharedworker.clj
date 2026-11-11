@@ -71,7 +71,7 @@
         (when -/Kernel (-/attach client)))
       (when (not -/Host) (-/elect)))
     (== (. data ["type"]) "yield")
-    (do (:= (. client ["active"]) false) (when (== client -/Host) (-/restart)))
+    (do (:= (. client ["active"]) false) (-/detach client))
     (== (. data ["type"]) "detach")
     (-/detach client)
     (== (. data ["type"]) "kernel")

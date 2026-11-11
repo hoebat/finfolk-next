@@ -14,7 +14,7 @@ export function validSignature(raw, signature, secret) {
     createHmac("sha256", secret).update(raw).digest(),
   );
 }
-export async function instagramWebhook(request, env, q) {
+export async function instagramWebhook(request, env, q, { onPublicCommand } = {}) {
   if(!['GET','POST'].includes(request.method))return new Response('',{status:405,headers:{Allow:'GET, POST'}});
   const url = new URL(request.url);
   const requestId=randomUUID();
@@ -53,7 +53,7 @@ export async function instagramWebhook(request, env, q) {
     if(!isMessaging && !isDiscovery)continue;
     for (const event of (isMessaging && Array.isArray(entry.messaging)?entry.messaging:[])) {
       if(!event || typeof event!=='object')continue;
-      await collectInstagramDM(event,env,q,{requestId});
+      await collectInstagramDM(event,env,q,{requestId,config:messaging,onPublicCommand});
       const match = String(event.message?.text || "")
           .trim()
           .match(/^FINFOLK ([a-f0-9]{24})$/i),

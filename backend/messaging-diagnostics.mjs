@@ -7,7 +7,7 @@ import { instagramContentCapabilities } from "./instagram-content.mjs";
 // tokens, token subject IDs, secrets, or unrelated business asset IDs.
 export async function authorizationDiagnostics(db, env, fetcher = fetch) {
   const config = await messagingConfig(db.query, env, { credentials: true });
-  if (!["instagram-unified", "instagram-facebook"].includes(config.provider))
+  if (config.provider !== "instagram-facebook")
     throw messagingError(
       "provider_not_supported",
       "Token diagnostics require Meta authorization.",
@@ -29,7 +29,7 @@ export async function authorizationDiagnostics(db, env, fetcher = fetch) {
       headers: {
         Authorization: "Bearer " + config.appId + "|" + config.clientSecret,
       },
-      redirect: "error",
+      redirect: "manual",
       signal: AbortSignal.timeout(15000),
     });
     result = await response.json();
@@ -120,26 +120,6 @@ export async function authorizationDiagnostics(db, env, fetcher = fetch) {
       grantedScopes, subscribedFields,
     });
     return output;
-  }
-  if (output.valid && output.appMatches) {
-    try {
-      const data = await new InstagramProvider(config, fetcher).request(
-        "/me/assigned_instagram_accounts?fields=id,username&limit=100",
-      );
-      output.assignedAccounts = {
-        count: Array.isArray(data.data) ? data.data.length : 0,
-        hasNext: !!data.paging?.next,
-        expectedAccountFound:
-          Array.isArray(data.data) &&
-          data.data.some(
-            (a) =>
-              String(a.id) === expectedAccountId &&
-              a.username?.toLowerCase() === "finfolk.com.au",
-          ),
-      };
-    } catch {
-      output.assignedAccounts = { errorCode: "account_lookup_failed" };
-    }
   }
   return output;
 }

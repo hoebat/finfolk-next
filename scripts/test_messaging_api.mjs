@@ -64,8 +64,11 @@ const env = {
   INSTAGRAM_VERIFY_TOKEN: "fixture-verify",
   INSTAGRAM_ADMIN_IDS: admin,
   MESSAGING_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
-  INSTAGRAM_MESSAGING_APP_ID: "777",
-  INSTAGRAM_MESSAGING_CLIENT_SECRET: "fixture-client-secret",
+  INSTAGRAM_MESSAGING_PROVIDER: "instagram-facebook",
+  INSTAGRAM_MESSAGING_PAGE_ID: "222",
+  INSTAGRAM_MESSAGING_WEBHOOK_SECRET: "fixture-signature",
+  INSTAGRAM_MESSAGING_META_APP_ID: "777",
+  INSTAGRAM_MESSAGING_META_APP_SECRET: "fixture-client-secret",
   INSTAGRAM_MESSAGING_GRAPH_VERSION: "v26.0",
   INSTAGRAM_MESSAGING_ACCOUNT_ID: brand,
   INSTAGRAM_QUEUE: {
@@ -85,74 +88,21 @@ let follows = true,
   profileCalls = 0;
 const fetcher = async (input, options = {}) => {
   const url = new URL(input);
-  if (url.hostname === "graph.facebook.com") {
-    const ok = (data) => ({
-      ok: true,
-      status: 200,
-      headers: new Headers(),
-      json: async () => data,
-    });
-    if (url.pathname.endsWith("/oauth/access_token")) {
-      businessExchanges++;
-      return ok({ access_token: "fixture-business", expires_in: 0 });
-    }
-    if (url.pathname.endsWith("/me/assigned_instagram_accounts"))
-      return ok({
-        data: assignedMissing
-          ? []
-          : [{ id: brand, username: "finfolk.com.au" }],
-      });
-    if (url.searchParams.get("fields") === "client_business_id")
-      return ok({ id: "system-user", client_business_id: "8888" });
-    if (url.pathname.endsWith("/subscribed_apps"))
-      return ok(
-        options.method === "POST"
-          ? { success: true }
-          : { data: [{ id: "778", subscribed_fields: ["messages"] }] },
-      );
-    if (url.pathname.endsWith("/messages")) {
-      replies.push(JSON.parse(options.body));
-      return ok({ message_id: "unified-reply-" + serial++ });
-    }
-    const id = url.pathname.split("/").pop();
-    return ok({
-      id,
-      username:
-        id === brand
-          ? "finfolk.com.au"
-          : id === sender
-            ? "owner.dives"
-            : "other.dives",
-      is_user_follow_business: follows,
-    });
+  assert.equal(url.hostname,'graph.facebook.com','Only the Facebook Graph transport is supported');
+  const ok=data=>({ok:true,status:200,headers:new Headers(),json:async()=>data});
+  if(url.pathname.endsWith('/oauth/access_token')){
+    if(url.searchParams.has('code'))businessExchanges++;
+    return ok({access_token:'fixture-user',expires_in:3600});
   }
-  assert.ok(
-    ["graph.instagram.com", "api.instagram.com"].includes(url.hostname),
-    "Messaging must not mix Graph API stacks",
-  );
-  const ok = (data) => ({
-    ok: true,
-    status: 200,
-    headers: new Headers(),
-    json: async () => data,
-  });
-  if (url.hostname === "api.instagram.com")
-    return ok({ access_token: "fixture-short" });
-  if (
-    url.pathname === "/access_token" ||
-    url.pathname === "/refresh_access_token"
-  )
-    return ok({ access_token: "fixture-long", expires_in: 5184000 });
-  if (url.pathname.endsWith("/me"))
-    return ok({ id: brand, username: "finfolk.com.au" });
-  if (url.pathname.endsWith("/subscribed_apps"))
-    return ok(
-      options.method === "POST"
-        ? { success: true }
-        : { data: [{ id: "778", subscribed_fields: ["messages"] }] },
-    );
-  assert.equal(options.headers.Authorization, "Bearer fixture-long");
-  assert.ok(!url.href.includes("fixture-long"));
+  if(url.pathname.endsWith('/debug_token'))return ok({data:{is_valid:true,app_id:env.INSTAGRAM_MESSAGING_META_APP_ID,type:'PAGE',expires_at:0,data_access_expires_at:0,scopes:['instagram_basic','instagram_manage_messages','instagram_manage_comments']}});
+  if(url.pathname.endsWith('/me'))return ok({id:env.INSTAGRAM_MESSAGING_PAGE_ID});
+  if(url.pathname.endsWith('/'+env.INSTAGRAM_MESSAGING_PAGE_ID)){
+    const exchanging=url.searchParams.get('fields')?.includes('access_token');
+    return ok({id:env.INSTAGRAM_MESSAGING_PAGE_ID,...(!assignedMissing||exchanging?{instagram_business_account:{id:brand,username:'finfolk.com.au'}}:{}),...(exchanging?{access_token:'fixture-page'}:{})});
+  }
+  if(url.pathname.endsWith('/subscribed_apps'))return ok(options.method==='POST'?{success:true}:{data:[{id:env.INSTAGRAM_MESSAGING_META_APP_ID,subscribed_fields:['messages','comments','mentions']}]});
+  assert.equal(options.headers.Authorization,'Bearer fixture-page');
+  assert.ok(!url.href.includes('fixture-page'));
   if (options.method === "POST") {
     const sent = JSON.parse(options.body);
     assert.ok([sender, otherSender, stranger].includes(sent.recipient.id));
@@ -420,7 +370,7 @@ try {
       await q(
         "SELECT credential_ciphertext FROM finfolk.messaging_accounts WHERE id='instagram'",
       )
-    )[0].credential_ciphertext.includes("fixture-long"),
+    )[0].credential_ciphertext.includes("fixture-page"),
   );
   await rollout(["ping", "help"]);
   await drain();
@@ -707,34 +657,34 @@ try {
     enabledCommands: ["ping", "help"],
     pilotSenderIds: [],
   });
-  // New Meta apps require Unified Login: same API lifecycle, a new provider namespace and business token.
-  env.INSTAGRAM_MESSAGING_PROVIDER = "instagram-unified";
+  // Reconnect the same Page pathway with a changed Meta app binding.
+  env.INSTAGRAM_MESSAGING_PROVIDER = "instagram-facebook";
   env.INSTAGRAM_MESSAGING_META_APP_ID = "778";
-  env.INSTAGRAM_MESSAGING_LOGIN_CONFIG_ID = "5544";
-  let unifiedAuth = await request(
+  env.INSTAGRAM_MESSAGING_PAGE_ID = "222";
+  let pageReconnectAuth = await request(
     admin,
     "POST",
     "/v1/admin/messaging/instagram/authorization",
     {},
   );
-  const unifiedURL = new URL(unifiedAuth.data.authorizationUrl);
-  assert.equal(unifiedURL.hostname, "www.facebook.com");
-  assert.equal(unifiedURL.searchParams.get("client_id"), "778");
-  assert.equal(unifiedURL.searchParams.get("config_id"), "5544");
-  assert.equal(unifiedURL.searchParams.get("scope"), null);
-  env.INSTAGRAM_MESSAGING_LOGIN_CONFIG_ID = "5545";
+  const pageReconnectURL = new URL(pageReconnectAuth.data.authorizationUrl);
+  assert.equal(pageReconnectURL.hostname, "www.facebook.com");
+  assert.equal(pageReconnectURL.searchParams.get("client_id"), "778");
+  assert.equal(pageReconnectURL.searchParams.has("config_id"), false);
+  assert.ok(pageReconnectURL.searchParams.get("scope").includes("instagram_manage_comments"));
+  env.INSTAGRAM_MESSAGING_PAGE_ID = "223";
   let staleAuth = await app.request(
     "/v1/integrations/instagram/oauth/callback?code=fixture-code&state=" +
-      unifiedURL.searchParams.get("state"),
+      pageReconnectURL.searchParams.get("state"),
     {},
     env,
   );
   assert.equal(
     staleAuth.status,
     400,
-    "Changing the login configuration invalidates the old authorization",
+    "Changing the configured Page invalidates the old authorization",
   );
-  env.INSTAGRAM_MESSAGING_LOGIN_CONFIG_ID = "5544";
+  env.INSTAGRAM_MESSAGING_PAGE_ID = "222";
   await q(
     "UPDATE finfolk.messaging_accounts SET account_id=null,username=null,credential_ciphertext=null,token_expires_at=null,provider_scope=null,checks='{}',mode='disabled' WHERE id='instagram'",
   );
@@ -753,11 +703,11 @@ try {
   );
   assert.equal(pendingCallback.status, 409);
   const pendingConfig = await messagingConfig(q, env, { credentials: true });
-  assert.equal(pendingConfig.token, "fixture-business");
+  assert.equal(pendingConfig.token, "fixture-page");
   assert.equal(pendingConfig.checks.pendingVerification, true);
   assert.equal(pendingConfig.checks.authorization, false);
   assert.equal(pendingConfig.mode, "disabled");
-  assert.ok(!pendingConfig.credential_ciphertext.includes("fixture-business"));
+  assert.ok(!pendingConfig.credential_ciphertext.includes("fixture-page"));
   const exchangeCount = businessExchanges;
   await assert.rejects(
     () =>
@@ -767,7 +717,7 @@ try {
         {
           token: pendingConfig.token,
           expiresAt: null,
-          tokenKind: "business-integration-system-user",
+          tokenKind: "facebook-page",
         },
         admin,
         randomUUID(),
@@ -794,7 +744,7 @@ try {
     {
       token: pendingConfig.token,
       expiresAt: null,
-      tokenKind: "business-integration-system-user",
+      tokenKind: "facebook-page",
     },
     admin,
     randomUUID(),
@@ -830,54 +780,54 @@ try {
     "Failed reconnect preserves the verified credential",
   );
   assignedMissing = false;
-  unifiedAuth = await request(
+  pageReconnectAuth = await request(
     admin,
     "POST",
     "/v1/admin/messaging/instagram/authorization",
     {},
   );
-  const unifiedState = new URL(
-    unifiedAuth.data.authorizationUrl,
+  const pageReconnectState = new URL(
+    pageReconnectAuth.data.authorizationUrl,
   ).searchParams.get("state");
-  const unifiedCallback = await app.request(
+  const pageReconnectCallback = await app.request(
     "/v1/integrations/instagram/oauth/callback?code=fixture-code&state=" +
-      unifiedState,
+      pageReconnectState,
     {},
     env,
   );
-  assert.equal(unifiedCallback.status, 303);
-  const unifiedConfig = await messagingConfig(q, env, { credentials: true });
-  assert.equal(unifiedConfig.provider, "instagram-unified");
-  assert.equal(unifiedConfig.scope, "instagram-unified:778:" + brand);
-  assert.equal(unifiedConfig.token, "fixture-business");
-  assert.equal(unifiedConfig.token_expires_at, null);
-  assert.equal(unifiedConfig.mode, "disabled");
+  assert.equal(pageReconnectCallback.status, 303);
+  const pageReconnectConfig = await messagingConfig(q, env, { credentials: true });
+  assert.equal(pageReconnectConfig.provider, "instagram-facebook");
+  assert.equal(pageReconnectConfig.scope, "instagram-facebook:778:" + brand);
+  assert.equal(pageReconnectConfig.token, "fixture-page");
+  assert.equal(pageReconnectConfig.token_expires_at, null);
+  assert.equal(pageReconnectConfig.mode, "disabled");
   follows = true;
   await incoming(sender, "/ping");
   await incoming(otherSender, "/help");
   await rollout(["ping", "help"]);
-  const unifiedBefore = replies.length;
-  const unifiedPing = await incoming(sender, "/ping");
-  assert.equal(unifiedPing.processing_state, "completed");
+  const pageReconnectBefore = replies.length;
+  const pageReconnectPing = await incoming(sender, "/ping");
+  assert.equal(pageReconnectPing.processing_state, "completed");
   assert.match(replies.at(-1).message.text, /^Pong\. Reference:/);
-  assert.equal((await outbox(unifiedPing.id)).state, "provider_accepted");
-  await incoming(sender, "/ping", { mid: unifiedPing.id.split(":").at(-1) });
+  assert.equal((await outbox(pageReconnectPing.id)).state, "provider_accepted");
+  await incoming(sender, "/ping", { mid: pageReconnectPing.id.split(":").at(-1) });
   assert.equal(
     replies.length,
-    unifiedBefore + 1,
-    "Unified duplicates reply only once",
+    pageReconnectBefore + 1,
+    "Page duplicates reply only once",
   );
   await incoming(sender, "/help");
   assert.match(replies.at(-1).message.text, /\/ping/);
   follows = false;
-  const unifiedPublicHelp = await incoming(otherSender, "/help");
+  const pageReconnectPublicHelp = await incoming(otherSender, "/help");
   assert.equal(
     replies.length,
-    unifiedBefore + 3,
+    pageReconnectBefore + 3,
     "Unified nonfollowers can receive public help",
   );
-  assert.equal(unifiedPublicHelp.processing_state, "completed");
-  assert.equal(unifiedPublicHelp.follow_checked_at, null);
+  assert.equal(pageReconnectPublicHelp.processing_state, "completed");
+  assert.equal(pageReconnectPublicHelp.follow_checked_at, null);
   assert.equal(
     Buffer.byteLength(replies.at(-1).message.text, "utf8") < 900,
     true,
@@ -891,12 +841,12 @@ try {
       enabledCommands: ["help", "ping"],
       pilotSenderIds: [],
       acceptance: {
-        pingEventId: unifiedPing.event_id,
-        helpEventId: unifiedPing.event_id,
+        pingEventId: pageReconnectPing.event_id,
+        helpEventId: pageReconnectPing.event_id,
         visibleRepliesConfirmed: true,
         productionAccessConfirmed: true,
         nonFollowerTestConfirmed: true,
-        nonFollowerHelpEventId: unifiedPublicHelp.event_id,
+        nonFollowerHelpEventId: pageReconnectPublicHelp.event_id,
       },
     },
     409,
@@ -906,12 +856,12 @@ try {
     enabledCommands: ["help", "ping"],
     pilotSenderIds: [],
     acceptance: {
-      pingEventId: unifiedPing.event_id,
+      pingEventId: pageReconnectPing.event_id,
       helpEventId: (await incoming(sender, "/help")).event_id,
       visibleRepliesConfirmed: true,
       productionAccessConfirmed: true,
       nonFollowerTestConfirmed: true,
-      nonFollowerHelpEventId: unifiedPublicHelp.event_id,
+      nonFollowerHelpEventId: pageReconnectPublicHelp.event_id,
     },
   });
   const publicReady = (
@@ -939,7 +889,7 @@ try {
   profileError = false;
 
   console.log(
-    "UNIFIED_MESSAGING_SQL_PASS: actual role, Meta code exchange, business-account discovery, subscription, encrypted scoped credentials and changed-configuration OAuth rejection.",
+    "PAGE_MESSAGING_SQL_PASS: actual role, Meta code exchange, configured Page binding, subscription, encrypted scoped credentials and changed-configuration OAuth rejection.",
   );
   console.log(
     "MESSAGING_SQL_API_PASS: isolated migration, actual Worker role, OpenAPI response validation, OAuth, encrypted idempotency, owner/admin boundaries, durable receipts, follower gates, claims/reviews, commands, queue recovery, outbox uncertainty, rollout cancellation and account-deletion cleanup.",
@@ -956,7 +906,7 @@ try {
       who,
     ]);
     await q("DELETE FROM finfolk.instagram_dm_limits WHERE sender_id=$1", [
-      digest("instagram-login:777:" + brand + ":" + who),
+      digest("instagram-facebook:777:" + brand + ":" + who),
     ]);
   }
   await q(

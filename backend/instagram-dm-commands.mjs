@@ -1,4 +1,4 @@
-import {instagramAccountURL,instagramLinks} from './instagram-urls.mjs';
+import {instagramAccountURL,instagramPublicURL,instagramLinks} from './instagram-urls.mjs';
 import { issueConnectCode } from './instagram-connect.mjs';
 import { commands } from "./messaging-config.mjs";
 import { windowFor } from "./community-core.mjs";
@@ -6,29 +6,43 @@ const accountURL = "https://finfolk.com.au/?view=account&tab=instagram";
 export const followRequiredReply =
   "Please follow @finfolk.com.au to use this feature.\nhttps://www.instagram.com/finfolk.com.au/\n\nOnce you’re following, send the same command again. You can use /help without following or connecting an account.";
 export const helpText = (enabled = Object.keys(commands)) =>
-  "Hey! Welcome to FinFolk 🌊\nYour coastal companion for finding beaches, exploring depths and keeping your dive memories together.\n\nAvailable here:\n" +
+  "Hey! Welcome to FinFolk 🌊\n\n" +
   Object.entries(commands)
-    .filter(([name]) => enabled.includes(name))
-    .map(([, c]) => c.syntax + " — " + c.description)
-    .join("\n") +
-  "\n\nGet started: https://finfolk.com.au\nExplore the map or sign in to start your logbook.\n\nYou don’t need to follow or connect your account to ask for help. Please follow @finfolk.com.au to connect your account and use member features, comments and posts.";
+    .filter(([name]) => enabled.includes(name) && !['ping','site','privacy','cancel','disconnect'].includes(name))
+    .map(([,c]) => c.syntax + ' — ' + c.description).join('\n') +
+  "\n/site — Open FinFolk\n/privacy — Privacy and deletion information\n\n/help account — Linking guidance\n/help diagnostics — Test the connection\n\nhttps://finfolk.com.au\nYou don’t need to follow or connect your account to ask for help.";
 export const commandHelp = helpText();
-export function parseInstagramCommand(text = "") {
-  const match = String(text)
-    .trim()
-    .match(/^\/([a-z]+)(?:\s+([^\r\n]*))?$/i);
-  if (!match)
-    return {
-      command: String(text).trim().startsWith("/") ? "unknown" : "prompt",
-      args: "",
-    };
-  const command = match[1].toLowerCase()==="checkin"?"in":match[1].toLowerCase(),
-    args = (match[2] || "").trim();
-  if (command === "claim") return { command: "claim_retired", args: "" };
-  if (!Object.keys(commands).includes(command))
-    return { command: "unknown", args: "" };
-  if (command !== "in" && args) return { command: "unknown", args: "" };
-  return { command, args: args.slice(0, 200) };
+export function parseInstagramCommand(text = '') {
+  const input=String(text).trim();
+  if(/^help$/i.test(input))return {command:'help',args:''};
+  if(/[\r\n]/.test(input))return {command:input.startsWith('/')?'unknown':'prompt',args:input.startsWith('/')?'Please send one command at a time. For example: /help.':''};
+  const match=input.match(/^\/([a-z]+)(?:\s+(.+))?$/i);
+  if(!match)return {command:input.startsWith('/')?'unknown':'prompt',args:''};
+  const aliases={menu:'help',checkin:'in'};
+  const command=aliases[match[1].toLowerCase()]||match[1].toLowerCase(),args=(match[2]||'').trim();
+  if(command==='claim')return {command:'claim_retired',args:''};
+  if(!Object.hasOwn(commands,command))return {command:'unknown',args:''};
+  if(command==='help')return {command,args:args.toLowerCase().slice(0,200)};
+  if(command!=='in' && args)return {command:'unknown',args:'Usage: /'+command};
+  if(args.length>200)return {command:'unknown',args:'That location is too long. Please send /in with a shorter location.'};
+  return {command,args};
+}
+export function publicInstagramReply(event,env={}) {
+  const enabled=env.MESSAGING_ENABLED_COMMANDS||Object.keys(commands),site=instagramPublicURL(env);
+  if(event.command==='ping')return 'Pong. Reference: '+event.correlation_id;
+  if(event.command==='site')return 'Explore FinFolk: '+site;
+  if(event.command==='privacy')return 'FinFolk privacy: https://api.finfolk.com.au/privacy\nData deletion instructions: https://api.finfolk.com.au/data-deletion';
+  if(event.command==='disconnect')return 'To disconnect Instagram, open '+instagramAccountURL(env)+' and confirm Remove link. This does not delete your FinFolk account.';
+  if(event.command==='unknown')return event.args || 'I don’t recognise that command. Send /help to see the available commands.';
+  if(event.command==='claim_retired')return '/claim has been retired. Follow @finfolk.com.au and send /connect to receive a code, then enter it on FinFolk: '+instagramAccountURL(env);
+  if(event.command==='help'){
+    if(!event.args)return instagramLinks(helpText(enabled),env);
+    if(event.args==='diagnostics')return enabled.includes('ping')?'Send /ping to check that FinFolk is responding.':'Diagnostics are not enabled. Send /help for available commands.';
+    if(event.args==='account')return enabled.includes('connect')?'Follow @finfolk.com.au, then send /connect for a private code. Enter it at '+instagramAccountURL(env)+(enabled.includes('status')?'\n/status — Check your connection':'')+'\n/cancel — Cancel an unused code\n/disconnect — Open link management':'Account linking is not enabled in this chat. Manage existing links at '+instagramAccountURL(env)+'. You can still use /help and /site.';
+    if(event.args==='visits')return enabled.includes('in')?'Send /in <location> to record arrival and /out when you leave. Follow @finfolk.com.au and connect your verified FinFolk account first.':'Visit commands are not enabled. Send /help for available commands.';
+    return 'Help topics: /help account, /help visits, /help diagnostics. Send /help for the main menu.';
+  }
+  return undefined;
 }
 const beachLabel = (b) =>
   [b.name, b.area_name, b.state].filter(Boolean).join(", ");
@@ -43,23 +57,22 @@ async function claimedMember(q, sender, scope) {
 }
 export async function commandResult(q, event, env, identity, identityError) {
   const accountURL=instagramAccountURL(env);
-  if (event.command === "ping")
-    return "Pong. Reference: " + event.correlation_id;
-  if (event.command === "prompt") {
-    const sent = await q(
-      "UPDATE finfolk.instagram_dm_limits SET prompted_at=now() WHERE sender_id=$1 AND (prompted_at IS NULL OR prompted_at<now()-interval '24 hours') RETURNING sender_id",
-      [event.rate_limit_key],
-    );
-    return sent.length
-      ? "Hi! Send /help to see FinFolk commands. Everyone can message us. Please follow @finfolk.com.au to connect your account and use member features."
-      : null;
+  const publicReply=publicInstagramReply(event,env);
+  if(publicReply!==undefined)return publicReply;
+  if(event.command==='prompt'){
+    const sent=await q("UPDATE finfolk.instagram_dm_limits SET prompted_at=now() WHERE sender_id=$1 AND (prompted_at IS NULL OR prompted_at<now()-interval '24 hours') RETURNING sender_id",[event.rate_limit_key]);
+    return sent.length?instagramLinks(helpText(env.MESSAGING_ENABLED_COMMANDS),env):null;
   }
-  if (["help", "unknown"].includes(event.command))
-    return event.command === "help"
-      ? instagramLinks(helpText(env.MESSAGING_ENABLED_COMMANDS),env)
-      : "I don’t recognise that command.\n\n" +
-          instagramLinks(helpText(env.MESSAGING_ENABLED_COMMANDS),env);
-  if (event.command === "claim_retired") return "/claim has been retired. Follow @finfolk.com.au and send /connect to receive a code, then enter it on FinFolk: " + accountURL;
+  if(event.command==='cancel'){
+    const cancelled=await q("UPDATE finfolk.instagram_connect_codes SET invalidated=true WHERE sender_id=$1 AND provider_scope=$2 AND NOT invalidated AND consumed_by IS NULL AND expires_at>now() RETURNING id",[event.sender_id,env.MESSAGING_PROVIDER_SCOPE]);
+    return cancelled.length?'Your unused connection code has been cancelled. Your existing account link, if any, is unchanged.':'No unused connection code is waiting. Your existing account link, if any, is unchanged.';
+  }
+  if(event.command==='status'){
+    const link=(await q("SELECT c.handle,m.deleted FROM finfolk.instagram_connections c LEFT JOIN finfolk.members m ON m.user_id=c.user_id WHERE c.sender_id=$1 AND c.provider_scope=$2 AND c.status='connected'",[event.sender_id,env.MESSAGING_PROVIDER_SCOPE]))[0];
+    if(link)return link.deleted===false?'Your Instagram is connected to FinFolk. Manage it at '+accountURL:'Your connection needs attention. Open '+accountURL+' to review it.';
+    const pending=(await q("SELECT expires_at FROM finfolk.instagram_connect_codes WHERE sender_id=$1 AND provider_scope=$2 AND NOT invalidated AND consumed_by IS NULL AND expires_at>now() ORDER BY created_at DESC LIMIT 1",[event.sender_id,env.MESSAGING_PROVIDER_SCOPE]))[0];
+    return pending?'A connection code is waiting. Enter the newest code on FinFolk before '+new Date(pending.expires_at).toISOString()+'.':'This Instagram account is not connected to FinFolk. Send /connect to get started.';
+  }
   if (event.command === "connect") return issueConnectCode(q, event, env, identity);
   const owner = await claimedMember(
     q,
@@ -71,8 +84,6 @@ export async function commandResult(q, event, env, identity, identityError) {
       "This Instagram account is not connected yet. Follow @finfolk.com.au, send /connect, then enter the code at " +
       accountURL
     );
-  if (event.command === "status")
-    return `@${owner.handle} is connected to FinFolk. Your connection is active. Send /help for commands.`;
   if (event.command === "points") {
     const row = (
       await q(

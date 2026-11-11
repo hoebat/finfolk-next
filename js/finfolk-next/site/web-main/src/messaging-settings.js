@@ -80,8 +80,6 @@ export async function renderMessagingSettings({ host, api }) {
         ),
       );
       const labels = {
-        token_refresh_failed:
-          "Reconnect Instagram: automatic token refresh failed.",
         token_expired: "Reconnect Instagram: authorization has expired.",
         subscription_missing:
           "Verify the Instagram account webhook subscription.",
@@ -116,14 +114,7 @@ export async function renderMessagingSettings({ host, api }) {
       ["Public help acceptance", state.checks.publicHelp],
       ["Personal-command follower verification", state.checks.followLookup],
       ["Real-account acceptance", state.checks.liveDelivery],
-      [
-        ["instagram-unified","instagram-facebook"].includes(state.provider)
-          ? "Meta authorization"
-          : "Token refresh",
-        ["instagram-unified","instagram-facebook"].includes(state.provider)
-          ? state.checks.authorization
-          : state.checks.tokenRefresh !== false,
-      ],
+      ["Meta Facebook Page authorization", state.checks.authorization],
     ])
       checks.append(
         el("li", label + ": " + (value ? "verified" : "not verified")),

@@ -79,3 +79,22 @@ assert.equal(queries.length,2);
 assert.ok(queries.every(sql=>!sql.includes("state='pending'") && !sql.includes('instagram_connections')));
 assert.match(await publicStatus(async()=>[{id:'public-trip'}],'https://www.instagram.com/p/example/'),/public-trip/);
 assert.equal(await publicStatus(async()=>{throw Error('Should not query without a source');},null),'This post has not been published on FinFolk.');
+
+// Bare commands are accepted only after provider-verified brand ownership.
+assert.equal(parse('/ping'),null);
+assert.equal(parse('/ping',{allowUnmentioned:true}).command,'ping');
+for(const text of ['/menu','/site','/privacy'])assert.ok(parse(text,{allowUnmentioned:true}));
+assert.equal(parse('/site @finfolk.com.au.evil'),null);
+assert.equal(parse('/menu @finfolk.com.au').command,'help');
+for(const name of ['connect','cancel','disconnect','points','in','out','claim']){
+ const result=parse('/'+name+' never-store-this @finfolk.com.au');
+ assert.equal(result.command,'help');assert.ok(!JSON.stringify(result).includes('never-store-this'));
+}
+const {publicCommentReply}=await import('../backend/instagram-commands.mjs');
+const sharedEnv={INSTAGRAM_COMMENT_COMMANDS:'help,status,ping,site,privacy'};
+for(const text of ['/help','/ping','/site','/privacy','/help account','/help diagnostics']){
+ const reply=publicCommentReply(parse(text,{allowUnmentioned:true}),sharedEnv);
+ assert.equal(typeof reply,'string');assert.ok(Buffer.byteLength(reply)<900);
+}
+assert.match(publicCommentReply(parse('/connect private-code',{allowUnmentioned:true}),sharedEnv),/in a DM/);
+console.log('SHARED_COMMENT_PARSER_PASS: public aliases, verified-owned plain commands, private-command guidance and no argument leaks.');

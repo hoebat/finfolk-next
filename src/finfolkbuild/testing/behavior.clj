@@ -14,7 +14,7 @@
 ;; supply required inputs; assertions below inspect persisted values, not catalogs.
 (require '[finfolkdb.schema.entity-catalog :as catalog]
          '[finfolkbuild.testing.common :as sql]
-         '[finfolkbuild.testing.neon :as neon]
+         '[finfolkbuild.testing.local :as local]
          '[clojure.string :as str])
 (defn typed [verb table & args]
   (eval (apply list (symbol "postgres.core" (name verb)) table args)))
@@ -39,7 +39,7 @@
         statement (str "INSERT INTO finfolk.\"" table "\" ("
                        (str/join "," (map #(str "\"" (:sql-name %) "\"") selected)) ") VALUES ("
                        (str/join "," (map #(str "?::" (sql-type %)) selected)) ") RETURNING row_to_json(\"" table "\")::text")
-        result (apply sql/rows @neon/lock-connection statement (map #(values (keyword (:name %))) selected))]
+        result (apply sql/rows @local/lock-connection statement (map #(values (keyword (:name %))) selected))]
     (json/read (ffirst result) json/+keyword-case-mapper+)))
 
 (declare entity!)
@@ -85,7 +85,7 @@
                               "enum" (let [enum-name (name (get-in column [:spec :enum :ns]))]
                                        (if (= enum-name "EnumClassType")
                                          (if (= key :class-context) "Global" "User")
-                                         (ffirst (sql/rows @neon/lock-connection
+                                         (ffirst (sql/rows @local/lock-connection
                                             "SELECT e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid WHERE t.typname=? ORDER BY e.enumsortorder LIMIT 1" enum-name))))
                               "uuid" (str (java.util.UUID/randomUUID))
                               ("integer" "bigint") 1
@@ -190,7 +190,7 @@
 (defn concurrent-claims! [application account]
   (let [barrier (java.util.concurrent.CyclicBarrier. 2)
         claim (fn [commit?]
-                (with-open [db (neon/connection)]
+                (with-open [db (local/connection)]
                   (.setAutoCommit db false)
                   (try
                     (.await barrier 15 java.util.concurrent.TimeUnit/SECONDS)
@@ -202,7 +202,7 @@
         second (future (claim false))
         committed @first
         rolled-back @second
-        recovered (json/read (ffirst (sql/rows @neon/lock-connection
+        recovered (json/read (ffirst (sql/rows @local/lock-connection
                                  "SELECT finfolk_rpc.claim_message(?,?)::text" application account)) json/+keyword-case-mapper+)]
     (expect! "Concurrent workers claim different receipts" false (= (get-in committed [:receipt :id]) (get-in rolled-back [:receipt :id])))
     (expect! "Rolled-back receipt is recoverable" (get-in rolled-back [:receipt :id]) (get-in recovered [:receipt :id]))

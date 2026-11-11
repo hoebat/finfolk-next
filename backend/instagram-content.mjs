@@ -94,7 +94,7 @@ export async function instagramContentClient(env, q, { capability = 'media', fet
     try {
       response = await fetcher(url, {
         method, headers: { Authorization: 'Bearer ' + config.token },
-        ...(body && { body }), redirect: 'error', signal: AbortSignal.timeout(15000),
+        ...(body && { body }), redirect: 'manual', signal: AbortSignal.timeout(15000),
       });
       data = await response.json();
     } catch {

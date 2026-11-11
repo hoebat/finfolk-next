@@ -13,12 +13,12 @@ const query = async (sql, values=[]) => (await pg.query(sql,values)).rows;
 const db = {query, transaction: fn => pg.transaction(tx=>fn(async(sql,values=[]) => (await tx.query(sql,values)).rows))};
 const env = {
   MESSAGING_ENCRYPTION_KEY: Buffer.alloc(32,9).toString('base64'),
-  INSTAGRAM_MESSAGING_PROVIDER:'instagram-login', INSTAGRAM_MESSAGING_APP_ID:'777',
-  INSTAGRAM_MESSAGING_CLIENT_SECRET:'fixture-secret', INSTAGRAM_MESSAGING_ACCOUNT_ID:'900',
+  INSTAGRAM_MESSAGING_PROVIDER:'instagram-facebook', INSTAGRAM_MESSAGING_META_APP_ID:'777',
+  INSTAGRAM_MESSAGING_META_APP_SECRET:'fixture-secret', INSTAGRAM_MESSAGING_ACCOUNT_ID:'900',
   INSTAGRAM_MESSAGING_GRAPH_VERSION:'v26.0',
   INSTAGRAM_ADMIN_IDS:'alice', INSTAGRAM_QUEUE:{send:async()=>{}},
 };
-const scope='instagram-login:777:900';
+const scope='instagram-facebook:777:900';
 let follows=true, providerFailure=false, holdReplies=false, uncertainReplies=false;
 const logs=[], originalLog=console.log;
 console.log=(...args)=>logs.push(args.map(String).join(" "));

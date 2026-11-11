@@ -1,12 +1,12 @@
 (ns finfolkdb.common.type-site-note-test
   (:use code.test)
-  (:require [lang.core :as l] [finfolkbuild.testing.neon :as neon]
+  (:require [lang.core :as l] [finfolkbuild.testing.local :as local]
             [finfolkbuild.testing.behavior :as fixture]))
 (l/script- :postgres
-  {:runtime :jdbc.client :config (neon/config)
+  {:runtime :jdbc.client :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main] [postgres.core :as pg]
              [finfolkdb.common.type-site-note :as t]]})
-(fact:global {:setup [(neon/setup!)] :teardown [(neon/teardown!)]})
+(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-site-note/EnumSiteNoteTopic :covers [finfolkdb.common.type-site-note/SiteNote] :id note-contracts}
 (fact "topics are closed values and conditions need an observation date"

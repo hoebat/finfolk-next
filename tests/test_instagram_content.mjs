@@ -37,7 +37,7 @@ await client.request('444', { fields: 'id,permalink' });
 let sent = f.calls.at(-1);
 assert.equal(sent.options.headers.Authorization, 'Bearer fixture-page-token');
 assert.equal(sent.url.searchParams.has('access_token'), false);
-assert.equal(sent.options.redirect, 'error');
+assert.equal(sent.options.redirect, 'manual');
 await assert.rejects(client.request('https://untrusted.test/'), e => e.code === 'content_path_invalid');
 await assert.rejects(client.request('444', { access_token: 'bad' }), e => e.code === 'content_parameter_invalid');
 await assert.rejects(client.request('444/media', {}, { method: 'POST' }), e => e.code === 'content_path_invalid');
@@ -71,12 +71,15 @@ try {
   await q(`UPDATE finfolk.messaging_accounts SET account_id='333',provider_scope=$1,credential_ciphertext=$2,mode='pilot',generation=1,checks=$3::jsonb`,
     [f.scope, f.row.credential_ciphertext, JSON.stringify(f.row.checks)]);
   let posts = 0, ambiguous = false;
+  const replyPaths = [];
   const fetcher = async (url, options = {}) => {
     const authorization = f.authorizationResponse(url, options);
     if (authorization) return authorization;
     if (options.method === 'POST') {
       posts++;
-      assert.ok(new URL(url).pathname.endsWith('/123/replies') || new URL(url).pathname.endsWith('/333/mentions'));
+      const path = new URL(url).pathname;
+      replyPaths.push(path);
+      assert.ok(/\/\d+\/replies$/.test(path) || path.endsWith('/333/mentions'));
       assert.ok(options.body.get('message').includes('/help'));
       if (ambiguous) throw Error('fixture-page-token must never appear in diagnostics');
       return Response.json({ id: '444' });
@@ -100,19 +103,76 @@ try {
   await sendCommandReply('123', f.env, db, fetcher);
   assert.equal(posts, 2, 'Uncertain replies are never automatically resent');
   ambiguous = false;
-  await processCommentCommand({...comment,id:'124'}, 'mention', f.env, db, {fetcher});
+  await processCommentCommand({...comment,id:'124',media:{...comment.media,owner:{id:'999'}}}, 'mention', f.env, db, {fetcher});
+  assert.ok(replyPaths.at(-1).endsWith('/333/mentions'), 'External mentions retain the mention reply route');
   assert.equal((await q("SELECT send_state,owner_id,reply FROM finfolk.instagram_commands WHERE id='124'"))[0].send_state,'sent');
   const publicRow = (await q("SELECT owner_id,reply FROM finfolk.instagram_commands WHERE id='124'"))[0];
   assert.equal(publicRow.owner_id,null);
   assert.ok(!publicRow.reply.includes('/checkin'));
   await processCommentCommand({...comment,id:'125',text:'/publish Bondi @finfolk.com.au'},'owned',f.env,db,{fetcher});
   assert.equal((await q("SELECT command FROM finfolk.instagram_commands WHERE id='125'"))[0].command,'help');
+  await processCommentCommand({...comment,id:'126'}, 'mention', f.env, db, {fetcher});
+  assert.ok(replyPaths.at(-1).endsWith('/126/replies'), 'A mention on verified brand-owned media must use the owned-comment route');
+  assert.equal((await q("SELECT context FROM finfolk.instagram_commands WHERE id='126'"))[0].context,'owned');
+  const afterOwnedMention = posts;
+  await processCommentCommand({...comment,id:'126'}, 'owned', f.env, db, {fetcher});
+  assert.equal(posts,afterOwnedMention,'The second webhook context must not create another reply');
   const beforePause = posts;
   await q("UPDATE finfolk.instagram_commands SET send_state='pending' WHERE id='124'");
   f.env.INSTAGRAM_COMMENT_MODE='paused';
   await sendCommandReply('124',f.env,db,fetcher);
   assert.equal(posts,beforePause);
   assert.equal((await q("SELECT send_state FROM finfolk.instagram_commands WHERE id='124'"))[0].send_state,'skipped');
+  f.env.INSTAGRAM_COMMENT_MODE='public';
+  await q('DELETE FROM finfolk.instagram_commands');
+  f.env.INSTAGRAM_COMMENT_MODE='pilot';
+  f.env.INSTAGRAM_COMMENT_TEST_POSTS='888';
+  f.env.INSTAGRAM_COMMENT_COMMANDS='help,status,ping,site,privacy';
+  let sharedPosts=0, sharedAmbiguous=false, delivered='';
+  const sharedFetcher=async(url,options={})=>{
+    const authorization=f.authorizationResponse(url,options);if(authorization)return authorization;
+    assert.equal(options.method,'POST','Shared comments require no follower/profile API request');
+    sharedPosts++; delivered=options.body.get('message');
+    assert.ok(!delivered.includes('never-store-this'));
+    if(sharedAmbiguous)throw Error('ambiguous fixture send');
+    return Response.json({id:'777'});
+  };
+  const publicQuery=async(sql,values)=>{
+    assert.ok(!/instagram_comment_identities|instagram_connections|instagram_connect_codes|finfolk\.checkins/.test(sql),'Shared comment commands must not resolve private identities');
+    return q(sql,values);
+  };
+  const publicDB={query:publicQuery,transaction:fn=>db.transaction(tx=>fn(async(sql,values)=>{
+    assert.ok(!/instagram_comment_identities|instagram_connections|instagram_connect_codes|finfolk\.checkins/.test(sql));return tx(sql,values);
+  }))};
+  let sharedId=500;
+  for(const [text,expected] of [
+    ['/help',/Available comment commands/],['/menu',/Available comment commands/],['/ping',/Pong!/],
+    ['/site',/https:\/\/finfolk.com.au/],['/privacy',/api.finfolk.com.au\/privacy/],
+    ['/help account',/in a DM/],['/help diagnostics',/Comment \/ping/],
+    ['/connect never-store-this',/in a DM/],['/cancel',/in a DM/],['/disconnect',/in a DM/],
+    ['/points',/in a DM/],['/in Bondi',/in a DM/],['/out',/in a DM/],['/status',/post has not been published/],
+  ]){
+    const incoming={...comment,id:String(sharedId++),text,from:{id:String(sharedId+1000),username:'diver'}};
+    const before=sharedPosts;
+    await processCommentCommand(incoming,'owned',f.env,publicDB,{fetcher:sharedFetcher});
+    assert.equal(sharedPosts,before+1,text); assert.match(delivered,expected);
+    const row=(await q('SELECT * FROM finfolk.instagram_commands WHERE id=$1',[incoming.id]))[0];
+    assert.equal(row.owner_id,null);assert.equal(row.send_state,'sent');assert.ok(!JSON.stringify(row.args).includes('never-store-this'));
+    await processCommentCommand(incoming,'mention',f.env,publicDB,{fetcher:sharedFetcher});
+    assert.equal(sharedPosts,before+1,'Owned and mention deliveries cannot repeat a reply');
+  }
+  const beforeGuards=sharedPosts;
+  await processCommentCommand({...comment,id:'600',text:'/ping',media:{id:'889',owner:{id:'333'}}},'owned',f.env,publicDB,{fetcher:sharedFetcher});
+  assert.equal(sharedPosts,beforeGuards,'Unapproved pilot posts do not get replies');
+  assert.equal(await processCommentCommand({...comment,id:'601',text:'/ping',media:{id:'888',owner:{id:'999'}}},'owned',f.env,publicDB,{fetcher:sharedFetcher}),false,'Request context alone cannot authorize unmentioned commands');
+  await processCommentCommand({...comment,id:'602',text:'/ping',from:{id:'333'}},'owned',f.env,publicDB,{fetcher:sharedFetcher});
+  assert.equal(sharedPosts,beforeGuards,'Brand echoes are ignored');
+  sharedAmbiguous=true;
+  await processCommentCommand({...comment,id:'603',text:'/ping'},'owned',f.env,publicDB,{fetcher:sharedFetcher});
+  assert.equal((await q("SELECT send_state FROM finfolk.instagram_commands WHERE id='603'"))[0].send_state,'uncertain');
+  await sendCommandReply('603',f.env,publicDB,sharedFetcher);
+  assert.equal(sharedPosts,beforeGuards+1,'An ambiguous shared-comment reply is never automatically repeated');
+  assert.equal((await q('SELECT count(*)::int AS n FROM finfolk.instagram_connect_codes'))[0].n,0,'Public account commands do not issue or cancel codes');
   f.env.INSTAGRAM_COMMENT_MODE='public';
   globalThis.fetch = fetcher;
   await q("UPDATE finfolk.instagram_sources SET status='queued',lease_until=now()+interval '5 minutes' WHERE key='tags'");

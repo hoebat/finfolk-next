@@ -50,7 +50,8 @@
       (. -/HTTP (delete id))
       (-/send client {"type" "http-abort" "id" id})
       (reject (new Error "Account request timed out."))) 30000))
-    (. -/HTTP (set id {"resolve" resolve "reject" reject "timer" timer "client" client "scope" (. scope ["id"]) "request" (. options ["request"])}))
+    (. -/HTTP (set id {"resolve" resolve "reject" reject "timer" timer "client" client "scope" (. scope ["id"]) "request" (. options ["request"])
+                        "name" name "values" values "options" options}))
     (-/send client {"type" "http" "id" id "scope" (. scope ["id"]) "name" name "values" values
                    "request" (. options ["request"]) "options" {"idempotencyKey" (. options ["idempotencyKey"])}})))))
 (defn.js scope [client actor]
@@ -94,6 +95,23 @@
   (for:iter [scope-id (. client ["scopes"])]
     (var scope (. -/SCOPES (get scope-id)))
     (when scope (. (. scope ["clients"]) (delete client))))
+  ;; A request belongs to the page performing HTTP, not merely its actor scope.
+  ;; Leaving that page must settle its requests before another tab joins a
+  ;; coalesced model read. Reads can move within the same actor; writes cannot.
+  (for:iter [[id task] -/HTTP]
+    (when (== (. task ["client"]) client)
+      (clearTimeout (. task ["timer"]))
+      (. -/HTTP (delete id))
+      (-/send client {"type" "http-abort" "id" id})
+      (var scope (. -/SCOPES (get (. task ["scope"]))))
+      (var spec (. registry/operations [(. task ["name"])]))
+      (if (and scope (> (. scope ["clients"] ["size"]) 0) spec (not (. spec ["write"])))
+        (. (-/transport scope (. task ["name"]) (. task ["values"])
+             (Object.assign {} (. task ["options"]) {"client" nil}))
+           (then (. task ["resolve"]) (. task ["reject"])))
+        ((. task ["reject"])
+          (Object.assign (new Error "The page handling this account request closed. Please retry.")
+            {"name" "AbortError" "code" "account_page_detached" "mutationOutcomeUnknown" (not (not (. spec ["write"])))})))))
   (for:iter [stop (. (. client ["subscriptions"]) (values))] (stop))
   (. (. client ["subscriptions"]) (clear))
   (. -/CLIENTS (delete client)))

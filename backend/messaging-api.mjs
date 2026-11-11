@@ -1,3 +1,4 @@
+import { instagramAuthorizationURL } from './messaging-config.mjs';
 import {lookupIdentity} from './backbone.mjs';
 export const messagingReturnURL=env=>new URL('/?view=account&tab=settings&messaging=connected',env.FINFOLK_PUBLIC_URL || 'https://finfolk.com.au').href;
 import { connectEnabled, prepareConnect, redeemConnect } from './instagram-connect.mjs';
@@ -353,7 +354,7 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch, registe
       if (
         !["disabled", "pilot", "live"].includes(input.mode) ||
         !Array.isArray(input.enabledCommands) ||
-        input.enabledCommands.length > 6 ||
+        input.enabledCommands.length > Object.keys(commands).length ||
         input.enabledCommands.some((name) => !Object.hasOwn(commands, name)) ||
         new Set(input.enabledCommands).size !== input.enabledCommands.length
       )
@@ -697,53 +698,12 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch, registe
       only(input, []);
       encryptionKey(ctx.env);
       const settings = oauthSettings(ctx.env);
-      if (
-        !/^\d{1,40}$/.test(settings.appId) ||
-        !settings.clientSecret ||
-        (settings.provider === "instagram-unified" &&
-          !/^\d{1,40}$/.test(settings.loginConfigId))
-      )
-        fail(
-          "oauth_not_configured",
-          "Configure the selected messaging authorization credentials and login configuration first.",
-          503,
-        );
       const state = randomBytes(32).toString("base64url");
       await ctx.db.query(
         "INSERT INTO finfolk.messaging_oauth_states(state_hash,user_id,expires_at,flow_key) VALUES($1,$2,now()+interval '10 minutes',$3)",
         [digest(state), ctx.uid, oauthFlowKey(ctx.env)],
       );
-      const url = new URL(
-        settings.provider !== "instagram-login"
-          ? "https://www.facebook.com/dialog/oauth"
-          : "https://www.instagram.com/oauth/authorize",
-      );
-      url.searchParams.set("client_id", settings.appId);
-      url.searchParams.set("redirect_uri", settings.redirectURI);
-      url.searchParams.set("response_type", "code");
-      if (settings.provider === "instagram-unified") {
-        url.searchParams.set("config_id", settings.loginConfigId);
-        url.searchParams.set("override_default_response_type", "true");
-        url.searchParams.set("display", "popup");
-        url.searchParams.set("prompt", "login");
-      } else if (settings.provider === "instagram-facebook") {
-        if (!/^\d{1,40}$/.test(settings.pageId))
-          fail(
-            "oauth_not_configured",
-            "Configure the FinFolk Facebook Page first.",
-            503,
-          );
-        url.searchParams.set(
-          "scope",
-          "instagram_basic,instagram_manage_messages,pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging",
-        );
-        url.searchParams.set("auth_type", "rerequest");
-      } else
-        url.searchParams.set(
-          "scope",
-          "instagram_business_basic,instagram_business_manage_messages",
-        );
-      url.searchParams.set("state", state);
+      const url = new URL(instagramAuthorizationURL(settings, state));
       return {
         data: {
           authorizationUrl: url.href,

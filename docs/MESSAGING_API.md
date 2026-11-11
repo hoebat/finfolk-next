@@ -31,19 +31,9 @@ This saves a self-provided profile URL, not verified ownership. `DELETE /v1/me/i
 
 ## Provider setup
 
-Messaging uses **Instagram API with Instagram Login** at `graph.instagram.com`, pinned to `v26.0`. Comment/discovery integrations continue to use their existing Facebook Login configuration. Do not copy tokens or scoped sender IDs between stacks.
+Messaging, comments and media use the **Meta Facebook Login for Business / Page-token connection** at `graph.facebook.com`, pinned to `v26.0`. `instagram-facebook` is the only supported provider. See [the canonical activation runbook](INSTAGRAM_ACTIVATION.md#only-supported-authorization-meta-facebook-page) for identifiers, permissions, Page-token exchange, subscriptions and acceptance checks. Instagram-only login, system-user authorization and Instagram user-token refresh are not available.
 
-1. Apply migration `0013_messaging_api.sql` through the migration runner on the isolated Neon branch first, then production, using the direct connection. Existing tables are extended without rewriting prior migrations. Established verified connections remain intact; provider scopes are never relabelled.
-2. Provision a stable, base64-encoded 32-byte `MESSAGING_ENCRYPTION_KEY` in Worker secrets. Keep an ignored, permissions-restricted copy and run `node scripts/backup_env.mjs .env.messaging.local` to create and verify an encrypted backup. Do not generate a different key on each deploy or discard it while credentials/replay records remain encrypted with it.
-3. Set the Instagram Login client ID and secret as `INSTAGRAM_MESSAGING_APP_ID` and `INSTAGRAM_MESSAGING_CLIENT_SECRET`. Set the associated Meta app ID and webhook secret separately when they differ from existing app configuration. The client secret and webhook-signature secret are different concepts and must not be substituted for one another.
-4. Register `https://api.finfolk.com.au/v1/integrations/instagram/oauth/callback` exactly. Register the stable webhook callback `https://api.finfolk.com.au/instagram/webhook`, with the existing verify token. App subscriptions and actual brand-account subscriptions are separate.
-5. Configure the intended administrator's actual Neon member ID in `INSTAGRAM_ADMIN_IDS`. Find this from the intended signed-in account; do not grant administration based on a self-provided Instagram handle.
-6. Open Settings → Instagram messaging → Authorize @finfolk.com.au. Authorize `instagram_business_basic` and `instagram_business_manage_messages`. The callback verifies the actual account username and optional configured expected ID, obtains a long-lived token, subscribes `messages`, verifies the recorded subscription, encrypts the token and leaves processing disabled.
-7. Complete Meta access, app review/publishing and connected-message-tool requirements applicable to the account. OAuth success alone does not prove that real messages are delivered. The supported token refresh runs before expiry; failed refresh is reported in checks, and expired/invalid credentials block sends.
-
-If messaging uses a different Meta app, configure its webhook signature secret explicitly. The common callback validates the correct app secret independently for messaging and existing discovery, preventing one app's events from being treated as another provider scope.
-
-No user access token is returned to the browser. Encrypted credentials are authenticated against the provider/client/brand scope. Changing client IDs requires reconnecting, not reinterpreting old scoped identities.
+Open Settings → Instagram messaging → Authorize @finfolk.com.au. The Facebook dialog requests the messaging and comment permissions. The callback validates the app-bound Page token and linked account, stores it encrypted and leaves processing paused. Account-scoped messaging and comment identities remain distinct even under this one connection; never equate their sender IDs.
 
 ## Receipt → command → reply
 
@@ -80,7 +70,7 @@ Events and outbound records expire after 30 days. Account deletion removes attri
 
 The readiness response also includes optional admin-only health metadata for pending/uncertain/failed replies, stalled commands, authorization expiry and subscription/refresh failures. No traffic alone is not considered an outage.
 
-Settings shows token/setup blockers, brand subscription, follow capability, last signed receipt, last command, last provider-accepted reply and recent event metadata. Token refresh failures appear as a failed check. Lack of recent traffic alone is not proof of an outage.
+Settings shows token/setup blockers, brand subscription, follow capability, last signed receipt, last command, last provider-accepted reply and recent event metadata. Expired or revoked Page grants require reconnection. Lack of recent traffic alone is not proof of an outage.
 
 1. With processing disabled, send a new message from @chriszfree. Verify a signed receipt and authoritative scoped sender ID; dashboard delivery by itself is insufficient.
 2. Configure pilot mode for sender IDs observed in signed receipts and enable only `ping` and `help`. No other account can execute commands.

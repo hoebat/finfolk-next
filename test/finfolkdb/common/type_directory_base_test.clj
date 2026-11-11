@@ -1,10 +1,10 @@
 (ns finfolkdb.common.type-directory-base-test
   (:use code.test)
   (:require [lang.core :as l]
-            [finfolkbuild.testing.neon :as neon]
+            [finfolkbuild.testing.local :as local]
             [finfolkbuild.testing.behavior :as fixture]))
 (l/script- :postgres
-  {:runtime :jdbc.client :config (neon/config)
+  {:runtime :jdbc.client :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main]
              [postgres.core :as pg]
              [finfolkdb.common.type-directory-base :as t]
@@ -12,7 +12,7 @@
              [finfolkdb.common.type-user-access :as access]
              [finfolkdb.common.type-user :as users]
              [finfolkdb.common.type-user-activity :as activity]]})
-(fact:global {:setup [(neon/setup!)] :teardown [(neon/teardown!)]})
+(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-directory-base/DirectoryListing :id publication-privacy}
 (fact "candidate listings stay private and publication never exposes internal notes"

@@ -1,14 +1,14 @@
 (ns finfolkdb.common.type-user-test
   (:use code.test)
   (:require [lang.core :as l]
-            [finfolkbuild.testing.neon :as neon]
+            [finfolkbuild.testing.local :as local]
             [finfolkbuild.testing.jdbc :as jdbc]
             [finfolkbuild.testing.common :as common]
             [finfolkbuild.testing.behavior :as fixture]))
 
 (l/script- :postgres
   {:runtime :jdbc.client
-   :config (neon/config)
+   :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main]
              [finfolkdb.common.type-user :as t]
              [finfolkdb.fn.user.user-manage :as user]
@@ -16,8 +16,8 @@
              [finfolkdb.common.type-system-site :as site]
              [postgres.core :as pg]]})
 
-(fact:global {:setup [(neon/setup!)]
-              :teardown [(neon/teardown!)]})
+(fact:global {:setup [(local/setup!)]
+              :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-user/User :added "0.1"}
 (fact "User persists a linked entity and returns its created values"
@@ -40,7 +40,7 @@
   => true)
 
 ^{:refer finfolkdb.common.type-user/User :id user-linked-writes}
-(fact "typed users initialize addons and relationships enforce identity on Neon"
+(fact "typed users initialize addons and relationships enforce identity on local PostgreSQL"
   (:id (user/insert-user "runtime-alice" {:displayName "Alice"}
                         (system/op-fn "create-user" "runtime-alice" {})))
   => "runtime-alice"

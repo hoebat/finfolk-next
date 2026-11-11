@@ -1,22 +1,22 @@
 (ns finfolkdb.common.type-import-base-test
   (:use code.test)
   (:require [lang.core :as l]
-            [finfolkbuild.testing.neon :as neon]
+            [finfolkbuild.testing.local :as local]
             [finfolkbuild.testing.jdbc :as jdbc]
             [finfolkbuild.testing.common :as common]
             [finfolkbuild.testing.behavior :as fixture]))
 
 (l/script- :postgres
   {:runtime :jdbc.client
-   :config (neon/config)
+   :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main] [finfolkdb.common.type-import-base :as t] [postgres.core :as pg]]})
 
-(fact:global {:setup [(neon/setup!)]
-              :teardown [(neon/teardown!)]})
+(fact:global {:setup [(local/setup!)]
+              :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-import-base/EnumDataAssetKind :added "0.1"}
-(fact "EnumDataAssetKind labels on Neon"
-  (binding [jdbc/*connection-fn* neon/contract-connection] (common/check! 'finfolkdb.common.type-import-base/EnumDataAssetKind))
+(fact "EnumDataAssetKind labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection] (common/check! 'finfolkdb.common.type-import-base/EnumDataAssetKind))
   => true)
 
 ^{:refer finfolkdb.common.type-import-base/DatabaseRelease :added "0.1"}

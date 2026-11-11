@@ -4,19 +4,13 @@ The active implementation uses Neon Postgres, Neon Auth and the `finfolk-communi
 
 ## Versioned messaging API
 
-The DM transport now has a versioned REST contract, Instagram Login authorization, durable receipt/outbox processing and admin diagnostics. See [Messaging API and activation](MESSAGING_API.md). Facebook Login discovery/comment credentials remain independent. Historical setup notes below do not prove the new messaging connection is authorized.
+Instagram has one authorization pathway: **Meta Facebook Login for Business → configured Facebook Page token → linked Instagram professional account**. It serves messages, comments, mentions and media. Use the [canonical activation runbook](INSTAGRAM_ACTIVATION.md#only-supported-authorization-meta-facebook-page) for current settings and verification. Instagram-only login and the separate system-user flow have been removed.
 
-## Meta setup status
+## Existing Meta registration
 
-Meta app **FinFolk**, ID `1667613151655339`, has been created with the Instagram use case. Its domain is `finfolk.com.au`. The Instagram callback `https://api.finfolk.com.au/instagram/webhook` is verified, and `mentions` and `messages` are subscribed on **v26.0**. Both dashboard test deliveries passed. These demonstrate webhook transport, not live account association or draft creation.
+FinFolk is already registered as Meta app `1667613151655339`, with domain `finfolk.com.au`, Facebook Page `1387107281155901` and linked Instagram account `17841461601419539` (`@finfolk.com.au`). Do not register another app. The original Actions configuration `1823789635502060` included comment permissions; the later Messaging configuration `2606242293176301` focused on messaging. These are historical dashboard configuration records, not independent runtime provider options.
 
-The app is **unpublished**. Meta's current dashboard states that unpublished apps receive dashboard tests only, including for app administrators. Brand account authorization, a production access token, required publishing/review prerequisites and real-account acceptance tests remain incomplete. No FinFolk admin identity has been configured yet.
-
-The app secret and verification token are saved in the ignored `.env.local`, uploaded to Worker secret storage, and included in verified encrypted local backups. See [local secrets backup instructions](SECRETS_BACKUP.md). No app secret, token or recovery key is committed.
-
-Facebook Login for Business configuration **FinFolk Instagram Actions** (`1823789635502060`) is saved using user access tokens and scopes `instagram_basic`, `instagram_manage_comments`, `instagram_manage_messages`, `pages_read_engagement` and `pages_show_list`. Creating this configuration does not authorize an Instagram account or issue an access token. The ID is also stored locally as `INSTAGRAM_LOGIN_CONFIG_ID`.
-
-A Facebook Page **FinFolk** (Page ID `1387107281155901`, public profile `61596205344691`) has been created with category Community, the supplied logo and website `https://finfolk.com.au`. The brand Instagram account `@finfolk.com.au` (Instagram ID `17841461601419539`) is now linked, verified in Facebook Page settings, with messaging Inbox access enabled. Developer-app authorization and production token acceptance remain to be verified.
+The last live check on 6 November 2026 verified the app/Page token but found `instagram_manage_comments` absent and no account `comments`/`mentions` subscriptions. The deployed comment release remains paused until the existing connection is reauthorized and live acceptance passes. Historical dashboard sample callbacks do not prove current account subscriptions or real delivery.
 
 ## Instagram account claiming
 
@@ -24,25 +18,15 @@ Connect through Instagram: follow @finfolk.com.au, send `/connect`, then enter t
 
 ## Current controls
 
-`INSTAGRAM_ENABLED=false` is intentional. No provider requests or public replies are sent until acceptance tests pass. With no `INSTAGRAM_ADMIN_IDS`, connection challenges are also disabled so members do not wait for an unconfigured reviewer. Public profile links remain available separately.
-
-Members connect by entering a handle and sending a 24-hour challenge code to the brand through Instagram. Only the challenge hash is stored. A configured administrator checks the actual received message, sender and provider sender ID, then verifies the connection. There is no follower-list check or claim of verified mutual follows. Signed messaging webhooks match the challenge hash and provide the actual sender ID to the review inbox. Administrators still check the declared handle against the actual received message before approval. Fully automatic verification is not enabled; manual review is the initial fallback.
-
-The social menu exposes Instagram & actions, private draft confirmations, public-stats reply consent, points privacy and invite statistics. Administrators see a separate inbox only when their server-verified Neon identity is allowlisted.
+`INSTAGRAM_ENABLED` gates the legacy action processor; the managed Page connection has its own messaging and comment rollout controls. Member linking uses the DM-first `/connect` workflow above. Manual challenge review and Firebase custom-claim setup are retired. Administrator access uses the verified Neon member IDs in `INSTAGRAM_ADMIN_IDS`.
 
 ## Deployment
 
-1. Apply migrations with `npm run db:migrate`. They add connection, event, action, audit, points and invitation tables. Existing members are not eligible to retroactively claim signup referrals; new members can claim one invite within seven days.
-2. Queues `finfolk-instagram-actions` and `finfolk-instagram-dead-letter` are declared in `wrangler.jsonc`. The hourly trigger reconciles interrupted work and cleans up expired challenges and 30-day event payloads/comment text.
-3. Set the following using Cloudflare Worker secrets, never browser config or Git commits:
-   - `INSTAGRAM_ADMIN_IDS`: comma-separated Neon user IDs, resolved from the intended administrator's FinFolk sign-in.
-   - `INSTAGRAM_APP_SECRET`, `INSTAGRAM_VERIFY_TOKEN`, `INSTAGRAM_ACCESS_TOKEN`.
-4. Set public provider configuration as Worker environment variables: `INSTAGRAM_ACCOUNT_ID`, `INSTAGRAM_GRAPH_VERSION`. Pin the Graph version tested for this Meta app.
-5. Configure the professional brand account and its linked Facebook Page in a Meta app using Instagram API with Facebook Login. Obtain applicable advanced access/app review before enabling public use. Subscribe the brand account to comment `mentions` and the messaging events approved for the app; setting a callback alone does not subscribe the account.
-6. Configure `https://api.finfolk.com.au/instagram/webhook` as the callback. GET verifies the token; POST verifies `X-Hub-Signature-256` before storing events and enqueueing IDs.
-7. Keep `INSTAGRAM_ENABLED=false` until the actual mention payload, comment lookup fields, sender attribution, permission scope and reply endpoint have passed real-account tests for the pinned Graph version. Provider field/version compatibility has not yet been demonstrated on live accounts.
+Use the existing `finfolk-next-api` Worker, `finfolk_next` database and Next Instagram queue declared in `wrangler.next-api.jsonc`. Never install a schema merely by generating it. No schema migration is required for the single-provider cleanup.
 
-Official contract: https://developers.facebook.com/docs/instagram-platform/instagram-api-with-facebook-login/mentions . Private-media mentions are not delivered, and API limitations may prevent access to a source.
+Keep static app/signature secrets and `MESSAGING_ENCRYPTION_KEY` in Worker secrets and the ignored, restricted `.env.local` with verified encrypted backups. The managed Page access token remains encrypted in the database; there is no raw access-token environment fallback. Public app, Page, account and Graph-version identifiers are declared in Worker configuration. See [activation](INSTAGRAM_ACTIVATION.md#only-supported-authorization-meta-facebook-page) for the complete list and reconnection sequence.
+
+The stable webhook is `https://api.finfolk.com.au/instagram/webhook`. Account-level subscriptions and app-level callbacks are separate. Actual comment permissions, lookup fields and replies require live acceptance; dashboard sample callbacks are insufficient. Comments remain independently paused until that evidence is recorded.
 
 ## Actions
 

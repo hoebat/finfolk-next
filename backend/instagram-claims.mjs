@@ -2,8 +2,6 @@ import { createHash } from 'node:crypto';
 import { instagramHandle } from '../js/finfolk-next/site/web-main/src/logbook-model.js';
 const fail = (message,status=400) => {throw Object.assign(Error(message),{status});};
 export const hashClaim = code => createHash('sha256').update(code.toLowerCase()).digest('hex');
-export const dmConfigured = env => !!env.INSTAGRAM_ACCESS_TOKEN && /^\d{1,40}$/.test(env.INSTAGRAM_ACCOUNT_ID || '') && /^v\d+\.0$/.test(env.INSTAGRAM_GRAPH_VERSION || '');
-export const dmEnabled = env => env.INSTAGRAM_DM_ENABLED==='true' && dmConfigured(env);
 export const claimsEnabled = () => false;
 export const reviewAvailable = () => false;
 export async function claimStatus(q,uid,env) {

@@ -1,7 +1,7 @@
 import {seal,unseal,encryptionKey} from './messaging-config.mjs';
 
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
-const methods=new Set(['instagram-login','instagram-facebook','instagram-unified','tiktok-business']);
+const methods=new Set(['instagram-facebook','tiktok-business']);
 const validToken=value=>typeof value==='string'&&value.length>0;
 const binding=(application,account)=>JSON.stringify(['messaging-credential',1,application,account.id,account.provider,account.account_id,account.checks?.appId??null]);
 export class MessagingAuthorizationChanged extends Error {}
@@ -23,8 +23,8 @@ export function createMessagingAuthorizationStore({db,application,account,encryp
   if(!object(value)||value.version!==1||!object(value.credential)||!validToken(value.credential.token)||
      !methods.has(value.credential.authMethod)||value.expiresAt!==(row.token_expires_at?new Date(row.token_expires_at).toISOString():null))
    throw Error('Messaging authorization does not match its connection.');
-  const expected=row.provider==='tiktok'?'tiktok-business':'instagram-';
-  if(row.provider==='tiktok'?value.credential.authMethod!==expected:!value.credential.authMethod.startsWith(expected))
+  const expected=row.provider==='tiktok'?'tiktok-business':'instagram-facebook';
+  if(value.credential.authMethod!==expected)
    throw Error('Messaging credential provider mismatch.');
   return value.credential;
  }
@@ -49,7 +49,7 @@ export function createMessagingAuthorizationStore({db,application,account,encryp
   }
   if(!object(proof)||proof.authorized!==true||proof.subscribed!==true||proof.provider!==row.provider||proof.accountId!==row.account_id||
      !prepared.expiresAt&&proof.nonExpiring!==true)throw Error('Provider authorization and subscription were not verified.');
-  if(row.provider==='tiktok'?prepared.credential.authMethod!=='tiktok-business':!prepared.credential.authMethod.startsWith('instagram-'))
+  if(row.provider==='tiktok'?prepared.credential.authMethod!=='tiktok-business':prepared.credential.authMethod!=='instagram-facebook')
    throw Error('Messaging credential provider mismatch.');
   return {provider:row.provider,accountId:row.account_id,authorized:true,subscribed:true,
    nonExpiring:proof.nonExpiring===true,...(typeof proof.appId==='string'?{appId:proof.appId}:{}),authMethod:prepared.credential.authMethod,

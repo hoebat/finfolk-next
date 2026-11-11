@@ -1,13 +1,12 @@
 import {
   messagingError,
-  seal,
-  unseal,
-  messagingConfig,
   oauthSettings,
 } from "./messaging-config.mjs";
 export class InstagramProvider {
   constructor(config, fetcher = fetch) {
-    this.config = config;
+    if (config.provider && config.provider !== 'instagram-facebook')
+      throw messagingError('provider_not_supported', 'Only Facebook Page authorization is supported for Instagram.', 503);
+    this.config = { ...config, provider: 'instagram-facebook' };
     // Workers requires native fetch to be called without a provider-instance receiver.
     this.fetcher = (input, init) => fetcher(input, init);
   }
@@ -17,12 +16,7 @@ export class InstagramProvider {
       method = "GET",
       body,
       token = this.config.token,
-      host = this.config.graphHost ||
-        (["instagram-unified", "instagram-facebook"].includes(
-          this.config.provider,
-        )
-          ? "https://graph.facebook.com"
-          : "https://graph.instagram.com"),
+      host = this.config.graphHost || "https://graph.facebook.com",
       versioned = true,
       timeoutMs = 15000,
     } = {},
@@ -41,6 +35,7 @@ export class InstagramProvider {
     try {
       response = await this.fetcher(url, {
         method,
+        redirect: "manual",
         headers: {
           Authorization: "Bearer " + token,
           ...(body ? { "Content-Type": "application/json" } : {}),
@@ -143,14 +138,7 @@ export class InstagramProvider {
     };
   }
   async validate() {
-    const data =
-      this.config.provider === "instagram-facebook"
-        ? await this.authorizedAccount()
-        : await this.request(
-            this.config.provider === "instagram-unified"
-              ? "/" + this.config.accountId + "?fields=id,username"
-              : "/me?fields=id,username",
-          );
+    const data = await this.authorizedAccount();
     if (
       String(data.id) !== this.config.accountId ||
       data.username?.toLowerCase() !== "finfolk.com.au"
@@ -190,70 +178,19 @@ export class InstagramProvider {
     return d;
   }
   async authorizedAccount() {
-    if (this.config.provider === "instagram-facebook") {
-      await this.validatePageToken();
-      const page = await this.request(
-        "/" +
-          this.config.pageId +
-          "?fields=id,instagram_business_account{id,username}",
-      );
-      if (
-        String(page.id) !== this.config.pageId ||
-        page.instagram_business_account?.username?.toLowerCase() !==
-          "finfolk.com.au"
-      )
-        throw messagingError(
-          "wrong_brand_account",
-          "The Facebook Page must be linked to @finfolk.com.au.",
-          409,
-        );
-      return page.instagram_business_account;
-    }
-    if (this.config.provider !== "instagram-unified")
-      return this.request("/me?fields=id,username");
-    const business = await this.request("/me?fields=client_business_id");
-    if (!/^\d{1,40}$/.test(String(business.client_business_id || "")))
-      throw messagingError(
-        "wrong_token_type",
-        "Unified Login requires a business integration system-user token.",
-        409,
-      );
-    const accounts = await this.request(
-      "/me/assigned_instagram_accounts?fields=id,username&limit=100",
-    );
-    if (
-      !Array.isArray(accounts.data) ||
-      accounts.data.length !== 1 ||
-      accounts.paging?.next
-    ) {
-      const count = Array.isArray(accounts.data) ? accounts.data.length : 0;
-      console.info(
-        JSON.stringify({
-          service: "instagram-authorization",
-          stage: "assigned_account_validation",
-          accountCount: count,
-          hasNext: !!accounts.paging?.next,
-        }),
-      );
-      throw messagingError(
-        "wrong_brand_account",
-        "Share only @finfolk.com.au with this integration. Meta returned " +
-          count +
-          " assigned accounts" +
-          (accounts.paging?.next ? " and another page." : "."),
-        409,
-      );
-    }
-    return {
-      ...accounts.data[0],
-      businessId: String(business.client_business_id),
-    };
+    await this.validatePageToken();
+    const page = await this.request("/" + this.config.pageId + "?fields=id,instagram_business_account{id,username}");
+    if (String(page.id) !== this.config.pageId ||
+        String(page.instagram_business_account?.id) !== this.config.accountId ||
+        page.instagram_business_account?.username?.toLowerCase() !== "finfolk.com.au")
+      throw messagingError("wrong_brand_account", "The Facebook Page must be linked to @finfolk.com.au.", 409);
+    return page.instagram_business_account;
   }
   async subscriptions() {
     const data = await this.request(
       "/" + this.config.accountId + "/subscribed_apps",
     );
-    if (this.config.provider === "instagram-facebook") {
+    {
       await this.validatePageToken();
       const page = await this.request(
         "/" +
@@ -278,27 +215,22 @@ export class InstagramProvider {
         data.data[0].subscribed_fields?.includes("messages") === true
       );
     }
-    return (
-      Array.isArray(data.data) &&
-      data.data.some(
-        (row) =>
-          String(row.id) === (this.config.metaAppId || this.config.appId) &&
-          row.subscribed_fields?.includes("messages"),
-      )
-    );
   }
   async subscribe() {
-    if (this.config.provider === "instagram-facebook") {
-      await this.validatePageToken();
-      await this.request("/" + this.config.pageId + "/subscribed_apps", {
-        method: "POST",
-        body: { subscribed_fields: ["messages"] },
-      });
-    }
-    return this.request("/" + this.config.accountId + "/subscribed_apps", {
-      method: "POST",
-      body: { subscribed_fields: ["messages"] },
-    });
+    const metadata = await this.validatePageToken();
+    const fields = async (id, additions) => {
+      const current = await this.request('/' + id + '/subscribed_apps');
+      const apps = Array.isArray(current.data) ? current.data : [];
+      const existing = apps.filter(app => String(app.id) === this.config.appId || (app.id === undefined && apps.length === 1))
+        .flatMap(app => Array.isArray(app.subscribed_fields) ? app.subscribed_fields : [])
+        .filter(field => typeof field === 'string' && /^[a-z_]+$/.test(field));
+      return [...new Set([...existing, ...additions])];
+    };
+    const pageFields = await fields(this.config.pageId, ['messages']);
+    const instagramFields = await fields(this.config.accountId,
+      metadata.scopes?.includes('instagram_manage_comments') ? ['messages','comments','mentions'] : ['messages']);
+    await this.request('/' + this.config.pageId + '/subscribed_apps', {method:'POST',body:{subscribed_fields:pageFields}});
+    return this.request('/' + this.config.accountId + '/subscribed_apps', {method:'POST',body:{subscribed_fields:instagramFields}});
   }
   async sendText(sender, text) {
     const data = await this.request("/" + this.config.accountId + "/messages", {
@@ -318,194 +250,32 @@ export class InstagramProvider {
       throw messagingError('sender_action_invalid', 'Invalid Instagram sender action.');
     // Page-authorized sender actions use the Page edge even though text replies
     // use the linked Instagram account edge. The recipient remains the IGSID.
-    const account = this.config.provider === 'instagram-facebook' ? this.config.pageId : this.config.accountId;
+    const account = this.config.pageId;
     if (!/^\d{1,40}$/.test(account || ''))
       throw messagingError('sender_action_account_missing', 'Reconnect the FinFolk messaging account.', 503);
     const data = await this.request('/' + account + '/messages', {
       method: 'POST', timeoutMs: 3000,
-      body: { recipient: { id: sender }, sender_action: this.config.provider === 'instagram-login' ? action.toUpperCase() : action },
+      body: { recipient: { id: sender }, sender_action: action },
     });
     if (String(data.recipient_id) !== sender && data.success !== true)
       throw messagingError('sender_action_unconfirmed', 'Instagram did not confirm the sender action.', 503);
   }
 }
-export async function exchangeOAuth(code, env, fetcher = fetch) {
+export async function exchangeOAuth(code, env, fetcher = fetch, {expectedUsername = 'finfolk.com.au'} = {}) {
   const settings = oauthSettings(env);
-  if (settings.provider !== "instagram-login") {
-    const url = new URL(
-      "https://graph.facebook.com/" +
-        (env.INSTAGRAM_MESSAGING_GRAPH_VERSION || "v26.0") +
-        "/oauth/access_token",
-    );
-    for (const [key, value] of Object.entries({
-      client_id: settings.appId,
-      client_secret: settings.clientSecret,
-      code,
-      redirect_uri: settings.redirectURI,
-    }))
-      url.searchParams.set(key, value);
-    let response, data;
-    try {
-      response = await fetcher(url, { signal: AbortSignal.timeout(15000) });
-      data = await response.json();
-    } catch {
-      throw messagingError(
-        "oauth_exchange_failed",
-        "Unified Login authorization could not be confirmed.",
-        503,
-      );
-    }
-    if (
-      !response.ok ||
-      typeof data.access_token !== "string" ||
-      !data.access_token
-    )
-      throw messagingError(
-        "oauth_exchange_failed",
-        "Unified Login authorization could not be completed.",
-        503,
-      );
-    if (
-      data.expires_in !== undefined &&
-      (!Number.isFinite(Number(data.expires_in)) || Number(data.expires_in) < 0)
-    )
-      throw messagingError(
-        "oauth_exchange_failed",
-        "The authorization expiry could not be verified.",
-        503,
-      );
-    if (settings.provider === "instagram-facebook")
-      return facebookPageGrant(data.access_token, env, fetcher);
-    return {
-      token: data.access_token,
-      expiresAt:
-        Number(data.expires_in) > 0
-          ? new Date(Date.now() + Number(data.expires_in) * 1000).toISOString()
-          : null,
-      tokenKind: "business-integration-system-user",
-    };
-  }
-  const redirect =
-    env.INSTAGRAM_MESSAGING_REDIRECT_URI ||
-    "https://api.finfolk.com.au/v1/integrations/instagram/oauth/callback";
-  const response = await fetcher(
-    "https://api.instagram.com/oauth/access_token",
-    {
-      method: "POST",
-      body: new URLSearchParams({
-        client_id: env.INSTAGRAM_MESSAGING_APP_ID,
-        client_secret: env.INSTAGRAM_MESSAGING_CLIENT_SECRET,
-        grant_type: "authorization_code",
-        redirect_uri: redirect,
-        code,
-      }),
-      signal: AbortSignal.timeout(15000),
-    },
-  );
-  let short;
-  try {
-    short = await response.json();
-  } catch {
-    throw messagingError(
-      "oauth_exchange_failed",
-      "Instagram authorization could not be completed.",
-      503,
-    );
-  }
-  if (!response.ok || !short.access_token)
-    throw messagingError(
-      "oauth_exchange_failed",
-      "Instagram authorization could not be completed.",
-      503,
-    );
-  const url = new URL("https://graph.instagram.com/access_token");
-  url.searchParams.set("grant_type", "ig_exchange_token");
-  url.searchParams.set("client_secret", env.INSTAGRAM_MESSAGING_CLIENT_SECRET);
-  url.searchParams.set("access_token", short.access_token);
-  // Meta's token-exchange contract uses query parameters; URLs are never logged.
-  const result = await fetcher(url, { signal: AbortSignal.timeout(15000) });
-  let long;
-  try {
-    long = await result.json();
-  } catch {
-    throw messagingError(
-      "oauth_exchange_failed",
-      "Long-lived authorization was not confirmed.",
-      503,
-    );
-  }
-  if (
-    !result.ok ||
-    !long.access_token ||
-    !Number.isFinite(long.expires_in) ||
-    long.expires_in <= 0
-  )
-    throw messagingError(
-      "oauth_exchange_failed",
-      "Long-lived authorization was not confirmed.",
-      503,
-    );
-  return {
-    token: long.access_token,
-    expiresAt: new Date(Date.now() + long.expires_in * 1000).toISOString(),
-  };
-}
-export async function refreshAuthorization(q, env, fetcher = fetch) {
-  let c;
-  try {
-    c = await messagingConfig(q, env, { credentials: true });
-  } catch {
-    return;
-  }
-  // Unified Login uses the business token lifecycle, never Instagram user-token refresh.
-  if (c.provider !== "instagram-login") return;
-  if (
-    !c.token ||
-    !c.token_expires_at ||
-    new Date(c.token_expires_at) > new Date(Date.now() + 7 * 86400000)
-  )
-    return;
-  // Provider-issued long-lived tokens can only be refreshed after their minimum age.
-  const secret = unseal(c.credential_ciphertext, env, c.scope);
-  if (Date.now() - Date.parse(secret.issuedAt) < 86400000) return;
-  try {
-    const url = new URL("https://graph.instagram.com/refresh_access_token");
-    url.searchParams.set("grant_type", "ig_refresh_token");
-    url.searchParams.set("access_token", c.token);
-    const response = await fetcher(url, { signal: AbortSignal.timeout(15000) });
-    const data = await response.json();
-    if (
-      !response.ok ||
-      !data.access_token ||
-      !Number.isFinite(data.expires_in) ||
-      data.expires_in <= 0
-    )
-      throw Error();
-    await q(
-      "UPDATE finfolk.messaging_accounts SET credential_ciphertext=$1,token_expires_at=$2,checks=checks || '{\"tokenRefresh\":true}'::jsonb,updated_at=now() WHERE id='instagram' AND credential_ciphertext=$3",
-      [
-        seal(
-          {
-            accessToken: data.access_token,
-            issuedAt: new Date().toISOString(),
-          },
-          env,
-          c.scope,
-        ),
-        new Date(Date.now() + data.expires_in * 1000),
-        c.credential_ciphertext,
-      ],
-    );
-  } catch {
-    await q(
-      "UPDATE finfolk.messaging_accounts SET checks=checks || '{\"tokenRefresh\":false}'::jsonb,updated_at=now() WHERE id='instagram'",
-    );
-  }
+  const url = new URL(settings.graphHost + '/' + (env.INSTAGRAM_MESSAGING_GRAPH_VERSION || 'v26.0') + '/oauth/access_token');
+  for(const [key,value] of Object.entries({client_id:settings.appId,client_secret:settings.clientSecret,code,redirect_uri:settings.redirectURI})) url.searchParams.set(key,value);
+  let response,data;
+  try {response=await fetcher(url,{redirect:'manual',signal:AbortSignal.timeout(15000)});data=await response.json();}
+  catch {throw messagingError('oauth_exchange_failed','Facebook authorization could not be confirmed.',503);}
+  if(!response.ok || typeof data.access_token!=='string' || !data.access_token)
+    throw messagingError('oauth_exchange_failed','Facebook authorization could not be completed.',503);
+  return facebookPageGrant(data.access_token,env,fetcher,{expectedUsername});
 }
 
 // Resolve a configured, verified Page directly. /me/accounts can be empty even
 // when Meta allows this exact Page and its linked Instagram account.
-export async function facebookPageGrant(userToken, env, fetcher = fetch) {
+export async function facebookPageGrant(userToken, env, fetcher = fetch, {expectedUsername = 'finfolk.com.au'} = {}) {
   const settings = oauthSettings(env);
   if (
     !/^\d{1,40}$/.test(settings.pageId) ||
@@ -545,8 +315,7 @@ export async function facebookPageGrant(userToken, env, fetcher = fetch) {
   );
   if (
     String(page.id) !== settings.pageId ||
-    page.instagram_business_account?.username?.toLowerCase() !==
-      "finfolk.com.au" ||
+    (expectedUsername && page.instagram_business_account?.username?.toLowerCase() !== expectedUsername.toLowerCase()) ||
     String(page.instagram_business_account?.id) !==
       env.INSTAGRAM_MESSAGING_ACCOUNT_ID ||
     !page.access_token

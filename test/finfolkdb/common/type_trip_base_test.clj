@@ -1,13 +1,13 @@
 (ns finfolkdb.common.type-trip-base-test
   (:use code.test)
-  (:require [lang.core :as l] [std.json :as json] [finfolkbuild.testing.neon :as neon]
+  (:require [lang.core :as l] [std.json :as json] [finfolkbuild.testing.local :as local]
             [finfolkbuild.testing.behavior :as fixture]))
 (l/script- :postgres
-  {:runtime :jdbc.client :config (neon/config)
+  {:runtime :jdbc.client :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main] [postgres.core :as pg]
              [finfolkdb.common.type-trip-base :as t]
              [finfolkdb.fn.user.user-manage-trips :as trips]]})
-(fact:global {:setup [(neon/setup!) (fixture/member "trip-alice") (fixture/member "trip-bob") (fixture/beach "trip-beach")] :teardown [(neon/teardown!)]})
+(fact:global {:setup [(local/setup!) (fixture/member "trip-alice") (fixture/member "trip-bob") (fixture/beach "trip-beach")] :teardown [(local/teardown!)]})
 
 (defonce imported-trip (atom nil))
 (defn insert-trip [arg0 arg1 arg2] (trips/insert-trip arg0 arg1 arg2))

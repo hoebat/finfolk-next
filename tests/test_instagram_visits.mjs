@@ -8,7 +8,7 @@ import {windowFor} from '../backend/community-core.mjs';
 const pg=process.env.FINFOLK_TEST_DATABASE_URL?await(await import('./db/harness.mjs')).compatDatabase(true):new PGlite();
 const q=async(sql,args=[]) => (await pg.query(sql,args)).rows;
 const db={query:q,transaction:fn=>pg.transaction(tx=>fn(async(sql,args=[]) => (await tx.query(sql,args)).rows))};
-const scope='instagram-login:777:900',env={MESSAGING_ENCRYPTION_KEY:Buffer.alloc(32,8).toString('base64'),INSTAGRAM_MESSAGING_PROVIDER:'instagram-login',INSTAGRAM_MESSAGING_APP_ID:'777',INSTAGRAM_MESSAGING_CLIENT_SECRET:'test',INSTAGRAM_MESSAGING_ACCOUNT_ID:'900',INSTAGRAM_QUEUE:{send:async()=>{}}};
+const scope='instagram-facebook:777:900',env={MESSAGING_ENCRYPTION_KEY:Buffer.alloc(32,8).toString('base64'),INSTAGRAM_MESSAGING_PROVIDER:'instagram-facebook',INSTAGRAM_MESSAGING_META_APP_ID:'777',INSTAGRAM_MESSAGING_META_APP_SECRET:'test',INSTAGRAM_MESSAGING_ACCOUNT_ID:'900',INSTAGRAM_QUEUE:{send:async()=>{}}};
 let follows=true,clock=Date.now()-20000;
 const fetcher=async(url,options={})=>options.method==='POST'?{ok:true,json:async()=>({message_id:randomUUID()})}:{ok:true,json:async()=>({id:new URL(url).pathname.split('/').at(-1),username:'diver'+new URL(url).pathname.split('/').at(-1),is_user_follow_business:follows})};
 const incoming=async(text,{sender='100',at=clock+=100,mid=randomUUID()}={})=>{

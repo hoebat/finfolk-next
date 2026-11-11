@@ -143,9 +143,7 @@ export function message(client,event){
   }
   else if(data["type"] == "yield"){
     client["active"] = false;
-    if(client == Host){
-      restart();
-    }
+    detach(client);
   }
   else if(data["type"] == "detach"){
     detach(client);

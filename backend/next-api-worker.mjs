@@ -5,7 +5,7 @@ import {publicPage} from './public-pages.mjs';
 import {createAPI,managedVerifier} from './api.mjs';
 import {database} from './db.mjs';
 import {instagramWebhook,processInstagramEvent,reconcileInstagram} from './instagram-webhook.mjs';
-import {processInstagramDM,sendOutbox,reconcileInstagramDM} from './messaging-engine.mjs';
+import {processInstagramPublicDM,processInstagramDM,sendOutbox,reconcileInstagramDM} from './messaging-engine.mjs';
 import {sendCommandReply} from './instagram-commands.mjs';
 import {collectInstagramSource,scheduleInstagramDiscovery} from './instagram-collector.mjs';
 
@@ -47,7 +47,19 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
     return instagramWebhook(request,env,()=>{throw Error('Verification must be database independent');});
    if(path==='/instagram/webhook' && env.INSTAGRAM_NEXT_INGRESS_ENABLED!=='true')
     return Response.json({error:'Instagram handover has not started.'},{status:503,headers:{'Cache-Control':'no-store'}});
-   try{return await withDatabase(env,async db=>{
+   try{
+    if(path==='/instagram/webhook' && request.method==='POST' && ctx?.waitUntil){
+     const direct=[];
+     const response=await withDatabase(env,db=>instagramWebhook(request,env,db.query,{onPublicCommand:id=>direct.push(id)}));
+     if(direct.length)ctx.waitUntil(withDatabase(env,async db=>{
+      await Promise.all(direct.map(async id=>{
+       try{await processInstagramPublicDM(id,env,db);}
+       catch{console.error(JSON.stringify({service:'instagram-messaging',stage:'public_deferred'}));}
+      }));
+     }).catch(()=>console.error(JSON.stringify({service:'instagram-messaging',stage:'public_deferred'}))));
+     return response;
+    }
+    return await withDatabase(env,async db=>{
     if(path==='/health')return Response.json({environment:'next',backbone:'Clojure/Postgres + xt.substrate + xt.db',ready:true,sqlSha:env.DB_SQL_SHA},{headers:{'Cache-Control':'no-store'}});
     let verify=verifiers.get(env.NEON_AUTH_BASE_URL);
     if(!verify){verify=managedVerifier(env);verifiers.set(env.NEON_AUTH_BASE_URL,verify);}
@@ -83,7 +95,8 @@ export function createNextWorker({openDatabase=database,apiFactory=createAPI,dat
     for(const message of legacy){
      try{
       const {kind,id,key}=message.body;
-      if(kind==='instagram-dm')await processInstagramDM(String(id),env,db);
+      if(kind==='instagram-dm' && message.body.publicCommand===true)await processInstagramPublicDM(String(id),env,db);
+      else if(kind==='instagram-dm')await processInstagramDM(String(id),env,db);
       else if(kind==='instagram-dm-reply')await sendOutbox(String(id),env,db);
       else if(kind==='instagram-comment-reply')await sendCommandReply(String(id),env,db);
       else if(kind==='discovery-source')await collectInstagramSource(key,env,db.query);

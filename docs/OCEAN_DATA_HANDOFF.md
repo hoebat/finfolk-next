@@ -1,6 +1,151 @@
-# Ocean data handoff — 6 November 2026
+# Ocean data handoff — updated 8 November 2026
 
-## State and authorization
+## Next agent: start here
+
+The current coastal acquisition is finished. No collector is running. The user's
+preference is useful beach/dive-site bathymetry, ideally around 1m where available,
+without collecting deep-sea or entire national datasets. The specific completed
+task is Victoria's unblended 2.5m grid cropped to a 500m coastal band, including
+bays and islands. This is 500m on **both sides** of the shoreline, not a verified
+seaward-only strip. Do not interpret grid spacing as measurement accuracy.
+
+### Machines and version control
+
+- Authoritative payload machine: `zcaudate@goloka.tail15d041.ts.net`.
+- Project there: `/Users/zcaudate/Development/greenways/finfolk-next`.
+- Originating Mac: `/Users/chris/Development/greenways/finfolk-next`; it has the
+  new scripts and metadata copies, not the complete coastal payloads.
+- Last checked branches/HEADs: originating Mac `main` at
+  `d879835e9493564c95b617187c84ee2478abecdd`; Goloka `fix/sign-in-theme-card` at
+  `25f184b874f79fb33b7bfaa52fd4e93f8ea3b7ec`.
+- The coastal work is uncommitted and has not been pushed or uploaded to Git LFS.
+  The two worktrees differ and Goloka includes older unrelated local changes.
+  Inspect before committing; scope staging to the coastal work. Do not overwrite
+  the repository or use `git add .` to bundle unrelated changes.
+- `.bin`, `.tif` and raw `original.geojson` files already match Git LFS rules.
+  That does not mean their LFS objects have been uploaded.
+
+### Completed data and evidence
+
+All paths below are relative to the project on Goloka:
+
+| Item | Path |
+| --- | --- |
+| 528 compressed native ZIP members, 2,073,909,683 bytes | `datasets/raw/ocean/vcdem-2021-coastal-500m/` |
+| 512 numeric COGs, 744,464,503 bytes | `datasets/processed/vcdem-coastal-500m/` |
+| Per-member source, checksum, processing and empty-tile records | `datasets/ocean/coastal/vcdem-500m.json` |
+| Portable selection with ZIP member offsets, sizes and CRCs | `datasets/ocean/provenance/vcdem-coast-500m-selection.json` |
+| Independent verification report | `datasets/ocean/provenance/vcdem-coast-500m-verification.json` |
+| Detailed Vicmap coastline and query provenance | `datasets/raw/ocean/vicmap-coastline/` |
+| Source registry entry with coastal summary | `datasets/ocean/records/vcdem-2021.json` |
+
+Sixteen selected source tiles are empty/gaps in the band; no substitute depths
+were invented. Every compressed source SHA256, inflated source SHA256/CRC32/size,
+and COG SHA256/header/valid-cell count passed. All 8,701 independently sampled
+valid pixel centres were within 500m of the detailed Vicmap coastline.
+
+The archive is a 39,062,003,888-byte ZIP containing individually retrievable
+tiles. Exact HTTP Range requests avoid downloading the full package. The native
+tiles are nominally 5km square; the downloader retains the selected compressed
+members and writes coastal-band COGs with NoData outside the band. Originals
+remain compressed; do not inflate the entire 12.65GB selected ASCII set to disk.
+
+### Remaining work
+
+1. Review source lineage, vertical datum, units/sign and underlying survey
+   resolution/accuracy. These are explicitly unverified; file integrity alone
+   does not resolve them.
+2. Measure actual valid-water coverage around beach and dive sites, retain gaps,
+   and decide whether a seaward-only mask is needed. Survey/tile bounding boxes
+   do not prove that a particular site has measured seabed values.
+3. After that review, register suitable numeric rasters with the runtime
+   inventory and implement public serving/tiles and depth lookup with provenance.
+   No database, runtime inventory or deployment was changed by this acquisition.
+4. Prepare a scoped code/metadata/data commit and Git LFS transfer if requested.
+   Make a transfer/storage plan first; the payloads currently live on Goloka.
+5. Any search for finer data in other states should target coastal beach/dive
+   sites and geographic subsets, using native 0.5–1m surveys where available.
+
+The recommended next step is datum/source review plus valid-water coverage for
+priority sites, rather than another bulk download.
+
+### Operations and checks
+
+The cumulative ledger is `.cache/ocean-acquisition/ledger.json`: last checked
+45,545,557,683 charged bytes against the persistent 100,000,000,000-byte ceiling.
+Never reset or refund it. Retain the 100GiB disk reserve and the coastal runner's
+128MiB additional margin. Free space was approximately 100.91GiB at the latest
+handoff check and can change; inspect again before writing large files.
+
+The former full-VCDEM partial (5.26GB) and national IMAS partial (3.52GB) were
+audited and removed to reclaim space. Completed originals were preserved and the
+two old bulk entries excluded. Do not restore those obsolete partials or run
+`.cache/ocean-control/start-downloads`. The original bulk stop flag remains set.
+There is no reason to restart the completed coastal job. For deliberate repair,
+its recovery launcher is `.cache/ocean-control/start-coastal-tiles`; it verifies
+completed files and resumes individual source members under the shared lock and
+budget. Its own cooperative stop file is
+`.cache/ocean-coastal-tiles/stop-request.json`.
+
+Independent verification on Goloka:
+
+```sh
+cd /Users/zcaudate/Development/greenways/finfolk-next
+.venv/bin/python -m scripts.verify_vcdem_coastal_tiles \
+  --plan datasets/ocean/provenance/vcdem-coast-500m-selection.json \
+  --coastline datasets/raw/ocean/vicmap-coastline/original.geojson \
+  --output datasets/ocean/provenance/vcdem-coast-500m-verification.json
+```
+
+Scripts are `scripts/plan_vcdem_coastal_tiles.py`,
+`scripts/acquire_vcdem_coastal_tiles.py` and
+`scripts/verify_vcdem_coastal_tiles.py`. The 36 focused ocean tests passed on both
+machines. `make generate`, `make check-generated`, `make test` and `make build`
+passed on the originating Mac without changing tracked application sources.
+The separate source catalog metadata validation passed on Goloka (13 records,
+114 legacy observed assets); the 528 new members use the dedicated coastal
+manifest above and are independently verified there.
+
+For full implementation detail, read
+[OCEAN_COASTAL_EXTRACTS.md](OCEAN_COASTAL_EXTRACTS.md). Everything after the current
+coastal sections below is historical context, not the current acquisition goal.
+
+## Current coastal scope — 8 November 2026
+
+The user subsequently authorized **Victoria's unblended 2.5m tiles within 500m
+of the coastline**, replacing the full-Victoria ZIP acquisition. The authoritative
+downloads are on Goloka under `/Users/zcaudate/Development/greenways/finfolk-next`.
+Use `.cache/ocean-control/start-coastal-tiles` for this workflow, not the older bulk
+launcher. The original computer must not acquire in parallel.
+
+The selection is 528 ZIP members (about 2.07GB compressed). The separate manifest
+`datasets/ocean/coastal/vcdem-500m.json` records per-member integrity and cropped
+COGs under `datasets/processed/vcdem-coastal-500m/`. Read its live state before
+restarting anything. The band includes both sides of the mapped shoreline; datum
+and scientific source quality still require review before runtime publication.
+
+The coastal run is now **complete and independently verified**: 528 source
+members, 512 COGs (744MB), and 16 empty/gap tiles. Verification checked every
+source/output checksum and 8,701 pixel-distance samples. See
+`datasets/ocean/provenance/vcdem-coast-500m-verification.json`. No collector needs
+to be restarted for the completed selection. Payloads remain on Goloka; local
+metadata copies are not a second full payload copy. This work has not been
+committed or uploaded to Git LFS.
+
+The older bulk batch remains stopped. Its unfinished 5.26GB Victoria ZIP prefix
+was audited and removed to make room; its queue entry is excluded. Completed
+originals and the cumulative charged-byte ledger were retained. Do not restore
+that superseded partial as part of the coastal workflow. See
+[OCEAN_COASTAL_EXTRACTS.md](OCEAN_COASTAL_EXTRACTS.md) for selection, paths, recovery
+and verification commands. The historical instructions below describe the older
+batch and are not authorization to resume it.
+
+A later disk-reserve stop at 475 coastal tiles was resolved by auditing and
+removing the older unfinished 3.52GB IMAS national-grid download. Its bulk entry
+is also excluded; see `.cache/ocean-control/imas-bulk-partial-superseded.json`.
+No completed originals or cumulative budget charges were removed.
+
+## Historical state and authorization — 6 November 2026
 
 The user paused the acquisition goal and requested all agents stopped. No ocean
 downloader is running on the originating computer. This commit/push is a transfer,

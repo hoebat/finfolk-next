@@ -49,7 +49,7 @@ export function createMessagingGateway({db,enabled=false,expectedDatabase,apiOri
   let providerAuthorization,transport,oauth;
   if(provider==='instagram'){
    const providerConfig={authMethod:config.authMethod,appId:app.appId,clientSecret:app.appSecret,
-    accountId:config.accountId,graphVersion:config.graphVersion,pageId:config.pageId,loginConfigId:config.loginConfigId,
+    accountId:config.accountId,graphVersion:config.graphVersion,pageId:config.pageId,
     expectedUsername:config.expectedUsername,redirectURI};
    providerAuthorization=createInstagramMessagingAuthorization(providerConfig,fetcher);
    const sender={sendText:async(recipient,body,{generation}={})=>{
@@ -226,7 +226,7 @@ export function createMessagingGateway({db,enabled=false,expectedDatabase,apiOri
      if(connection.provider!=='app'){
       if(current.checks.authorized!==true||current.checks.subscribed!==true||current.checks.appId!==connection.app.appId)throw Error('Authorization not ready.');
       const expiry=current.expiresAt?Date.parse(current.expiresAt):Infinity;
-      const refreshable=connection.provider==='tiktok'||connection.authMethod==='instagram-login';
+      const refreshable=connection.provider==='tiktok';
       if(expiry<=Date.now()+300000&&refreshable){
        const refreshed=await connection.authorization.refresh({exchange:connection.providerAuthorization.refresh,verify:connection.providerAuthorization.verify});
        if(refreshed.status==='busy'){results.push({key,status:'refreshing'});continue;}

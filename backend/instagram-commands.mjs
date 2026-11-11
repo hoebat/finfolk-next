@@ -18,12 +18,21 @@ const fail = (message, status = 400) => {
 };
 const namespace = (env) =>
   "facebook-comments:" + env.INSTAGRAM_APP_ID + ":" + env.INSTAGRAM_ACCOUNT_ID;
-export const commentHelp = "FinFolk helps you discover freediving locations and keep a logbook. Mention @finfolk.com.au with /help or /status (this post). Explore: https://finfolk.com.au";
+const sharedPublicComments = ['help','status','ping','site','privacy'];
+const privateDmCommands = ['connect','cancel','disconnect','points','in','out','claim'];
+const personalComment = command => !sharedPublicComments.includes(command);
+const commentHelpLabels = {help:'available commands',status:'this post’s status',ping:'check that FinFolk is responding',site:'open FinFolk',privacy:'privacy and deletion information'};
+function formattedCommentHelp(commands) {
+  return 'FinFolk helps you discover freediving locations and keep a logbook.\n\nAvailable comment commands:\n' +
+    commands.map(command=>'/' + command + (commentHelpLabels[command] ? ' — ' + commentHelpLabels[command] : '')).join('\n') +
+    '\n\nOn other posts, include @finfolk.com.au. For account commands, send a DM.\nExplore: https://finfolk.com.au';
+}
+export const commentHelp = formattedCommentHelp(['help','status']);
 export function commentRollout(env) {
   const mode = ['pilot','public'].includes(env.INSTAGRAM_COMMENT_MODE) ? env.INSTAGRAM_COMMENT_MODE : 'paused';
   const since = Date.parse(env.INSTAGRAM_COMMENT_ACTIVE_SINCE || '');
   return { mode, since: Number.isFinite(since) ? new Date(since).toISOString() : null,
-    commands: String(env.INSTAGRAM_COMMENT_COMMANDS || 'help,status').split(',').map(s=>s.trim()).filter(s=>['help','status','me','checkin','publish'].includes(s)),
+    commands: String(env.INSTAGRAM_COMMENT_COMMANDS || 'help,status').split(',').map(s=>s.trim()).filter(s=>[...sharedPublicComments,'me','checkin','publish'].includes(s)),
     posts: String(env.INSTAGRAM_COMMENT_TEST_POSTS || '').split(',').map(s=>s.trim()).filter(Boolean) };
 }
 export function commentAllowed(env, row, now = new Date()) {
@@ -33,44 +42,42 @@ export function commentAllowed(env, row, now = new Date()) {
     (rollout.mode === 'public' || rollout.posts.includes(String(row.media_id || row.media?.id || '')));
 }
 function publicHelp(env) {
-  const commands = commentRollout(env).commands.map(c=>'/' + c + (c==='status' ? ' (this post)' : '')).join(' or ');
-  return commands ? commentHelp.replace('/help or /status (this post)', commands) : 'Comment commands are paused. Explore FinFolk: https://finfolk.com.au';
+  const commands = commentRollout(env).commands;
+  return commands.length ? formattedCommentHelp(commands) : 'Comment commands are paused. Explore FinFolk: https://finfolk.com.au';
 }
-export function parseCommentCommand(text = "") {
-  if (
-    typeof text !== "string" ||
-    !/(^|\s)@finfolk\.com\.au(?=\s|$|[!?,])/i.test(text)
-  )
-    return null;
-  const value = text
-    .replace(/(^|\s)@finfolk\.com\.au(?=\s|$|[!?,])/gi, " ")
-    .trim();
-  if (!/(^|\s)\//.test(value)) return null;
-  const m = value.match(
-    /^\/(help|status|me|publish|checkin)(?:\s+([^\r\n]*))?$/i,
-  );
-  if (!m || (value.match(/(^|\s)\//g) || []).length !== 1)
-    return { command: "help", invalid: true };
-  const command = m[1].toLowerCase(),
-    args = (m[2] || "").trim();
-  if (
-    /[\r\n]/.test(value) ||
-    args.length > 200 ||
-    (["help", "status"].includes(command) && args)
-  )
-    return { command: "help", invalid: true };
-  if (command === "me")
-    return !args
-      ? { command, args: {} }
-      : /^[a-f0-9]{24}$/i.test(args)
-        ? { command, args: { challengeHash: hash(args.toLowerCase()) } }
-        : { command: "help", invalid: true };
-  const date =
-    command === "checkin" ? args.match(/^\d{1,4}[-/]\S*(?=\s|$)/)?.[0] : null;
-  return {
-    command,
-    args: { beach: date ? args.slice(date.length).trim() : args, day: date },
-  };
+export function parseCommentCommand(text = '', { allowUnmentioned = false } = {}) {
+  if(typeof text!=='string')return null;
+  const mention=/(^|\s)@finfolk\.com\.au(?=\s|$|[!?,])/i;
+  if(!allowUnmentioned && !mention.test(text))return null;
+  let value=text.replace(/(^|\s)@finfolk\.com\.au(?=\s|$|[!?,])[!?,]?/gi,' ').trim();
+  if(/^help$/i.test(value))value='/help';
+  if(!value.startsWith('/'))return null;
+  if(/[\r\n]/.test(value))return {command:'help',invalid:true};
+  const m=value.match(/^\/([a-z]+)(?:\s+([^\r\n]*))?$/i);
+  if(!m || (value.match(/(^|\s)\//g)||[]).length!==1)return {command:'help',invalid:true};
+  const command=m[1].toLowerCase()==='menu'?'help':m[1].toLowerCase(),args=(m[2]||'').trim();
+  // Private commands never reach comment identity checks or mutation handlers.
+  // Retain only the canonical command name, never submitted codes or arguments.
+  if(privateDmCommands.includes(command))return {command:'help',args:{dmCommand:command==='claim'?'connect':command}};
+  if(args.length>200)return {command:'help',invalid:true};
+  if(command==='help')return {command,args:args?{topic:['account','diagnostics','visits'].includes(args.toLowerCase())?args.toLowerCase():'unknown'}:{}};
+  if(![...sharedPublicComments,'me','publish','checkin'].includes(command))return {command:'help',invalid:true};
+  if(['status','ping','site','privacy'].includes(command) && args)return {command:'help',args:{usage:command},invalid:true};
+  if(command==='me')return !args?{command,args:{}}:/^[a-f0-9]{24}$/i.test(args)?{command,args:{challengeHash:hash(args.toLowerCase())}}:{command:'help',invalid:true};
+  const date=command==='checkin'?args.match(/^\d{1,4}[-/]\S*(?=\s|$)/)?.[0]:null;
+  return {command,args:{beach:date?args.slice(date.length).trim():args,day:date}};
+}
+export function publicCommentReply(row,env) {
+  if(row.command==='ping')return 'Pong! FinFolk is responding. Send /help for comment commands.';
+  if(row.command==='site')return 'Explore FinFolk: https://finfolk.com.au';
+  if(row.command==='privacy')return 'FinFolk privacy: https://api.finfolk.com.au/privacy\nData deletion: https://api.finfolk.com.au/data-deletion';
+  if(row.command!=='help')return undefined;
+  if(privateDmCommands.includes(row.args?.dmCommand))return 'For your account, send /'+row.args.dmCommand+' in a DM to @finfolk.com.au. Account details and connection codes are never posted in comments.';
+  if(row.args?.topic==='account' || row.args?.topic==='visits')return 'For account linking and visits, send /help account in a DM to @finfolk.com.au. Public /status describes this post, not your account.';
+  if(row.args?.topic==='diagnostics')return commentRollout(env).commands.includes('ping')?'Comment /ping to check that FinFolk is responding. Use /help for other comment commands.':'Comment diagnostics are not enabled. Send /help for available commands.';
+  if(row.args?.topic)return 'Comment help topics: /help account and /help diagnostics. Send /help for the main menu.';
+  if(sharedPublicComments.includes(row.args?.usage))return 'Usage: /'+row.args.usage+'. Send /help for available comment commands.';
+  return publicHelp(env);
 }
 export function checkinDay({ day, commentAt, now = new Date(), timezone }) {
   const range = windowFor(now, timezone);
@@ -125,7 +132,8 @@ export async function publicStatus(q, url) {
   return "This post has not been published on FinFolk.";
 }
 async function execute(q, row, env, identity, media, now, proof) {
-  if (row.command === "help") return { reply: publicHelp(env) };
+  const publicReply=publicCommentReply(row,env);
+  if(publicReply!==undefined)return {reply:publicReply};
   if (row.command === "status")
     return { reply: await publicStatus(q, row.source_url) };
   if (!identity)
@@ -215,7 +223,8 @@ export async function processCommentCommand(
   db,
   { fetcher = fetch, now = new Date() } = {},
 ) {
-  let parsed = parseCommentCommand(comment.text);
+  const brandOwned=String(comment.media?.owner?.id || '')===env.INSTAGRAM_ACCOUNT_ID && numeric(env.INSTAGRAM_ACCOUNT_ID);
+  let parsed = parseCommentCommand(comment.text,{allowUnmentioned:brandOwned});
   if (!parsed) return false;
   // Consume slash commands even while gated; never pass them to discovery or legacy actions.
   if (!commentAllowed(env, comment, now)) return true;
@@ -226,6 +235,10 @@ export async function processCommentCommand(
     id = String(comment.id || "");
   if (!numeric(actor) || !numeric(id) || actor === env.INSTAGRAM_ACCOUNT_ID)
     return true;
+  // A brand-owned comment can arrive through both webhook fields. Select its
+  // reply route from verified media ownership, not whichever webhook won.
+  if (String(comment.media?.owner?.id || '') === env.INSTAGRAM_ACCOUNT_ID)
+    context = 'owned';
   const ns = namespace(env),
     media = comment.media;
   let source = null;
@@ -238,7 +251,7 @@ export async function processCommentCommand(
     )
       source = "https://www.instagram.com" + u.pathname.replace(/\/?$/, "/");
   } catch {}
-  const personal = !["help", "status"].includes(parsed.command);
+  const personal = personalComment(parsed.command);
   let proof = null;
   if (personal) {
     const candidate = (
@@ -363,7 +376,7 @@ export async function sendCommandReply(id, env, db, fetcher = fetch) {
   // Resolve authorization before claiming a send. Missing permissions or a
   // provider outage must leave pending replies recoverable, not uncertain.
   const client = await instagramContentClient(env, db.query, { capability: "comments", fetcher });
-  const personal = candidate && !["help", "status"].includes(candidate.command);
+  const personal = candidate && personalComment(candidate.command);
   const proof =
     personal && candidate.owner_id
       ? await instagramFollowerProof(candidate.owner_id, env, db.query, {
@@ -388,7 +401,8 @@ export async function sendCommandReply(id, env, db, fetcher = fetch) {
     )[0];
     if (!pending) return null;
     if (!commentAllowed(env, pending) || !commentRollout(env).commands.includes(pending.command)) return null;
-    if (pending.command === 'help') pending.reply = instagramLinks(publicHelp(env), env);
+    const publicReply=publicCommentReply(pending,env);
+    if(publicReply!==undefined)pending.reply=instagramLinks(publicReply,env);
     if (pending.command === 'status') pending.reply = instagramLinks(await publicStatus(q, pending.source_url), env);
     if (pending.namespace !== 'facebook-comments:' + client.appId + ':' + client.accountId) {
       await q("UPDATE finfolk.instagram_commands SET send_state='skipped',updated_at=now() WHERE id=$1", [id]);

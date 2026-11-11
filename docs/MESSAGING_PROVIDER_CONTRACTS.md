@@ -53,7 +53,7 @@ the repository cannot infer that they have been granted from video-import tokens
 
 ## Instagram
 
-- [Instagram messaging](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-instagram-login/messaging-api)
+- [Instagram messaging](https://developers.facebook.com/docs/instagram-platform/instagram-api-with-facebook-login/messaging-api)
 - [Instagram webhooks](https://developers.facebook.com/docs/instagram-platform/webhooks/)
 
 The new adapter follows the raw-body HMAC and configured-account checks already

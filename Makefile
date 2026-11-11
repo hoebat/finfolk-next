@@ -73,7 +73,7 @@ test-db-messaging: check-generated-db
 scaffold-db-common:
 	lein run -m finfolkbuild.testing.scaffold-common
 test-db-common: check-generated-db
-	lein run -m finfolkdb.test --common
+	node scripts/test_database.mjs --clojure-common $(DB_TEST_NAMESPACE)
 
 .PHONY: neon-test-setup
 neon-test-setup:
@@ -98,3 +98,10 @@ test-db-rebuild-data: prepare-db-rebuild
 .PHONY: test-reference-assets
 test-reference-assets:
 	node tests/test_reference_assets.mjs
+
+# A long-lived disposable server for individual code.test facts in a REPL.
+.PHONY: test-db-local-up test-db-local-down
+test-db-local-up:
+	docker compose -f compose.test.yaml up -d --wait
+test-db-local-down:
+	docker compose -f compose.test.yaml down

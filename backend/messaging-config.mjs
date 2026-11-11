@@ -16,6 +16,10 @@ export const commands = Object.freeze({
     description: "See available commands.",
     claimed: false,
   },
+  site: { syntax:'/site', description:'Open FinFolk.', claimed:false },
+  privacy: { syntax:'/privacy', description:'Read privacy and deletion information.', claimed:false },
+  cancel: { syntax:'/cancel', description:'Cancel an unused connection code.', claimed:false },
+  disconnect: { syntax:'/disconnect', description:'Manage removal of your Instagram link.', claimed:false },
   connect: {
     syntax: "/connect",
     description: "Get a code to connect your Instagram account to FinFolk.",
@@ -43,8 +47,8 @@ export const commands = Object.freeze({
   },
 });
 // Public assistance never reads member data or needs a follower lookup.
-export const requiresFollower = (command) =>
-  !["help", "ping", "unknown", "prompt", "claim_retired"].includes(command);
+export const publicCommandNames = Object.freeze(['help','ping','site','privacy','disconnect','unknown','prompt','claim_retired']);
+export const requiresFollower = command => ![...publicCommandNames,'status','cancel'].includes(command);
 export const hasPersonalCommands = (enabled = []) =>
   enabled.some(requiresFollower);
 const canonical = (value) =>
@@ -114,66 +118,32 @@ export function unseal(value, env, aad) {
     );
   }
 }
+// The sole Instagram pathway is Meta Facebook Login -> Page token -> linked Instagram.
+export const INSTAGRAM_PROVIDER = "instagram-facebook";
+export const INSTAGRAM_PERMISSIONS = "instagram_basic,instagram_manage_messages,instagram_manage_comments,pages_show_list,pages_read_engagement,pages_manage_metadata,pages_messaging";
 export function oauthSettings(env) {
-  const provider = env.INSTAGRAM_MESSAGING_PROVIDER || "instagram-login";
-  if (
-    !["instagram-login", "instagram-unified", "instagram-facebook"].includes(
-      provider,
-    )
-  )
-    throw messagingError(
-      "provider_not_supported",
-      "Unsupported messaging authorization type.",
-      503,
-    );
-  const metaAppId =
-    env.INSTAGRAM_MESSAGING_META_APP_ID || env.INSTAGRAM_APP_ID || "";
-  const appId =
-    provider !== "instagram-login"
-      ? metaAppId
-      : env.INSTAGRAM_MESSAGING_APP_ID || "";
-  const clientSecret =
-    provider !== "instagram-login"
-      ? env.INSTAGRAM_MESSAGING_META_APP_SECRET ||
-        (metaAppId === env.INSTAGRAM_APP_ID ? env.INSTAGRAM_APP_SECRET : "")
-      : env.INSTAGRAM_MESSAGING_CLIENT_SECRET;
-  return {
-    provider,
-    appId,
-    metaAppId: metaAppId || appId,
-    clientSecret,
-    loginConfigId:
-      provider === "instagram-unified"
-        ? env.INSTAGRAM_MESSAGING_LOGIN_CONFIG_ID || ""
-        : "",
-    graphHost:
-      provider !== "instagram-login"
-        ? "https://graph.facebook.com"
-        : "https://graph.instagram.com",
-    pageId:
-      provider === "instagram-facebook"
-        ? env.INSTAGRAM_MESSAGING_PAGE_ID || ""
-        : "",
-    redirectURI:
-      env.INSTAGRAM_MESSAGING_REDIRECT_URI ||
-      "https://api.finfolk.com.au/v1/integrations/instagram/oauth/callback",
-  };
+  const provider = env.INSTAGRAM_MESSAGING_PROVIDER || INSTAGRAM_PROVIDER;
+  if (provider !== INSTAGRAM_PROVIDER)
+    throw messagingError("provider_not_supported", "Only Facebook Page authorization is supported for Instagram.", 503);
+  const appId = env.INSTAGRAM_MESSAGING_META_APP_ID || env.INSTAGRAM_APP_ID || "";
+  return { provider, appId, metaAppId: appId,
+    clientSecret: env.INSTAGRAM_MESSAGING_META_APP_SECRET || (appId === env.INSTAGRAM_APP_ID ? env.INSTAGRAM_APP_SECRET : ""),
+    graphHost: "https://graph.facebook.com", pageId: env.INSTAGRAM_MESSAGING_PAGE_ID || "",
+    redirectURI: env.INSTAGRAM_MESSAGING_REDIRECT_URI || "https://api.finfolk.com.au/v1/integrations/instagram/oauth/callback" };
+}
+export function instagramAuthorizationURL(settings, state) {
+  if (settings.provider !== INSTAGRAM_PROVIDER || !/^\d{1,40}$/.test(settings.appId || "") ||
+      !/^\d{1,40}$/.test(settings.pageId || "") || !settings.clientSecret)
+    throw messagingError("oauth_not_configured", "Configure the Meta app and linked Facebook Page first.", 503);
+  if (typeof state !== 'string' || !state) throw messagingError("oauth_state_missing", "A bound OAuth state is required.");
+  const url = new URL("https://www.facebook.com/dialog/oauth");
+  for (const [key,value] of Object.entries({client_id:settings.appId,redirect_uri:settings.redirectURI,response_type:'code',scope:INSTAGRAM_PERMISSIONS,auth_type:'rerequest',state})) url.searchParams.set(key,value);
+  return url.href;
 }
 export function oauthFlowKey(env) {
   const c = oauthSettings(env);
-  return digest(
-    JSON.stringify(
-      c.provider === "instagram-facebook"
-        ? [
-            c.provider,
-            c.appId,
-            c.pageId,
-            env.INSTAGRAM_MESSAGING_ACCOUNT_ID,
-            c.redirectURI,
-          ]
-        : [c.provider, c.appId, c.loginConfigId, c.redirectURI],
-    ),
-  );
+  // Preserve existing Page-token state bindings and credential namespaces.
+  return digest(JSON.stringify([c.provider,c.appId,c.pageId,env.INSTAGRAM_MESSAGING_ACCOUNT_ID,c.redirectURI]));
 }
 export async function messagingConfig(q, env, { credentials = false } = {}) {
   const account = (
@@ -251,9 +221,7 @@ export async function readiness(q, env, { enabledCommands } = {}) {
   if (
     !c.appId ||
     !c.clientSecret ||
-    (c.provider === "instagram-unified" &&
-      !/^\d{1,40}$/.test(c.loginConfigId)) ||
-    (c.provider === "instagram-facebook" && !/^\d{1,40}$/.test(c.pageId))
+    !/^\d{1,40}$/.test(c.pageId)
   )
     blockers.push("oauth_not_configured");
   if (!c.credential_ciphertext) blockers.push("token_missing");
@@ -263,7 +231,6 @@ export async function readiness(q, env, { enabledCommands } = {}) {
     } catch {
       blockers.push("credential_unavailable");
     }
-  if (c.checks?.tokenRefresh === false) blockers.push("token_refresh_failed");
   if (c.token_expires_at && new Date(c.token_expires_at) <= new Date())
     blockers.push("token_expired");
   for (const [key, code] of [

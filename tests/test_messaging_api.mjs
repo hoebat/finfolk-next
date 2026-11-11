@@ -56,7 +56,7 @@ const config = {
   graphVersion: "v26.0",
 };
 const provider = new InstagramProvider(config, async (url, options) => {
-  assert.equal(new URL(url).origin, "https://graph.instagram.com");
+  assert.equal(new URL(url).origin, "https://graph.facebook.com");
   assert.equal(options.headers.Authorization, "Bearer secret");
   assert.ok(!String(url).includes("secret"));
   sent = options.body;

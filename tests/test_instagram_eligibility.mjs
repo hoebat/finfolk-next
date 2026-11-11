@@ -7,10 +7,10 @@ import {
 import { seal } from "../backend/messaging-config.mjs";
 const env = {
   MESSAGING_ENCRYPTION_KEY: randomBytes(32).toString("base64"),
-  INSTAGRAM_MESSAGING_APP_ID: "123",
+  INSTAGRAM_MESSAGING_META_APP_ID: "123",
   INSTAGRAM_MESSAGING_ACCOUNT_ID: "456",
 };
-const scope = "instagram-login:123:456";
+const scope = "instagram-facebook:123:456";
 const connection = {
   user_id: "owner",
   sender_id: "789",
@@ -40,7 +40,7 @@ const q = async (sql) =>
   sql.includes("messaging_accounts") ? [config] : [connection];
 const fetcher = async (url, options) => {
   calls++;
-  assert.ok(String(url).startsWith("https://graph.instagram.com/"));
+  assert.ok(String(url).startsWith("https://graph.facebook.com/"));
   assert.equal(options.headers.Authorization, "Bearer private-test-token");
   if (fail) throw Error("Provider unavailable");
   return {

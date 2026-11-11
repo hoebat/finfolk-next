@@ -11,7 +11,7 @@ import {createMessagingAuthorizationStore,MessagingAuthorizationChanged} from '.
 const db=await connect(),pool=new pg.Pool({connectionString:process.env.FINFOLK_TEST_DATABASE_URL,max:5});
 const encryptionEnv={MESSAGING_ENCRYPTION_KEY:randomBytes(32).toString('base64')};
 const expiry=()=>new Date(Date.now()+3600000).toISOString();
-const token=(value='FIRST',authMethod='instagram-login')=>({token:value,authMethod});
+const token=(value='FIRST',authMethod='instagram-facebook')=>({token:value,authMethod});
 const query=(sql,args)=>pool.query(sql,args);
 const account=async id=>(await db.query(`SELECT * FROM finfolk."MessagingAccount" WHERE id=$1`,[id])).rows[0];
 const store=id=>createMessagingAuthorizationStore({db:apiDatabase(pool),application:'finfolk',account:id,encryptionEnv});
@@ -69,17 +69,23 @@ try{
  assert.equal(disconnected.mode,'disabled');assert.equal(disconnected.remoteRevoked,false);assert.equal((await account('ig')).credential_ciphertext,null);await assert.rejects(ig.accessToken(),/missing/);
  await assert.rejects(ig.activate({generation:5,mode:'live'}),/missing/);
  const tt=store('tt');await tt.install({credential:{token:'TT_TOKEN',refreshToken:'TT_REFRESH',authMethod:'tiktok-business'},expiresAt:expiry(),verify});
- assert.equal(await tt.accessToken({authMethod:'tiktok-business'}),'TT_TOKEN');await assert.rejects(tt.accessToken({authMethod:'instagram-login'}),/method changed/);
+ assert.equal(await tt.accessToken({authMethod:'tiktok-business'}),'TT_TOKEN');await assert.rejects(tt.accessToken({authMethod:'instagram-facebook'}),/method changed/);
  await assert.rejects(tt.install({credential:token(),expiresAt:expiry(),verify}),/provider mismatch/);
  await assert.rejects(ig.install({credential:token(),expiresAt:null,verify}),/not verified/);
- await ig.install({credential:token('PERMANENT','instagram-unified'),expiresAt:null,verify:async(c,a)=>({...await verify(c,a),nonExpiring:true})});assert.equal(await ig.accessToken(),'PERMANENT');
+ await ig.install({credential:token('PERMANENT','instagram-facebook'),expiresAt:null,verify:async(c,a)=>({...await verify(c,a),nonExpiring:true})});assert.equal(await ig.accessToken(),'PERMANENT');
  await assert.rejects(ig.install({credential:token(),expiresAt:'2000-01-01',verify}),/expired/);
  // Native proof validation fails closed on missing IDs and string booleans.
  await assert.rejects(db.query(`SELECT finfolk_rpc.set_messaging_authorization('finfolk','ig',6,'bad',now()+interval '1 hour','{"authorized":true,"subscribed":true}')`),/Invalid verified/);
  await assert.rejects(db.query(`SELECT finfolk_rpc.set_messaging_authorization('finfolk','ig',6,'bad',now()+interval '1 hour','{"provider":"instagram","accountId":"123","authorized":"true","subscribed":true}')`),/Invalid verified/);
  await db.query(`INSERT INTO finfolk."MessagingAccount"(id,application_id,provider,account_id) VALUES('provider-ig','finfolk','instagram','789'),('provider-tt','finfolk','tiktok','business')`);
  const providerStore=store('provider-ig');
- const graph=new InstagramProvider({provider:'instagram-login',accountId:'789',appId:'999',metaAppId:'999',token:'VERIFIED',graphVersion:'v26.0'},async url=>new URL(url).pathname.endsWith('/me')?Response.json({id:'789',username:'another.business'}):Response.json({data:[{id:'999',subscribed_fields:['messages']}]}));
+ const graph=new InstagramProvider({provider:'instagram-facebook',accountId:'789',pageId:'321',appId:'999',metaAppId:'999',clientSecret:'SECRET',token:'VERIFIED',graphVersion:'v26.0'},async url=>{
+  const path=new URL(url).pathname;
+  if(path.endsWith('/debug_token'))return Response.json({data:{is_valid:true,app_id:'999',type:'PAGE',expires_at:0,data_access_expires_at:0}});
+  if(path.endsWith('/me'))return Response.json({id:'321'});
+  if(path.endsWith('/321'))return Response.json({id:'321',instagram_business_account:{id:'789',username:'another.business'}});
+  return Response.json({data:[{id:'999',subscribed_fields:['messages']}]});
+ });
  const verifiedExpiry=new Date(Date.now()+300000).toISOString();
  await providerStore.install({credential:token('VERIFIED'),expiresAt:expiry(),verify:async()=>({...await verifyInstagramMessagingAuthorization(graph,{accountId:'789'}),expiresAt:verifiedExpiry})});
  assert.equal(await providerStore.accessToken({appId:'999'}),'VERIFIED');await assert.rejects(providerStore.accessToken({appId:'other'}),/app changed/);

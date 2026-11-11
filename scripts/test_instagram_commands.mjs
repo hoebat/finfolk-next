@@ -46,11 +46,11 @@ const fixture = await messagingFixture(db, env, {
   handle: "comment.diver",
 });
 globalThis.fetch = async (url, options) =>
-  new URL(url).hostname === "graph.instagram.com"
+  new URL(url).hostname === "graph.facebook.com"
     ? fixture.profileResponse(url)
     : nativeFetch(url, options);
 const fetcher = async (url, options = {}) => {
-  if (new URL(url).hostname === "graph.instagram.com")
+  if (new URL(url).hostname === "graph.facebook.com")
     return fixture.profileResponse(url);
   assert.equal(options.method, "POST");
   posts++;

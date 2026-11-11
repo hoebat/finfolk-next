@@ -123,7 +123,7 @@ Example configuration (replace placeholder values; secrets stay outside JSON):
     {"key":"tiktok","provider":"tiktok","appId":"registered-client-key","secretEnv":"ENTITY_TIKTOK_APP_SECRET"}
   ],
   "connections": [
-    {"key":"instagram","application":"finfolk","account":"finfolk-instagram","providerApp":"instagram","accountId":"numeric-instagram-account-id","authMethod":"instagram-login","graphVersion":"v26.0","replyWindowSeconds":86400,"returnURL":"https://finfolk.com.au/?view=account","handler":"finfolk"},
+    {"key":"instagram","application":"finfolk","account":"finfolk-instagram","providerApp":"instagram","accountId":"numeric-instagram-account-id","authMethod":"instagram-facebook","pageId":"numeric-facebook-page-id","graphVersion":"v26.0","replyWindowSeconds":86400,"returnURL":"https://finfolk.com.au/?view=account","handler":"finfolk"},
     {"key":"tiktok","application":"finfolk","account":"finfolk-tiktok","providerApp":"tiktok","accountId":"business-open-id","accountAuthorizationURL":"https://www.tiktok.com/v2/auth/authorize?client_key=registered-client-key","replyWindowSeconds":172800,"returnURL":"https://finfolk.com.au/?view=account","handler":"finfolk"},
     {"key":"chat","application":"finfolk","account":"finfolk-chat","provider":"app","accountId":"finfolk-chat","handler":"finfolk"}
   ]

@@ -31,9 +31,9 @@
 (defn fact-form [source var version]
   (str (format "^{:refer %s/%s :added %s}\n" source var (pr-str version))
        (cond
-         (FUNCTION_FORMS var) (str "(fact " (pr-str (str var " executes directly on Neon")) "\n  " (str/join "\n  " (map pr-str (rest (FUNCTION_FORMS var)))) ")")
+         (FUNCTION_FORMS var) (str "(fact " (pr-str (str var " executes directly on local PostgreSQL")) "\n  " (str/join "\n  " (map pr-str (rest (FUNCTION_FORMS var)))) ")")
          (str/starts-with? (name var) "Enum")
-         (format "(fact %s\n  (binding [jdbc/*connection-fn* neon/contract-connection] (common/check! '%s/%s))\n  => true)" (pr-str (str var " labels on Neon")) source var)
+         (format "(fact %s\n  (binding [jdbc/*connection-fn* local/contract-connection] (common/check! '%s/%s))\n  => true)" (pr-str (str var " labels on local PostgreSQL")) source var)
          :else (format "(fact %s\n  (fixture/persisted! '%s/%s)\n  => true)" (pr-str (str var " persists linked data and rejects missing parents atomically")) source var))))
 
 (defn covered-vars [path]
@@ -55,7 +55,7 @@
                               (mapcat #(str/split (second %) #"\s+")
                                       (re-seq #":covers\s+\[([^\]]+)\]" text))))
                 missing (remove covered missing)]
-          (when (re-find #"is reachable through the typed Neon runtime|\(fact \"TODO" text)
+          (when (re-find #"is reachable through the typed PostgreSQL runtime|\(fact \"TODO" text)
             (throw (ex-info "Application tests contain placeholder facts" {:namespace source})))
           (when (seq missing)
             (throw (ex-info "Common declarations need tests; run make scaffold-db-common"
@@ -67,7 +67,7 @@
     (binding [framework/*toplevel-forms* (conj framework/*toplevel-forms* 'defenum.pg 'pg/defsel.pg)
               scaffold/*ns-form-fn*
               (fn [source target _]
-                (format "(ns %s\n  (:use code.test)\n  (:require [lang.core :as l]\n            [finfolkbuild.testing.neon :as neon]\n            [finfolkbuild.testing.jdbc :as jdbc]\n            [finfolkbuild.testing.common :as common]\n            [finfolkbuild.testing.behavior :as fixture]))\n\n(l/script- :postgres\n  {:runtime :jdbc.client\n   :config (neon/config)\n   :require [[finfolkdb.main.scaffold-001-entity :as main] [%s :as t] [postgres.core :as pg]]})\n\n(fact:global {:setup [(neon/setup!)]\n              :teardown [(neon/teardown!)]})" target source))]
+                (format "(ns %s\n  (:use code.test)\n  (:require [lang.core :as l]\n            [finfolkbuild.testing.local :as local]\n            [finfolkbuild.testing.jdbc :as jdbc]\n            [finfolkbuild.testing.common :as common]\n            [finfolkbuild.testing.behavior :as fixture]))\n\n(l/script- :postgres\n  {:runtime :jdbc.client\n   :config (local/config)\n   :require [[finfolkdb.main.scaffold-001-entity :as main] [%s :as t] [postgres.core :as pg]]})\n\n(fact:global {:setup [(local/setup!)]\n              :teardown [(local/teardown!)]})" target source))]
       (let [original-vars framework/vars]
       (with-redefs [scaffold/test-fact-form fact-form
                     framework/vars (fn [module params lookup project]

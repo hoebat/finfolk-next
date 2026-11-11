@@ -9,7 +9,7 @@ const q = async (sql) =>
     : [{ stalled }];
 const config = {
   mode: "disabled",
-  scope: "instagram-login:1:2",
+  scope: "instagram-facebook:1:2",
   generation: 1,
   checks: {},
 };
@@ -35,8 +35,9 @@ config.token_expires_at = "2000-01-01T00:00:00Z";
 h = await messagingHealth(q, config);
 assert.equal(h.status, "attention");
 assert.equal(h.uncertainReplies, 2);
-assert.equal(h.issues.length, 6);
+assert.equal(h.issues.length, 5);
+assert.ok(!h.issues.includes("token_refresh_failed"), "Retired user-token refresh does not block the Page grant");
 assert.ok(!JSON.stringify(h).includes("sender_id"));
 console.log(
-  "Messaging health passed: paused/no-traffic semantics, expired authorization, refresh/subscription failures, delayed work and private operational counts.",
+  "Messaging health passed: paused/no-traffic semantics, expired authorization, subscription failures, delayed work and private operational counts.",
 );

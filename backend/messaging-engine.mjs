@@ -5,6 +5,7 @@ import {
   runtimeEnv,
   digest,
   requiresFollower,
+  publicCommandNames,
   seal,
   unseal,
   messagingError,
@@ -12,7 +13,6 @@ import {
 import { instagramFeedback, processingTimeoutReply } from './messaging-feedback.mjs';
 import {
   InstagramProvider,
-  refreshAuthorization,
 } from "./instagram-provider.mjs";
 import {
   parseInstagramCommand,
@@ -26,6 +26,8 @@ const expired = (event) =>
   Date.parse(event.message_at) < Date.now() - 86400000 ||
   Date.parse(event.message_at) > Date.now() + 300000;
 const commandName = (event) =>
+  event.command === "cancel" ? "connect" :
+  ["site","privacy","disconnect"].includes(event.command) ? "help" :
   event.command === "checkin" ? "in" :
   ["unknown", "prompt", "claim_usage", "claim_retired"].includes(event.command)
     ? event.command === "claim_usage"
@@ -46,13 +48,17 @@ function log(stage, event, extra = {}) {
     }),
   );
 }
+// Only fixed public replies belong here. New commands must opt in explicitly.
+const publicCommands = publicCommandNames;
+export const isPublicInstagramCommand = command => publicCommands.includes(command);
+
 export async function collectInstagramDM(
   event,
   env,
   q,
-  { requestId = randomUUID() } = {},
+  { requestId = randomUUID(), config: receivedConfig, onPublicCommand } = {},
 ) {
-  const config = await messagingConfig(q, env);
+  const config = receivedConfig || await messagingConfig(q, env);
   const brand = config.accountId || env.INSTAGRAM_ACCOUNT_ID;
   const sender = String(event.sender?.id || ""),
     recipient = String(event.recipient?.id || ""),
@@ -89,8 +95,8 @@ export async function collectInstagramDM(
   const rows = await q(
     `INSERT INTO finfolk.instagram_dm_events(id,sender_id,recipient_id,command,args,challenge_hash,message_at,owner_id,
   provider_scope,correlation_id,processing_state,generation,rate_limit_key,error)
-  VALUES($1,$2,$3,$4,$5,$6,$7,coalesce((SELECT user_id FROM finfolk.instagram_claims WHERE code_hash=$6 AND provider_scope=$8),
-  (SELECT user_id FROM finfolk.instagram_connections WHERE sender_id=$2 AND provider_scope=$8 AND status='connected')),$8,$9,$10,$11,$12,$13)
+  VALUES($1,$2,$3,$4,$5,$6,$7,CASE WHEN $14::boolean THEN NULL ELSE coalesce((SELECT user_id FROM finfolk.instagram_claims WHERE code_hash=$6 AND provider_scope=$8),
+  (SELECT user_id FROM finfolk.instagram_connections WHERE sender_id=$2 AND provider_scope=$8 AND status='connected')) END,$8,$9,$10,$11,$12,$13)
   ON CONFLICT(id) DO NOTHING RETURNING event_id,correlation_id`,
     [
       id,
@@ -106,6 +112,7 @@ export async function collectInstagramDM(
       config.generation,
       digest(config.scope + ":" + sender),
       ignored ? "unsupported_event" : paused ? "processing_disabled" : "",
+      isPublicInstagramCommand(parsed.command),
     ],
   );
   if (!rows.length) return;
@@ -116,8 +123,14 @@ export async function collectInstagramDM(
     state: ignored ? "ignored" : paused ? "paused" : "received",
   });
   if (!ignored && !paused) {
+    if (onPublicCommand && isPublicInstagramCommand(parsed.command)) {
+      // The receipt is committed before the Worker schedules direct delivery.
+      // The ordinary reconciler recovers it if the background task is interrupted.
+      onPublicCommand(id);
+      return;
+    }
     try {
-      await env.INSTAGRAM_QUEUE.send({ kind: "instagram-dm", id });
+      await env.INSTAGRAM_QUEUE.send({ kind: "instagram-dm", id, ...(isPublicInstagramCommand(parsed.command) ? { publicCommand:true } : {}) });
       await q(
         "UPDATE finfolk.instagram_dm_events SET processing_state='queued' WHERE id=$1 AND processing_state='received'",
         [id],
@@ -195,6 +208,53 @@ async function completeTimeout(db, env, event) {
     return true;
   });
 }
+// Public replies do not need a queue, follower lookup, member lookup, UI action
+// round trips, or the domain-command timeout/fallback machinery. Keep the same
+// durable event lease and outbox sender as member commands: competing workers
+// and ambiguous provider POSTs must still never produce duplicate replies.
+export async function processInstagramPublicDM(id, env, db, { fetcher = fetch } = {}) {
+  const completed = await db.transaction(async q => {
+    await q("SELECT id FROM finfolk.messaging_accounts WHERE id='instagram' FOR SHARE");
+    const config = await messagingConfig(q, env, { credentials: true });
+    const event = (await q(`UPDATE finfolk.instagram_dm_events
+      SET processing_state='processing',status='processing',lease=$2,attempts=attempts+1,updated_at=now()
+      WHERE id=$1 AND command=ANY($3::text[]) AND processing_state IN ('received','queued','failed')
+        AND attempts<5 AND next_attempt_at<=now() RETURNING *`, [id,randomUUID(),publicCommands]))[0];
+    if (!event) return false;
+    if (event.provider_scope!==config.scope || event.recipient_id!==config.accountId || !canRun(config,event)) {
+      await markBlocked(q,event,'rollout_restricted');
+      return false;
+    }
+    if (expired(event)) { await markBlocked(q,event,'message_expired'); return false; }
+    if (!config.checks?.authorization || !config.checks?.subscription || !config.token ||
+        (config.token_expires_at && Date.parse(config.token_expires_at)<=Date.now())) {
+      await markBlocked(q,event,'authorization_unavailable');
+      return false;
+    }
+    if (config.backoff_until && Date.parse(config.backoff_until)>Date.now()) {
+      await q("UPDATE finfolk.instagram_dm_events SET processing_state='failed',attempts=attempts-1,error='provider_backoff',next_attempt_at=$3 WHERE id=$1 AND lease=$2",
+        [id,event.lease,config.backoff_until]);
+      return false;
+    }
+    const rate = (await q(`INSERT INTO finfolk.instagram_dm_limits(sender_id,count) VALUES($1,1) ON CONFLICT(sender_id) DO UPDATE
+      SET minute=date_trunc('minute',now()),count=CASE WHEN instagram_dm_limits.minute=date_trunc('minute',now()) THEN instagram_dm_limits.count+1 ELSE 1 END RETURNING count`,
+      [event.rate_limit_key]))[0];
+    if (rate.count>30) { await markBlocked(q,event,'sender_rate_limit'); return false; }
+    const reply = await commandResult(q,event,{...runtimeEnv(config,env),MESSAGING_ENABLED_COMMANDS:config.enabled_commands});
+    if (reply) await q(`INSERT INTO finfolk.messaging_outbox(event_id,body,correlation_id,deadline)
+      VALUES($1,$2,$3,$4) ON CONFLICT(event_id) DO NOTHING`,
+      [id,reply.slice(0,2000),event.correlation_id,new Date(Date.parse(event.message_at)+86400000)]);
+    await q("UPDATE finfolk.instagram_dm_events SET processing_state='completed',status='done',error='',updated_at=now() WHERE id=$1 AND lease=$2",[id,event.lease]);
+    await q("UPDATE finfolk.messaging_accounts SET last_command_at=now() WHERE id='instagram'");
+    log('public_completed',event);
+    return true;
+  });
+  // The delivery reservation also handles a committed result whose first worker
+  // stopped before sending. No typing indicator is needed for an instant reply.
+  await sendOutboxForEvent(id,env,db,{fetcher,feedback:{responding:async()=>{}}});
+  return completed;
+}
+
 export async function processInstagramDM(id, env, db, options = {}) {
   const fetcher = options.fetcher || fetch;
   const feedback = instagramFeedback(env,db,fetcher,(config,event) =>
@@ -596,9 +656,9 @@ export async function reconcileInstagramDM(env, q) {
   const config = await messagingConfig(q, env);
   if (config.mode !== "disabled") {
     for (const row of await q(
-      "SELECT id FROM finfolk.instagram_dm_events WHERE processing_state IN ('received','queued','failed') AND attempts<5 AND next_attempt_at<=now() AND created_at>now()-interval '24 hours' ORDER BY created_at LIMIT 50",
+      "SELECT id,command FROM finfolk.instagram_dm_events WHERE processing_state IN ('received','queued','failed') AND attempts<5 AND next_attempt_at<=now() AND created_at>now()-interval '24 hours' ORDER BY created_at LIMIT 50",
     ))
-      await env.INSTAGRAM_QUEUE.send({ kind: "instagram-dm", id: row.id });
+      await env.INSTAGRAM_QUEUE.send({ kind: "instagram-dm", id: row.id, ...(isPublicInstagramCommand(row.command) ? { publicCommand:true } : {}) });
     for (const row of await q(
       "SELECT id FROM finfolk.messaging_outbox WHERE state='pending' AND attempts<5 AND next_attempt_at<=now() AND deadline>now() ORDER BY created_at LIMIT 50",
     ))
@@ -627,5 +687,4 @@ export async function reconcileInstagramDM(env, q) {
   );
   await q("DELETE FROM finfolk.instagram_connect_codes WHERE created_at<now()-interval '1 day'");
   await q("DELETE FROM finfolk.instagram_connect_limits WHERE resets_at<now()-interval '1 day'");
-  await refreshAuthorization(q, env);
 }

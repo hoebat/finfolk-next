@@ -15,9 +15,13 @@ let providerRequests = 0;
 const provider = http.createServer((request, response) => {
   providerRequests++;
   response.setHeader('Content-Type', 'application/json');
-  const valid = request.method === 'GET' && request.url === '/v26.0/123?fields=id,username' && request.headers.authorization === 'Bearer fixture';
-  response.statusCode = valid ? 200 : 400;
-  response.end(JSON.stringify(valid ? { id: '123', username: 'finfolk.com.au' } : { error: { code: 100 } }));
+  const url = new URL(request.url,'http://fixture');
+  const data = url.pathname === '/v26.0/oauth/access_token' ? {access_token:url.searchParams.has('code')?'fixture-short':'fixture-long'} :
+    url.pathname === '/v26.0/debug_token' ? {data:{app_id:'111',type:'PAGE',is_valid:true}} :
+    url.pathname === '/v26.0/me' ? {id:'222'} :
+    url.pathname === '/v26.0/222' ? {id:'222',instagram_business_account:{id:'123',username:'finfolk.com.au'},access_token:'fixture-page'} : null;
+  response.statusCode = data ? 200 : 400;
+  response.end(JSON.stringify(data || {error:{code:100}}));
 });
 await new Promise(done => provider.listen(0, '127.0.0.1', done));
 const providerOrigin = 'http://127.0.0.1:' + provider.address().port;
@@ -36,10 +40,14 @@ try {
   assert.equal(ready.status, 200);
   assert.equal(providerRequests, 0, 'Startup probes must not call the provider');
   const response = await fetch('http://127.0.0.1:' + port, {signal: AbortSignal.timeout(15000)});
-  assert.equal(response.status, 200, await response.clone().text());
+  assert.equal(response.status, 200, output.slice(-1500));
   assert.deepEqual(await response.json(), { providerAccount: { id: '123', username: 'finfolk.com.au' }, result: { command: '/claim fixture', unicode: '波 🌊' }, rejectsWrongScope: true, challenge: 'challenge-123' });
-  assert.equal(providerRequests, 1, 'The provider must issue one real HTTP request with its default fetch function');
-  console.log('MESSAGING_WORKER_PASS: actual workerd encrypted replay, Unicode, scope binding database-free webhook verification and real provider HTTP transport.');
+  assert.equal(providerRequests, 3, 'The provider must issue one real HTTP request with its default fetch function');
+  const oauth = await fetch('http://127.0.0.1:' + port + '/oauth', {signal:AbortSignal.timeout(15000)});
+  assert.equal(oauth.status, 200, 'The OAuth code exchange must work with native workerd fetch');
+  assert.deepEqual(await oauth.json(), {token:'fixture-page',tokenKind:'facebook-page',expiresAt:null});
+  assert.equal(providerRequests, 8, 'Code exchange, long-lived grant, configured Page, token validation and Page identity must all reach the provider');
+  console.log('MESSAGING_WORKER_PASS: actual workerd encrypted replay, Unicode, scope binding, webhook verification, provider HTTP transport and full Facebook Page OAuth exchange.');
 } finally {
   worker.kill('SIGTERM');
   if (worker.exitCode === null) await new Promise(done => worker.once('exit', done));

@@ -1,15 +1,15 @@
 (ns finfolkdb.common.type-event-test
   (:use code.test)
-  (:require [lang.core :as l] [finfolkbuild.testing.neon :as neon]
+  (:require [lang.core :as l] [finfolkbuild.testing.local :as local]
             [finfolkbuild.testing.behavior :as fixture]))
 (l/script- :postgres
-  {:runtime :jdbc.client :config (neon/config)
+  {:runtime :jdbc.client :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main] [postgres.core :as pg]
              [finfolkdb.common.type-event :as t]
              [finfolkdb.fn.event.event-manage :as events]
              [finfolkdb.fn.directory.directory-manage :as directory]
              [finfolkdb.common.type-system-base :as system]]})
-(fact:global {:setup [(neon/setup!)] :teardown [(neon/teardown!)]})
+(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-event/Event :id create-and-rollback}
 (fact "events belong to their organiser and invalid dates leave no addon providers"
