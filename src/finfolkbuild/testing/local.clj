@@ -8,7 +8,7 @@
 
 (def ^:dynamic *suite* false)
 (defonce lock-connection (atom nil))
-(def default-url "postgresql://postgres:finfolk-test@127.0.0.1:55432/finfolk_test_repl")
+(def default-url "postgresql://postgres:postgres@127.0.0.1:55432/finfolk_test_repl")
 
 (defn parse-config [url]
   (let [uri (URI. url)]

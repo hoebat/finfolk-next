@@ -23,3 +23,8 @@
 (fact "an omitted port uses PostgreSQL's default"
   (:port (local/parse-config "postgresql://test:secret@localhost/finfolk_test_demo"))
   => 5432)
+
+(fact "the REPL default uses the dedicated local Supabase test database"
+  (select-keys (local/parse-config local/default-url) [:host :port :dbname :user :pass])
+  => {:host "127.0.0.1" :port 55432 :dbname "finfolk_test_repl"
+      :user "postgres" :pass "postgres"})

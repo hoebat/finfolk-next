@@ -42,7 +42,14 @@ jobs:
         run: .venv/bin/python scripts/ocean_catalog.py validate
       - run: make check-generated
       - run: make test
+      - uses: supabase/setup-cli@v3
+        id: supabase_cli
+        with:
+          version: 2.122.0
       - run: make test-db
+      - name: Stop local Supabase
+        if: always() && steps.supabase_cli.outcome == 'success'
+        run: make test-db-local-down
       - run: corepack yarn playwright install --with-deps chromium firefox webkit
       - run: make test-browser
       - name: Build native Next app with Netlify adapter (no deployment)

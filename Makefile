@@ -15,6 +15,7 @@ generate:
 check-generated:
 	node scripts/check_generated.mjs
 test:
+	node --test tests/test_local_supabase.mjs
 	lein run -m finfolkdb.test --application-contracts
 	lein run -m finfolkdb.test
 	$(PYTHON) -m unittest discover -s tests -v
@@ -100,8 +101,13 @@ test-reference-assets:
 	node tests/test_reference_assets.mjs
 
 # A long-lived disposable server for individual code.test facts in a REPL.
-.PHONY: test-db-local-up test-db-local-down
+.PHONY: test-db-local-up test-db-local-down test-db-local-status test-db-runtime
 test-db-local-up:
-	docker compose -f compose.test.yaml up -d --wait
+	node scripts/local_supabase.mjs up
 test-db-local-down:
-	docker compose -f compose.test.yaml down
+	node scripts/local_supabase.mjs down
+
+test-db-local-status:
+	node scripts/local_supabase.mjs status
+test-db-runtime:
+	node --test tests/test_local_supabase.mjs
