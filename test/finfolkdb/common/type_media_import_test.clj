@@ -10,12 +10,11 @@
   {:runtime :jdbc.client
    :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main]
-             [finfolkdb.common.type-media-import :as t] [postgres.core :as pg]]})
+             [finfolkdb.common.type-media-import :as t]
+             [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)]
-              :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-media-import/MediaImport :added "0.1"}
 (fact "MediaImport persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-media-import/MediaImport)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-media-import/MediaImport) => true)

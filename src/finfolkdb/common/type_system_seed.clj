@@ -14,25 +14,20 @@
    :static {:application ["finfolk-entity"]
             :all         {:schema ["finfolk"]}}})
 
-(defonce +run+
-  [(et/init-default-ns-str)])
+(defonce +run+ [(et/init-default-ns-str)])
 
-(def REQUIRED_EXTENSIONS
-  ["citext" "pgcrypto" "uuid-ossp"])
+(def REQUIRED_EXTENSIONS ["citext" "pgcrypto" "uuid-ossp"])
 
-(def +legacy-class-types+
-  ["Global" "Post" "TaskProvider"])
+(def +legacy-class-types+ ["Global" "Post" "TaskProvider"])
 
-(defenum.pg ^{:static/no-cache true}
-  EnumClassType
+(defenum.pg ^{:static/no-cache true} EnumClassType
   @(et/class-types "finfolk-entity" +legacy-class-types+))
 
 ;;
 ;; JSON Coercions
 ;;
 
-(defn.pg ^{:props [:immutable :parallel-safe]}
-  as-jsonb
+(defn.pg ^{:props [:immutable :parallel-safe]} as-jsonb
   [:jsonb input]
   (when [input :is-null]
     (return (:jsonb "{}")))
@@ -40,8 +35,7 @@
     [:raise-exception "Expected a JSON object"])
   (return input))
 
-(defn.pg ^{:props [:immutable :parallel-safe]}
-  as-jsonb-array
+(defn.pg ^{:props [:immutable :parallel-safe]} as-jsonb-array
   [:jsonb input]
   (when [input :is-null]
     (return (:jsonb "[]")))

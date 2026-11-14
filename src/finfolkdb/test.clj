@@ -7,16 +7,14 @@
             [finfolkbuild.testing.local :as local]))
 
 (def TEST_NAMESPACES
-  '[finfolkbuild.testing.local-test
-    finfolkdb.schema.type-namespaces-test
-    finfolkdb.schema.entity-catalog-test
-    finfolkdb.schema.messaging-catalog-test])
+  '[finfolkbuild.testing.local-test finfolkdb.schema.type-namespaces-test
+    finfolkdb.schema.entity-catalog-test finfolkdb.schema.messaging-catalog-test])
 
 (def LEGACY_TEST_NAMESPACES
-  '[finfolkdb.common.fn-system-auth-test
-    finfolkdb.fn.member.member-profile-test])
+  '[finfolkdb.common.fn-system-auth-test finfolkdb.fn.member.member-profile-test])
 
-(defn checked-run! [modules]
+(defn checked-run!
+  [modules]
   (let [result (test/run modules)]
     (when (or (seq (:errored @executive/+latest+))
               (pos? (or (:skipped result) 0))
@@ -36,14 +34,16 @@
                     ["--common-contracts"] '[finfolkdb.schema.common-contracts-test]
                     ["--legacy"] LEGACY_TEST_NAMESPACES
                     [] TEST_NAMESPACES
-                    (if (and (= "--common" (first args)) (= 2 (count args))
+                    (if (and (= "--common" (first args))
+                             (= 2 (count args))
                              (some #{(symbol (second args))} (common/test-namespaces)))
                       [(symbol (second args))]
                       (throw (ex-info "Unknown database test selection" {:args args}))))]
-      (when (= "--common" (first args)) (common/check-coverage!) (local/acquire!))
+      (when (= "--common" (first args))
+        (common/check-coverage!)
+        (local/acquire!))
       (when-not (= "--common" (first args))
-        (binding [context/*eval-mode* false]
-          (doseq [module modules] (require module))))
+        (binding [context/*eval-mode* false] (doseq [module modules] (require module))))
       (binding [local/*suite* (= "--common" (first args))]
         (if local/*suite*
           (do (doseq [module modules] (checked-run! [module]))

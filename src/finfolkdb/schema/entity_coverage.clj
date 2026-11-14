@@ -5,9 +5,7 @@
 
 (defn report
   [historical fresh]
-  (let [pairs (for [[name spec] fresh
-                    table (:legacy-tables spec)]
-                [table name])
+  (let [pairs (for [[name spec] fresh table (:legacy-tables spec)] [table name])
         mappings (into (sorted-map) pairs)]
     (when-not (= (count pairs) (count mappings))
       (throw (ex-info "Duplicate historical-table entity mapping" {:mappings pairs})))
@@ -19,6 +17,4 @@
      :mappings mappings
      :remaining (vec (sort (remove #(contains? mappings %) (keys historical))))}))
 
-(defn current
-  []
-  (report (legacy/declarations) (entity/declarations)))
+(defn current [] (report (legacy/declarations) (entity/declarations)))

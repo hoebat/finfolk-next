@@ -7,18 +7,18 @@
             [lang.core.library :as library]
             [lang.core.library-snapshot :as snapshot]))
 
-(defn declarations []
+(defn declarations
+  []
   (namespaces/load-all!)
   (let [book (snapshot/get-book (library/get-snapshot (impl/runtime-library)) :postgres)]
     (into (sorted-map)
-      (for [module (vals (:modules book))
-            entry (vals (:code module))
-            :when (and (= :function (:static/dbtype entry))
-                       (= "finfolk_rpc" (:static/schema entry)))]
-        [(str/replace (str (:id entry)) "-" "_")
-         {:module (str (:module entry))
-          :schema "finfolk_rpc"
-          :arguments (mapv (fn [[type argument]]
-                             {:name (str argument) :type (name type)})
-                           (partition 2 (nth (:form entry) 2)))
-          :returns (mapv str (:static/return entry))}]))))
+          (for [module (vals (:modules book))
+                entry (vals (:code module))
+                :when (and (= :function (:static/dbtype entry))
+                           (= "finfolk_rpc" (:static/schema entry)))]
+            [(str/replace (str (:id entry)) "-" "_")
+             {:module (str (:module entry))
+              :schema "finfolk_rpc"
+              :arguments (mapv (fn [[type argument]] {:name (str argument) :type (name type)})
+                               (partition 2 (nth (:form entry) 2)))
+              :returns (mapv str (:static/return entry))}]))))

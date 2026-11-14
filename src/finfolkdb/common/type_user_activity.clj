@@ -17,8 +17,7 @@
    :static {:application ["finfolk-entity"]
             :all         {:schema ["finfolk"]}}})
 
-(defenum.pg
-  EnumActionType
+(defenum.pg EnumActionType
   [:create :read :update :delete :login :logout :invite :join :leave :share :export :import])
 
 (deftype.pg ^{:final true
@@ -28,5 +27,7 @@
                         :addons [:detail]})}
   ActivityLog
   "An immutable activity entry linked to a provider and authenticated actor."
-  [:action {:type :enum :required true :enum {:ns -/EnumActionType}}
-   :actor  {:type :ref :ref {:ns finfolkdb.common.type-user/User}}])
+  [:action {:type :enum :required true
+            :enum {:ns -/EnumActionType}}
+   :actor  {:type :ref
+            :ref {:ns finfolkdb.common.type-user/User}}])

@@ -36,5 +36,4 @@
            :ref {:ns finfolkdb.common.type-user/User}
            :sql {:cascade true :index true :unique ["session_owner"]}}
    :beach {:type :ref
-           :ref {:ns finfolkdb.common.type-system-site/Beach}
-           :sql {:index true}}])
+           :ref {:ns finfolkdb.common.type-system-site/Beach} :sql {:index true}}])

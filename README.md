@@ -47,6 +47,8 @@ make dev
 
 Public survey sources are stored in Git LFS. The independent [ocean dataset catalog](datasets/ocean/README.md) and [cross-computer handoff](docs/OCEAN_DATA_HANDOFF.md) cover native bathymetry archives and paused download recovery. The frozen national directory and coastline inputs are under `resources/atlas`; a fresh clone can reproduce the public site without a developer's cache. Existing publisher attribution, metadata and survey limitations are retained. To refresh upstream sources deliberately, use the acquisition scripts; normal builds do not refresh them automatically.
 
+Format Clojure with `lein zprint fix src/finfolkdb test/finfolkdb` (replace `fix` with `check` for CI). Zprint is a development dependency; `.zprintrc` uses a 100-column community style and reflows existing line breaks. Its form mappings are derived from the pinned Foundation clj-kondo `:lint-as` and analyzer-hook classifications, including PostgreSQL definitions, XTalk definitions, scripts and facts. The formatter skips hidden/editor files and symbolic links. Run `lein run -m tooling.format-test` to verify the formatter. After updating Foundation, refresh the mappings with `lein zprint sync-kondo ref/foundation`; this updates local configuration and does not modify the dependency.
+
 `make test` runs Clojure contract/release checks, Python atlas tests, and the existing generated-runtime, SQL/API and desktop/mobile UI tests. Tests cover cache keys, concurrency, invalidation, committed-write refresh failures, authentication changes, navigation/history, public forwarding, member actions and admin restrictions. External Meta messaging remains governed by its existing feature switches.
 
 `make test-db-common` runs every Clojure common namespace against a disposable local PostgreSQL 18 database, using Docker or `FINFOLK_TEST_POSTGRES_URL`. Select one namespace with `make test-db-common DB_TEST_NAMESPACE=finfolkdb.common.fn-system-util-test`. No Neon account, cloud credentials, or network quota is needed.
@@ -119,3 +121,20 @@ feature flag remains disabled. See [Messaging rollout](docs/MESSAGING_ROLLOUT.md
 for separate database provisioning, server-only grants, OAuth, queue/cron setup,
 provider acceptance and rollback. Local tests use injected provider HTTP; live
 provider activation is not verified.
+
+Foundation editing support for Emacs lives in `dev/emacs/`. Add that directory
+to `load-path` and `(require 'foundation-format)` in your init file. It styles
+`fact`, `l/script`, and PostgreSQL `t:*`/`g:*` macros without needing a REPL.
+`M-x foundation-format-buffer` reflows the buffer with the project's zprint
+configuration; CIDER's format-buffer and format-region keys use these commands
+in configured projects. Assertion triples stay together, including inside `let`
+forms. The generated `foundation-form-data.el` shares the Foundation form
+classifications with `.zprintrc`; `sync-kondo` refreshes both.
+
+Script options put each `:require` entry on its own line and expand the
+`:static` map across lines. `when` bodies always start on the next line.
+
+Table formatting places the name below its metadata, aligns field/spec columns
+and entity options, keeps scalar field attributes together, and puts nested
+`:ref`, `:enum`, and `:sql` attributes on continuation lines. This changes layout
+only; field declarations, defaults, constraints and entry order are preserved.

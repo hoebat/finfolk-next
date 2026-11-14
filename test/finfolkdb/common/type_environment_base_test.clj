@@ -10,37 +10,31 @@
   {:runtime :jdbc.client
    :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main]
-             [finfolkdb.common.type-environment-base :as t] [postgres.core :as pg]]})
+             [finfolkdb.common.type-environment-base :as t]
+             [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)]
-              :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-environment-base/DataSource :added "0.1"}
 (fact "DataSource persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-environment-base/DataSource)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-environment-base/DataSource) => true)
 
 ^{:refer finfolkdb.common.type-environment-base/DepthDataset :added "0.1"}
 (fact "DepthDataset persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-environment-base/DepthDataset)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-environment-base/DepthDataset) => true)
 
 ^{:refer finfolkdb.common.type-environment-base/TideStation :added "0.1"}
 (fact "TideStation persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-environment-base/TideStation)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-environment-base/TideStation) => true)
 
 ^{:refer finfolkdb.common.type-environment-base/EnvironmentTarget :added "0.1"}
 (fact "EnvironmentTarget persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-environment-base/EnvironmentTarget)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-environment-base/EnvironmentTarget) => true)
 
 ^{:refer finfolkdb.common.type-environment-base/EnvironmentSnapshot :added "0.1"}
 (fact "EnvironmentSnapshot persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-environment-base/EnvironmentSnapshot)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-environment-base/EnvironmentSnapshot) => true)
 
 ^{:refer finfolkdb.common.type-environment-base/EnvironmentJob :added "0.1"}
 (fact "EnvironmentJob persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-environment-base/EnvironmentJob)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-environment-base/EnvironmentJob) => true)

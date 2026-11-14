@@ -15,6 +15,9 @@
   :source-paths ["src" "src-app" "ref/foundation/src" "ref/foundation/src-lang"]
   :resource-paths ["resources"]
   :test-paths ["test" "test-app"]
+  :profiles {:dev {:dependencies [[zprint/zprint "1.3.0"]]
+                   :source-paths ["dev"]}}
   :aliases {"test" ["run" "-m" "code.test"]
+            "zprint" ["run" "-m" "tooling.format"]
             "generate" ["run" "-m" "finfolkbuild.project.main"]}
   :jvm-opts ["-Xmx2g" "--enable-native-access=ALL-UNNAMED"])

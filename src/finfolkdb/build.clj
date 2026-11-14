@@ -17,18 +17,22 @@
   []
   (namespaces/load-all!)
   (into (sorted-map)
-    {"resources/finfolkdb/rebuild.sql" (rebuild/sql)
-     "resources/finfolkdb/rebuild-contract.json" (str (json/write (rebuild/contracts)) "\n")
-     "resources/finfolkdb/shop.sql" (str "-- Generated from finfolkdb.shop/SQL.\n" shop/SQL)
-     "resources/finfolkdb/messaging-grants.sql" (messaging/grants-sql)
-     "resources/finfolkdb/site-notes-grants.sql" (site-notes/grants-sql)
-     "resources/finfolkdb/entity-schema.sql" (entity/sql)
-     "resources/finfolkdb/rpc-catalog.json" (str (json/write (rpc/declarations)) "\n")
-     "resources/finfolkdb/entity-catalog.json" (str (json/write (catalog/portable (catalog/declarations))) "\n")
-     "resources/finfolkdb/entity-coverage.json" (str (json/write (coverage/current)) "\n")
-     "resources/finfolkdb/type-namespaces.json" (str (json/write (into (sorted-map) (map (fn [[ns path]] [(str ns) path]) (namespaces/declarations)))) "\n")
-     "resources/finfolkdb/enums.sql" (enums/sql)
-     "resources/finfolkdb/enums.json" (str (json/write (enums/contracts)) "\n")}))
+        {"resources/finfolkdb/rebuild.sql" (rebuild/sql)
+         "resources/finfolkdb/rebuild-contract.json" (str (json/write (rebuild/contracts)) "\n")
+         "resources/finfolkdb/shop.sql" (str "-- Generated from finfolkdb.shop/SQL.\n" shop/SQL)
+         "resources/finfolkdb/messaging-grants.sql" (messaging/grants-sql)
+         "resources/finfolkdb/site-notes-grants.sql" (site-notes/grants-sql)
+         "resources/finfolkdb/entity-schema.sql" (entity/sql)
+         "resources/finfolkdb/rpc-catalog.json" (str (json/write (rpc/declarations)) "\n")
+         "resources/finfolkdb/entity-catalog.json"
+         (str (json/write (catalog/portable (catalog/declarations))) "\n")
+         "resources/finfolkdb/entity-coverage.json" (str (json/write (coverage/current)) "\n")
+         "resources/finfolkdb/type-namespaces.json"
+         (str (json/write (into (sorted-map)
+                                (map (fn [[ns path]] [(str ns) path]) (namespaces/declarations))))
+              "\n")
+         "resources/finfolkdb/enums.sql" (enums/sql)
+         "resources/finfolkdb/enums.json" (str (json/write (enums/contracts)) "\n")}))
 
 (defn publish!
   [root check?]
@@ -39,8 +43,4 @@
           (throw (ex-info "Stale database artifact; run make generate-db" {:file path})))
         (do (io/make-parents file) (spit file content))))))
 
-(defn -main
-  [& args]
-  (try
-    (publish! "." (= ["--check"] (vec args)))
-    (finally (shutdown-agents))))
+(defn -main [& args] (try (publish! "." (= ["--check"] (vec args))) (finally (shutdown-agents))))
