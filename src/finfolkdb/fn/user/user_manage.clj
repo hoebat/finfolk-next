@@ -17,7 +17,7 @@
 
 (defn.pg insert-user
   "Creates the user and its scoped addon streams in one statement transaction."
-  [:text i-user-id :jsonb i-profile :jsonb o-op]
+  [:uuid i-user-id :jsonb i-profile :jsonb o-op]
   (let [o-rev (pg/t:insert tsb/Rev
                 {:class-table "User"
                  :class-context "Global"
@@ -25,19 +25,16 @@
                  :current (tss/as-jsonb i-profile)}
                 {:track o-op})
         o-audit (pg/t:insert tsb/Audit
-                  {:class-table "User"
-                   :class-context "Global"
-                   :class-ref i-user-id}
+                  {:class-table "User" :class-context "Global" :class-ref i-user-id}
                   {:track o-op})
-        o-activity (pg/t:insert tsb/Activity
-                     {:class-table "User" :class-ref i-user-id}
-                     {:track o-op})
+        o-activity
+        (pg/t:insert tsb/Activity {:class-table "User" :class-ref i-user-id} {:track o-op})
         o-user (pg/t:insert tu/User
-              {:id i-user-id
-               :profile (tss/as-jsonb i-profile)
-               :rev (pg/id o-rev)
-               :audit (pg/id o-audit)
-               :activity (pg/id o-activity)})
+                 {:id i-user-id
+                  :profile (tss/as-jsonb i-profile)
+                  :rev (pg/id o-rev)
+                  :audit (pg/id o-audit)
+                  :activity (pg/id o-activity)})
         o-audit-log (pg/t:insert tsb/AuditLog
                       {:class-table "User"
                        :class-context "Global"

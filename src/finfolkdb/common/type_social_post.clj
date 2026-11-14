@@ -32,7 +32,8 @@
 
 (deftype.pg ^{:finfolk/legacy-tables ["posts"]
               :final true
-              :! (et/E {:class :0d/entry :addons [:rev :audit]})}
+              :! (et/E {:class  :0d/entry
+                        :addons [:rev :audit]})}
   SocialPost
   "A public link requiring both moderation approval and current public consent."
   [:owner            {:type :ref :required true
@@ -41,30 +42,32 @@
    :beach            {:type :ref :required true
                       :ref {:ns finfolkdb.common.type-system-site/Beach}
                       :sql {:index true :unique ["post_owner_url"]}}
-   :url              {:type :text :required true :sql {:unique ["post_owner_url"]}}
+   :url              {:type :text :required true
+                      :sql {:unique ["post_owner_url"]}}
    :platform         {:type :enum :required true
                       :enum {:ns finfolkdb.common.type-social-base/EnumSocialHandleType}}
-   :creator-handle   {:type :text :required true :sql {:default ""}}
+   :creator-handle   {:type :text :required true
+                      :sql {:default ""}}
    :status           {:type :enum :required true
                       :enum {:ns finfolkdb.common.type-domain-enum/EnumSocialPostStatus}
                       :sql {:default "pending" :index true}}
-   :public-consent   {:type :boolean :required true :sql {:default false}}
-   :rejection-reason {:type :text :required true :sql {:default ""}}
+   :public-consent   {:type :boolean :required true
+                      :sql {:default false}}
+   :rejection-reason {:type :text :required true
+                      :sql {:default ""}}
    :reviewed-by      {:type :ref
                       :ref {:ns finfolkdb.common.type-user/User}
                       :sql {:raw [:on-delete-set-null]}}
-   :reviewed-at      {:type :timestamptz}])
+   :reviewed-at      {:type :long}])
 
 ;;
 ;; SocialPostReport
 ;;
 
-(deftype.pg ^{:finfolk/legacy-tables ["post_reports"]
-              :final true
-              :! (et/E {:class :0d/entry})}
+(deftype.pg ^{:finfolk/legacy-tables ["post_reports"] :final true :! (et/E {:class :0d/entry})}
   SocialPostReport
-  [:post        {:type :ref :required true :ref {:ns -/SocialPost}
-                 :sql {:cascade true :unique ["post_reporter"]}}
+  [:post        {:type :ref :required true
+                 :ref {:ns -/SocialPost} :sql {:cascade true :unique ["post_reporter"]}}
    :reporter    {:type :ref :required true
                  :ref {:ns finfolkdb.common.type-user/User}
                  :sql {:cascade true :unique ["post_reporter"]}}
@@ -73,11 +76,10 @@
                  :enum {:ns finfolkdb.common.type-domain-enum/EnumSocialPostReportStatus}
                  :sql {:default "open" :index true}}
    :resolved-by {:type :ref
-                 :ref {:ns finfolkdb.common.type-user/User}
-                 :sql {:raw [:on-delete-set-null]}}
-   :resolved-at {:type :timestamptz}]
+                 :ref {:ns finfolkdb.common.type-user/User} :sql {:raw [:on-delete-set-null]}}
+   :resolved-at {:type :long}]
   {:constraints {:bounded-reason (and (>= (pg/length #{"reason"}) 1)
-                                     (<= (pg/length #{"reason"}) 1000))}})
+                                      (<= (pg/length #{"reason"}) 1000))}})
 
 ;;
 ;; SocialReferral
@@ -85,10 +87,16 @@
 
 (deftype.pg ^{:finfolk/legacy-tables ["community_referrals"]
               :final true
-              :! (et/E {:class :0d/entry :id :id/none :track :track/none})}
+              :! (et/E {:class :0d/entry
+                        :track :track/none})}
   SocialReferral
-  [:day      {:type :date :required true :primary "default"
-              :sql {:default (:date (#{"timezone"} "Australia/Sydney" (pg/now)))}}
-   :platform {:type :enum :required true :primary "default"
-              :enum {:ns finfolkdb.common.type-social-base/EnumSocialHandleType}}
-   :clicks   {:type :bigint :required true :sql {:default 0}}])
+  [:day      {:type :date :required true
+              :sql {:default (:date (#{"timezone"}
+                                     "Australia/Sydney"
+                                     (pg/to-timestamp (/ (pg/time-us) 1000000.0))))
+                    :unique ["entity_key"]}}
+   :platform {:type :enum :required true
+              :enum {:ns finfolkdb.common.type-social-base/EnumSocialHandleType}
+              :sql {:unique ["entity_key"]}}
+   :clicks   {:type :bigint :required true
+              :sql {:default 0}}])

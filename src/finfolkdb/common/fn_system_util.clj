@@ -11,18 +11,17 @@
 ;; Authentication Context
 ;;
 
-(defn.pg ^{:%% :sql :- [:text]}
-  auth-uid
+(defn.pg ^{:%% :sql :- [:uuid]} auth-uid
   "Returns the identity set by the authenticated backend transaction."
   []
-  (pg/coalesce (pg/current-setting "finfolk.actor_id" true) ""))
+  (:uuid (#{"nullif"} (pg/current-setting "finfolk.actor_id" true) "")))
 
 ;;
 ;; API Time Serialization
 ;;
 
-(defn.pg ^{:%% :sql :- [:text] :props [:immutable :parallel-safe]}
-  as-iso-time
-  "Matches JSON serialization of the legacy Node PostgreSQL Date values."
-  [:timestamptz i-time]
-  (pg/to-char (#{"timezone"} "UTC" i-time) "YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\""))
+(defn.pg ^{:%% :sql :- [:text] :props [:immutable :parallel-safe]} as-iso-time
+  "Serializes epoch microseconds as a UTC ISO timestamp at the API boundary."
+  [:bigint i-time]
+  (pg/to-char (#{"timezone"} "UTC" (pg/to-timestamp (/ (:numeric i-time) 1000000)))
+              "YYYY-MM-DD\"T\"HH24:MI:SS.MS\"Z\""))

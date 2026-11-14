@@ -14,13 +14,15 @@
 (deftype.pg ^{:finfolk/legacy-tables ["beaches"]
               :final true
               :! (et/E {:class  :0d/entry
-                        :id     :id/none
+                        :id     :id/v4
                         :track  :track/none
                         :access :none})}
   Beach
-  [:id        {:type :text :primary true}
+  [:key       {:type :text
+               :sql {:unique ["key"]}}
    :name      {:type :text :required true}
    :timezone  {:type :text :required true}
-   :area-name {:type :text :required true :sql {:default ""}}
-   :state     {:type :text :required true :sql {:default ""}}])
-
+   :area-name {:type :text :required true
+               :sql {:default ""}}
+   :state     {:type :text :required true
+               :sql {:default ""}}])

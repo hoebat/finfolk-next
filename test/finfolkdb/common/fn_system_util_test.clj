@@ -8,15 +8,15 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.common.fn-system-util :as t] [postgres.core :as pg]]})
+   :require [[finfolkdb.common.fn-system-util :as t]
+             [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)]
-              :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.fn-system-util/auth-uid :added "0.1"}
 (fact "auth-uid executes directly on local PostgreSQL"
-  (t/auth-uid) => "")
+  (t/auth-uid) => nil)
 
 ^{:refer finfolkdb.common.fn-system-util/as-iso-time :added "0.1"}
 (fact "as-iso-time executes directly on local PostgreSQL"
-  (t/as-iso-time "2026-11-05T01:02:03.456+11") => "2026-11-04T14:02:03.456Z")
+  (t/as-iso-time 1793800923456000) => "2026-11-04T14:02:03.456Z")

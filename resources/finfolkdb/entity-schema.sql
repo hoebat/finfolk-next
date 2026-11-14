@@ -60,11 +60,13 @@ $$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
 
 -- finfolkdb.common.type-system-site/Beach 
 CREATE TABLE IF NOT EXISTS "finfolk"."Beach" (
-  "id" TEXT PRIMARY KEY,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
   "name" TEXT NOT NULL,
   "timezone" TEXT NOT NULL,
   "area_name" TEXT NOT NULL DEFAULT '',
-  "state" TEXT NOT NULL DEFAULT ''
+  "state" TEXT NOT NULL DEFAULT '',
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-system-base/Op 
@@ -73,7 +75,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Op" (
   "time" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "tag" TEXT NOT NULL,
   "data" JSONB NOT NULL DEFAULT '{}',
-  "user_id" TEXT
+  "user_id" UUID
 );
 
 -- finfolkdb.common.type-system-base/Rev 
@@ -81,7 +83,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Rev" (
   "id" UUID DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType",
   "class_context" "finfolk"."EnumClassType",
-  "class_ref" TEXT NOT NULL,
+  "class_ref" UUID NOT NULL,
   "index" INTEGER NOT NULL DEFAULT 0,
   "current" JSONB NOT NULL DEFAULT '{}',
   "op_created" UUID,
@@ -92,6 +94,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Rev" (
 
 -- finfolkdb.common.type-system-base/RevLog 
 CREATE TABLE IF NOT EXISTS "finfolk"."RevLog" (
+  "id" UUID DEFAULT uuid_generate_v1(),
   "class_table" "finfolk"."EnumClassType",
   "class_context" "finfolk"."EnumClassType",
   "rev_id" UUID NOT NULL,
@@ -99,7 +102,8 @@ CREATE TABLE IF NOT EXISTS "finfolk"."RevLog" (
   "deltas" JSONB NOT NULL DEFAULT '{}',
   "op_created" UUID,
   "time_created" BIGINT,
-  PRIMARY KEY (class_table,class_context,rev_id,version),
+  PRIMARY KEY (id,class_table,class_context,rev_id),
+  UNIQUE ("class_table","class_context","rev_id","version"),
   CONSTRAINT fk_rev_log_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id) ON DELETE CASCADE
 );
 
@@ -108,7 +112,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Audit" (
   "id" UUID DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType",
   "class_context" "finfolk"."EnumClassType",
-  "class_ref" TEXT NOT NULL,
+  "class_ref" UUID NOT NULL,
   "op_created" UUID,
   "time_created" BIGINT,
   PRIMARY KEY (id,class_table,class_context),
@@ -117,13 +121,15 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Audit" (
 
 -- finfolkdb.common.type-system-base/AuditLog 
 CREATE TABLE IF NOT EXISTS "finfolk"."AuditLog" (
+  "id" UUID DEFAULT uuid_generate_v1(),
   "class_table" "finfolk"."EnumClassType",
   "class_context" "finfolk"."EnumClassType",
   "audit_id" UUID NOT NULL,
   "entry" JSONB NOT NULL DEFAULT '{}',
-  "op_created" UUID,
+  "op_created" UUID NOT NULL,
   "time_created" BIGINT,
-  PRIMARY KEY (class_table,class_context,audit_id,op_created),
+  PRIMARY KEY (id,class_table,class_context,audit_id),
+  UNIQUE ("class_table","class_context","audit_id","op_created"),
   CONSTRAINT fk_audit_log_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id) ON DELETE CASCADE
 );
 
@@ -144,7 +150,7 @@ $$ LANGUAGE 'sql';
 CREATE OR REPLACE FUNCTION "finfolk".ret_rev_default(
   i_class_table TEXT,
   i_class_context TEXT,
-  i_class_ref TEXT
+  i_class_ref UUID
 ) RETURNS JSONB AS $$
 
   WITH j_ret AS (  
@@ -161,7 +167,7 @@ $$ LANGUAGE 'sql';
 CREATE TABLE IF NOT EXISTS "finfolk"."Activity" (
   "id" UUID DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType",
-  "class_ref" TEXT NOT NULL,
+  "class_ref" UUID NOT NULL,
   "op_created" UUID,
   "time_created" BIGINT,
   PRIMARY KEY (id,class_table),
@@ -171,7 +177,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Activity" (
 -- finfolkdb.common.type-system-base/op-fn 
 CREATE OR REPLACE FUNCTION "finfolk".op_fn(
   i_tag TEXT,
-  i_user_id TEXT,
+  i_user_id UUID,
   i_data JSONB
 ) RETURNS JSONB AS $$
 
@@ -179,7 +185,7 @@ CREATE OR REPLACE FUNCTION "finfolk".op_fn(
     INSERT INTO "finfolk"."Op" ("tag","data","user_id") VALUES (
       (i_tag)::TEXT,
       ("finfolk".as_jsonb(i_data))::JSONB,
-      (i_user_id)::TEXT
+      (i_user_id)::UUID
     ) RETURNING "id","time","tag","data","user_id")
   SELECT to_jsonb(j_ret) FROM j_ret;
 
@@ -471,14 +477,14 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-user/User 
 CREATE TABLE IF NOT EXISTS "finfolk"."User" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('User')::"finfolk"."EnumClassType") STORED,
   "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
-  "id" TEXT PRIMARY KEY,
   "profile" JSONB NOT NULL DEFAULT '{}',
   "deleted" BOOLEAN NOT NULL DEFAULT false,
   "invite_eligible" BOOLEAN NOT NULL DEFAULT false,
-  "joined_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "joined_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "activity_id" UUID NOT NULL,
   "audit_id" UUID NOT NULL,
   "rev_id" UUID NOT NULL,
@@ -492,32 +498,35 @@ CREATE TABLE IF NOT EXISTS "finfolk"."User" (
 
 -- finfolkdb.common.type-user/UserBlock 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserBlock" (
-  "owner_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "target_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  PRIMARY KEY (owner_id,target_id),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "target_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  UNIQUE ("owner_id","target_id"),
   CONSTRAINT different_users CHECK ("owner_id" != "target_id")
 );
 
 -- finfolkdb.common.type-user/UserCheckin 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserCheckin" (
-  "user_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "beach_id" TEXT NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
   "visit_day" DATE NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "checked_in_at" TIMESTAMPTZ,
-  "checked_out_at" TIMESTAMPTZ,
-  PRIMARY KEY (user_id,beach_id,visit_day),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "checked_in_at" BIGINT,
+  "checked_out_at" BIGINT,
+  UNIQUE ("user_id","beach_id","visit_day"),
   CONSTRAINT valid_checkout CHECK ("checked_out_at" IS NULL OR ("checked_in_at" IS NOT NULL AND ("checked_out_at" >= "checked_in_at")))
 );
 
 -- finfolkdb.common.type-user/UserConnection 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserConnection" (
-  "user_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "target_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "requested_by_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "target_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "requested_by_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "status" "finfolk"."EnumUserConnectionStatus" NOT NULL,
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (user_id,target_id),
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("user_id","target_id"),
   CONSTRAINT ordered_users CHECK ("user_id" < "target_id"),
   CONSTRAINT valid_requester CHECK (("requested_by_id" = "user_id") OR ("requested_by_id" = "target_id"))
 );
@@ -533,16 +542,16 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.common.type-site-note/SiteNote 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteNote" (
   "id" UUID PRIMARY KEY,
-  "beach_id" TEXT NOT NULL REFERENCES "finfolk"."Beach"("id") ON DELETE CASCADE,
-  "author_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id") ON DELETE CASCADE,
+  "author_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "topic" "finfolk"."EnumSiteNoteTopic" NOT NULL,
   "body" TEXT NOT NULL,
   "observed_on" DATE,
   "withdrawn" BOOLEAN NOT NULL DEFAULT false,
   "hidden" BOOLEAN NOT NULL DEFAULT false,
   "revision" INTEGER NOT NULL DEFAULT 1,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   CONSTRAINT bounded_body CHECK ((length(btrim("body")) >= 10) AND (length("body") <= 1000)),
   CONSTRAINT observation_required CHECK (("topic" != 'conditions') OR "observed_on" IS NOT NULL),
   CONSTRAINT finite_observation CHECK ("observed_on" IS NULL OR "isfinite"("observed_on")),
@@ -553,21 +562,23 @@ CREATE INDEX ON "finfolk"."SiteNote" ("author_id");
 
 -- finfolkdb.common.type-site-note/SiteNoteVote 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteNoteVote" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "note_id" UUID NOT NULL REFERENCES "finfolk"."SiteNote"("id") ON DELETE CASCADE,
-  "voter_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (note_id,voter_id)
+  "voter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("note_id","voter_id")
 );
 CREATE INDEX ON "finfolk"."SiteNoteVote" ("voter_id");
 
 -- finfolkdb.common.type-site-note/SiteNoteReport 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteNoteReport" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "note_id" UUID NOT NULL REFERENCES "finfolk"."SiteNote"("id") ON DELETE CASCADE,
-  "reporter_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "reporter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "reason" TEXT NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "resolved_at" TIMESTAMPTZ,
-  PRIMARY KEY (note_id,reporter_id),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "resolved_at" BIGINT,
+  UNIQUE ("note_id","reporter_id"),
   CONSTRAINT bounded_reason CHECK ((length(btrim("reason")) >= 1) AND (length("reason") <= 1000))
 );
 CREATE INDEX ON "finfolk"."SiteNoteReport" ("reporter_id");
@@ -598,33 +609,37 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-messaging-base/MessagingApplication 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingApplication" (
-  "id" TEXT PRIMARY KEY,
-  "name" TEXT NOT NULL
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "name" TEXT NOT NULL,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-messaging-base/MessagingAccount 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingAccount" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "application_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingApplication"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "application_id" UUID NOT NULL REFERENCES "finfolk"."MessagingApplication"("id"),
   "provider" "finfolk"."EnumMessagingProvider" NOT NULL,
   "account_id" TEXT NOT NULL,
   "username" TEXT,
   "credential_ciphertext" TEXT,
-  "token_expires_at" TIMESTAMPTZ,
+  "token_expires_at" BIGINT,
   "credential_lease" UUID,
-  "credential_lease_until" TIMESTAMPTZ,
+  "credential_lease_until" BIGINT,
   "mode" "finfolk"."EnumMessagingAccountMode" NOT NULL DEFAULT 'disabled',
   "enabled_commands" JSONB NOT NULL DEFAULT '["ping", "help"]',
   "pilot_sender_ids" JSONB NOT NULL DEFAULT '[]',
   "generation" INTEGER NOT NULL DEFAULT 1,
   "checks" JSONB NOT NULL DEFAULT '{}',
-  "last_webhook_at" TIMESTAMPTZ,
-  "last_command_at" TIMESTAMPTZ,
-  "last_reply_at" TIMESTAMPTZ,
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "backoff_until" TIMESTAMPTZ,
+  "last_webhook_at" BIGINT,
+  "last_command_at" BIGINT,
+  "last_reply_at" BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "backoff_until" BIGINT,
   "provider_scope" TEXT,
   UNIQUE ("id","application_id"),
+  UNIQUE ("key"),
   UNIQUE ("application_id","provider","account_id"),
   CONSTRAINT credential_lease_pair CHECK (("credential_lease" IS NULL AND "credential_lease_until" IS NULL) OR ("credential_lease" IS NOT NULL AND "credential_lease_until" IS NOT NULL)),
   CONSTRAINT positive_generation CHECK ("generation" > 0),
@@ -635,41 +650,43 @@ CREATE INDEX ON "finfolk"."MessagingAccount" ("application_id");
 
 -- finfolkdb.common.type-messaging-base/MessagingAudit 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingAudit" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
-  "account_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
   "actor" TEXT NOT NULL,
   "event" TEXT NOT NULL,
   "correlation_id" UUID NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
 );
 CREATE INDEX ON "finfolk"."MessagingAudit" ("account_id");
 
 -- finfolkdb.common.type-messaging-base/MessagingIdempotency 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingIdempotency" (
-  "application_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingApplication"("id"),
-  "user_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "application_id" UUID NOT NULL REFERENCES "finfolk"."MessagingApplication"("id"),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "key_hash" TEXT NOT NULL,
   "request_hash" TEXT NOT NULL,
   "response_ciphertext" TEXT,
   "response_status" INTEGER NOT NULL,
-  "expires_at" TIMESTAMPTZ NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  PRIMARY KEY (application_id,user_id,key_hash)
+  "expires_at" BIGINT NOT NULL,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("application_id","user_id","key_hash")
 );
 
 -- finfolkdb.common.type-messaging-base/MessagingOauthState 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingOauthState" (
-  "application_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingApplication"("id"),
-  "account_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "application_id" UUID NOT NULL REFERENCES "finfolk"."MessagingApplication"("id"),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
   "state_hash" TEXT NOT NULL,
   "nonce_hash" TEXT NOT NULL,
   "generation" INTEGER NOT NULL,
-  "user_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "expires_at" TIMESTAMPTZ NOT NULL,
-  "consumed_at" TIMESTAMPTZ,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "expires_at" BIGINT NOT NULL,
+  "consumed_at" BIGINT,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "flow_key" TEXT NOT NULL,
-  PRIMARY KEY (application_id,state_hash),
+  UNIQUE ("application_id","state_hash"),
   CONSTRAINT fk_messaging_oauth_state_account_scope FOREIGN KEY (application_id,account_id) REFERENCES "finfolk"."MessagingAccount"(application_id,id)
 );
 CREATE INDEX ON "finfolk"."MessagingOauthState" ("account_id");
@@ -677,9 +694,9 @@ CREATE INDEX ON "finfolk"."MessagingOauthState" ("account_id");
 -- finfolkdb.common.type-messaging-base/MessagingIdentity 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingIdentity" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "account_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
   "external_id" TEXT NOT NULL,
-  "user_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "user_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
   UNIQUE ("id","account_id"),
   UNIQUE ("account_id","external_id")
 );
@@ -688,7 +705,7 @@ CREATE INDEX ON "finfolk"."MessagingIdentity" ("account_id");
 -- finfolkdb.common.type-messaging-base/MessagingConversation 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingConversation" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "account_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
   "participant_id" UUID NOT NULL REFERENCES "finfolk"."MessagingIdentity"("id"),
   "external_id" TEXT NOT NULL,
   UNIQUE ("id","account_id"),
@@ -700,14 +717,14 @@ CREATE INDEX ON "finfolk"."MessagingConversation" ("account_id");
 -- finfolkdb.common.type-messaging-base/MessagingMessage 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingMessage" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "account_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
   "conversation_id" UUID NOT NULL REFERENCES "finfolk"."MessagingConversation"("id"),
   "direction" "finfolk"."EnumMessagingDirection" NOT NULL,
   "external_id" TEXT,
   "body" TEXT NOT NULL,
   "metadata" JSONB NOT NULL DEFAULT '{}',
-  "sent_at" TIMESTAMPTZ,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "sent_at" BIGINT,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   UNIQUE ("id","account_id"),
   UNIQUE ("account_id","direction","external_id"),
   CONSTRAINT body_limit CHECK (length("body") <= 2000),
@@ -720,19 +737,19 @@ CREATE INDEX ON "finfolk"."MessagingMessage" ("account_id");
 -- finfolkdb.common.type-messaging-base/MessagingReceipt 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingReceipt" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "account_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
   "external_event_id" TEXT NOT NULL,
   "message_id" UUID NOT NULL REFERENCES "finfolk"."MessagingMessage"("id"),
   "status" "finfolk"."EnumMessagingReceiptStatus" NOT NULL DEFAULT 'received',
   "generation" INTEGER NOT NULL,
   "attempts" INTEGER NOT NULL DEFAULT 0,
   "lease" UUID,
-  "lease_until" TIMESTAMPTZ,
-  "next_attempt_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "deadline" TIMESTAMPTZ NOT NULL,
+  "lease_until" BIGINT,
+  "next_attempt_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "deadline" BIGINT NOT NULL,
   "result" JSONB NOT NULL DEFAULT '{}',
   "correlation_id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   UNIQUE ("id","account_id"),
   UNIQUE ("account_id","external_event_id"),
   UNIQUE ("message_id"),
@@ -747,7 +764,7 @@ CREATE INDEX ON "finfolk"."MessagingReceipt" ("account_id");
 -- finfolkdb.common.type-messaging-base/MessagingOutbox 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingOutbox" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "account_id" TEXT NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
   "receipt_id" UUID NOT NULL REFERENCES "finfolk"."MessagingReceipt"("id"),
   "message_id" UUID NOT NULL REFERENCES "finfolk"."MessagingMessage"("id"),
   "body" TEXT NOT NULL,
@@ -756,13 +773,13 @@ CREATE TABLE IF NOT EXISTS "finfolk"."MessagingOutbox" (
   "state" "finfolk"."EnumMessagingOutboxStatus" NOT NULL DEFAULT 'pending',
   "attempts" INTEGER NOT NULL DEFAULT 0,
   "lease" UUID,
-  "lease_until" TIMESTAMPTZ,
-  "next_attempt_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "deadline" TIMESTAMPTZ NOT NULL,
+  "lease_until" BIGINT,
+  "next_attempt_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "deadline" BIGINT NOT NULL,
   "provider_message_id" TEXT,
   "error_code" TEXT,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "body_ciphertext" TEXT,
   "reply_kind" "finfolk"."EnumMessagingOutboxReplyKind" NOT NULL DEFAULT 'text',
   UNIQUE ("receipt_id"),
@@ -779,12 +796,12 @@ CREATE INDEX ON "finfolk"."MessagingOutbox" ("account_id");
 -- finfolkdb.common.type-messaging-base/__work_indexes__ 
 CREATE INDEX IF NOT EXISTS "MessagingReceipt_ready" ON "finfolk"."MessagingReceipt" ("account_id","status","next_attempt_at");
 CREATE INDEX IF NOT EXISTS "MessagingOutbox_ready" ON "finfolk"."MessagingOutbox" ("account_id","state","next_attempt_at");
-CREATE INDEX IF NOT EXISTS "MessagingMessage_history" ON "finfolk"."MessagingMessage" ("conversation_id","created_at","id");
+CREATE INDEX IF NOT EXISTS "MessagingMessage_history" ON "finfolk"."MessagingMessage" ("conversation_id","time_created","id");
 
 -- finfolkdb.fn.messaging.messaging-manage/ret-messaging-account 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_account(
-  i_application TEXT,
-  i_account TEXT
+  i_application UUID,
+  i_account UUID
 ) RETURNS JSONB AS $$
 
   DECLARE
@@ -793,6 +810,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_account(
     WITH j_ret AS (  
       SELECT
         "id",
+        "key",
         "application_id",
         "provider",
         "account_id",
@@ -809,7 +827,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_account(
         "last_webhook_at",
         "last_command_at",
         "last_reply_at",
-        "updated_at",
+        "time_updated",
         "backoff_until",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
@@ -827,8 +845,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/record-messaging-audit 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".record_messaging_audit(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_event TEXT,
   i_correlation UUID
 ) RETURNS JSONB AS $$
@@ -838,11 +856,17 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_messaging_audit(
   BEGIN
     WITH j_ret AS (  
       INSERT INTO "finfolk"."MessagingAudit" ("account_id","actor","event","correlation_id") VALUES (
-        (i_account)::TEXT,
+        (i_account)::UUID,
         (i_application)::TEXT,
         (i_event)::TEXT,
         (i_correlation)::UUID
-      ) RETURNING "id","account_id","actor","event","correlation_id","created_at")
+      ) RETURNING
+        "id",
+        "account_id",
+        "actor",
+        "event",
+        "correlation_id",
+        "time_created")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
     RETURN o_audit;
   END;
@@ -876,8 +900,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/receive-message 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_envelope JSONB
 ) RETURNS JSONB AS $$
 
@@ -887,16 +911,17 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
     o_metadata JSONB;
     v_body TEXT;
     v_conversation TEXT;
-    v_deadline TIMESTAMPTZ;
+    v_deadline BIGINT;
     v_event TEXT;
     v_message TEXT;
     v_sender TEXT;
-    v_sent TIMESTAMPTZ;
+    v_sent BIGINT;
   BEGIN
     o_envelope := "finfolk".as_jsonb(i_envelope);
     WITH j_ret AS (  
       SELECT
         "id",
+        "key",
         "application_id",
         "provider",
         "account_id",
@@ -913,7 +938,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
         "last_webhook_at",
         "last_command_at",
         "last_reply_at",
-        "updated_at",
+        "time_updated",
         "backoff_until",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
@@ -926,13 +951,13 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
     v_conversation := (o_envelope ->> 'conversationId');
     v_sender := (o_envelope ->> 'senderId');
     v_body := (o_envelope ->> 'body');
-    v_sent := (o_envelope ->> 'sentAt')::TIMESTAMPTZ;
-    v_deadline := (o_envelope ->> 'deadline')::TIMESTAMPTZ;
+    v_sent := (o_envelope ->> 'sentAt')::BIGINT;
+    v_deadline := (o_envelope ->> 'deadline')::BIGINT;
     o_metadata := "finfolk".as_jsonb(o_envelope -> 'metadata');
     IF o_account is null  THEN
       RAISE EXCEPTION 'Messaging account is outside application scope';
     END IF;
-    IF (jsonb_typeof(o_envelope -> 'eventId') != 'string') OR (jsonb_typeof(o_envelope -> 'messageId') != 'string') OR (jsonb_typeof(o_envelope -> 'conversationId') != 'string') OR (jsonb_typeof(o_envelope -> 'senderId') != 'string') OR (jsonb_typeof(o_envelope -> 'body') != 'string') OR NOT "isfinite"(v_sent) OR NOT "isfinite"(v_deadline) OR (coalesce(v_event,'') = '') OR (length(v_event) > 500) OR (coalesce(v_message,'') = '') OR (length(v_message) > 500) OR (coalesce(v_conversation,'') = '') OR (length(v_conversation) > 500) OR (coalesce(v_sender,'') = '') OR (length(v_sender) > 500) OR v_body IS NULL OR (length(v_body) > 2000) OR v_sent IS NULL OR v_deadline IS NULL OR (v_deadline <= v_sent) OR (v_sent > (now() + ('5 minutes')::INTERVAL)) THEN
+    IF (jsonb_typeof(o_envelope -> 'eventId') != 'string') OR (jsonb_typeof(o_envelope -> 'messageId') != 'string') OR (jsonb_typeof(o_envelope -> 'conversationId') != 'string') OR (jsonb_typeof(o_envelope -> 'senderId') != 'string') OR (jsonb_typeof(o_envelope -> 'body') != 'string') OR v_sent IS NULL OR v_deadline IS NULL OR (coalesce(v_event,'') = '') OR (length(v_event) > 500) OR (coalesce(v_message,'') = '') OR (length(v_message) > 500) OR (coalesce(v_conversation,'') = '') OR (length(v_conversation) > 500) OR (coalesce(v_sender,'') = '') OR (length(v_sender) > 500) OR v_body IS NULL OR (length(v_body) > 2000) OR v_sent IS NULL OR v_deadline IS NULL OR (v_deadline <= v_sent) OR (v_sent > ((1000000 * extract(epoch FROM now()))::BIGINT + 300000000)) THEN
       RAISE EXCEPTION 'Invalid normalized messaging envelope';
     END IF;
     DECLARE
@@ -954,7 +979,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
           "deadline",
           "result",
           "correlation_id",
-          "created_at"
+          "time_created"
         FROM "finfolk"."MessagingReceipt"
         WHERE "account_id" = i_account AND "external_event_id" = v_event
         LIMIT 1)
@@ -969,7 +994,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
           "body",
           "metadata",
           "sent_at",
-          "created_at"
+          "time_created"
         FROM "finfolk"."MessagingMessage"
         WHERE "account_id" = i_account
         AND "direction" = ('inbound')::"finfolk"."EnumMessagingDirection"
@@ -992,7 +1017,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
               "body",
               "metadata",
               "sent_at",
-              "created_at"
+              "time_created"
             FROM "finfolk"."MessagingMessage"
             WHERE "id" = coalesce(
               (o_existing ->> 'message_id')::UUID,
@@ -1010,7 +1035,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
             WHERE "id" = (o_thread ->> 'participant_id')::UUID
             LIMIT 1)
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_sender;
-          IF ((o_original ->> 'external_id') != v_message) OR ((o_original ->> 'body') != v_body) OR ((o_original -> 'metadata') != o_metadata) OR ((o_original ->> 'sent_at')::TIMESTAMPTZ != v_sent) OR ((o_thread ->> 'external_id') != v_conversation) OR ((o_sender ->> 'external_id') != v_sender) THEN
+          IF ((o_original ->> 'external_id') != v_message) OR ((o_original ->> 'body') != v_body) OR ((o_original -> 'metadata') != o_metadata) OR ((o_original ->> 'sent_at')::BIGINT != v_sent) OR ((o_thread ->> 'external_id') != v_conversation) OR ((o_sender ->> 'external_id') != v_sender) THEN
             RAISE EXCEPTION 'Conflicting duplicate messaging event';
           END IF;
           IF o_existing is null  THEN
@@ -1032,7 +1057,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
                   "deadline",
                   "result",
                   "correlation_id",
-                  "created_at"
+                  "time_created"
                 FROM "finfolk"."MessagingReceipt"
                 WHERE "message_id" = (o_original ->> 'id')::UUID
                 LIMIT 1)
@@ -1055,7 +1080,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
           DECLARE
           o_new JSONB;
         BEGIN
-          WITH j_ret AS (INSERT INTO "finfolk"."MessagingIdentity" ("account_id","external_id") VALUES ((i_account)::TEXT,(v_sender)::TEXT) RETURNING "id","account_id","external_id","user_id")
+          WITH j_ret AS (INSERT INTO "finfolk"."MessagingIdentity" ("account_id","external_id") VALUES ((i_account)::UUID,(v_sender)::TEXT) RETURNING "id","account_id","external_id","user_id")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_new;
             o_identity := o_new;
         END;
@@ -1074,7 +1099,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
           BEGIN
             WITH j_ret AS (  
                 INSERT INTO "finfolk"."MessagingConversation" ("account_id","participant_id","external_id") VALUES (
-                  (i_account)::TEXT,
+                  (i_account)::UUID,
                   (o_identity ->> 'id')::UUID,
                   (v_conversation)::TEXT
                 ) RETURNING "id","account_id","participant_id","external_id")
@@ -1082,7 +1107,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
               o_conversation := o_new;
           END;
           END IF;
-          IF (o_conversation ->> 'participant_id') != (o_identity ->> 'id') THEN
+          IF (o_conversation ->> 'participant_id')::UUID != (o_identity ->> 'id')::UUID THEN
             RAISE EXCEPTION 'Conversation participant mismatch';
           END IF;
           DECLARE
@@ -1100,13 +1125,13 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
                 "metadata",
                 "sent_at"
               ) VALUES (
-                (i_account)::TEXT,
+                (i_account)::UUID,
                 (o_conversation ->> 'id')::UUID,
                 ('inbound')::"finfolk"."EnumMessagingDirection",
                 (v_message)::TEXT,
                 (v_body)::TEXT,
                 (o_metadata)::JSONB,
-                (v_sent)::TIMESTAMPTZ
+                (v_sent)::BIGINT
               ) RETURNING
                 "id",
                 "account_id",
@@ -1116,7 +1141,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
                 "body",
                 "metadata",
                 "sent_at",
-                "created_at")
+                "time_created")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_message;
             WITH j_ret AS (  
               INSERT INTO "finfolk"."MessagingReceipt" (
@@ -1126,11 +1151,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
                 "generation",
                 "deadline"
               ) VALUES (
-                (i_account)::TEXT,
+                (i_account)::UUID,
                 (v_event)::TEXT,
                 (o_message ->> 'id')::UUID,
                 (o_account ->> 'generation')::INTEGER,
-                (v_deadline)::TIMESTAMPTZ
+                (v_deadline)::BIGINT
               ) RETURNING
                 "id",
                 "account_id",
@@ -1145,7 +1170,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
                 "deadline",
                 "result",
                 "correlation_id",
-                "created_at")
+                "time_created")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_receipt;
             o_audit := "finfolk_rpc".record_messaging_audit(
               i_application,
@@ -1164,8 +1189,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/reconcile-messaging-work 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
-  i_application TEXT,
-  i_account TEXT
+  i_application UUID,
+  i_account UUID
 ) RETURNS JSONB AS $$
 
   DECLARE
@@ -1183,8 +1208,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
       UPDATE "finfolk"."MessagingReceipt" SET
         "status" = ('expired')::"finfolk"."EnumMessagingReceiptStatus",
         "lease" = (null)::UUID,
-        "lease_until" = (null)::TIMESTAMPTZ
-      WHERE ("account_id" = i_account AND "status" != ('completed')::"finfolk"."EnumMessagingReceiptStatus" AND "status" != ('expired')::"finfolk"."EnumMessagingReceiptStatus" AND "deadline" <= now())
+        "lease_until" = (null)::BIGINT
+      WHERE ("account_id" = i_account AND "status" != ('completed')::"finfolk"."EnumMessagingReceiptStatus" AND "status" != ('expired')::"finfolk"."EnumMessagingReceiptStatus" AND "deadline" <= (1000000 * extract(epoch FROM now()))::BIGINT)
       OR ("account_id" = i_account AND "status" != ('completed')::"finfolk"."EnumMessagingReceiptStatus" AND "status" != ('expired')::"finfolk"."EnumMessagingReceiptStatus" AND "generation" != v_generation)
       RETURNING
         "id",
@@ -1200,17 +1225,17 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
         "deadline",
         "result",
         "correlation_id",
-        "created_at")
+        "time_created")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_expired;
     WITH j_ret AS (  
       UPDATE "finfolk"."MessagingReceipt" SET
         "status" = ('failed')::"finfolk"."EnumMessagingReceiptStatus",
         "lease" = (null)::UUID,
-        "lease_until" = (null)::TIMESTAMPTZ
+        "lease_until" = (null)::BIGINT
       WHERE "account_id" = i_account
       AND "status" = ('processing')::"finfolk"."EnumMessagingReceiptStatus"
       AND "attempts" >= 5
-      AND "lease_until" <= now()
+      AND "lease_until" <= (1000000 * extract(epoch FROM now()))::BIGINT
       RETURNING
         "id",
         "account_id",
@@ -1225,17 +1250,17 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
         "deadline",
         "result",
         "correlation_id",
-        "created_at")
+        "time_created")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_exhausted;
     WITH j_ret AS (  
       UPDATE "finfolk"."MessagingOutbox" SET
         "state" = ('uncertain')::"finfolk"."EnumMessagingOutboxStatus",
         "lease" = (null)::UUID,
-        "lease_until" = (null)::TIMESTAMPTZ,
+        "lease_until" = (null)::BIGINT,
         "error_code" = ('delivery_lease_expired')::TEXT
       WHERE "account_id" = i_account
       AND "state" = ('sending')::"finfolk"."EnumMessagingOutboxStatus"
-      AND "lease_until" <= now()
+      AND "lease_until" <= (1000000 * extract(epoch FROM now()))::BIGINT
       RETURNING
         "id",
         "account_id",
@@ -1252,8 +1277,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
         "deadline",
         "provider_message_id",
         "error_code",
-        "created_at",
-        "updated_at",
+        "time_created",
+        "time_updated",
         "body_ciphertext",
         "reply_kind")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_uncertain;
@@ -1280,8 +1305,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
         "deadline",
         "provider_message_id",
         "error_code",
-        "created_at",
-        "updated_at",
+        "time_created",
+        "time_updated",
         "body_ciphertext",
         "reply_kind")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_cancelled;
@@ -1290,7 +1315,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
         "state" = ('expired')::"finfolk"."EnumMessagingOutboxStatus"
       WHERE "account_id" = i_account
       AND "state" = ('pending')::"finfolk"."EnumMessagingOutboxStatus"
-      AND "deadline" <= now()
+      AND "deadline" <= (1000000 * extract(epoch FROM now()))::BIGINT
       RETURNING
         "id",
         "account_id",
@@ -1307,8 +1332,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
         "deadline",
         "provider_message_id",
         "error_code",
-        "created_at",
-        "updated_at",
+        "time_created",
+        "time_updated",
         "body_ciphertext",
         "reply_kind")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_deadline;
@@ -1319,8 +1344,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/claim-message 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
-  i_application TEXT,
-  i_account TEXT
+  i_application UUID,
+  i_account UUID
 ) RETURNS JSONB AS $$
 
   DECLARE
@@ -1331,7 +1356,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
     o_account := "finfolk_rpc".ret_messaging_account(i_application,i_account);
     o_reconciled := "finfolk_rpc".reconcile_messaging_work(i_application,i_account);
     v_generation := (o_account ->> 'generation')::INTEGER;
-    IF ((o_account ->> 'mode') = 'disabled') OR ((o_account ->> 'backoff_until')::TIMESTAMPTZ > now()) THEN
+    IF ((o_account ->> 'mode') = 'disabled') OR ((o_account ->> 'backoff_until')::BIGINT > (1000000 * extract(epoch FROM now()))::BIGINT) THEN
       RETURN null;
     END IF;
     DECLARE
@@ -1352,12 +1377,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
           "deadline",
           "result",
           "correlation_id",
-          "created_at"
+          "time_created"
         FROM "finfolk"."MessagingReceipt"
-        WHERE ("account_id" = i_account AND "generation" = v_generation AND "status" = ('received')::"finfolk"."EnumMessagingReceiptStatus" AND "deadline" > now() AND "next_attempt_at" <= now() AND "attempts" < 5)
-        OR ("account_id" = i_account AND "generation" = v_generation AND "status" = ('failed')::"finfolk"."EnumMessagingReceiptStatus" AND "deadline" > now() AND "next_attempt_at" <= now() AND "attempts" < 5)
-        OR ("account_id" = i_account AND "generation" = v_generation AND "status" = ('processing')::"finfolk"."EnumMessagingReceiptStatus" AND "deadline" > now() AND "lease_until" <= now() AND "attempts" < 5)
-        ORDER BY "created_at","id" ASC
+        WHERE ("account_id" = i_account AND "generation" = v_generation AND "status" = ('received')::"finfolk"."EnumMessagingReceiptStatus" AND "deadline" > (1000000 * extract(epoch FROM now()))::BIGINT AND "next_attempt_at" <= (1000000 * extract(epoch FROM now()))::BIGINT AND "attempts" < 5)
+        OR ("account_id" = i_account AND "generation" = v_generation AND "status" = ('failed')::"finfolk"."EnumMessagingReceiptStatus" AND "deadline" > (1000000 * extract(epoch FROM now()))::BIGINT AND "next_attempt_at" <= (1000000 * extract(epoch FROM now()))::BIGINT AND "attempts" < 5)
+        OR ("account_id" = i_account AND "generation" = v_generation AND "status" = ('processing')::"finfolk"."EnumMessagingReceiptStatus" AND "deadline" > (1000000 * extract(epoch FROM now()))::BIGINT AND "lease_until" <= (1000000 * extract(epoch FROM now()))::BIGINT AND "attempts" < 5)
+        ORDER BY "time_created","id" ASC
         LIMIT 1
         FOR UPDATE SKIP LOCKED)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_receipt;
@@ -1379,7 +1404,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
             "body",
             "metadata",
             "sent_at",
-            "created_at"
+            "time_created"
           FROM "finfolk"."MessagingMessage"
           WHERE "id" = (o_receipt ->> 'message_id')::UUID
           LIMIT 1)
@@ -1404,7 +1429,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
               UPDATE "finfolk"."MessagingReceipt" SET
                 "status" = ('expired')::"finfolk"."EnumMessagingReceiptStatus",
                 "lease" = (null)::UUID,
-                "lease_until" = (null)::TIMESTAMPTZ
+                "lease_until" = (null)::BIGINT
               WHERE "id" = (o_receipt ->> 'id')::UUID
               RETURNING
                 "id",
@@ -1420,7 +1445,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
                 "deadline",
                 "result",
                 "correlation_id",
-                "created_at")
+                "time_created")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_expired;
             RETURN null;
         END;
@@ -1433,7 +1458,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
               "status" = ('processing')::"finfolk"."EnumMessagingReceiptStatus",
               "attempts" = ((o_receipt ->> 'attempts')::INTEGER + 1)::INTEGER,
               "lease" = (uuid_generate_v4())::UUID,
-              "lease_until" = (now() + ('60 seconds')::INTERVAL)::TIMESTAMPTZ
+              "lease_until" = ((1000000 * extract(epoch FROM now()))::BIGINT + 60000000)::BIGINT
             WHERE "id" = (o_receipt ->> 'id')::UUID
             RETURNING
               "id",
@@ -1449,7 +1474,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
               "deadline",
               "result",
               "correlation_id",
-              "created_at")
+              "time_created")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_claim;
           RETURN jsonb_build_object(
             'receipt',
@@ -1461,7 +1486,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
             'senderId',
             o_participant ->> 'external_id',
             'userId',
-            o_participant ->> 'user_id'
+            (o_participant ->> 'user_id')::UUID
           );
         END;
       END;
@@ -1472,8 +1497,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/complete-message 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_receipt UUID,
   i_lease UUID,
   i_result JSONB,
@@ -1502,14 +1527,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
         "deadline",
         "result",
         "correlation_id",
-        "created_at"
+        "time_created"
       FROM "finfolk"."MessagingReceipt"
       WHERE "id" = i_receipt
       AND "account_id" = i_account
       AND "status" = ('processing')::"finfolk"."EnumMessagingReceiptStatus"
       AND "lease" = i_lease
-      AND "lease_until" > now()
-      AND "deadline" > now()
+      AND "lease_until" > (1000000 * extract(epoch FROM now()))::BIGINT
+      AND "deadline" > (1000000 * extract(epoch FROM now()))::BIGINT
       AND "generation" = (o_account ->> 'generation')::INTEGER
       LIMIT 1
       FOR UPDATE)
@@ -1533,7 +1558,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
           "body",
           "metadata",
           "sent_at",
-          "created_at"
+          "time_created"
         FROM "finfolk"."MessagingMessage"
         WHERE "id" = (o_receipt ->> 'message_id')::UUID
         LIMIT 1)
@@ -1548,7 +1573,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
       BEGIN
         WITH j_ret AS (  
             INSERT INTO "finfolk"."MessagingMessage" ("account_id","conversation_id","direction","body") VALUES (
-              (i_account)::TEXT,
+              (i_account)::UUID,
               (o_incoming ->> 'conversation_id')::UUID,
               ('outbound')::"finfolk"."EnumMessagingDirection",
               (i_reply)::TEXT
@@ -1561,7 +1586,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
               "body",
               "metadata",
               "sent_at",
-              "created_at")
+              "time_created")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_message;
           WITH j_ret AS (  
             INSERT INTO "finfolk"."MessagingOutbox" (
@@ -1573,13 +1598,13 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
               "generation",
               "deadline"
             ) VALUES (
-              (i_account)::TEXT,
+              (i_account)::UUID,
               (i_receipt)::UUID,
               (o_message ->> 'id')::UUID,
               (i_reply)::TEXT,
               (o_receipt ->> 'correlation_id')::UUID,
               (o_receipt ->> 'generation')::INTEGER,
-              (o_receipt ->> 'deadline')::TIMESTAMPTZ
+              (o_receipt ->> 'deadline')::BIGINT
             ) RETURNING
               "id",
               "account_id",
@@ -1596,8 +1621,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
               "deadline",
               "provider_message_id",
               "error_code",
-              "created_at",
-              "updated_at",
+              "time_created",
+              "time_updated",
               "body_ciphertext",
               "reply_kind")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_outbox;
@@ -1612,7 +1637,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
           UPDATE "finfolk"."MessagingReceipt" SET
             "status" = ('completed')::"finfolk"."EnumMessagingReceiptStatus",
             "lease" = (null)::UUID,
-            "lease_until" = (null)::TIMESTAMPTZ,
+            "lease_until" = (null)::BIGINT,
             "result" = (o_result)::JSONB
           WHERE "id" = i_receipt
           RETURNING
@@ -1629,7 +1654,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
             "deadline",
             "result",
             "correlation_id",
-            "created_at")
+            "time_created")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_complete;
         o_audit := "finfolk_rpc".record_messaging_audit(
           i_application,
@@ -1646,8 +1671,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/retry-message 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".retry_message(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_receipt UUID,
   i_lease UUID,
   i_delay INTEGER
@@ -1667,14 +1692,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".retry_message(
         UPDATE "finfolk"."MessagingReceipt" SET
           "status" = ('failed')::"finfolk"."EnumMessagingReceiptStatus",
           "lease" = (null)::UUID,
-          "lease_until" = (null)::TIMESTAMPTZ,
-          "next_attempt_at" = (now() + (i_delay * ('1 second')::INTERVAL))::TIMESTAMPTZ
+          "lease_until" = (null)::BIGINT,
+          "next_attempt_at" = ((1000000 * extract(epoch FROM now()))::BIGINT + (i_delay * 1000000))::BIGINT
         WHERE "id" = i_receipt
         AND "account_id" = i_account
         AND "status" = ('processing')::"finfolk"."EnumMessagingReceiptStatus"
         AND "lease" = i_lease
-        AND "lease_until" > now()
-        AND "deadline" > now()
+        AND "lease_until" > (1000000 * extract(epoch FROM now()))::BIGINT
+        AND "deadline" > (1000000 * extract(epoch FROM now()))::BIGINT
         AND "generation" = (o_account ->> 'generation')::INTEGER
         RETURNING
           "id",
@@ -1690,7 +1715,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".retry_message(
           "deadline",
           "result",
           "correlation_id",
-          "created_at")
+          "time_created")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_retry;
       RETURN o_retry;
     END;
@@ -1700,8 +1725,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/claim-delivery 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
-  i_application TEXT,
-  i_account TEXT
+  i_application UUID,
+  i_account UUID
 ) RETURNS JSONB AS $$
 
   DECLARE
@@ -1712,7 +1737,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
     o_account := "finfolk_rpc".ret_messaging_account(i_application,i_account);
     v_generation := (o_account ->> 'generation')::INTEGER;
     o_reconciled := "finfolk_rpc".reconcile_messaging_work(i_application,i_account);
-    IF ((o_account ->> 'mode') = 'disabled') OR ((o_account ->> 'backoff_until')::TIMESTAMPTZ > now()) THEN
+    IF ((o_account ->> 'mode') = 'disabled') OR ((o_account ->> 'backoff_until')::BIGINT > (1000000 * extract(epoch FROM now()))::BIGINT) THEN
       RETURN null;
     END IF;
     DECLARE
@@ -1735,18 +1760,18 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
           "deadline",
           "provider_message_id",
           "error_code",
-          "created_at",
-          "updated_at",
+          "time_created",
+          "time_updated",
           "body_ciphertext",
           "reply_kind"
         FROM "finfolk"."MessagingOutbox"
         WHERE "account_id" = i_account
         AND "state" = ('pending')::"finfolk"."EnumMessagingOutboxStatus"
         AND "generation" = v_generation
-        AND "deadline" > now()
-        AND "next_attempt_at" <= now()
+        AND "deadline" > (1000000 * extract(epoch FROM now()))::BIGINT
+        AND "next_attempt_at" <= (1000000 * extract(epoch FROM now()))::BIGINT
         AND "attempts" < 5
-        ORDER BY "created_at","id" ASC
+        ORDER BY "time_created","id" ASC
         LIMIT 1
         FOR UPDATE SKIP LOCKED)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_outbox;
@@ -1768,7 +1793,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
             "body",
             "metadata",
             "sent_at",
-            "created_at"
+            "time_created"
           FROM "finfolk"."MessagingMessage"
           WHERE "id" = (o_outbox ->> 'message_id')::UUID
           LIMIT 1)
@@ -1808,8 +1833,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
                 "deadline",
                 "provider_message_id",
                 "error_code",
-                "created_at",
-                "updated_at",
+                "time_created",
+                "time_updated",
                 "body_ciphertext",
                 "reply_kind")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_cancelled;
@@ -1824,8 +1849,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
               "state" = ('sending')::"finfolk"."EnumMessagingOutboxStatus",
               "attempts" = ((o_outbox ->> 'attempts')::INTEGER + 1)::INTEGER,
               "lease" = (uuid_generate_v4())::UUID,
-              "lease_until" = (now() + ('60 seconds')::INTERVAL)::TIMESTAMPTZ,
-              "updated_at" = (now())::TIMESTAMPTZ
+              "lease_until" = ((1000000 * extract(epoch FROM now()))::BIGINT + 60000000)::BIGINT,
+              "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
             WHERE "id" = (o_outbox ->> 'id')::UUID
             RETURNING
               "id",
@@ -1843,8 +1868,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
               "deadline",
               "provider_message_id",
               "error_code",
-              "created_at",
-              "updated_at",
+              "time_created",
+              "time_updated",
               "body_ciphertext",
               "reply_kind")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_claim;
@@ -1869,8 +1894,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/record-delivery-result 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_delivery UUID,
   i_lease UUID,
   i_outcome TEXT,
@@ -1900,8 +1925,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
         "deadline",
         "provider_message_id",
         "error_code",
-        "created_at",
-        "updated_at",
+        "time_created",
+        "time_updated",
         "body_ciphertext",
         "reply_kind"
       FROM "finfolk"."MessagingOutbox"
@@ -1909,7 +1934,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
       AND "account_id" = i_account
       AND "state" = ('sending')::"finfolk"."EnumMessagingOutboxStatus"
       AND "lease" = i_lease
-      AND "lease_until" > now()
+      AND "lease_until" > (1000000 * extract(epoch FROM now()))::BIGINT
       LIMIT 1
       FOR UPDATE)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_outbox;
@@ -1934,7 +1959,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
         IF ((o_outbox ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) OR ((o_account ->> 'mode') = 'disabled') THEN
           v_state := 'cancelled';
         END IF;
-        IF (o_outbox ->> 'deadline')::TIMESTAMPTZ <= now() THEN
+        IF (o_outbox ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT THEN
           v_state := 'expired';
         END IF;
       END IF;
@@ -1946,10 +1971,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
           UPDATE "finfolk"."MessagingOutbox" SET
             "state" = (v_state)::"finfolk"."EnumMessagingOutboxStatus",
             "lease" = (null)::UUID,
-            "lease_until" = (null)::TIMESTAMPTZ,
-            "next_attempt_at" = (now() + (coalesce(i_delay,1) * ('1 second')::INTERVAL))::TIMESTAMPTZ,
+            "lease_until" = (null)::BIGINT,
+            "next_attempt_at" = ((1000000 * extract(epoch FROM now()))::BIGINT + (coalesce(i_delay,1) * 1000000))::BIGINT,
             "provider_message_id" = (i_provider_message)::TEXT,
-            "updated_at" = (now())::TIMESTAMPTZ
+            "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
           WHERE "id" = i_delivery
           RETURNING
             "id",
@@ -1967,8 +1992,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
             "deadline",
             "provider_message_id",
             "error_code",
-            "created_at",
-            "updated_at",
+            "time_created",
+            "time_updated",
             "body_ciphertext",
             "reply_kind")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_finished;
@@ -1985,7 +2010,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
           WITH j_ret AS (  
               UPDATE "finfolk"."MessagingMessage" SET
                 "external_id" = (i_provider_message)::TEXT,
-                "sent_at" = (now())::TIMESTAMPTZ
+                "sent_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
               WHERE "id" = (o_outbox ->> 'message_id')::UUID
               RETURNING
                 "id",
@@ -1996,7 +2021,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
                 "body",
                 "metadata",
                 "sent_at",
-                "created_at")
+                "time_created")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_message;
             null;
         END;
@@ -2010,8 +2035,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/ret-messaging-history 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_history(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_conversation UUID
 ) RETURNS JSONB AS $$
 
@@ -2030,10 +2055,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_history(
         "body",
         "metadata",
         "sent_at",
-        "created_at"
+        "time_created"
       FROM "finfolk"."MessagingMessage"
       WHERE "account_id" = i_account AND "conversation_id" = i_conversation
-      ORDER BY "created_at","id" DESC
+      ORDER BY "time_created","id" DESC
       LIMIT 50)
     SELECT jsonb_agg(j_ret) FROM j_ret INTO o_history;
     RETURN coalesce(o_history,('[]')::JSONB);
@@ -2043,9 +2068,9 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-oauth/begin-messaging-oauth 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".begin_messaging_oauth(
-  i_application TEXT,
-  i_account TEXT,
-  i_user TEXT,
+  i_application UUID,
+  i_account UUID,
+  i_user UUID,
   i_state TEXT,
   i_nonce TEXT,
   i_flow TEXT
@@ -2078,15 +2103,16 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".begin_messaging_oauth(
           "expires_at",
           "flow_key"
         ) VALUES (
-          (i_application)::TEXT,
-          (i_account)::TEXT,
+          (i_application)::UUID,
+          (i_account)::UUID,
           (i_state)::TEXT,
           (i_nonce)::TEXT,
           (o_account ->> 'generation')::INTEGER,
-          (i_user)::TEXT,
-          (now() + ('10 minutes')::INTERVAL)::TIMESTAMPTZ,
+          (i_user)::UUID,
+          ((1000000 * extract(epoch FROM now()))::BIGINT + 600000000)::BIGINT,
           (i_flow)::TEXT
         ) RETURNING
+          "id",
           "application_id",
           "account_id",
           "state_hash",
@@ -2095,7 +2121,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".begin_messaging_oauth(
           "user_id",
           "expires_at",
           "consumed_at",
-          "created_at",
+          "time_created",
           "flow_key")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_intent;
       RETURN jsonb_build_object(
@@ -2111,8 +2137,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-oauth/ret-messaging-oauth-intent 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_oauth_intent(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_state TEXT
 ) RETURNS JSONB AS $$
 
@@ -2127,7 +2153,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_oauth_intent(
       AND "account_id" = i_account
       AND "state_hash" = i_state
       AND "consumed_at" IS NULL
-      AND "expires_at" > now()
+      AND "expires_at" > (1000000 * extract(epoch FROM now()))::BIGINT
       AND "generation" = (o_account ->> 'generation')::INTEGER
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_intent;
@@ -2138,9 +2164,9 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-oauth/consume-messaging-oauth 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".consume_messaging_oauth(
-  i_application TEXT,
-  i_account TEXT,
-  i_user TEXT,
+  i_application UUID,
+  i_account UUID,
+  i_user UUID,
   i_state TEXT,
   i_nonce TEXT,
   i_flow TEXT
@@ -2159,6 +2185,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".consume_messaging_oauth(
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
     WITH j_ret AS (  
       SELECT
+        "id",
         "application_id",
         "account_id",
         "state_hash",
@@ -2167,14 +2194,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".consume_messaging_oauth(
         "user_id",
         "expires_at",
         "consumed_at",
-        "created_at",
+        "time_created",
         "flow_key"
       FROM "finfolk"."MessagingOauthState"
       WHERE "user_id" = i_user
       AND "flow_key" = i_flow
       AND "application_id" = i_application
       AND "nonce_hash" = i_nonce
-      AND "expires_at" > now()
+      AND "expires_at" > (1000000 * extract(epoch FROM now()))::BIGINT
       AND "generation" = (o_account ->> 'generation')::INTEGER
       AND "consumed_at" IS NULL
       AND "state_hash" = i_state
@@ -2189,8 +2216,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".consume_messaging_oauth(
       o_consumed JSONB;
     BEGIN
       WITH j_ret AS (  
-        UPDATE "finfolk"."MessagingOauthState" SET "consumed_at" = (now())::TIMESTAMPTZ WHERE "application_id" = i_application AND "state_hash" = i_state
+        UPDATE "finfolk"."MessagingOauthState" SET
+          "consumed_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+        WHERE "application_id" = i_application AND "state_hash" = i_state
         RETURNING
+          "id",
           "application_id",
           "account_id",
           "state_hash",
@@ -2199,7 +2229,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".consume_messaging_oauth(
           "user_id",
           "expires_at",
           "consumed_at",
-          "created_at",
+          "time_created",
           "flow_key")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_consumed;
       RETURN jsonb_build_object(
@@ -2218,8 +2248,8 @@ CREATE TABLE IF NOT EXISTS "finfolk"."DiveSession" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('DiveSession')::"finfolk"."EnumClassType") STORED,
   "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
-  "owner_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "beach_id" TEXT REFERENCES "finfolk"."Beach"("id"),
+  "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "beach_id" UUID REFERENCES "finfolk"."Beach"("id"),
   "detail" JSONB NOT NULL DEFAULT '{}',
   "audit_id" UUID NOT NULL,
   "rev_id" UUID NOT NULL,
@@ -2238,118 +2268,128 @@ CREATE INDEX ON "finfolk"."DiveSession" ("beach_id");
 
 -- finfolkdb.common.type-social-instagram/InstagramSource 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramSource" (
-  "key" TEXT PRIMARY KEY NOT NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT NOT NULL,
   "kind" "finfolk"."EnumInstagramSourceType" NOT NULL,
   "data" JSONB NOT NULL DEFAULT '{}',
   "checkpoint" TEXT,
-  "last_success" TIMESTAMPTZ,
-  "next_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "lease_until" TIMESTAMPTZ,
+  "last_success" BIGINT,
+  "next_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "lease_until" BIGINT,
   "failures" INTEGER NOT NULL DEFAULT 0,
-  "status" TEXT NOT NULL DEFAULT 'ready'
+  "status" TEXT NOT NULL DEFAULT 'ready',
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramSuppressedSource 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramSuppressedSource" (
-  "author_id" TEXT PRIMARY KEY NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "author_id" TEXT NOT NULL,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("author_id")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramAction 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramAction" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "source_id" TEXT NOT NULL,
-  "owner_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "sender_id" TEXT,
   "kind" "finfolk"."EnumInstagramActionType" NOT NULL,
   "state" TEXT NOT NULL DEFAULT 'review',
   "data" JSONB NOT NULL DEFAULT '{}',
   "member_confirmed" BOOLEAN NOT NULL DEFAULT false,
   "session_id" UUID REFERENCES "finfolk"."DiveSession"("id"),
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   UNIQUE ("source_id","kind")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramAudit 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramAudit" (
-  "id" BIGINT PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "action_id" UUID REFERENCES "finfolk"."InstagramAction"("id") ON DELETE CASCADE,
   "actor" TEXT NOT NULL,
   "event" TEXT NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramConnection 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramConnection" (
-  "user_id" TEXT PRIMARY KEY NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "handle" TEXT NOT NULL,
   "sender_id" TEXT,
   "status" TEXT NOT NULL DEFAULT 'pending',
   "challenge_hash" TEXT,
-  "expires_at" TIMESTAMPTZ,
+  "expires_at" BIGINT,
   "public_points" BOOLEAN NOT NULL DEFAULT false,
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "share_posts" BOOLEAN NOT NULL DEFAULT false,
   "media_owner_id" TEXT,
   "provider_scope" TEXT NOT NULL DEFAULT 'facebook-login:legacy',
-  "identity_version" UUID NOT NULL DEFAULT gen_random_uuid()
+  "identity_version" UUID NOT NULL DEFAULT gen_random_uuid(),
+  UNIQUE ("user_id")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramClaim 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramClaim" (
-  "user_id" TEXT PRIMARY KEY NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "code_hash" TEXT,
   "state" "finfolk"."EnumInstagramClaimStatus" NOT NULL DEFAULT 'waiting',
   "sender_id" TEXT,
   "handle" TEXT,
   "error" TEXT NOT NULL DEFAULT '',
-  "expires_at" TIMESTAMPTZ NOT NULL,
-  "follow_checked_at" TIMESTAMPTZ,
-  "review_requested_at" TIMESTAMPTZ,
+  "expires_at" BIGINT NOT NULL,
+  "follow_checked_at" BIGINT,
+  "review_requested_at" BIGINT,
   "verified_by" TEXT,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "claim_id" UUID NOT NULL DEFAULT gen_random_uuid(),
   "provider_scope" TEXT NOT NULL DEFAULT 'facebook-login:legacy',
+  UNIQUE ("user_id"),
   UNIQUE ("code_hash"),
   UNIQUE ("claim_id")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramCommentIdentity 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramCommentIdentity" (
-  "user_id" TEXT PRIMARY KEY NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "namespace" TEXT NOT NULL,
   "actor_id" TEXT,
   "sender_id" TEXT NOT NULL,
   "handle" TEXT NOT NULL,
   "challenge_hash" TEXT,
-  "expires_at" TIMESTAMPTZ,
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "expires_at" BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "connection_scope" TEXT NOT NULL DEFAULT 'facebook-login:legacy',
   "connection_version" UUID,
+  UNIQUE ("user_id"),
   UNIQUE ("namespace","actor_id"),
   UNIQUE ("challenge_hash")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramDiscovery 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramDiscovery" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "media_id" TEXT,
   "url" TEXT NOT NULL,
-  "owner_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
   "author_id" TEXT,
   "author" TEXT,
-  "beach_id" TEXT REFERENCES "finfolk"."Beach"("id"),
+  "beach_id" UUID REFERENCES "finfolk"."Beach"("id"),
   "candidates" JSONB NOT NULL DEFAULT '[]',
   "caption" TEXT NOT NULL DEFAULT '',
-  "posted_at" TIMESTAMPTZ,
+  "posted_at" BIGINT,
   "state" "finfolk"."EnumInstagramDiscoveryStatus" NOT NULL DEFAULT 'pending',
   "automatic" BOOLEAN NOT NULL DEFAULT false,
   "sources" JSONB NOT NULL DEFAULT '[]',
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "checked_at" TIMESTAMPTZ,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "checked_at" BIGINT,
   UNIQUE ("media_id"),
   UNIQUE ("url"),
   CONSTRAINT check_0 CHECK ("media_id" IS NULL OR "regexp_like"("media_id",'^[0-9]{1,40}$'))
@@ -2357,90 +2397,98 @@ CREATE TABLE IF NOT EXISTS "finfolk"."InstagramDiscovery" (
 
 -- finfolkdb.common.type-social-instagram/InstagramDiscoveryAudit 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramDiscoveryAudit" (
-  "id" BIGINT PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "discovery_id" UUID REFERENCES "finfolk"."InstagramDiscovery"("id") ON DELETE CASCADE,
   "actor" TEXT NOT NULL,
   "event" TEXT NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramPostReport 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramPostReport" (
-  "id" BIGINT PRIMARY KEY NOT NULL GENERATED ALWAYS AS IDENTITY,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "discovery_id" UUID NOT NULL REFERENCES "finfolk"."InstagramDiscovery"("id") ON DELETE CASCADE,
   "reason" "finfolk"."EnumInstagramPostReportReason" NOT NULL,
-  "day" DATE NOT NULL DEFAULT (now())::DATE,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "day" DATE NOT NULL DEFAULT (to_timestamp((1000000 * extract(epoch FROM now()))::BIGINT / 1000000.0))::DATE,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   UNIQUE ("discovery_id","reason","day")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramCommand 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramCommand" (
-  "id" TEXT PRIMARY KEY NOT NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
   "context" "finfolk"."EnumInstagramCommandContext" NOT NULL,
   "actor_id" TEXT NOT NULL,
   "namespace" TEXT NOT NULL,
   "media_id" TEXT,
-  "owner_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "command" TEXT NOT NULL,
   "args" JSONB NOT NULL DEFAULT '{}',
   "source_url" TEXT,
-  "comment_at" TIMESTAMPTZ,
-  "received_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "comment_at" BIGINT,
+  "received_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "state" "finfolk"."EnumInstagramCommandStatus" NOT NULL DEFAULT 'new',
   "result" TEXT,
-  "beach_id" TEXT REFERENCES "finfolk"."Beach"("id"),
+  "beach_id" UUID REFERENCES "finfolk"."Beach"("id"),
   "visit_day" DATE,
   "reply" TEXT,
   "send_state" "finfolk"."EnumInstagramCommandSendState" NOT NULL DEFAULT 'pending',
   "reply_id" TEXT,
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "send_started_at" TIMESTAMPTZ
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "send_started_at" BIGINT,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramEvent 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramEvent" (
-  "id" TEXT PRIMARY KEY NOT NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
   "payload" JSONB NOT NULL,
   "status" TEXT NOT NULL DEFAULT 'queued',
   "attempts" INTEGER NOT NULL DEFAULT 0,
   "error" TEXT,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramDmLimit 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramDmLimit" (
-  "sender_id" TEXT PRIMARY KEY NOT NULL,
-  "minute" TIMESTAMPTZ NOT NULL DEFAULT "date_trunc"('minute',now()),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "sender_id" TEXT NOT NULL,
+  "minute" BIGINT NOT NULL DEFAULT div((1000000 * extract(epoch FROM now()))::BIGINT,60000000) * 60000000,
   "count" INTEGER NOT NULL DEFAULT 0,
-  "prompted_at" TIMESTAMPTZ
+  "prompted_at" BIGINT,
+  UNIQUE ("sender_id")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramConnectCode 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramConnectCode" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "code_hash" TEXT NOT NULL,
   "sender_id" TEXT NOT NULL,
   "handle" TEXT NOT NULL,
   "provider_scope" TEXT NOT NULL,
   "generation" INTEGER NOT NULL,
   "event_id" UUID NOT NULL REFERENCES "finfolk"."MessagingReceipt"("id") ON DELETE CASCADE,
-  "expires_at" TIMESTAMPTZ NOT NULL DEFAULT now() + ('10 minutes')::INTERVAL,
+  "expires_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT + 600000000,
   "invalidated" BOOLEAN NOT NULL DEFAULT false,
-  "consumed_by_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "consumed_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "consumed_version" UUID,
-  "consumed_at" TIMESTAMPTZ,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "consumed_at" BIGINT,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   UNIQUE ("code_hash"),
   UNIQUE ("event_id")
 );
 
 -- finfolkdb.common.type-social-instagram/InstagramConnectLimit 
 CREATE TABLE IF NOT EXISTS "finfolk"."InstagramConnectLimit" (
-  "bucket" TEXT PRIMARY KEY NOT NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "bucket" TEXT NOT NULL,
   "count" INTEGER NOT NULL,
-  "resets_at" TIMESTAMPTZ NOT NULL
+  "resets_at" BIGINT NOT NULL,
+  UNIQUE ("bucket")
 );
 
 -- finfolkdb.common.type-user-access/EnumAccessSetting 
@@ -2456,7 +2504,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Access" (
   "id" UUID DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType",
   "class_context" "finfolk"."EnumClassType",
-  "class_ref" TEXT NOT NULL,
+  "class_ref" UUID NOT NULL,
   "setting" "finfolk"."EnumAccessSetting" NOT NULL DEFAULT 'closed',
   "op_created" UUID,
   "time_created" BIGINT,
@@ -2474,20 +2522,22 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-user-access/AccessRole 
 CREATE TABLE IF NOT EXISTS "finfolk"."AccessRole" (
+  "id" UUID DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType",
   "class_context" "finfolk"."EnumClassType",
   "is_active" BOOLEAN NOT NULL DEFAULT true,
   "is_public" BOOLEAN NOT NULL DEFAULT true,
   "access_id" UUID NOT NULL,
-  "member_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "from_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "member_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "from_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
   "level" "finfolk"."EnumAccessRoleLevel" NOT NULL DEFAULT 'member',
   "scope" JSONB NOT NULL DEFAULT '{}',
   "op_created" UUID,
   "op_updated" UUID,
   "time_created" BIGINT,
   "time_updated" BIGINT,
-  PRIMARY KEY (class_table,class_context,access_id,member_id),
+  PRIMARY KEY (id,class_table,class_context,access_id),
+  UNIQUE ("class_table","class_context","access_id","member_id"),
   CONSTRAINT fk_access_role_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id) ON DELETE CASCADE
 );
 CREATE INDEX ON "finfolk"."AccessRole" ("member_id");
@@ -2506,10 +2556,10 @@ CREATE TABLE IF NOT EXISTS "finfolk"."AccessRequest" (
   "class_table" "finfolk"."EnumClassType",
   "class_context" "finfolk"."EnumClassType",
   "access_id" UUID NOT NULL,
-  "from_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "reply_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "from_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "reply_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
   "status" "finfolk"."EnumAccessRequestStatus" NOT NULL DEFAULT 'pending',
-  "expires_at" TIMESTAMPTZ NOT NULL DEFAULT now() + ('7 days')::INTERVAL,
+  "expires_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT + 604800000000,
   "detail" JSONB NOT NULL DEFAULT '{}',
   "log" JSONB NOT NULL DEFAULT '[]',
   "op_created" UUID,
@@ -2536,11 +2586,11 @@ CREATE TABLE IF NOT EXISTS "finfolk"."AccessInviteExternal" (
   "class_context" "finfolk"."EnumClassType",
   "access_id" UUID NOT NULL,
   "secret" TEXT NOT NULL UNIQUE,
-  "from_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "reply_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "from_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "reply_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
   "status" "finfolk"."EnumAccessInviteExternalStatus" NOT NULL DEFAULT 'pending',
-  "expires_at" TIMESTAMPTZ NOT NULL DEFAULT now() + ('7 days')::INTERVAL,
-  "accepted_at" TIMESTAMPTZ,
+  "expires_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT + 604800000000,
+  "accepted_at" BIGINT,
   "detail" JSONB NOT NULL DEFAULT '{}',
   "log" JSONB NOT NULL DEFAULT '[]',
   "op_created" UUID,
@@ -2567,11 +2617,11 @@ CREATE TABLE IF NOT EXISTS "finfolk"."AccessInviteEmail" (
   "access_id" UUID NOT NULL,
   "email" TEXT NOT NULL,
   "secret" TEXT NOT NULL UNIQUE,
-  "from_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "reply_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "from_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "reply_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "status" "finfolk"."EnumAccessInviteEmailStatus" NOT NULL DEFAULT 'pending',
-  "expires_at" TIMESTAMPTZ NOT NULL,
-  "accepted_at" TIMESTAMPTZ,
+  "expires_at" BIGINT NOT NULL,
+  "accepted_at" BIGINT,
   "detail" JSONB NOT NULL DEFAULT '{}',
   "log" JSONB NOT NULL DEFAULT '[]',
   "op_created" UUID,
@@ -2590,7 +2640,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "AccessRequestPending" ON "finfolk"."AccessReq
 CREATE TABLE IF NOT EXISTS "finfolk"."Social" (
   "id" UUID DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType",
-  "class_ref" TEXT NOT NULL,
+  "class_ref" UUID NOT NULL,
   "op_created" UUID,
   "time_created" BIGINT,
   PRIMARY KEY (id,class_table),
@@ -2613,7 +2663,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SocialHandle" (
   "type" "finfolk"."EnumSocialHandleType" NOT NULL,
   "handle" TEXT NOT NULL,
   "is_verified" BOOLEAN NOT NULL DEFAULT false,
-  "verified_at" TIMESTAMPTZ,
+  "verified_at" BIGINT,
   "op_created" UUID,
   "op_updated" UUID,
   "time_created" BIGINT,
@@ -2650,7 +2700,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryListing" (
   "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('DirectoryListing')::"finfolk"."EnumClassType") STORED,
   "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
   "status" "finfolk"."EnumDirectoryListingStatus" NOT NULL DEFAULT 'candidate',
-  "reviewed_at" TIMESTAMPTZ,
+  "reviewed_at" BIGINT,
   "outreach" TEXT NOT NULL DEFAULT 'Not contacted',
   "notes" TEXT NOT NULL DEFAULT '',
   "detail" JSONB NOT NULL DEFAULT '{}',
@@ -2677,7 +2727,7 @@ CREATE INDEX ON "finfolk"."DirectoryListing" ("status");
 CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryReport" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "listing_id" UUID NOT NULL REFERENCES "finfolk"."DirectoryListing"("id"),
-  "author_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "author_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
   "message" TEXT NOT NULL,
   "resolved" BOOLEAN NOT NULL DEFAULT false,
   "op_created" UUID,
@@ -2703,7 +2753,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryRun" (
 -- finfolkdb.fn.helper.helper-entity/insert-base-addons 
 CREATE OR REPLACE FUNCTION "finfolk".insert_base_addons(
   i_class_table TEXT,
-  i_class_ref TEXT,
+  i_class_ref UUID,
   i_current JSONB,
   o_op JSONB
 ) RETURNS JSONB AS $$
@@ -2728,7 +2778,7 @@ CREATE OR REPLACE FUNCTION "finfolk".insert_base_addons(
       ) VALUES (
         (i_class_table)::"finfolk"."EnumClassType",
         ('Global')::"finfolk"."EnumClassType",
-        (i_class_ref)::TEXT,
+        (i_class_ref)::UUID,
         (1)::INTEGER,
         (o_current)::JSONB,
         (o_op ->> 'id')::UUID,
@@ -2745,7 +2795,7 @@ CREATE OR REPLACE FUNCTION "finfolk".insert_base_addons(
       ) VALUES (
         (i_class_table)::"finfolk"."EnumClassType",
         ('Global')::"finfolk"."EnumClassType",
-        (i_class_ref)::TEXT,
+        (i_class_ref)::UUID,
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
       ) RETURNING "id","class_ref","op_created","time_created")
@@ -2767,7 +2817,7 @@ CREATE OR REPLACE FUNCTION "finfolk".insert_base_addons(
         (o_current)::JSONB,
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
-      ) RETURNING "rev_id","version","deltas","op_created","time_created")
+      ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_revision;
     WITH j_ret AS (  
       INSERT INTO "finfolk"."AuditLog" (
@@ -2784,7 +2834,7 @@ CREATE OR REPLACE FUNCTION "finfolk".insert_base_addons(
         "finfolk".as_jsonb((jsonb_build_object('event','create'))::JSONB),
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
-      ) RETURNING "audit_id","op_created","time_created")
+      ) RETURNING "id","audit_id","op_created","time_created")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
     RETURN jsonb_build_object('rev',(o_rev ->> 'id')::UUID,'audit',(o_audit ->> 'id')::UUID);
   END;
@@ -2807,7 +2857,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_directory_listing(
   BEGIN
     v_id := uuid_generate_v4();
     o_document := "finfolk".as_jsonb(i_document);
-    o_base := "finfolk".insert_base_addons('DirectoryListing',(v_id)::TEXT,o_document,o_op);
+    o_base := "finfolk".insert_base_addons('DirectoryListing',v_id,o_document,o_op);
     WITH j_ret AS (  
       INSERT INTO "finfolk"."Access" (
         "class_table",
@@ -2819,7 +2869,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_directory_listing(
       ) VALUES (
         ('DirectoryListing')::"finfolk"."EnumClassType",
         ('Global')::"finfolk"."EnumClassType",
-        (v_id)::TEXT,
+        (v_id)::UUID,
         ('closed')::"finfolk"."EnumAccessSetting",
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
@@ -2828,7 +2878,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_directory_listing(
     WITH j_ret AS (  
       INSERT INTO "finfolk"."Social" ("class_table","class_ref","op_created","time_created") VALUES (
         ('DirectoryListing')::"finfolk"."EnumClassType",
-        (v_id)::TEXT,
+        (v_id)::UUID,
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
       ) RETURNING "id","class_ref","op_created","time_created")
@@ -2905,7 +2955,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_directory_public(
     END IF;
     RETURN jsonb_build_object(
       'id',
-      o_listing ->> 'id',
+      (o_listing ->> 'id')::UUID,
       'name',
       o_document ->> 'name',
       'category',
@@ -2937,8 +2987,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.helper.helper-access/is-user-blocked 
 CREATE OR REPLACE FUNCTION "finfolk".is_user_blocked(
-  i_viewer TEXT,
-  i_owner TEXT
+  i_viewer UUID,
+  i_owner UUID
 ) RETURNS BOOLEAN AS $$
 
   DECLARE
@@ -2956,7 +3006,7 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.helper.helper-access/is-user-active 
 CREATE OR REPLACE FUNCTION "finfolk".is_user_active(
-  i_user TEXT
+  i_user UUID
 ) RETURNS BOOLEAN AS $$
 
   DECLARE
@@ -2974,8 +3024,8 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Trip" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Trip')::"finfolk"."EnumClassType") STORED,
   "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
-  "owner_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "beach_id" TEXT NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
   "start_date" DATE NOT NULL,
   "end_date" DATE NOT NULL,
   "detail" JSONB NOT NULL DEFAULT '{}',
@@ -3013,6 +3063,7 @@ CREATE INDEX ON "finfolk"."TripImport" ("trip_id");
 
 -- finfolkdb.common.type-trip-base/TripDive 
 CREATE TABLE IF NOT EXISTS "finfolk"."TripDive" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "import_id" UUID NOT NULL REFERENCES "finfolk"."TripImport"("id") ON DELETE CASCADE,
   "ordinal" INTEGER NOT NULL,
   "day" DATE NOT NULL,
@@ -3021,12 +3072,13 @@ CREATE TABLE IF NOT EXISTS "finfolk"."TripDive" (
   "op_updated" UUID,
   "time_created" BIGINT,
   "time_updated" BIGINT,
-  PRIMARY KEY (import_id,ordinal),
+  UNIQUE ("import_id","ordinal"),
   CONSTRAINT positive_ordinal CHECK ("ordinal" > 0)
 );
 
 -- finfolkdb.common.type-trip-base/TripImportBatch 
 CREATE TABLE IF NOT EXISTS "finfolk"."TripImportBatch" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "import_id" UUID NOT NULL REFERENCES "finfolk"."TripImport"("id") ON DELETE CASCADE,
   "index" INTEGER NOT NULL,
   "rows" JSONB NOT NULL,
@@ -3034,7 +3086,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."TripImportBatch" (
   "op_updated" UUID,
   "time_created" BIGINT,
   "time_updated" BIGINT,
-  PRIMARY KEY (import_id,index),
+  UNIQUE ("import_id","index"),
   CONSTRAINT bounded_batch CHECK (("index" >= 0) AND ("index" <= 9999)),
   CONSTRAINT array_rows CHECK (jsonb_typeof("rows") = 'array')
 );
@@ -3059,10 +3111,10 @@ $$ LANGUAGE 'plpgsql';
 CREATE TABLE IF NOT EXISTS "finfolk"."TripPublication" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "trip_id" UUID NOT NULL REFERENCES "finfolk"."Trip"("id") ON DELETE CASCADE,
-  "beach_id" TEXT NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
   "status" "finfolk"."EnumTripPublicationStatus" NOT NULL DEFAULT 'pending',
   "public_consent" BOOLEAN NOT NULL DEFAULT false,
-  "published_at" TIMESTAMPTZ,
+  "published_at" BIGINT,
   "detail" JSONB NOT NULL DEFAULT '{}',
   "op_created" UUID,
   "op_updated" UUID,
@@ -3076,24 +3128,27 @@ CREATE TABLE IF NOT EXISTS "finfolk"."TripPublication" (
 CREATE UNIQUE INDEX IF NOT EXISTS "TripImportActive" ON "finfolk"."TripImport" ("trip_id") WHERE "is_active";
 
 -- finfolkdb.common.fn-system-util/auth-uid 
-CREATE OR REPLACE FUNCTION "finfolk".auth_uid() RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION "finfolk".auth_uid() RETURNS UUID AS $$
 
-  SELECT coalesce(current_setting('finfolk.actor_id',true),'');
+  SELECT ("nullif"(current_setting('finfolk.actor_id',true),''))::UUID;
 
 $$ LANGUAGE 'sql';
 
 -- finfolkdb.common.fn-system-util/as-iso-time 
 CREATE OR REPLACE FUNCTION "finfolk".as_iso_time(
-  i_time TIMESTAMPTZ
+  i_time BIGINT
 ) RETURNS TEXT AS $$
 
-  SELECT to_char("timezone"('UTC',i_time),'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"');
+  SELECT to_char(
+    "timezone"('UTC',to_timestamp((i_time)::NUMERIC / 1000000)),
+    'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
+  );
 
 $$ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE;
 
 -- finfolkdb.fn.user.user-manage-trips/insert-trip 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_trip(
-  i_owner TEXT,
+  i_owner UUID,
   i_draft JSONB,
   o_op JSONB
 ) RETURNS JSONB AS $$
@@ -3106,7 +3161,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_trip(
   BEGIN
     v_id := uuid_generate_v4();
     o_draft := "finfolk".as_jsonb(i_draft);
-    o_base := "finfolk".insert_base_addons('Trip',(v_id)::TEXT,o_draft,o_op);
+    o_base := "finfolk".insert_base_addons('Trip',v_id,o_draft,o_op);
     WITH j_ret AS (  
       INSERT INTO "finfolk"."Trip" (
         "id",
@@ -3123,8 +3178,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_trip(
         "time_updated"
       ) VALUES (
         (v_id)::UUID,
-        (i_owner)::TEXT,
-        (o_draft ->> 'beachId')::TEXT,
+        (i_owner)::UUID,
+        (o_draft ->> 'beachId')::UUID,
         (o_draft ->> 'start')::DATE,
         (o_draft ->> 'end')::DATE,
         "finfolk".as_jsonb((((o_draft - 'beachId') - 'start') - 'end')::JSONB),
@@ -3156,7 +3211,7 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.fn.user.user-manage-trips/ret-trip-owned 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_owned(
   i_trip_id UUID,
-  i_owner TEXT
+  i_owner UUID
 ) RETURNS JSONB AS $$
 
   DECLARE
@@ -3211,9 +3266,9 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_owned(
     IF o_trip IS NULL OR NOT "finfolk".is_user_active(i_owner) THEN
       RETURN null;
     END IF;
-    RETURN jsonb_build_object('id',o_trip ->> 'id','draft',(o_trip -> 'detail') || jsonb_build_object(
+    RETURN jsonb_build_object('id',(o_trip ->> 'id')::UUID,'draft',(o_trip -> 'detail') || jsonb_build_object(
       'beachId',
-      o_trip ->> 'beach_id',
+      (o_trip ->> 'beach_id')::UUID,
       'start',
       o_trip ->> 'start_date',
       'end',
@@ -3226,7 +3281,7 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.fn.user.user-manage-trips/insert-trip-import 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_trip_import(
   i_trip_id UUID,
-  i_owner TEXT,
+  i_owner UUID,
   i_expected_rows INTEGER,
   o_op JSONB
 ) RETURNS JSONB AS $$
@@ -3311,7 +3366,7 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.fn.user.user-manage-trips/save-trip-import-batch 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".save_trip_import_batch(
   i_trip_id UUID,
-  i_owner TEXT,
+  i_owner UUID,
   i_import_id UUID,
   i_index INTEGER,
   i_rows JSONB,
@@ -3372,6 +3427,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_trip_import_batch(
     BEGIN
       WITH j_ret AS (  
         SELECT
+          "id",
           "import_id",
           "index",
           "rows",
@@ -3410,6 +3466,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_trip_import_batch(
             (o_op ->> 'time')::BIGINT,
             (o_op ->> 'time')::BIGINT
           ) RETURNING
+            "id",
             "import_id",
             "index",
             "rows",
@@ -3428,7 +3485,7 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.fn.user.user-manage-trips/complete-trip-import 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_trip_import(
   i_trip_id UUID,
-  i_owner TEXT,
+  i_owner UUID,
   i_import_id UUID,
   i_revision INTEGER,
   i_fingerprint TEXT,
@@ -3628,6 +3685,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_trip_import(
                     (o_op ->> 'time')::BIGINT,
                     (o_op ->> 'time')::BIGINT
                   ) RETURNING
+                    "id",
                     "import_id",
                     "ordinal",
                     "day",
@@ -3690,7 +3748,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_trip_import(
                 (jsonb_build_object('importedRows',v_ordinal))::JSONB,
                 (o_op ->> 'id')::UUID,
                 (o_op ->> 'time')::BIGINT
-              ) RETURNING "rev_id","version","deltas","op_created","time_created")
+              ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_version;
             WITH j_ret AS (  
               INSERT INTO "finfolk"."AuditLog" (
@@ -3709,7 +3767,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_trip_import(
               ),
                 (o_op ->> 'id')::UUID,
                 (o_op ->> 'time')::BIGINT
-              ) RETURNING "audit_id","op_created","time_created")
+              ) RETURNING "id","audit_id","op_created","time_created")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
             WITH j_ret AS (  
               DELETE FROM "finfolk"."TripImport" WHERE "trip_id" = i_trip_id
@@ -3754,7 +3812,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_publication_snapshot(
     IF o_publication is null  THEN
       RETURN null;
     END IF;
-    RETURN (o_publication -> 'detail') || jsonb_build_object('beachId',o_publication ->> 'beach_id');
+    RETURN (o_publication -> 'detail') || jsonb_build_object('beachId',(o_publication ->> 'beach_id')::UUID);
   END;
 
 $$ LANGUAGE 'plpgsql';
@@ -3762,7 +3820,7 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.fn.user.user-manage-trips/set-trip-publication 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
   i_trip_id UUID,
-  i_owner TEXT,
+  i_owner UUID,
   i_snapshot JSONB,
   i_revision INTEGER,
   i_consent BOOLEAN,
@@ -3826,7 +3884,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
         AND "status" = ('complete')::"finfolk"."EnumTripImportStatus"
         LIMIT 1)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_active;
-      IF (i_revision != (o_rev ->> 'index')::INTEGER) OR o_snapshot ->> 'beachId' IS NULL OR ((o_snapshot ->> 'beachId') != (o_trip ->> 'beach_id')) THEN
+      IF (i_revision != (o_rev ->> 'index')::INTEGER) OR (o_snapshot ->> 'beachId')::UUID IS NULL OR ((o_snapshot ->> 'beachId')::UUID != (o_trip ->> 'beach_id')::UUID) THEN
         RETURN null;
       END IF;
       IF o_active is null  THEN
@@ -3876,13 +3934,13 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
         END IF;
         DECLARE
           v_status TEXT;
-          v_time TIMESTAMPTZ;
+          v_time BIGINT;
         BEGIN
           v_status := 'pending';
           v_time := null;
           IF coalesce(i_approved,false) THEN
             v_status := 'published';
-            v_time := now();
+            v_time := (1000000 * extract(epoch FROM now()))::BIGINT;
           END IF;
           DECLARE
             o_log JSONB;
@@ -3902,10 +3960,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
                 "time_updated"
               ) VALUES (
                 (i_trip_id)::UUID,
-                (o_snapshot ->> 'beachId')::TEXT,
+                (o_snapshot ->> 'beachId')::UUID,
                 (v_status)::"finfolk"."EnumTripPublicationStatus",
                 (true)::BOOLEAN,
-                (v_time)::TIMESTAMPTZ,
+                (v_time)::BIGINT,
                 "finfolk".as_jsonb((o_snapshot - 'beachId')::JSONB),
                 (o_op ->> 'id')::UUID,
                 (o_op ->> 'id')::UUID,
@@ -3940,7 +3998,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
               ),
                 (o_op ->> 'id')::UUID,
                 (o_op ->> 'time')::BIGINT
-              ) RETURNING "audit_id","op_created","time_created")
+              ) RETURNING "id","audit_id","op_created","time_created")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
             RETURN jsonb_build_object('id',i_trip_id,'status',v_status);
           END;
@@ -3974,7 +4032,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_public(
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_publication;
     o_data := (o_publication -> 'detail');
-    IF o_trip IS NULL OR o_publication IS NULL OR NOT "finfolk".is_user_active(o_trip ->> 'owner_id') THEN
+    IF o_trip IS NULL OR o_publication IS NULL OR NOT "finfolk".is_user_active((o_trip ->> 'owner_id')::UUID) THEN
       RETURN null;
     END IF;
     RETURN jsonb_build_object(
@@ -3987,7 +4045,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_public(
       'story',
       o_data ->> 'story',
       'beachId',
-      o_publication ->> 'beach_id',
+      (o_publication ->> 'beach_id')::UUID,
       'beachName',
       o_data ->> 'beachName',
       'timezone',
@@ -4003,7 +4061,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_public(
       'selfReported',
       true,
       'publishedAt',
-      "finfolk".as_iso_time((o_publication ->> 'published_at')::TIMESTAMPTZ)
+      "finfolk".as_iso_time((o_publication ->> 'published_at')::BIGINT)
     );
   END;
 
@@ -4034,7 +4092,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".review_trip_publication(
     v_decision := ((i_decision)::"finfolk"."EnumTripReviewDecision")::TEXT;
     o_pending := "finfolk_rpc".ret_trip_publication_snapshot(i_trip_id,'pending');
     o_published := "finfolk_rpc".ret_trip_publication_snapshot(i_trip_id,'published');
-    IF o_trip IS NULL OR i_review_token IS NULL OR v_decision IS NULL OR NOT "finfolk".is_user_active(o_trip ->> 'owner_id') THEN
+    IF o_trip IS NULL OR i_review_token IS NULL OR v_decision IS NULL OR NOT "finfolk".is_user_active((o_trip ->> 'owner_id')::UUID) THEN
       RETURN null;
     END IF;
     IF v_decision = 'remove' THEN
@@ -4073,7 +4131,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".review_trip_publication(
         WITH j_ret AS (  
           UPDATE "finfolk"."TripPublication" SET
             "status" = ('published')::"finfolk"."EnumTripPublicationStatus",
-            "published_at" = (now())::TIMESTAMPTZ,
+            "published_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT,
             "op_updated" = (o_op ->> 'id')::UUID,
             "time_updated" = (o_op ->> 'time')::BIGINT
           WHERE "trip_id" = i_trip_id
@@ -4161,7 +4219,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".review_trip_publication(
         ),
           (o_op ->> 'id')::UUID,
           (o_op ->> 'time')::BIGINT
-        ) RETURNING "audit_id","op_created","time_created")
+        ) RETURNING "id","audit_id","op_created","time_created")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
       RETURN jsonb_build_object('ok',true);
     END;
@@ -4172,7 +4230,7 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.fn.user.user-manage-trips/withdraw-trip-publication 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".withdraw_trip_publication(
   i_trip_id UUID,
-  i_owner TEXT,
+  i_owner UUID,
   o_op JSONB
 ) RETURNS JSONB AS $$
 
@@ -4222,7 +4280,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".withdraw_trip_publication(
           "finfolk".as_jsonb((jsonb_build_object('event','unpublish'))::JSONB),
           (o_op ->> 'id')::UUID,
           (o_op ->> 'time')::BIGINT
-        ) RETURNING "audit_id","op_created","time_created")
+        ) RETURNING "id","audit_id","op_created","time_created")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
       RETURN jsonb_build_object('ok',true);
     END;
@@ -4233,7 +4291,7 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.fn.user.user-manage-trips/update-trip-draft 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".update_trip_draft(
   i_trip_id UUID,
-  i_owner TEXT,
+  i_owner UUID,
   i_draft JSONB,
   i_revision INTEGER,
   o_op JSONB
@@ -4305,7 +4363,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".update_trip_draft(
       BEGIN
         WITH j_ret AS (  
           UPDATE "finfolk"."Trip" SET
-            "beach_id" = (o_draft ->> 'beachId')::TEXT,
+            "beach_id" = (o_draft ->> 'beachId')::UUID,
             "start_date" = (v_start)::DATE,
             "end_date" = (v_end)::DATE,
             "detail" = "finfolk".as_jsonb((((o_draft - 'beachId') - 'start') - 'end')::JSONB),
@@ -4351,7 +4409,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".update_trip_draft(
             (o_draft)::JSONB,
             (o_op ->> 'id')::UUID,
             (o_op ->> 'time')::BIGINT
-          ) RETURNING "rev_id","version","deltas","op_created","time_created")
+          ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_history;
         WITH j_ret AS (  
           INSERT INTO "finfolk"."AuditLog" (
@@ -4368,7 +4426,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".update_trip_draft(
             "finfolk".as_jsonb((jsonb_build_object('event','save'))::JSONB),
             (o_op ->> 'id')::UUID,
             (o_op ->> 'time')::BIGINT
-          ) RETURNING "audit_id","op_created","time_created")
+          ) RETURNING "id","audit_id","op_created","time_created")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
         RETURN jsonb_build_object('id',i_trip_id,'revision',i_revision + 1);
       END;
@@ -4379,32 +4437,36 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-user-reward/UserInvitation 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserInvitation" (
-  "code" TEXT PRIMARY KEY NOT NULL,
-  "inviter_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "code" TEXT NOT NULL,
+  "inviter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("code"),
   UNIQUE ("inviter_id")
 );
 
 -- finfolkdb.common.type-user-reward/UserInvitationJoin 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserInvitationJoin" (
-  "invitee_id" TEXT PRIMARY KEY NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "inviter_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "invitee_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "inviter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "verified_sender_id" TEXT,
-  "rewarded_at" TIMESTAMPTZ,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "rewarded_at" BIGINT,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("invitee_id"),
   UNIQUE ("verified_sender_id"),
   CONSTRAINT check_0 CHECK ("invitee_id" != "inviter_id")
 );
 
 -- finfolkdb.common.type-user-reward/UserPointsEntry 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserPointsEntry" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
-  "user_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "action_id" UUID NOT NULL REFERENCES "finfolk"."InstagramAction"("id"),
   "day" DATE NOT NULL,
   "points" INTEGER NOT NULL DEFAULT 1,
   "reversed" BOOLEAN NOT NULL DEFAULT false,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   UNIQUE ("user_id","day"),
   UNIQUE ("action_id"),
   CONSTRAINT check_0 CHECK ("points" = 1)
@@ -4412,9 +4474,11 @@ CREATE TABLE IF NOT EXISTS "finfolk"."UserPointsEntry" (
 
 -- finfolkdb.common.type-user-reward/UserRequestLimit 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserRequestLimit" (
-  "user_id" TEXT PRIMARY KEY NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "minute" TIMESTAMPTZ NOT NULL,
-  "count" INTEGER NOT NULL
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "minute" BIGINT NOT NULL,
+  "count" INTEGER NOT NULL,
+  UNIQUE ("user_id")
 );
 
 -- finfolkdb.common.type-social-post/SocialPost 
@@ -4422,16 +4486,16 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SocialPost" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('SocialPost')::"finfolk"."EnumClassType") STORED,
   "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
-  "owner_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "beach_id" TEXT NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
   "url" TEXT NOT NULL,
   "platform" "finfolk"."EnumSocialHandleType" NOT NULL,
   "creator_handle" TEXT NOT NULL DEFAULT '',
   "status" "finfolk"."EnumSocialPostStatus" NOT NULL DEFAULT 'pending',
   "public_consent" BOOLEAN NOT NULL DEFAULT false,
   "rejection_reason" TEXT NOT NULL DEFAULT '',
-  "reviewed_by_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "reviewed_at" TIMESTAMPTZ,
+  "reviewed_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "reviewed_at" BIGINT,
   "audit_id" UUID NOT NULL,
   "rev_id" UUID NOT NULL,
   "op_created" UUID,
@@ -4452,11 +4516,11 @@ CREATE INDEX ON "finfolk"."SocialPost" ("status");
 CREATE TABLE IF NOT EXISTS "finfolk"."SocialPostReport" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "post_id" UUID NOT NULL REFERENCES "finfolk"."SocialPost"("id") ON DELETE CASCADE,
-  "reporter_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "reporter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "reason" TEXT NOT NULL,
   "status" "finfolk"."EnumSocialPostReportStatus" NOT NULL DEFAULT 'open',
-  "resolved_by_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "resolved_at" TIMESTAMPTZ,
+  "resolved_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "resolved_at" BIGINT,
   "op_created" UUID,
   "op_updated" UUID,
   "time_created" BIGINT,
@@ -4468,10 +4532,14 @@ CREATE INDEX ON "finfolk"."SocialPostReport" ("status");
 
 -- finfolkdb.common.type-social-post/SocialReferral 
 CREATE TABLE IF NOT EXISTS "finfolk"."SocialReferral" (
-  "day" DATE NOT NULL DEFAULT ("timezone"('Australia/Sydney',now()))::DATE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "day" DATE NOT NULL DEFAULT ("timezone"(
+    'Australia/Sydney',
+    to_timestamp((1000000 * extract(epoch FROM now()))::BIGINT / 1000000.0)
+  ))::DATE,
   "platform" "finfolk"."EnumSocialHandleType" NOT NULL,
   "clicks" BIGINT NOT NULL DEFAULT 0,
-  PRIMARY KEY (day,platform)
+  UNIQUE ("day","platform")
 );
 
 -- finfolkdb.common.type-event/Event 
@@ -4482,8 +4550,8 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Event" (
   "listing_id" UUID NOT NULL REFERENCES "finfolk"."DirectoryListing"("id"),
   "status" "finfolk"."EnumEventStatus" NOT NULL DEFAULT 'draft',
   "visibility" "finfolk"."EnumEventVisibility" NOT NULL DEFAULT 'public',
-  "starts_at" TIMESTAMPTZ NOT NULL,
-  "ends_at" TIMESTAMPTZ NOT NULL,
+  "starts_at" BIGINT NOT NULL,
+  "ends_at" BIGINT NOT NULL,
   "timezone" TEXT NOT NULL,
   "capacity" INTEGER,
   "hidden" BOOLEAN NOT NULL DEFAULT false,
@@ -4509,14 +4577,15 @@ CREATE INDEX ON "finfolk"."Event" ("status");
 
 -- finfolkdb.common.type-event/EventRsvp 
 CREATE TABLE IF NOT EXISTS "finfolk"."EventRsvp" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "event_id" UUID NOT NULL REFERENCES "finfolk"."Event"("id"),
-  "member_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "member_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "status" "finfolk"."EnumEventRsvpStatus" NOT NULL,
   "op_created" UUID,
   "op_updated" UUID,
   "time_created" BIGINT,
   "time_updated" BIGINT,
-  PRIMARY KEY (event_id,member_id)
+  UNIQUE ("event_id","member_id")
 );
 CREATE INDEX ON "finfolk"."EventRsvp" ("member_id");
 
@@ -4525,8 +4594,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_event(
   i_listing_id UUID,
   i_document JSONB,
   i_visibility TEXT,
-  i_starts_at TIMESTAMPTZ,
-  i_ends_at TIMESTAMPTZ,
+  i_starts_at BIGINT,
+  i_ends_at BIGINT,
   i_timezone TEXT,
   o_op JSONB
 ) RETURNS JSONB AS $$
@@ -4540,7 +4609,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_event(
   BEGIN
     v_id := uuid_generate_v4();
     o_document := "finfolk".as_jsonb(i_document);
-    o_base := "finfolk".insert_base_addons('Event',(v_id)::TEXT,o_document,o_op);
+    o_base := "finfolk".insert_base_addons('Event',v_id,o_document,o_op);
     WITH j_ret AS (  
       INSERT INTO "finfolk"."Access" (
         "class_table",
@@ -4552,7 +4621,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_event(
       ) VALUES (
         ('Event')::"finfolk"."EnumClassType",
         ('Global')::"finfolk"."EnumClassType",
-        (v_id)::TEXT,
+        (v_id)::UUID,
         ('closed')::"finfolk"."EnumAccessSetting",
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
@@ -4579,8 +4648,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_event(
         (v_id)::UUID,
         (i_listing_id)::UUID,
         (i_visibility)::"finfolk"."EnumEventVisibility",
-        (i_starts_at)::TIMESTAMPTZ,
-        (i_ends_at)::TIMESTAMPTZ,
+        (i_starts_at)::BIGINT,
+        (i_ends_at)::BIGINT,
         (i_timezone)::TEXT,
         (o_document ->> 'capacity')::INTEGER,
         "finfolk".as_jsonb((o_document)::JSONB),
@@ -4625,16 +4694,16 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-shop-base/FinnieAccount 
 CREATE TABLE IF NOT EXISTS "finfolk"."FinnieAccount" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
-  "user_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "imported_points" BIGINT NOT NULL DEFAULT 0,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   UNIQUE ("user_id")
 );
 
 -- finfolkdb.common.type-shop-base/FinnieItem 
 CREATE TABLE IF NOT EXISTS "finfolk"."FinnieItem" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "title" TEXT NOT NULL,
   "outlet" TEXT NOT NULL,
   "description" TEXT NOT NULL DEFAULT '',
@@ -4643,8 +4712,8 @@ CREATE TABLE IF NOT EXISTS "finfolk"."FinnieItem" (
   "stock" INTEGER,
   "revision" INTEGER NOT NULL DEFAULT 1,
   "active" BOOLEAN NOT NULL DEFAULT false,
-  "expires_at" TIMESTAMPTZ,
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "expires_at" BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   CONSTRAINT positive_cost CHECK ("cost" > 0),
   CONSTRAINT positive_revision CHECK ("revision" > 0),
   CONSTRAINT valid_stock CHECK ("stock" IS NULL OR ("stock" >= 0)),
@@ -4654,7 +4723,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."FinnieItem" (
 
 -- finfolkdb.common.type-shop-base/FinnieRedemption 
 CREATE TABLE IF NOT EXISTS "finfolk"."FinnieRedemption" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "account_id" UUID NOT NULL REFERENCES "finfolk"."FinnieAccount"("id"),
   "item_id" UUID NOT NULL REFERENCES "finfolk"."FinnieItem"("id"),
   "request_key" UUID NOT NULL,
@@ -4662,8 +4731,8 @@ CREATE TABLE IF NOT EXISTS "finfolk"."FinnieRedemption" (
   "cost" INTEGER NOT NULL,
   "item_snapshot" JSONB NOT NULL,
   "status" "finfolk"."EnumFinnieRedemptionStatus" NOT NULL DEFAULT 'claimed',
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "completed_at" TIMESTAMPTZ,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "completed_at" BIGINT,
   UNIQUE ("account_id","request_key"),
   UNIQUE ("code"),
   CONSTRAINT positive_cost CHECK ("cost" > 0)
@@ -4671,21 +4740,21 @@ CREATE TABLE IF NOT EXISTS "finfolk"."FinnieRedemption" (
 
 -- finfolkdb.common.type-shop-base/FinnieEntry 
 CREATE TABLE IF NOT EXISTS "finfolk"."FinnieEntry" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "account_id" UUID NOT NULL REFERENCES "finfolk"."FinnieAccount"("id"),
   "amount" BIGINT NOT NULL,
   "reference" TEXT NOT NULL,
   "reason" TEXT NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   UNIQUE ("account_id","reference"),
   CONSTRAINT nonzero_amount CHECK ("amount" != 0)
 );
 
 -- finfolkdb.common.type-user-report/UserReport 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserReport" (
-  "id" BIGINT PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-  "author_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "target_id" TEXT REFERENCES "finfolk"."User"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "author_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "target_id" UUID REFERENCES "finfolk"."User"("id"),
   "trip_id" UUID REFERENCES "finfolk"."Trip"("id") ON DELETE CASCADE,
   "reason" TEXT NOT NULL,
   "op_created" UUID,
@@ -4721,7 +4790,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."ActivityLog" (
   "class_table" "finfolk"."EnumClassType",
   "activity_id" UUID NOT NULL,
   "action" "finfolk"."EnumActionType" NOT NULL,
-  "actor_id" TEXT REFERENCES "finfolk"."User"("id"),
+  "actor_id" UUID REFERENCES "finfolk"."User"("id"),
   "detail" JSONB NOT NULL DEFAULT '{}',
   "op_created" UUID,
   "time_created" BIGINT,
@@ -4731,7 +4800,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."ActivityLog" (
 
 -- finfolkdb.fn.user.user-manage/insert-user 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_user(
-  i_user_id TEXT,
+  i_user_id UUID,
   i_profile JSONB,
   o_op JSONB
 ) RETURNS JSONB AS $$
@@ -4755,7 +4824,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_user(
       ) VALUES (
         ('User')::"finfolk"."EnumClassType",
         ('Global')::"finfolk"."EnumClassType",
-        (i_user_id)::TEXT,
+        (i_user_id)::UUID,
         ("finfolk".as_jsonb(i_profile))::JSONB,
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
@@ -4771,7 +4840,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_user(
       ) VALUES (
         ('User')::"finfolk"."EnumClassType",
         ('Global')::"finfolk"."EnumClassType",
-        (i_user_id)::TEXT,
+        (i_user_id)::UUID,
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
       ) RETURNING "id","class_ref","op_created","time_created")
@@ -4779,14 +4848,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_user(
     WITH j_ret AS (  
       INSERT INTO "finfolk"."Activity" ("class_table","class_ref","op_created","time_created") VALUES (
         ('User')::"finfolk"."EnumClassType",
-        (i_user_id)::TEXT,
+        (i_user_id)::UUID,
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
       ) RETURNING "id","class_ref","op_created","time_created")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_activity;
     WITH j_ret AS (  
       INSERT INTO "finfolk"."User" ("id","profile","activity_id","audit_id","rev_id") VALUES (
-        (i_user_id)::TEXT,
+        (i_user_id)::UUID,
         ("finfolk".as_jsonb(i_profile))::JSONB,
         ((o_activity ->> 'id')::UUID)::UUID,
         ((o_audit ->> 'id')::UUID)::UUID,
@@ -4797,7 +4866,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_user(
         "deleted",
         "invite_eligible",
         "joined_at",
-        "updated_at",
+        "time_updated",
         "activity_id",
         "audit_id",
         "rev_id")
@@ -4817,7 +4886,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_user(
         "finfolk".as_jsonb((jsonb_build_object('status','created'))::JSONB),
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
-      ) RETURNING "audit_id","op_created","time_created")
+      ) RETURNING "id","audit_id","op_created","time_created")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit_log;
     WITH j_ret AS (  
       INSERT INTO "finfolk"."ActivityLog" (
@@ -4832,7 +4901,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_user(
         ('User')::"finfolk"."EnumClassType",
         ((o_activity ->> 'id')::UUID)::UUID,
         ('create')::"finfolk"."EnumActionType",
-        (i_user_id)::TEXT,
+        (i_user_id)::UUID,
         "finfolk".as_jsonb((jsonb_build_object('status','created'))::JSONB),
         (o_op ->> 'id')::UUID,
         (o_op ->> 'time')::BIGINT
@@ -4851,52 +4920,60 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-environment-base/DataSource 
 CREATE TABLE IF NOT EXISTS "finfolk"."DataSource" (
-  "id" TEXT PRIMARY KEY NOT NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
   "metadata" JSONB NOT NULL,
-  "enabled" BOOLEAN NOT NULL DEFAULT false
+  "enabled" BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-environment-base/DepthDataset 
 CREATE TABLE IF NOT EXISTS "finfolk"."DepthDataset" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "source_id" TEXT NOT NULL REFERENCES "finfolk"."DataSource"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
   "upstream_id" TEXT NOT NULL,
   "version" TEXT NOT NULL,
   "checksum" TEXT NOT NULL,
   "status" "finfolk"."EnumDepthDatasetStatus" NOT NULL DEFAULT 'staged',
   "metadata" JSONB NOT NULL,
+  UNIQUE ("key"),
   UNIQUE ("source_id","upstream_id","version")
 );
 
 -- finfolkdb.common.type-environment-base/TideStation 
 CREATE TABLE IF NOT EXISTS "finfolk"."TideStation" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "source_id" TEXT NOT NULL REFERENCES "finfolk"."DataSource"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
   "upstream_id" TEXT NOT NULL,
   "metadata" JSONB NOT NULL,
   "active" BOOLEAN NOT NULL DEFAULT true,
+  UNIQUE ("key"),
   UNIQUE ("source_id","upstream_id")
 );
 
 -- finfolkdb.common.type-environment-base/EnvironmentTarget 
 CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentTarget" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "source_id" TEXT NOT NULL REFERENCES "finfolk"."DataSource"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
   "product" "finfolk"."EnumEnvironmentTargetProduct" NOT NULL,
   "configuration" JSONB NOT NULL,
-  "last_requested_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "last_requested_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-environment-base/EnvironmentSnapshot 
 CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentSnapshot" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
-  "target_id" TEXT NOT NULL REFERENCES "finfolk"."EnvironmentTarget"("id") ON DELETE CASCADE,
-  "issued_at" TIMESTAMPTZ,
-  "retrieved_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "valid_from" TIMESTAMPTZ NOT NULL,
-  "valid_to" TIMESTAMPTZ NOT NULL,
-  "fresh_until" TIMESTAMPTZ NOT NULL,
-  "delete_after" TIMESTAMPTZ NOT NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "target_id" UUID NOT NULL REFERENCES "finfolk"."EnvironmentTarget"("id") ON DELETE CASCADE,
+  "issued_at" BIGINT,
+  "retrieved_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "valid_from" BIGINT NOT NULL,
+  "valid_to" BIGINT NOT NULL,
+  "fresh_until" BIGINT NOT NULL,
+  "delete_after" BIGINT NOT NULL,
   "checksum" TEXT NOT NULL,
   "schema_version" INTEGER NOT NULL DEFAULT 1,
   "payload" JSONB NOT NULL,
@@ -4907,21 +4984,23 @@ CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentSnapshot" (
 
 -- finfolkdb.common.type-environment-base/EnvironmentJob 
 CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentJob" (
-  "target_id" TEXT PRIMARY KEY NOT NULL REFERENCES "finfolk"."EnvironmentTarget"("id") ON DELETE CASCADE,
-  "next_attempt_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "target_id" UUID NOT NULL REFERENCES "finfolk"."EnvironmentTarget"("id") ON DELETE CASCADE,
+  "next_attempt_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "lease_token" UUID,
-  "lease_until" TIMESTAMPTZ,
+  "lease_until" BIGINT,
   "attempts" INTEGER NOT NULL DEFAULT 0,
-  "last_success" TIMESTAMPTZ,
+  "last_success" BIGINT,
   "error_code" TEXT,
+  UNIQUE ("target_id"),
   CONSTRAINT check_0 CHECK ("attempts" >= 0),
   CONSTRAINT check_1 CHECK (("lease_token" IS NULL AND "lease_until" IS NULL) OR ("lease_token" IS NOT NULL AND "lease_until" IS NOT NULL))
 );
 
 -- finfolkdb.fn.messaging.messaging-chat/receive-chat-message 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_subject TEXT,
   i_key TEXT,
   i_body TEXT,
@@ -4934,6 +5013,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
     WITH j_ret AS (  
       SELECT
         "id",
+        "key",
         "application_id",
         "provider",
         "account_id",
@@ -4950,7 +5030,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
         "last_webhook_at",
         "last_command_at",
         "last_reply_at",
-        "updated_at",
+        "time_updated",
         "backoff_until",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
@@ -4967,9 +5047,9 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
     DECLARE
       o_message JSONB;
       o_receipt JSONB;
-      v_deadline TIMESTAMPTZ;
+      v_deadline BIGINT;
       v_key TEXT;
-      v_sent TIMESTAMPTZ;
+      v_sent BIGINT;
     BEGIN
       v_key := "encode"(
         "digest"((jsonb_build_array(i_subject,i_key))::TEXT,'sha256'),
@@ -4990,7 +5070,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
           "deadline",
           "result",
           "correlation_id",
-          "created_at"
+          "time_created"
         FROM "finfolk"."MessagingReceipt"
         WHERE "account_id" = i_account AND "external_event_id" = v_key
         LIMIT 1)
@@ -5005,15 +5085,18 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
           "body",
           "metadata",
           "sent_at",
-          "created_at"
+          "time_created"
         FROM "finfolk"."MessagingMessage"
         WHERE "id" = (o_receipt ->> 'message_id')::UUID
         LIMIT 1)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_message;
-      v_sent := coalesce((o_message ->> 'sent_at')::TIMESTAMPTZ,now());
+      v_sent := coalesce(
+        (o_message ->> 'sent_at')::BIGINT,
+        (1000000 * extract(epoch FROM now()))::BIGINT
+      );
       v_deadline := coalesce(
-        (o_receipt ->> 'deadline')::TIMESTAMPTZ,
-        v_sent + (i_window * ('1 second')::INTERVAL)
+        (o_receipt ->> 'deadline')::BIGINT,
+        v_sent + (i_window * 1000000)
       );
       RETURN "finfolk_rpc".receive_message(i_application,i_account,jsonb_build_object(
         'eventId',
@@ -5040,8 +5123,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-chat/ret-chat-history 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_chat_history(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_subject TEXT
 ) RETURNS JSONB AS $$
 
@@ -5079,11 +5162,11 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-authorization/set-messaging-authorization 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_generation INTEGER,
   i_ciphertext TEXT,
-  i_expires TIMESTAMPTZ,
+  i_expires BIGINT,
   i_proof JSONB
 ) RETURNS JSONB AS $$
 
@@ -5094,6 +5177,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
     WITH j_ret AS (  
       SELECT
         "id",
+        "key",
         "application_id",
         "provider",
         "account_id",
@@ -5110,7 +5194,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
         "last_webhook_at",
         "last_command_at",
         "last_reply_at",
-        "updated_at",
+        "time_updated",
         "backoff_until",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
@@ -5125,7 +5209,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
     IF (o_account ->> 'generation')::INTEGER != i_generation THEN
       RETURN null;
     END IF;
-    IF i_generation IS NULL OR (coalesce(i_ciphertext,'') = '') OR (coalesce(o_proof ->> 'provider','') != (o_account ->> 'provider')) OR (coalesce(o_proof ->> 'accountId','') != (o_account ->> 'account_id')) OR (coalesce(o_proof -> 'authorized',('false')::JSONB) != ('true')::JSONB) OR (i_expires IS NOT NULL AND (NOT "isfinite"(i_expires) OR (i_expires <= now()))) OR (i_expires IS NULL AND (coalesce(o_proof -> 'nonExpiring',('false')::JSONB) != ('true')::JSONB)) THEN
+    IF i_generation IS NULL OR (coalesce(i_ciphertext,'') = '') OR (coalesce(o_proof ->> 'provider','') != (o_account ->> 'provider')) OR (coalesce(o_proof ->> 'accountId','') != (o_account ->> 'account_id')) OR (coalesce(o_proof -> 'authorized',('false')::JSONB) != ('true')::JSONB) OR (i_expires IS NOT NULL AND (i_expires IS NULL OR (i_expires <= (1000000 * extract(epoch FROM now()))::BIGINT))) OR (i_expires IS NULL AND (coalesce(o_proof -> 'nonExpiring',('false')::JSONB) != ('true')::JSONB)) THEN
       RAISE EXCEPTION 'Invalid verified messaging authorization';
     END IF;
     DECLARE
@@ -5136,16 +5220,17 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
       WITH j_ret AS (  
         UPDATE "finfolk"."MessagingAccount" SET
           "credential_ciphertext" = (i_ciphertext)::TEXT,
-          "token_expires_at" = (i_expires)::TIMESTAMPTZ,
+          "token_expires_at" = (i_expires)::BIGINT,
           "credential_lease" = (null)::UUID,
-          "credential_lease_until" = (null)::TIMESTAMPTZ,
+          "credential_lease_until" = (null)::BIGINT,
           "mode" = ('disabled')::"finfolk"."EnumMessagingAccountMode",
           "generation" = (i_generation + 1)::INTEGER,
           "checks" = (o_proof)::JSONB,
-          "updated_at" = (now())::TIMESTAMPTZ
+          "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
         WHERE "id" = i_account
         RETURNING
           "id",
+          "key",
           "application_id",
           "provider",
           "account_id",
@@ -5162,7 +5247,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
           "last_webhook_at",
           "last_command_at",
           "last_reply_at",
-          "updated_at",
+          "time_updated",
           "backoff_until",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_saved;
@@ -5186,8 +5271,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-authorization/activate-messaging-account 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_generation INTEGER,
   i_mode TEXT,
   i_senders JSONB
@@ -5200,6 +5285,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
     WITH j_ret AS (  
       SELECT
         "id",
+        "key",
         "application_id",
         "provider",
         "account_id",
@@ -5216,7 +5302,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
         "last_webhook_at",
         "last_command_at",
         "last_reply_at",
-        "updated_at",
+        "time_updated",
         "backoff_until",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
@@ -5234,7 +5320,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
     IF i_generation IS NULL OR i_mode IS NULL OR NOT ((i_mode = 'pilot') OR (i_mode = 'live')) THEN
       RAISE EXCEPTION 'Invalid messaging activation mode';
     END IF;
-    IF ((o_account ->> 'provider') != 'app') AND (o_account ->> 'credential_ciphertext' IS NULL OR (coalesce((o_account -> 'checks') ->> 'provider','') != (o_account ->> 'provider')) OR (coalesce((o_account -> 'checks') ->> 'accountId','') != (o_account ->> 'account_id')) OR (coalesce((o_account -> 'checks') -> 'authorized',('false')::JSONB) != ('true')::JSONB) OR (coalesce((o_account -> 'checks') -> 'subscribed',('false')::JSONB) != ('true')::JSONB) OR ((o_account ->> 'token_expires_at')::TIMESTAMPTZ <= now()) OR (o_account ->> 'token_expires_at' IS NULL AND (coalesce((o_account -> 'checks') -> 'nonExpiring',('false')::JSONB) != ('true')::JSONB))) THEN
+    IF ((o_account ->> 'provider') != 'app') AND (o_account ->> 'credential_ciphertext' IS NULL OR (coalesce((o_account -> 'checks') ->> 'provider','') != (o_account ->> 'provider')) OR (coalesce((o_account -> 'checks') ->> 'accountId','') != (o_account ->> 'account_id')) OR (coalesce((o_account -> 'checks') -> 'authorized',('false')::JSONB) != ('true')::JSONB) OR (coalesce((o_account -> 'checks') -> 'subscribed',('false')::JSONB) != ('true')::JSONB) OR ((o_account ->> 'token_expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR (o_account ->> 'token_expires_at' IS NULL AND (coalesce((o_account -> 'checks') -> 'nonExpiring',('false')::JSONB) != ('true')::JSONB))) THEN
       RAISE EXCEPTION 'Messaging authorization and subscription must be verified';
     END IF;
     DECLARE
@@ -5258,10 +5344,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
         UPDATE "finfolk"."MessagingAccount" SET
           "mode" = (i_mode)::"finfolk"."EnumMessagingAccountMode",
           "pilot_sender_ids" = (o_senders)::JSONB,
-          "updated_at" = (now())::TIMESTAMPTZ
+          "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
         WHERE "id" = i_account
         RETURNING
           "id",
+          "key",
           "application_id",
           "provider",
           "account_id",
@@ -5278,7 +5365,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
           "last_webhook_at",
           "last_command_at",
           "last_reply_at",
-          "updated_at",
+          "time_updated",
           "backoff_until",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_active;
@@ -5291,8 +5378,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-authorization/disable-messaging-account 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_generation INTEGER,
   i_disconnect BOOLEAN
 ) RETURNS JSONB AS $$
@@ -5303,6 +5390,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
     WITH j_ret AS (  
       SELECT
         "id",
+        "key",
         "application_id",
         "provider",
         "account_id",
@@ -5319,7 +5407,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
         "last_webhook_at",
         "last_command_at",
         "last_reply_at",
-        "updated_at",
+        "time_updated",
         "backoff_until",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
@@ -5342,13 +5430,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
       WITH j_ret AS (  
         UPDATE "finfolk"."MessagingAccount" SET
           "credential_lease" = (null)::UUID,
-          "credential_lease_until" = (null)::TIMESTAMPTZ,
+          "credential_lease_until" = (null)::BIGINT,
           "mode" = ('disabled')::"finfolk"."EnumMessagingAccountMode",
           "generation" = (i_generation + 1)::INTEGER,
-          "updated_at" = (now())::TIMESTAMPTZ
+          "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
         WHERE "id" = i_account
         RETURNING
           "id",
+          "key",
           "application_id",
           "provider",
           "account_id",
@@ -5365,7 +5454,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
           "last_webhook_at",
           "last_command_at",
           "last_reply_at",
-          "updated_at",
+          "time_updated",
           "backoff_until",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_disabled;
@@ -5376,11 +5465,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
         WITH j_ret AS (  
             UPDATE "finfolk"."MessagingAccount" SET
               "credential_ciphertext" = (null)::TEXT,
-              "token_expires_at" = (null)::TIMESTAMPTZ,
+              "token_expires_at" = (null)::BIGINT,
               "checks" = ('{}')::JSONB
             WHERE "id" = i_account
             RETURNING
               "id",
+              "key",
               "application_id",
               "provider",
               "account_id",
@@ -5397,7 +5487,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
               "last_webhook_at",
               "last_command_at",
               "last_reply_at",
-              "updated_at",
+              "time_updated",
               "backoff_until",
               "provider_scope")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_cleared;
@@ -5419,8 +5509,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-authorization/claim-messaging-refresh 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_generation INTEGER
 ) RETURNS JSONB AS $$
 
@@ -5430,6 +5520,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
     WITH j_ret AS (  
       SELECT
         "id",
+        "key",
         "application_id",
         "provider",
         "account_id",
@@ -5446,7 +5537,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
         "last_webhook_at",
         "last_command_at",
         "last_reply_at",
-        "updated_at",
+        "time_updated",
         "backoff_until",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
@@ -5457,7 +5548,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
     IF o_account is null  THEN
       RAISE EXCEPTION 'Messaging account is outside application scope';
     END IF;
-    IF i_generation IS NULL OR ((o_account ->> 'generation')::INTEGER != i_generation) OR o_account ->> 'credential_ciphertext' IS NULL OR ((o_account ->> 'credential_lease_until')::TIMESTAMPTZ > now()) THEN
+    IF i_generation IS NULL OR ((o_account ->> 'generation')::INTEGER != i_generation) OR o_account ->> 'credential_ciphertext' IS NULL OR ((o_account ->> 'credential_lease_until')::BIGINT > (1000000 * extract(epoch FROM now()))::BIGINT) THEN
       RETURN null;
     END IF;
     DECLARE
@@ -5466,10 +5557,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
       WITH j_ret AS (  
         UPDATE "finfolk"."MessagingAccount" SET
           "credential_lease" = (uuid_generate_v4())::UUID,
-          "credential_lease_until" = (now() + ('2 minutes')::INTERVAL)::TIMESTAMPTZ
+          "credential_lease_until" = ((1000000 * extract(epoch FROM now()))::BIGINT + 120000000)::BIGINT
         WHERE "id" = i_account
         RETURNING
           "id",
+          "key",
           "application_id",
           "provider",
           "account_id",
@@ -5486,7 +5578,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
           "last_webhook_at",
           "last_command_at",
           "last_reply_at",
-          "updated_at",
+          "time_updated",
           "backoff_until",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_claim;
@@ -5498,8 +5590,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-authorization/release-messaging-refresh 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".release_messaging_refresh(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_generation INTEGER,
   i_lease UUID
 ) RETURNS JSONB AS $$
@@ -5513,13 +5605,14 @@ BEGIN
     WITH j_ret AS (  
       UPDATE "finfolk"."MessagingAccount" SET
         "credential_lease" = (null)::UUID,
-        "credential_lease_until" = (null)::TIMESTAMPTZ
+        "credential_lease_until" = (null)::BIGINT
       WHERE "id" = i_account
       AND "application_id" = i_application
       AND "generation" = i_generation
       AND "credential_lease" = i_lease
       RETURNING
         "id",
+        "key",
         "application_id",
         "provider",
         "account_id",
@@ -5536,7 +5629,7 @@ BEGIN
         "last_webhook_at",
         "last_command_at",
         "last_reply_at",
-        "updated_at",
+        "time_updated",
         "backoff_until",
         "provider_scope")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_release;
@@ -5547,12 +5640,12 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-authorization/save-messaging-refresh 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
-  i_application TEXT,
-  i_account TEXT,
+  i_application UUID,
+  i_account UUID,
   i_generation INTEGER,
   i_lease UUID,
   i_ciphertext TEXT,
-  i_expires TIMESTAMPTZ,
+  i_expires BIGINT,
   i_proof JSONB
 ) RETURNS JSONB AS $$
 
@@ -5564,6 +5657,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
     WITH j_ret AS (  
       SELECT
         "id",
+        "key",
         "application_id",
         "provider",
         "account_id",
@@ -5580,7 +5674,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
         "last_webhook_at",
         "last_command_at",
         "last_reply_at",
-        "updated_at",
+        "time_updated",
         "backoff_until",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
@@ -5588,14 +5682,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
       AND "application_id" = i_application
       AND "generation" = i_generation
       AND "credential_lease" = i_lease
-      AND "credential_lease_until" > now()
+      AND "credential_lease_until" > (1000000 * extract(epoch FROM now()))::BIGINT
       LIMIT 1
       FOR UPDATE)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
     IF o_account IS NULL OR i_lease IS NULL THEN
       RETURN null;
     END IF;
-    IF (coalesce(i_ciphertext,'') = '') OR (coalesce(o_proof ->> 'provider','') != (o_account ->> 'provider')) OR (coalesce(o_proof ->> 'accountId','') != (o_account ->> 'account_id')) OR (coalesce(o_proof -> 'authorized',('false')::JSONB) != ('true')::JSONB) OR (coalesce(o_proof -> 'subscribed',('false')::JSONB) != ('true')::JSONB) OR (i_expires IS NOT NULL AND (NOT "isfinite"(i_expires) OR (i_expires <= now()))) OR (i_expires IS NULL AND (coalesce(o_proof -> 'nonExpiring',('false')::JSONB) != ('true')::JSONB)) THEN
+    IF (coalesce(i_ciphertext,'') = '') OR (coalesce(o_proof ->> 'provider','') != (o_account ->> 'provider')) OR (coalesce(o_proof ->> 'accountId','') != (o_account ->> 'account_id')) OR (coalesce(o_proof -> 'authorized',('false')::JSONB) != ('true')::JSONB) OR (coalesce(o_proof -> 'subscribed',('false')::JSONB) != ('true')::JSONB) OR (i_expires IS NOT NULL AND (i_expires IS NULL OR (i_expires <= (1000000 * extract(epoch FROM now()))::BIGINT))) OR (i_expires IS NULL AND (coalesce(o_proof -> 'nonExpiring',('false')::JSONB) != ('true')::JSONB)) THEN
       RAISE EXCEPTION 'Invalid refreshed messaging authorization';
     END IF;
     DECLARE
@@ -5605,14 +5699,15 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
       WITH j_ret AS (  
         UPDATE "finfolk"."MessagingAccount" SET
           "credential_ciphertext" = (i_ciphertext)::TEXT,
-          "token_expires_at" = (i_expires)::TIMESTAMPTZ,
+          "token_expires_at" = (i_expires)::BIGINT,
           "credential_lease" = (null)::UUID,
-          "credential_lease_until" = (null)::TIMESTAMPTZ,
+          "credential_lease_until" = (null)::BIGINT,
           "checks" = (o_proof)::JSONB,
-          "updated_at" = (now())::TIMESTAMPTZ
+          "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
         WHERE "id" = i_account
         RETURNING
           "id",
+          "key",
           "application_id",
           "provider",
           "account_id",
@@ -5629,7 +5724,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
           "last_webhook_at",
           "last_command_at",
           "last_reply_at",
-          "updated_at",
+          "time_updated",
           "backoff_until",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_saved;
@@ -5655,111 +5750,128 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-import-base/DatabaseRelease 
 CREATE TABLE IF NOT EXISTS "finfolk"."DatabaseRelease" (
-  "id" TEXT PRIMARY KEY NOT NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
   "manifest" JSONB NOT NULL,
   "counts" JSONB NOT NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-import-base/DataAsset 
 CREATE TABLE IF NOT EXISTS "finfolk"."DataAsset" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "source_id" TEXT NOT NULL REFERENCES "finfolk"."DataSource"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
   "checksum" TEXT NOT NULL,
   "bytes" BIGINT NOT NULL,
   "kind" "finfolk"."EnumDataAssetKind" NOT NULL,
   "uri" TEXT NOT NULL,
   "metadata" JSONB NOT NULL,
+  UNIQUE ("key"),
   CONSTRAINT check_0 CHECK ("bytes" >= 0)
 );
 
 -- finfolkdb.common.type-import-base/GeoArea 
 CREATE TABLE IF NOT EXISTS "finfolk"."GeoArea" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "source_id" TEXT NOT NULL REFERENCES "finfolk"."DataSource"("id"),
-  "metadata" JSONB NOT NULL
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
+  "metadata" JSONB NOT NULL,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-import-base/GeoFeature 
 CREATE TABLE IF NOT EXISTS "finfolk"."GeoFeature" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "dataset_id" TEXT NOT NULL REFERENCES "finfolk"."DepthDataset"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "dataset_id" UUID NOT NULL REFERENCES "finfolk"."DepthDataset"("id"),
   "geometry" JSONB NOT NULL,
-  "properties" JSONB NOT NULL
+  "properties" JSONB NOT NULL,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-import-base/SiteLocation 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteLocation" (
-  "beach_id" TEXT PRIMARY KEY NOT NULL REFERENCES "finfolk"."Beach"("id"),
-  "area_id" TEXT REFERENCES "finfolk"."GeoArea"("id"),
-  "source_id" TEXT NOT NULL REFERENCES "finfolk"."DataSource"("id"),
-  "geometry" JSONB NOT NULL
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "area_id" UUID REFERENCES "finfolk"."GeoArea"("id"),
+  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
+  "geometry" JSONB NOT NULL,
+  UNIQUE ("beach_id")
 );
 
 -- finfolkdb.common.type-import-base/DepthDatasetAsset 
 CREATE TABLE IF NOT EXISTS "finfolk"."DepthDatasetAsset" (
-  "dataset_id" TEXT NOT NULL REFERENCES "finfolk"."DepthDataset"("id"),
-  "asset_id" TEXT NOT NULL REFERENCES "finfolk"."DataAsset"("id"),
-  PRIMARY KEY (dataset_id,asset_id)
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "dataset_id" UUID NOT NULL REFERENCES "finfolk"."DepthDataset"("id"),
+  "asset_id" UUID NOT NULL REFERENCES "finfolk"."DataAsset"("id"),
+  UNIQUE ("dataset_id","asset_id")
 );
 
 -- finfolkdb.common.type-import-base/GeoBoundary 
 CREATE TABLE IF NOT EXISTS "finfolk"."GeoBoundary" (
-  "id" TEXT PRIMARY KEY NOT NULL,
-  "asset_id" TEXT NOT NULL REFERENCES "finfolk"."DataAsset"("id"),
-  "area_id" TEXT REFERENCES "finfolk"."GeoArea"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "asset_id" UUID NOT NULL REFERENCES "finfolk"."DataAsset"("id"),
+  "area_id" UUID REFERENCES "finfolk"."GeoArea"("id"),
   "geometry" JSONB NOT NULL,
-  "properties" JSONB NOT NULL
+  "properties" JSONB NOT NULL,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-site-base/SiteCatalog 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteCatalog" (
-  "id" INTEGER PRIMARY KEY NOT NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "singleton" BOOLEAN NOT NULL DEFAULT true,
   "revision" BIGINT NOT NULL DEFAULT 0,
   "metadata" JSONB NOT NULL DEFAULT '{}',
-  CONSTRAINT check_0 CHECK ("id" = 1),
+  UNIQUE ("singleton"),
+  CONSTRAINT singleton CHECK ("singleton"),
   CONSTRAINT check_1 CHECK ("revision" >= 0)
 );
 
 -- finfolkdb.common.type-site-base/SiteProfile 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteProfile" (
-  "beach_id" TEXT PRIMARY KEY NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
   "revision" BIGINT NOT NULL,
   "waterbody" "finfolk"."EnumSiteProfileWaterbody" NOT NULL,
   "access_mode" "finfolk"."EnumSiteProfileAccessMode" NOT NULL,
   "status" "finfolk"."EnumSiteProfileStatus" NOT NULL,
   "payload" JSONB NOT NULL,
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("beach_id")
 );
 
 -- finfolkdb.common.type-site-base/SiteImport 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteImport" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
-  "owner_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
   "preview" JSONB NOT NULL DEFAULT '{}',
   "status" "finfolk"."EnumSiteImportStatus" NOT NULL DEFAULT 'draft',
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
 );
 
 -- finfolkdb.common.type-site-base/SiteRevision 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteRevision" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
-  "site_id" TEXT NOT NULL REFERENCES "finfolk"."Beach"("id"),
-  "owner_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
   "import_id" UUID REFERENCES "finfolk"."SiteImport"("id") ON DELETE CASCADE,
   "base_revision" BIGINT NOT NULL DEFAULT 0,
   "version" BIGINT NOT NULL DEFAULT 1,
   "status" "finfolk"."EnumSiteRevisionStatus" NOT NULL,
   "payload" JSONB NOT NULL,
   "reason" TEXT NOT NULL DEFAULT '',
-  "reviewed_by_id" TEXT REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "created_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now()
+  "reviewed_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
 );
 
 -- finfolkdb.common.type-site-base/SiteAccessPoint 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteAccessPoint" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
   "mode" "finfolk"."EnumSiteAccessPointMode" NOT NULL,
   "payload" JSONB NOT NULL
@@ -5767,7 +5879,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SiteAccessPoint" (
 
 -- finfolkdb.common.type-site-base/SiteDepthEvidence 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteDepthEvidence" (
-  "id" UUID PRIMARY KEY NOT NULL DEFAULT gen_random_uuid(),
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
   "kind" "finfolk"."EnumSiteDepthEvidenceType" NOT NULL,
   "payload" JSONB NOT NULL
@@ -5775,31 +5887,34 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SiteDepthEvidence" (
 
 -- finfolkdb.common.type-site-base/SiteDepthDataset 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteDepthDataset" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
-  "dataset_id" TEXT NOT NULL REFERENCES "finfolk"."DepthDataset"("id"),
+  "dataset_id" UUID NOT NULL REFERENCES "finfolk"."DepthDataset"("id"),
   "relationship" "finfolk"."EnumSiteDepthDatasetRelationship" NOT NULL,
   "evidence" JSONB NOT NULL,
-  PRIMARY KEY (revision_id,dataset_id)
+  UNIQUE ("revision_id","dataset_id")
 );
 
 -- finfolkdb.common.type-site-base/SiteTideStation 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteTideStation" (
-  "revision_id" UUID PRIMARY KEY NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
-  "station_id" TEXT NOT NULL REFERENCES "finfolk"."TideStation"("id"),
-  "evidence" JSONB NOT NULL
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
+  "station_id" UUID NOT NULL REFERENCES "finfolk"."TideStation"("id"),
+  "evidence" JSONB NOT NULL,
+  UNIQUE ("revision_id")
 );
 
 -- finfolkdb.common.type-media-import/MediaImport 
 CREATE TABLE IF NOT EXISTS "finfolk"."MediaImport" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "owner_id" TEXT NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "platform" "finfolk"."EnumMediaImportPlatform" NOT NULL,
   "provider_id" TEXT NOT NULL,
   "url" TEXT NOT NULL,
   "kind" TEXT NOT NULL DEFAULT 'post',
-  "posted_at" TIMESTAMPTZ,
+  "posted_at" BIGINT,
   "day" DATE,
-  "beach_id" TEXT REFERENCES "finfolk"."Beach"("id"),
+  "beach_id" UUID REFERENCES "finfolk"."Beach"("id"),
   "location_name" TEXT NOT NULL DEFAULT '',
   "candidates" JSONB NOT NULL DEFAULT '[]',
   "notes" TEXT NOT NULL DEFAULT '',
@@ -5819,20 +5934,20 @@ CREATE INDEX ON "finfolk"."MediaImport" ("owner_id");
 
 -- finfolkdb.fn.site.site-notes/is-site-note-member 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".is_site_note_member(
-  i_user TEXT
+  i_user UUID
 ) RETURNS BOOLEAN AS $$
 BEGIN
   RETURN "finfolk".is_user_active(i_user) AND exists(
-    SELECT 1 FROM neon_auth."user" WHERE (("id")::TEXT = i_user) AND coalesce("emailVerified",false) AND NOT coalesce("banned",false)
+    SELECT 1 FROM neon_auth."user" WHERE (("id")::TEXT = (i_user)::TEXT) AND coalesce("emailVerified",false) AND NOT coalesce("banned",false)
   );
 END;
 $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/require-site-note-member 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".require_site_note_member() RETURNS TEXT AS $$
+CREATE OR REPLACE FUNCTION "finfolk_rpc".require_site_note_member() RETURNS UUID AS $$
 
   DECLARE
-    v_user TEXT;
+    v_user UUID;
   BEGIN
     v_user := "finfolk".auth_uid();
     IF NOT "finfolk_rpc".is_site_note_member(v_user) THEN
@@ -5845,7 +5960,7 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/is-site-note-site 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".is_site_note_site(
-  i_site TEXT
+  i_site UUID
 ) RETURNS BOOLEAN AS $$
 
   DECLARE
@@ -5867,20 +5982,20 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".site_note_score(
   i_note UUID
 ) RETURNS BIGINT AS $$
 
-  SELECT count(*) FROM "finfolk"."SiteNoteVote" AS "v" INNER JOIN "finfolk"."User" AS "u" ON "v"."voter_id" = "u"."id" INNER JOIN neon_auth."user" AS "a" ON ("a"."id")::TEXT = "u"."id" WHERE ("v"."note_id" = i_note) AND NOT "u"."deleted" AND coalesce("a"."emailVerified",false) AND NOT coalesce("a"."banned",false);
+  SELECT count(*) FROM "finfolk"."SiteNoteVote" AS "v" INNER JOIN "finfolk"."User" AS "u" ON "v"."voter_id" = "u"."id" INNER JOIN neon_auth."user" AS "a" ON ("a"."id")::TEXT = ("u"."id")::TEXT WHERE ("v"."note_id" = i_note) AND NOT "u"."deleted" AND coalesce("a"."emailVerified",false) AND NOT coalesce("a"."banned",false);
 
 $$ LANGUAGE 'sql';
 
 -- finfolkdb.fn.site.site-notes/ret-site-note 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
   i_note UUID,
-  i_viewer TEXT
+  i_viewer UUID
 ) RETURNS JSONB AS $$
 
   DECLARE
     o_note JSONB;
     o_user JSONB;
-    v_author TEXT;
+    v_author UUID;
     v_upvoted BOOLEAN;
   BEGIN
     WITH j_ret AS (  
@@ -5894,13 +6009,13 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
         "withdrawn",
         "hidden",
         "revision",
-        "created_at",
-        "updated_at"
+        "time_created",
+        "time_updated"
       FROM "finfolk"."SiteNote"
       WHERE "id" = i_note AND "hidden" = false AND "withdrawn" = false
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
-    v_author := (o_note ->> 'author_id');
+    v_author := (o_note ->> 'author_id')::UUID;
     WITH j_ret AS (  
       SELECT "profile" FROM "finfolk"."User"
       WHERE "id" = v_author AND "deleted" = false
@@ -5908,14 +6023,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
     SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteVote"
     WHERE "note_id" = i_note AND "voter_id" = i_viewer) INTO v_upvoted;
-    IF o_note IS NULL OR NOT "finfolk_rpc".is_site_note_site(o_note ->> 'beach_id') OR NOT "finfolk_rpc".is_site_note_member(v_author) OR "finfolk".is_user_blocked(i_viewer,v_author) THEN
+    IF o_note IS NULL OR NOT "finfolk_rpc".is_site_note_site((o_note ->> 'beach_id')::UUID) OR NOT "finfolk_rpc".is_site_note_member(v_author) OR "finfolk".is_user_blocked(i_viewer,v_author) THEN
       RETURN null;
     END IF;
     RETURN jsonb_build_object(
       'id',
       i_note,
       'site',
-      o_note ->> 'beach_id',
+      (o_note ->> 'beach_id')::UUID,
       'topic',
       o_note ->> 'topic',
       'text',
@@ -5923,7 +6038,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
       'author',
       coalesce((o_user -> 'profile') ->> 'displayName','Diver'),
       'createdAt',
-      "finfolk".as_iso_time((o_note ->> 'created_at')::TIMESTAMPTZ),
+      "finfolk".as_iso_time((o_note ->> 'time_created')::BIGINT),
       'observedOn',
       o_note ->> 'observed_on',
       'revision',
@@ -5941,7 +6056,7 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/ret-site-notes 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_notes(
-  i_site TEXT,
+  i_site UUID,
   i_sort TEXT,
   i_topic TEXT,
   i_offset INTEGER,
@@ -5950,10 +6065,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_notes(
 
   DECLARE
     o_rows JSONB;
-    v_viewer TEXT;
+    v_viewer UUID;
   BEGIN
     v_viewer := CASE WHEN i_member THEN "finfolk_rpc".require_site_note_member()
-    WHEN true THEN ''
+    WHEN true THEN null
     END;
     o_rows := null;
     IF i_offset IS NULL OR (i_offset < 0) OR (i_offset > 10000) OR i_sort IS NULL OR NOT ((i_sort = 'helpful') OR (i_sort = 'newest')) OR i_topic IS NULL OR NOT ((i_topic = 'all') OR (i_topic = 'access') OR (i_topic = 'facilities') OR (i_topic = 'wildlife') OR (i_topic = 'conditions')) THEN
@@ -5964,7 +6079,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_notes(
         0 - CASE WHEN i_sort = 'helpful' THEN "finfolk_rpc".site_note_score("id")
       WHEN true THEN 0
       END,
-        0 - "date_part"('epoch',"created_at"),
+        0 - "time_created",
         "id"
       LIMIT 21 OFFSET i_offset) AS "selected_notes" INTO o_rows;
     RETURN jsonb_build_object('notes',CASE WHEN jsonb_array_length(o_rows) > 20 THEN o_rows - 20
@@ -5978,7 +6093,7 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/save-site-note 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
-  i_site TEXT,
+  i_site UUID,
   i_id UUID,
   i_topic TEXT,
   i_body TEXT,
@@ -5986,7 +6101,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
 ) RETURNS JSONB AS $$
 
   DECLARE
-    v_user TEXT;
+    v_user UUID;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
     PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_id)::TEXT,0));
@@ -5996,7 +6111,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
       v_body TEXT;
     BEGIN
       WITH j_ret AS (  
-        SELECT "id","name","timezone","area_name","state" FROM "finfolk"."Beach"
+        SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Beach"
         WHERE "id" = i_site
         LIMIT 1)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
@@ -6012,17 +6127,20 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
           "withdrawn",
           "hidden",
           "revision",
-          "created_at",
-          "updated_at"
+          "time_created",
+          "time_updated"
         FROM "finfolk"."SiteNote"
         WHERE "id" = i_id
         LIMIT 1)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_existing;
-      IF i_id IS NULL OR NOT "finfolk_rpc".is_site_note_site(i_site) OR (length(v_body) < 10) OR (length(v_body) > 1000) OR i_topic IS NULL OR NOT ((i_topic = 'access') OR (i_topic = 'facilities') OR (i_topic = 'wildlife') OR (i_topic = 'conditions')) OR ((i_topic = 'conditions') AND i_observed IS NULL) OR (i_observed IS NOT NULL AND (NOT "isfinite"(i_observed) OR (i_observed > ("timezone"(o_site ->> 'timezone',now()))::DATE))) THEN
+      IF i_id IS NULL OR NOT "finfolk_rpc".is_site_note_site(i_site) OR (length(v_body) < 10) OR (length(v_body) > 1000) OR i_topic IS NULL OR NOT ((i_topic = 'access') OR (i_topic = 'facilities') OR (i_topic = 'wildlife') OR (i_topic = 'conditions')) OR ((i_topic = 'conditions') AND i_observed IS NULL) OR (i_observed IS NOT NULL AND (NOT "isfinite"(i_observed) OR (i_observed > ("timezone"(
+        o_site ->> 'timezone',
+        to_timestamp((1000000 * extract(epoch FROM now()))::BIGINT / 1000000.0)
+      ))::DATE))) THEN
         RAISE EXCEPTION 'Check the site, topic, note length and observation date';
       END IF;
       IF o_existing is not null  THEN
-        IF ((o_existing ->> 'author_id') != v_user) OR ((o_existing ->> 'beach_id') != i_site) OR ((o_existing ->> 'topic') != i_topic) OR ((o_existing ->> 'body') != v_body) OR (coalesce(o_existing ->> 'observed_on','') != coalesce((i_observed)::TEXT,'')) THEN
+        IF ((o_existing ->> 'author_id')::UUID != v_user) OR ((o_existing ->> 'beach_id')::UUID != i_site) OR ((o_existing ->> 'topic') != i_topic) OR ((o_existing ->> 'body') != v_body) OR (coalesce(o_existing ->> 'observed_on','') != coalesce((i_observed)::TEXT,'')) THEN
           RAISE EXCEPTION 'This note identifier was already used';
         END IF;
         RETURN jsonb_build_object('id',i_id,'revision',(o_existing ->> 'revision')::INTEGER);
@@ -6033,8 +6151,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
         WITH j_ret AS (  
           INSERT INTO "finfolk"."SiteNote" ("id","beach_id","author_id","topic","body","observed_on") VALUES (
             (i_id)::UUID,
-            (i_site)::TEXT,
-            (v_user)::TEXT,
+            (i_site)::UUID,
+            (v_user)::UUID,
             (i_topic)::"finfolk"."EnumSiteNoteTopic",
             (v_body)::TEXT,
             (i_observed)::DATE
@@ -6048,8 +6166,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
             "withdrawn",
             "hidden",
             "revision",
-            "created_at",
-            "updated_at")
+            "time_created",
+            "time_updated")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
         RETURN jsonb_build_object('id',i_id,'revision',1);
       END;
@@ -6060,14 +6178,14 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/set-site-note-vote 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
-  i_site TEXT,
+  i_site UUID,
   i_note UUID,
   i_upvoted BOOLEAN
 ) RETURNS JSONB AS $$
 
   DECLARE
     o_note JSONB;
-    v_user TEXT;
+    v_user UUID;
     v_voted BOOLEAN;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
@@ -6082,8 +6200,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
         "withdrawn",
         "hidden",
         "revision",
-        "created_at",
-        "updated_at"
+        "time_created",
+        "time_updated"
       FROM "finfolk"."SiteNote"
       WHERE "id" = i_note AND "beach_id" = i_site
       LIMIT 1
@@ -6099,7 +6217,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
         DECLARE
       o_write JSONB;
     BEGIN
-      WITH j_ret AS (INSERT INTO "finfolk"."SiteNoteVote" ("note_id","voter_id") VALUES ((i_note)::UUID,(v_user)::TEXT) RETURNING "note_id","voter_id","created_at")
+      WITH j_ret AS (INSERT INTO "finfolk"."SiteNoteVote" ("note_id","voter_id") VALUES ((i_note)::UUID,(v_user)::UUID) RETURNING "id","note_id","voter_id","time_created")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
           null;
     END;
@@ -6110,7 +6228,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
     BEGIN
       WITH j_ret AS (  
           DELETE FROM "finfolk"."SiteNoteVote" WHERE "note_id" = i_note AND "voter_id" = v_user
-          RETURNING "note_id","voter_id","created_at")
+          RETURNING "id","note_id","voter_id","time_created")
         SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
         null;
     END;
@@ -6122,7 +6240,7 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/set-site-note-withdrawn 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_withdrawn(
-  i_site TEXT,
+  i_site UUID,
   i_note UUID,
   i_revision INTEGER,
   i_withdrawn BOOLEAN
@@ -6130,7 +6248,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_withdrawn(
 
   DECLARE
     o_note JSONB;
-    v_user TEXT;
+    v_user UUID;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
     WITH j_ret AS (  
@@ -6144,8 +6262,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_withdrawn(
         "withdrawn",
         "hidden",
         "revision",
-        "created_at",
-        "updated_at"
+        "time_created",
+        "time_updated"
       FROM "finfolk"."SiteNote"
       WHERE "id" = i_note AND "beach_id" = i_site AND "author_id" = v_user
       LIMIT 1
@@ -6165,7 +6283,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_withdrawn(
           UPDATE "finfolk"."SiteNote" SET
             "withdrawn" = (i_withdrawn)::BOOLEAN,
             "revision" = (i_revision + 1)::INTEGER,
-            "updated_at" = (now())::TIMESTAMPTZ
+            "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
           WHERE "id" = i_note
           RETURNING
             "id",
@@ -6177,8 +6295,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_withdrawn(
             "withdrawn",
             "hidden",
             "revision",
-            "created_at",
-            "updated_at")
+            "time_created",
+            "time_updated")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_saved;
         o_note := o_saved;
     END;
@@ -6197,7 +6315,7 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/report-site-note 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".report_site_note(
-  i_site TEXT,
+  i_site UUID,
   i_note UUID,
   i_reason TEXT
 ) RETURNS JSONB AS $$
@@ -6206,7 +6324,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".report_site_note(
     o_note JSONB;
     v_reason TEXT;
     v_reported BOOLEAN;
-    v_user TEXT;
+    v_user UUID;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
     WITH j_ret AS (  
@@ -6220,8 +6338,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".report_site_note(
         "withdrawn",
         "hidden",
         "revision",
-        "created_at",
-        "updated_at"
+        "time_created",
+        "time_updated"
       FROM "finfolk"."SiteNote"
       WHERE "id" = i_note AND "beach_id" = i_site
       LIMIT 1
@@ -6237,7 +6355,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".report_site_note(
       DECLARE
       o_write JSONB;
     BEGIN
-      WITH j_ret AS (INSERT INTO "finfolk"."SiteNoteReport" ("note_id","reporter_id","reason") VALUES ((i_note)::UUID,(v_user)::TEXT,(v_reason)::TEXT) RETURNING "note_id","reporter_id","reason","created_at","resolved_at")
+      WITH j_ret AS (  
+          INSERT INTO "finfolk"."SiteNoteReport" ("note_id","reporter_id","reason") VALUES ((i_note)::UUID,(v_user)::UUID,(v_reason)::TEXT) RETURNING
+            "id",
+            "note_id",
+            "reporter_id",
+            "reason",
+            "time_created",
+            "resolved_at")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
         null;
     END;
@@ -6249,13 +6374,13 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/moderate-site-note 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
-  i_site TEXT,
+  i_site UUID,
   i_note UUID,
   i_hidden BOOLEAN
 ) RETURNS JSONB AS $$
 
   DECLARE
-    v_user TEXT;
+    v_user UUID;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
     IF coalesce(current_setting('finfolk.directory_admin',true),'false') != 'true' THEN
@@ -6275,8 +6400,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
           "withdrawn",
           "hidden",
           "revision",
-          "created_at",
-          "updated_at"
+          "time_created",
+          "time_updated"
         FROM "finfolk"."SiteNote"
         WHERE "id" = i_note AND "beach_id" = i_site
         LIMIT 1
@@ -6293,7 +6418,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
             UPDATE "finfolk"."SiteNote" SET
               "hidden" = (i_hidden)::BOOLEAN,
               "revision" = ((o_note ->> 'revision')::INTEGER + 1)::INTEGER,
-              "updated_at" = (now())::TIMESTAMPTZ
+              "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
             WHERE "id" = i_note
             RETURNING
               "id",
@@ -6305,8 +6430,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
               "withdrawn",
               "hidden",
               "revision",
-              "created_at",
-              "updated_at")
+              "time_created",
+              "time_updated")
           SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
           null;
       END;
@@ -6315,8 +6440,16 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
         o_write JSONB;
       BEGIN
         WITH j_ret AS (  
-          UPDATE "finfolk"."SiteNoteReport" SET "resolved_at" = (now())::TIMESTAMPTZ WHERE "note_id" = i_note AND "resolved_at" IS NULL
-          RETURNING "note_id","reporter_id","reason","created_at","resolved_at")
+          UPDATE "finfolk"."SiteNoteReport" SET
+            "resolved_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+          WHERE "note_id" = i_note AND "resolved_at" IS NULL
+          RETURNING
+            "id",
+            "note_id",
+            "reporter_id",
+            "reason",
+            "time_created",
+            "resolved_at")
         SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
         null;
       END;
@@ -6328,8 +6461,8 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.user.user-manage-posts/insert-social-post 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_social_post(
-  i_owner TEXT,
-  i_beach TEXT,
+  i_owner UUID,
+  i_beach UUID,
   i_url TEXT,
   i_platform TEXT,
   i_handle TEXT,
@@ -6345,7 +6478,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_social_post(
     v_id := uuid_generate_v4();
     o_base := "finfolk".insert_base_addons(
       'SocialPost',
-      (v_id)::TEXT,
+      v_id,
       jsonb_build_object('url',i_url,'platform',i_platform),
       o_op
     );
@@ -6366,8 +6499,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_social_post(
         "time_updated"
       ) VALUES (
         (v_id)::UUID,
-        (i_owner)::TEXT,
-        (i_beach)::TEXT,
+        (i_owner)::UUID,
+        (i_beach)::UUID,
         (i_url)::TEXT,
         (i_platform)::"finfolk"."EnumSocialHandleType",
         (i_handle)::TEXT,
@@ -6405,12 +6538,12 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.fn.user.user-manage-posts/ret-social-post-public 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_social_post_public(
   i_post_id UUID,
-  i_viewer TEXT
+  i_viewer UUID
 ) RETURNS JSONB AS $$
 
   DECLARE
     o_post JSONB;
-    v_owner TEXT;
+    v_owner UUID;
   BEGIN
     WITH j_ret AS (  
       SELECT
@@ -6427,21 +6560,32 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_social_post_public(
       AND "public_consent" = true
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_post;
-    v_owner := (o_post ->> 'owner_id');
+    v_owner := (o_post ->> 'owner_id')::UUID;
     IF o_post IS NULL OR NOT "finfolk".is_user_active(v_owner) OR "finfolk".is_user_blocked(i_viewer,v_owner) THEN
       RETURN null;
     END IF;
-    RETURN jsonb_build_object('id',o_post ->> 'id','beach_id',o_post ->> 'beach_id','url',o_post ->> 'url','platform',o_post ->> 'platform','creator_handle',o_post ->> 'creator_handle','created_at',"finfolk".as_iso_time(
-      to_timestamp((o_post ->> 'time_created')::NUMERIC / 1000000)
-    ));
+    RETURN jsonb_build_object(
+      'id',
+      (o_post ->> 'id')::UUID,
+      'beach_id',
+      (o_post ->> 'beach_id')::UUID,
+      'url',
+      o_post ->> 'url',
+      'platform',
+      o_post ->> 'platform',
+      'creator_handle',
+      o_post ->> 'creator_handle',
+      'created_at',
+      "finfolk".as_iso_time((o_post ->> 'time_created')::BIGINT)
+    );
   END;
 
 $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.user.user-manage-logbook/insert-dive-session 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_dive_session(
-  i_owner TEXT,
-  i_beach TEXT,
+  i_owner UUID,
+  i_beach UUID,
   i_data JSONB,
   o_op JSONB
 ) RETURNS JSONB AS $$
@@ -6454,7 +6598,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_dive_session(
   BEGIN
     v_id := uuid_generate_v4();
     o_data := (("finfolk".as_jsonb(i_data) - 'beachId') || jsonb_build_object('visibility','private','photos',('[]')::JSONB));
-    o_base := "finfolk".insert_base_addons('DiveSession',(v_id)::TEXT,o_data,o_op);
+    o_base := "finfolk".insert_base_addons('DiveSession',v_id,o_data,o_op);
     WITH j_ret AS (  
       INSERT INTO "finfolk"."DiveSession" (
         "id",
@@ -6469,8 +6613,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_dive_session(
         "time_updated"
       ) VALUES (
         (v_id)::UUID,
-        (i_owner)::TEXT,
-        (nullif(i_beach,''))::TEXT,
+        (i_owner)::UUID,
+        (i_beach)::UUID,
         "finfolk".as_jsonb((o_data)::JSONB),
         (o_base ->> 'audit')::UUID,
         (o_base ->> 'rev')::UUID,
@@ -6498,7 +6642,7 @@ $$ LANGUAGE 'plpgsql';
 -- finfolkdb.fn.user.user-manage-logbook/ret-dive-session-owned 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_dive_session_owned(
   i_session_id UUID,
-  i_owner TEXT
+  i_owner UUID
 ) RETURNS JSONB AS $$
 
   DECLARE
@@ -6514,9 +6658,9 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_dive_session_owned(
     END IF;
     RETURN (o_session -> 'detail') || jsonb_build_object(
       'id',
-      o_session ->> 'id',
+      (o_session ->> 'id')::UUID,
       'ownerId',
-      o_session ->> 'owner_id',
+      (o_session ->> 'owner_id')::UUID,
       'beachId',
       coalesce(o_session ->> 'beach_id','')
     );
@@ -6526,23 +6670,25 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-social-tiktok/TiktokConnection 
 CREATE TABLE IF NOT EXISTS "finfolk"."TiktokConnection" (
-  "user_id" TEXT PRIMARY KEY NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "app_id" TEXT NOT NULL,
   "open_id" TEXT,
   "display_name" TEXT NOT NULL DEFAULT '',
   "status" "finfolk"."EnumTiktokConnectionStatus" NOT NULL DEFAULT 'pending',
   "credential_ciphertext" TEXT,
-  "access_expires_at" TIMESTAMPTZ,
-  "refresh_expires_at" TIMESTAMPTZ,
+  "access_expires_at" BIGINT,
+  "refresh_expires_at" BIGINT,
   "oauth_hash" TEXT,
-  "oauth_expires_at" TIMESTAMPTZ,
+  "oauth_expires_at" BIGINT,
   "oauth_nonce_hash" TEXT,
-  "last_success" TIMESTAMPTZ,
-  "next_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
-  "lease_until" TIMESTAMPTZ,
+  "last_success" BIGINT,
+  "next_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "lease_until" BIGINT,
   "cursor" TEXT,
   "failures" INTEGER NOT NULL DEFAULT 0,
-  "updated_at" TIMESTAMPTZ NOT NULL DEFAULT now(),
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("user_id"),
   UNIQUE ("app_id","open_id")
 );
 
@@ -6580,7 +6726,7 @@ $$ LANGUAGE sql;
 
 CREATE OR REPLACE FUNCTION finfolk_rpc.directory_operation(op text,v jsonb) RETURNS jsonb AS $$
 DECLARE
- actor text:=finfolk.auth_uid(); adm boolean:=coalesce(current_setting('finfolk.directory_admin',true),'')='true';
+ actor uuid:=finfolk.auth_uid(); adm boolean:=coalesce(current_setting('finfolk.directory_admin',true),'')='true';
  l finfolk."DirectoryListing"; req finfolk."AccessRequest"; ident uuid; doc jsonb; ctx jsonb; result jsonb; off integer; rev integer;
 BEGIN
  IF jsonb_typeof(v) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Invalid request' USING ERRCODE='22023'; END IF;
@@ -6601,7 +6747,7 @@ BEGIN
  IF result IS NULL THEN RAISE EXCEPTION 'Page unavailable' USING ERRCODE='P0002'; END IF; RETURN result;
  END IF;
  -- Serialize first-use provisioning and repeated requests for this authenticated actor.
- IF NOT EXISTS(SELECT 1 FROM neon_auth."user" WHERE id::text=actor AND "emailVerified" AND NOT coalesce(banned,false)) THEN
+ IF NOT EXISTS(SELECT 1 FROM neon_auth."user" WHERE id::text=actor::text AND "emailVerified" AND NOT coalesce(banned,false)) THEN
  RAISE EXCEPTION 'Verified member required' USING ERRCODE='42501'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended('directory-member:'||actor,0));
  IF EXISTS(SELECT 1 FROM finfolk."User" WHERE id=actor AND deleted) THEN RAISE EXCEPTION 'Member unavailable' USING ERRCODE='42501'; END IF;
@@ -6732,5 +6878,5 @@ GRANT USAGE ON SCHEMA finfolk,finfolk_rpc,neon_auth TO finfolk_directory;
 GRANT SELECT,INSERT,UPDATE ON finfolk."DirectoryListing",finfolk."DirectoryReport",finfolk."Access",finfolk."AccessRole",finfolk."AccessRequest",finfolk."Rev",finfolk."RevLog",finfolk."Audit",finfolk."AuditLog",finfolk."Social",finfolk."Op",finfolk."User",finfolk."Activity",finfolk."ActivityLog" TO finfolk_directory;
 GRANT SELECT(id) ON finfolk."DatabaseRelease" TO finfolk_directory;
 GRANT SELECT(id,"emailVerified",banned) ON neon_auth."user" TO finfolk_directory;
-GRANT EXECUTE ON FUNCTION finfolk.auth_uid(),finfolk.as_jsonb(jsonb),finfolk.op_fn(text,text,jsonb),finfolk.insert_base_addons(text,text,jsonb,jsonb),finfolk.ret_social_url(text),finfolk.ret_social_urls(jsonb),finfolk_rpc.insert_user(text,jsonb,jsonb),finfolk_rpc.insert_directory_listing(jsonb,jsonb),finfolk_rpc.ret_directory_public(uuid),finfolk_rpc.directory_document(jsonb),finfolk_rpc.directory_owner_row(finfolk."DirectoryListing"),finfolk_rpc.directory_operation(text,jsonb) TO finfolk_directory;
+GRANT EXECUTE ON FUNCTION finfolk.auth_uid(),finfolk.as_jsonb(jsonb),finfolk.op_fn(text,uuid,jsonb),finfolk.insert_base_addons(text,uuid,jsonb,jsonb),finfolk.ret_social_url(text),finfolk.ret_social_urls(jsonb),finfolk_rpc.insert_user(uuid,jsonb,jsonb),finfolk_rpc.insert_directory_listing(jsonb,jsonb),finfolk_rpc.ret_directory_public(uuid),finfolk_rpc.directory_document(jsonb),finfolk_rpc.directory_owner_row(finfolk."DirectoryListing"),finfolk_rpc.directory_operation(text,jsonb) TO finfolk_directory;
 COMMIT;

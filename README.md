@@ -2,6 +2,21 @@
 
 The Clojure-authored database and substrate backbone for [finfolk.com.au](https://finfolk.com.au). This is the source of truth for FinFolk production development. The `hoebat/finfolk-app` implementation remains a frozen legacy copy; it is not a build dependency.
 
+## Native entity identities
+
+Fresh FinfolkDB entities use UUID IDs and UUID relationships, including addon
+`class-ref` identities. `et/E` supplies generated UUIDs. Provider identifiers,
+slugs and imported source keys remain separate text fields; former text primary
+keys are retained as optional unique `key` fields. SiteCatalog has a UUID ID and
+an enforced singleton flag. Transaction actor IDs and native ID RPC arguments
+must be UUIDs; an absent actor is SQL NULL. Managed-auth subjects must contain
+UUIDs and are compared in their canonical text form at the provider boundary.
+
+This updates database source and generated fresh-schema artifacts. Existing
+data, backend adapters, reference-import producers and deployed databases need
+a coordinated UUID mapping before adopting this schema. Historical migrations
+remain unchanged.
+
 ## Source and output
 
 | Authored source | Generated output |

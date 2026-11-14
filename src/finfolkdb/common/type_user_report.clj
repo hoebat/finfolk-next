@@ -18,19 +18,16 @@
 
 (deftype.pg ^{:finfolk/legacy-tables ["reports"]
               :final true
-              :! (et/E {:class :0d/entry :id :id/none})}
+              :! (et/E {:class :0d/entry
+                        :id    :id/v4})}
   UserReport
   "The API may encode a trip target as trip:UUID; storage keeps a typed link."
-  [:id     {:type :bigint :primary true
-            :sql {:raw [:generated :always :as :identity]}}
-   :author {:type :ref :required true
-            :ref {:ns finfolkdb.common.type-user/User}
-            :sql {:cascade true :index true}}
+  [:author {:type :ref :required true
+            :ref {:ns finfolkdb.common.type-user/User} :sql {:cascade true :index true}}
    :target {:type :ref
             :ref {:ns finfolkdb.common.type-user/User}}
-   :trip   {:type :ref :ref {:ns finfolkdb.common.type-trip-base/Trip}
-            :sql {:cascade true}}
+   :trip   {:type :ref
+            :ref {:ns finfolkdb.common.type-trip-base/Trip} :sql {:cascade true}}
    :reason {:type :text :required true}]
-  {:constraints {:one-target
-                 (or (and [#{"target_id"} :is-not-null] [#{"trip_id"} :is-null])
-                     (and [#{"target_id"} :is-null] [#{"trip_id"} :is-not-null]))}})
+  {:constraints {:one-target (or (and [#{"target_id"} :is-not-null] [#{"trip_id"} :is-null])
+                                 (and [#{"target_id"} :is-null] [#{"trip_id"} :is-not-null]))}})

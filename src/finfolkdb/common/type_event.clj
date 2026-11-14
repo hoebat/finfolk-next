@@ -29,7 +29,8 @@
 
 (deftype.pg ^{:finfolk/legacy-tables ["events"]
               :final true
-              :! (et/E {:class :0d/entry :addons [:detail :rev :audit :access]})}
+              :! (et/E {:class  :0d/entry
+                        :addons [:detail :rev :audit :access]})}
   Event
   [:listing    {:type :ref :required true
                 :ref {:ns finfolkdb.common.type-directory-base/DirectoryListing}
@@ -40,11 +41,12 @@
    :visibility {:type :enum :required true
                 :enum {:ns finfolkdb.common.type-domain-enum/EnumEventVisibility}
                 :sql {:default "public"}}
-   :starts-at  {:type :timestamptz :required true}
-   :ends-at    {:type :timestamptz :required true}
+   :starts-at  {:type :long :required true}
+   :ends-at    {:type :long :required true}
    :timezone   {:type :text :required true}
    :capacity   {:type :integer}
-   :hidden     {:type :boolean :required true :sql {:default false}}]
+   :hidden     {:type :boolean :required true
+                :sql {:default false}}]
   {:constraints {:positive-capacity (> #{"capacity"} 0)
                  :ordered-times (> #{"ends_at"} #{"starts_at"})}})
 
@@ -52,13 +54,12 @@
 ;; EventRsvp
 ;;
 
-(deftype.pg ^{:finfolk/legacy-tables ["event_rsvps"]
-              :final true
-              :! (et/E {:class :0d/entry :id :id/none})}
+(deftype.pg ^{:finfolk/legacy-tables ["event_rsvps"] :final true :! (et/E {:class :0d/entry})}
   EventRsvp
-  [:event  {:type :ref :required true :primary "default" :ref {:ns -/Event}}
-   :member {:type :ref :required true :primary "default"
+  [:event  {:type :ref :required true
+            :ref {:ns -/Event} :sql {:unique ["entity_key"]}}
+   :member {:type :ref :required true
             :ref {:ns finfolkdb.common.type-user/User}
-            :sql {:cascade true :index true}}
+            :sql {:cascade true :index true :unique ["entity_key"]}}
    :status {:type :enum :required true
             :enum {:ns finfolkdb.common.type-domain-enum/EnumEventRsvpStatus}}])

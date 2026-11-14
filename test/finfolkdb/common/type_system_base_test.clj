@@ -10,52 +10,50 @@
   {:runtime :jdbc.client
    :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main]
-             [finfolkdb.common.type-system-base :as t] [postgres.core :as pg]]})
+             [finfolkdb.common.type-system-base :as t]
+             [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)]
-              :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
 
 ^{:refer finfolkdb.common.type-system-base/Op :added "0.1"}
 (fact "Op persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-system-base/Op)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-system-base/Op) => true)
 
 ^{:refer finfolkdb.common.type-system-base/Rev :added "0.1"}
 (fact "Rev persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-system-base/Rev)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-system-base/Rev) => true)
 
 ^{:refer finfolkdb.common.type-system-base/RevLog :added "0.1"}
 (fact "RevLog persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-system-base/RevLog)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-system-base/RevLog) => true)
 
 ^{:refer finfolkdb.common.type-system-base/Audit :added "0.1"}
 (fact "Audit persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-system-base/Audit)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-system-base/Audit) => true)
 
 ^{:refer finfolkdb.common.type-system-base/AuditLog :added "0.1"}
 (fact "AuditLog persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-system-base/AuditLog)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-system-base/AuditLog) => true)
 
 ^{:refer finfolkdb.common.type-system-base/sel-rev-all :added "0.1"}
 (fact "sel-rev-all executes directly on local PostgreSQL"
-  (let [reference (str (java.util.UUID/randomUUID))
-        revision (pg/t:insert t/Rev {:class-table "User" :class-context "Post" :class-ref reference :current "{\"value\":7}"} {:track {}})]
+  (let
+    [reference (str (java.util.UUID/randomUUID))
+     revision
+     (pg/t:insert t/Rev
+       {:class-table "User" :class-context "Post" :class-ref reference :current "{\"value\":7}"}
+       {:track {}})]
     (t/sel-rev-all "User" "Post") => (contains [(:id revision)])
     (:current (t/ret-rev-default "User" "Post" reference)) => {:value 7}
     (t/ret-rev-default "User" "Global" reference) => nil))
 
 ^{:refer finfolkdb.common.type-system-base/ret-rev-default :added "0.1"}
 (fact "ret-rev-default executes directly on local PostgreSQL"
-  (t/ret-rev-default "User" "Global" "missing") => nil)
+  (t/ret-rev-default "User" "Global" "215b60fc-cda3-55bd-a254-f56b5416b78e") => nil)
 
 ^{:refer finfolkdb.common.type-system-base/Activity :added "0.1"}
 (fact "Activity persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-system-base/Activity)
-  => true)
+  (fixture/persisted! 'finfolkdb.common.type-system-base/Activity) => true)
 
 ^{:refer finfolkdb.common.type-system-base/op-fn :added "0.1"}
 (fact "op-fn executes directly on local PostgreSQL"

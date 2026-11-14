@@ -4,7 +4,8 @@
             [finfolkbuild.testing.local :as local]
             [finfolkbuild.testing.behavior :as fixture]))
 (l/script- :postgres
-  {:runtime :jdbc.client :config (local/config)
+  {:runtime :jdbc.client
+   :config (local/config)
    :require [[finfolkdb.main.scaffold-001-entity :as main]
              [postgres.core :as pg]
              [finfolkdb.common.type-directory-base :as t]
@@ -16,33 +17,53 @@
 
 ^{:refer finfolkdb.common.type-directory-base/DirectoryListing :id publication-privacy}
 (fact "candidate listings stay private and publication never exposes internal notes"
-  (fixture/member "directory-owner")
-  (let [listing (directory/insert-directory-listing
-                  {:name "Ocean School" :category "School" :state "VIC" :locality "Portsea"
-                   :sources [] :socials ["instagram:ocean"] :notes "PRIVATE_NOTE"}
-                  (fixture/op "create-listing" "directory-owner"))
-        id (:id listing)]
+  (fixture/member "6fa348fb-6bac-5532-909c-3ebade0d86f1")
+  (let
+    [listing (directory/insert-directory-listing
+              {:name "Ocean School"
+               :category "School"
+               :state "VIC"
+               :locality "Portsea"
+               :sources []
+               :socials ["instagram:ocean"]
+               :notes "PRIVATE_NOTE"}
+              (fixture/op "create-listing" "6fa348fb-6bac-5532-909c-3ebade0d86f1"))
+     id (:id listing)]
     (:status listing) => "candidate"
     (directory/ret-directory-public id) => nil
-    (pg/t:update t/DirectoryListing {:track {} :where {:id id} :set {:status "published" :notes "PRIVATE_NOTE"}})
+    (pg/t:update t/DirectoryListing
+      {:track {} :where {:id id} :set {:status "published" :notes "PRIVATE_NOTE"}})
     (:name (directory/ret-directory-public id)) => "Ocean School"
     (:notes (directory/ret-directory-public id)) => nil
     (:socials (directory/ret-directory-public id)) => ["https://www.instagram.com/ocean/"]
     (:managed (directory/ret-directory-public id)) => false
-    (pg/t:insert access/AccessRole {:class-table "DirectoryListing" :class-context "Global"
-                                  :access (:access-id listing) :member "directory-owner" :level "owner"} {:track {}})
+    (pg/t:insert access/AccessRole
+      {:class-table "DirectoryListing"
+       :class-context "Global"
+       :access (:access-id listing)
+       :member "6fa348fb-6bac-5532-909c-3ebade0d86f1"
+       :level "owner"}
+      {:track {}})
     (:managed (directory/ret-directory-public id)) => true
-    (pg/t:update access/AccessRole {:track {} :where {:access (:access-id listing)} :set {:is-active false}})
+    (pg/t:update access/AccessRole
+      {:track {} :where {:access (:access-id listing)} :set {:is-active false}})
     (:managed (directory/ret-directory-public id)) => false))
 
 ^{:refer finfolkdb.common.type-directory-base/DirectoryReport :id author-deletion}
 (fact "reports retain their message when the optional author is removed"
-  (fixture/member "report-author")
-  (let [listing (directory/insert-directory-listing {:name "Reported school"} (fixture/op "create-listing" "report-author"))
-        report (pg/t:insert t/DirectoryReport {:listing (:id listing) :author "report-author" :message "Correct this address"} {:track {}})]
+  (fixture/member "54de46ea-1c90-5117-9d88-b64bd0337386")
+  (let
+    [listing (directory/insert-directory-listing
+              {:name "Reported school"}
+              (fixture/op "create-listing" "54de46ea-1c90-5117-9d88-b64bd0337386"))
+     report (pg/t:insert t/DirectoryReport
+              {:listing (:id listing)
+               :author "54de46ea-1c90-5117-9d88-b64bd0337386"
+               :message "Correct this address"}
+              {:track {}})]
     (:resolved report) => false
-    (pg/t:delete activity/ActivityLog {:where {:actor "report-author"}})
-    (pg/t:delete users/User {:where {:id "report-author"}})
+    (pg/t:delete activity/ActivityLog {:where {:actor "54de46ea-1c90-5117-9d88-b64bd0337386"}})
+    (pg/t:delete users/User {:where {:id "54de46ea-1c90-5117-9d88-b64bd0337386"}})
     (:author-id (pg/t:get t/DirectoryReport {:where {:id (:id report)}})) => nil
     (:message (pg/t:get t/DirectoryReport {:where {:id (:id report)}})) => "Correct this address"))
 
@@ -52,5 +73,5 @@
     (:status run) => "running"
     (pg/t:update t/DirectoryRun {:track {} :where {:id (:id run)} :set {:status "complete"}})
     (select-keys (pg/t:get t/DirectoryRun {:where {:id (:id run)}}) [:query :status])
-    => {:query "Portsea dive schools" :status "complete"}))
-
+    =>
+    {:query "Portsea dive schools" :status "complete"}))
