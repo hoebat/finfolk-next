@@ -6,7 +6,7 @@
   (var config (. inputs ["config"]))
   (when (. inputs ["session"])
     (var entry (await (read "session" {"id" (. inputs ["session"])})))
-    (when (and (not= (. entry ["visibility"]) "public") (not= (. entry ["ownerId"]) actor))
+    (when (or (not entry) (and (not= (. entry ["visibility"]) "public") (not= (. entry ["ownerId"]) actor)))
       (throw (new Error "This session is private. Sign in with its owner account.")))
     (return {"config" config "entry" entry "profile" (await (read "profile" {"target" (. entry ["ownerId"])}))}))
   (when (. inputs ["profile"])
