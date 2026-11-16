@@ -11,10 +11,11 @@
 
 (deftest foundation-form-classifications
   (let [m (:fn-map (options))]
-    (is (= "defn" (m "defn.pg") (m "defrun.pg") (m "defn.js")))
+    (is (= [:arg1-force-nl-body {:meta {:split? true}}] (m "defn.pg") (m "defrun.pg")))
+    (is (= "defn" (m "defn.js")))
     (is (= "def" (m "defvar.xt")))
     (is (= :arg1-force-nl-body (first (m "deftype.pg")) (first (m "script-")) (m "fact")))
-    (is (= {"custom" "let" "defn.pg" "defn"}
+    (is (= {"custom" "let" "defn.pg" [:arg1-force-nl-body {:meta {:split? true}}]}
            (fmt/foundation-fn-map
             [{:lint-as {'example/custom 'clojure.core/let}
               :hooks {:analyze-call {'defn.pg 'clj-kondo.hooks.lang-postgres/defn-pg}}}])))))
@@ -32,6 +33,18 @@
                               "test"
                               (assoc (options) :width 60)))))
   (is (str/includes? (fmt/format-string "(def values [1\n  2\n  3])" "test" (options)) "[1 2 3]")))
+
+(deftest postgres-function-metadata-starts-a-separate-header
+  (doseq [head ["defn.pg" "pg/defn.pg" "defrun.pg"]]
+    (let [input (str "(" head
+                     " ^{:- [:uuid]} create-social-audit "
+                     "[:text i-table :uuid i-id :jsonb o-op] (return i-id))")
+          output (fmt/format-string input "test" (options))]
+      (is (= (str "(" head
+                  " ^{:- [:uuid]}\n" "  create-social-audit\n"
+                  "  [:text i-table :uuid i-id :jsonb o-op]\n" "  (return i-id))\n")
+             output))
+      (is (= output (fmt/format-string output "test" (options)))))))
 
 (deftest preserves-data-and-metadata
   (let

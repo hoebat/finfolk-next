@@ -13,7 +13,9 @@
                   ("(pg/g:select Table\n{:where {:id id}})"
                    . "(pg/g:select Table\n  {:where {:id id}})")
                   ("(deftype.pg ^{:final true}\nSample\n[:id {:type :text}])"
-                   . "(deftype.pg ^{:final true}\n  Sample\n  [:id {:type :text}])")))
+                   . "(deftype.pg ^{:final true}\n  Sample\n  [:id {:type :text}])")
+                  ("(defn.pg ^{:- [:uuid]}\ncreate-social-audit\n[:uuid i-id]\n(return i-id))"
+                   . "(defn.pg ^{:- [:uuid]}\n  create-social-audit\n  [:uuid i-id]\n  (return i-id))")))
     (with-temp-buffer
       (clojure-mode)
       (insert (car pair))

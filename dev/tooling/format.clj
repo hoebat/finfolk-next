@@ -11,7 +11,7 @@
            [java.security MessageDigest]))
 
 (def hook-styles
-  {"defn-pg" "defn"
+  {"defn-pg" [:arg1-force-nl-body {:meta {:split? true}}]
    "defn-xt" "defn"
    "defgen-xt" "defn"
    "def-xt" "def"
@@ -82,7 +82,7 @@
   [fn-map]
   (let [indent (fn [form style]
                  (let [style (if (vector? style) (first style) style)]
-                   (cond (#{"fact" "deftype.pg"} form) ":defn"
+                   (cond (#{"fact" "deftype.pg" "defn.pg" "defrun.pg"} form) ":defn"
                          (#{"defn" "def" "defmacro"} style) ":defn"
                          (= style "defrecord") 2
                          (= style "defprotocol") 1
