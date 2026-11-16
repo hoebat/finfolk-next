@@ -2,6 +2,109 @@
 CREATE SCHEMA IF NOT EXISTS finfolk;
 
 
+-- finfolkdb.common.type-domain-enum/EnumSocialProvider 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialProvider" AS ENUM ('instagram','tiktok','mock');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialConnectionStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialConnectionStatus" AS ENUM ('pending','active','expired','revoked','failed');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialProofKind 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialProofKind" AS ENUM ('oauth','message','comment','manual');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialProofStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialProofStatus" AS ENUM ('pending','verified','consumed','expired','revoked','rejected');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialSourceKind 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialSourceKind" AS ENUM ('account','tags','hashtag','recheck');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialSourceStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialSourceStatus" AS ENUM ('ready','paused','failed');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialActionKind 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialActionKind" AS ENUM ('reply','stats','dive','points','verify-account','prepare-link');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialDiscoveryStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialDiscoveryStatus" AS ENUM ('pending','published','hidden','rejected','unavailable');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialDiscoveryReportReason 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialDiscoveryReportReason" AS ENUM ('wrong_location','inappropriate','removed','other');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialCommandContext 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialCommandContext" AS ENUM ('mention','owned','message');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialCommandStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialCommandStatus" AS ENUM ('new',
+    'confirmation',
+    'done',
+    'cancelled',
+    'limited',
+    'waiting',
+    'expired',
+    'rejected');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialCommandSendState 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialCommandSendState" AS ENUM ('pending','sending','sent','uncertain','skipped');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
 -- finfolkdb.common.type-domain-enum/EnumSocialReferralPlatform 
 DO $$
 BEGIN

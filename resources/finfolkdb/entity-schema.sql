@@ -18,7 +18,12 @@ BEGIN
     'Event',
     'Global',
     'Post',
+    'SiteNote',
     'Social',
+    'SocialAccount',
+    'SocialAction',
+    'SocialConnection',
+    'SocialDiscovery',
     'SocialHandle',
     'SocialPost',
     'TaskProvider',
@@ -58,8 +63,48 @@ BEGIN
 END;
 $$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
 
--- finfolkdb.common.type-system-site/Beach 
-CREATE TABLE IF NOT EXISTS "finfolk"."Beach" (
+-- finfolkdb.common.type-system-seed/as-bounded-text 
+CREATE OR REPLACE FUNCTION "finfolk".as_bounded_text(
+  input TEXT,
+  minimum INTEGER,
+  maximum INTEGER
+) RETURNS TEXT AS $$
+BEGIN
+  IF (length(btrim(input)) < minimum) OR (length(input) > maximum) THEN
+    RAISE EXCEPTION 'Text length is outside the permitted bounds';
+  END IF;
+  RETURN input;
+END;
+$$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
+
+-- finfolkdb.common.type-system-seed/as-finite-date 
+CREATE OR REPLACE FUNCTION "finfolk".as_finite_date(
+  input DATE
+) RETURNS DATE AS $$
+BEGIN
+  IF input IS NOT NULL AND NOT "isfinite"(input) THEN
+    RAISE EXCEPTION 'A finite date is required';
+  END IF;
+  RETURN input;
+END;
+$$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
+
+-- finfolkdb.common.type-system-seed/as-bounded-integer 
+CREATE OR REPLACE FUNCTION "finfolk".as_bounded_integer(
+  input INTEGER,
+  minimum INTEGER,
+  maximum INTEGER
+) RETURNS INTEGER AS $$
+BEGIN
+  IF (input < minimum) OR (input > maximum) THEN
+    RAISE EXCEPTION 'Integer is outside the permitted bounds';
+  END IF;
+  RETURN input;
+END;
+$$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
+
+-- finfolkdb.common.type-system-site/Site 
+CREATE TABLE IF NOT EXISTS "finfolk"."Site" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "key" TEXT,
   "name" TEXT NOT NULL,
@@ -190,6 +235,109 @@ CREATE OR REPLACE FUNCTION "finfolk".op_fn(
   SELECT to_jsonb(j_ret) FROM j_ret;
 
 $$ LANGUAGE 'sql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialProvider 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialProvider" AS ENUM ('instagram','tiktok','mock');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialConnectionStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialConnectionStatus" AS ENUM ('pending','active','expired','revoked','failed');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialProofKind 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialProofKind" AS ENUM ('oauth','message','comment','manual');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialProofStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialProofStatus" AS ENUM ('pending','verified','consumed','expired','revoked','rejected');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialSourceKind 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialSourceKind" AS ENUM ('account','tags','hashtag','recheck');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialSourceStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialSourceStatus" AS ENUM ('ready','paused','failed');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialActionKind 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialActionKind" AS ENUM ('reply','stats','dive','points','verify-account','prepare-link');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialDiscoveryStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialDiscoveryStatus" AS ENUM ('pending','published','hidden','rejected','unavailable');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialDiscoveryReportReason 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialDiscoveryReportReason" AS ENUM ('wrong_location','inappropriate','removed','other');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialCommandContext 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialCommandContext" AS ENUM ('mention','owned','message');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialCommandStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialCommandStatus" AS ENUM ('new',
+    'confirmation',
+    'done',
+    'cancelled',
+    'limited',
+    'waiting',
+    'expired',
+    'rejected');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-domain-enum/EnumSocialCommandSendState 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumSocialCommandSendState" AS ENUM ('pending','sending','sent','uncertain','skipped');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-domain-enum/EnumSocialReferralPlatform 
 DO $$
@@ -509,12 +657,12 @@ CREATE TABLE IF NOT EXISTS "finfolk"."UserBlock" (
 CREATE TABLE IF NOT EXISTS "finfolk"."UserCheckin" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
   "visit_day" DATE NOT NULL,
   "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "checked_in_at" BIGINT,
   "checked_out_at" BIGINT,
-  UNIQUE ("user_id","beach_id","visit_day"),
+  UNIQUE ("user_id","site_id","visit_day"),
   CONSTRAINT valid_checkout CHECK ("checked_out_at" IS NULL OR ("checked_in_at" IS NOT NULL AND ("checked_out_at" >= "checked_in_at")))
 );
 
@@ -531,6 +679,78 @@ CREATE TABLE IF NOT EXISTS "finfolk"."UserConnection" (
   CONSTRAINT valid_requester CHECK (("requested_by_id" = "user_id") OR ("requested_by_id" = "target_id"))
 );
 
+-- finfolkdb.common.type-social-account/SocialAccount 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialAccount" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('SocialAccount')::"finfolk"."EnumClassType") STORED,
+  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
+  "provider" "finfolk"."EnumSocialProvider" NOT NULL,
+  "namespace" TEXT NOT NULL,
+  "external_id" TEXT NOT NULL,
+  "handle" TEXT NOT NULL DEFAULT '',
+  "display_name" TEXT NOT NULL DEFAULT '',
+  "generation" INTEGER NOT NULL DEFAULT 1,
+  "provider_data" JSONB NOT NULL DEFAULT '{}',
+  "audit_id" UUID NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("provider","namespace","external_id"),
+  UNIQUE ("audit_id"),
+  CONSTRAINT nonempty_namespace CHECK (length(btrim("namespace")) > 0),
+  CONSTRAINT nonempty_external_id CHECK (length(btrim("external_id")) > 0),
+  CONSTRAINT positive_generation CHECK ("generation" > 0),
+  CONSTRAINT object_provider_data CHECK (jsonb_typeof("provider_data") = 'object'),
+  CONSTRAINT fk_social_account_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id)
+);
+
+-- finfolkdb.common.type-social-account/SocialConnection 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialConnection" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('SocialConnection')::"finfolk"."EnumClassType") STORED,
+  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."SocialAccount"("id"),
+  "status" "finfolk"."EnumSocialConnectionStatus" NOT NULL DEFAULT 'pending',
+  "identity_version" UUID NOT NULL DEFAULT gen_random_uuid(),
+  "generation" INTEGER NOT NULL DEFAULT 1,
+  "credential_ciphertext" TEXT,
+  "access_expires_at" BIGINT,
+  "refresh_expires_at" BIGINT,
+  "credential_lease" UUID,
+  "lease_until" BIGINT,
+  "share_posts" BOOLEAN NOT NULL DEFAULT false,
+  "public_points" BOOLEAN NOT NULL DEFAULT false,
+  "capabilities" JSONB NOT NULL DEFAULT '[]',
+  "granted_scopes" JSONB NOT NULL DEFAULT '[]',
+  "cursor" TEXT,
+  "last_success" BIGINT,
+  "next_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "failures" INTEGER NOT NULL DEFAULT 0,
+  "provider_data" JSONB NOT NULL DEFAULT '{}',
+  "audit_id" UUID NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("id","user_id"),
+  UNIQUE ("audit_id"),
+  CONSTRAINT positive_generation CHECK ("generation" > 0),
+  CONSTRAINT nonnegative_failures CHECK ("failures" >= 0),
+  CONSTRAINT array_capabilities CHECK (jsonb_typeof("capabilities") = 'array'),
+  CONSTRAINT array_scopes CHECK (jsonb_typeof("granted_scopes") = 'array'),
+  CONSTRAINT object_provider_data CHECK (jsonb_typeof("provider_data") = 'object'),
+  CONSTRAINT paired_lease CHECK (("credential_lease" IS NULL AND "lease_until" IS NULL) OR ("credential_lease" IS NOT NULL AND "lease_until" IS NOT NULL)),
+  CONSTRAINT revoked_private CHECK (("status" != 'revoked') OR ("credential_ciphertext" IS NULL AND "credential_lease" IS NULL AND NOT "share_posts" AND NOT "public_points")),
+  CONSTRAINT fk_social_connection_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id)
+);
+CREATE INDEX ON "finfolk"."SocialConnection" ("user_id");
+CREATE INDEX ON "finfolk"."SocialConnection" ("account_id");
+
+-- finfolkdb.common.type-social-account/__social_connection_indexes__ 
+CREATE UNIQUE INDEX IF NOT EXISTS "SocialConnectionCurrentAccount" ON "finfolk"."SocialConnection" ("account_id") WHERE "status" != 'revoked';
+
 -- finfolkdb.common.type-site-note/EnumSiteNoteTopic 
 DO $$
 BEGIN
@@ -541,23 +761,26 @@ $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-site-note/SiteNote 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteNote" (
-  "id" UUID PRIMARY KEY,
-  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id") ON DELETE CASCADE,
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('SiteNote')::"finfolk"."EnumClassType") STORED,
+  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id") ON DELETE CASCADE,
   "author_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
   "topic" "finfolk"."EnumSiteNoteTopic" NOT NULL,
-  "body" TEXT NOT NULL,
-  "observed_on" DATE,
+  "body" TEXT NOT NULL CHECK ("body" = "finfolk".as_bounded_text("body",10,1000)),
+  "observed_on" DATE CHECK ("observed_on" = "finfolk".as_finite_date("observed_on")),
   "withdrawn" BOOLEAN NOT NULL DEFAULT false,
   "hidden" BOOLEAN NOT NULL DEFAULT false,
-  "revision" INTEGER NOT NULL DEFAULT 1,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  CONSTRAINT bounded_body CHECK ((length(btrim("body")) >= 10) AND (length("body") <= 1000)),
+  "rev_id" UUID NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("rev_id"),
   CONSTRAINT observation_required CHECK (("topic" != 'conditions') OR "observed_on" IS NOT NULL),
-  CONSTRAINT finite_observation CHECK ("observed_on" IS NULL OR "isfinite"("observed_on")),
-  CONSTRAINT positive_revision CHECK ("revision" > 0)
+  CONSTRAINT fk_site_note_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id)
 );
-CREATE INDEX ON "finfolk"."SiteNote" ("beach_id");
+CREATE INDEX ON "finfolk"."SiteNote" ("site_id");
 CREATE INDEX ON "finfolk"."SiteNote" ("author_id");
 
 -- finfolkdb.common.type-site-note/SiteNoteVote 
@@ -565,7 +788,10 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SiteNoteVote" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "note_id" UUID NOT NULL REFERENCES "finfolk"."SiteNote"("id") ON DELETE CASCADE,
   "voter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
   UNIQUE ("note_id","voter_id")
 );
 CREATE INDEX ON "finfolk"."SiteNoteVote" ("voter_id");
@@ -575,18 +801,155 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SiteNoteReport" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "note_id" UUID NOT NULL REFERENCES "finfolk"."SiteNote"("id") ON DELETE CASCADE,
   "reporter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "reason" TEXT NOT NULL,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "reason" TEXT NOT NULL CHECK ("reason" = "finfolk".as_bounded_text("reason",1,1000)),
   "resolved_at" BIGINT,
-  UNIQUE ("note_id","reporter_id"),
-  CONSTRAINT bounded_reason CHECK ((length(btrim("reason")) >= 1) AND (length("reason") <= 1000))
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("note_id","reporter_id")
 );
 CREATE INDEX ON "finfolk"."SiteNoteReport" ("reporter_id");
+
+-- finfolkdb.common.type-social-base/Social 
+CREATE TABLE IF NOT EXISTS "finfolk"."Social" (
+  "id" UUID DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType",
+  "class_ref" UUID NOT NULL,
+  "op_created" UUID,
+  "time_created" BIGINT,
+  PRIMARY KEY (id,class_table),
+  UNIQUE ("class_table","class_ref")
+);
+
+-- finfolkdb.common.type-social-base/SocialHandle 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialHandle" (
+  "id" UUID DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType",
+  "social_id" UUID NOT NULL,
+  "account_id" UUID REFERENCES "finfolk"."SocialAccount"("id"),
+  "type" "finfolk"."EnumSocialProvider" NOT NULL,
+  "handle" TEXT NOT NULL,
+  "is_verified" BOOLEAN NOT NULL DEFAULT false,
+  "verified_at" BIGINT,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  PRIMARY KEY (id,class_table),
+  UNIQUE ("class_table","type","handle"),
+  CONSTRAINT fk_social_handle_social FOREIGN KEY (class_table,social_id) REFERENCES "finfolk"."Social"(class_table,id) ON DELETE CASCADE
+);
+
+-- finfolkdb.common.type-social-base/ret-social-url 
+CREATE OR REPLACE FUNCTION "finfolk".ret_social_url(
+  i_identity TEXT
+) RETURNS TEXT AS $$
+
+  SELECT CASE split_part(i_identity,':',1)
+    WHEN 'instagram' THEN 'https://www.instagram.com/' || split_part(i_identity,':',2) || '/'
+    WHEN 'tiktok' THEN 'https://www.tiktok.com/@' || split_part(i_identity,':',2)
+    END;
+
+$$ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE;
+
+-- finfolkdb.common.type-social-base/ret-social-urls 
+CREATE OR REPLACE FUNCTION "finfolk".ret_social_urls(
+  i_identities JSONB
+) RETURNS JSONB AS $$
+
+  SELECT coalesce(jsonb_agg("finfolk".ret_social_url("value")),('[]')::JSONB) FROM jsonb_array_elements_text(coalesce(i_identities,('[]')::JSONB)) WHERE "finfolk".ret_social_url("value") IS NOT NULL;
+
+$$ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE;
+
+-- finfolkdb.common.type-social-post/SocialPost 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialPost" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('SocialPost')::"finfolk"."EnumClassType") STORED,
+  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
+  "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
+  "url" TEXT NOT NULL,
+  "platform" "finfolk"."EnumSocialProvider" NOT NULL,
+  "creator_handle" TEXT NOT NULL DEFAULT '',
+  "status" "finfolk"."EnumSocialPostStatus" NOT NULL DEFAULT 'pending',
+  "public_consent" BOOLEAN NOT NULL DEFAULT false,
+  "rejection_reason" TEXT NOT NULL DEFAULT '',
+  "reviewed_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "reviewed_at" BIGINT,
+  "audit_id" UUID NOT NULL,
+  "rev_id" UUID NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("owner_id","site_id","url"),
+  UNIQUE ("audit_id"),
+  UNIQUE ("rev_id"),
+  CONSTRAINT fk_social_post_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id),
+  CONSTRAINT fk_social_post_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id)
+);
+CREATE INDEX ON "finfolk"."SocialPost" ("owner_id");
+CREATE INDEX ON "finfolk"."SocialPost" ("site_id");
+CREATE INDEX ON "finfolk"."SocialPost" ("status");
+
+-- finfolkdb.common.type-social-post/SocialPostReport 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialPostReport" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "post_id" UUID NOT NULL REFERENCES "finfolk"."SocialPost"("id") ON DELETE CASCADE,
+  "reporter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "reason" TEXT NOT NULL,
+  "status" "finfolk"."EnumSocialPostReportStatus" NOT NULL DEFAULT 'open',
+  "resolved_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "resolved_at" BIGINT,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("post_id","reporter_id"),
+  CONSTRAINT bounded_reason CHECK ((length("reason") >= 1) AND (length("reason") <= 1000))
+);
+CREATE INDEX ON "finfolk"."SocialPostReport" ("status");
+
+-- finfolkdb.common.type-social-post/SocialReferral 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialReferral" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "day" DATE NOT NULL DEFAULT ("timezone"(
+    'Australia/Sydney',
+    to_timestamp((1000000 * extract(epoch FROM now()))::BIGINT / 1000000.0)
+  ))::DATE,
+  "platform" "finfolk"."EnumSocialProvider" NOT NULL,
+  "clicks" BIGINT NOT NULL DEFAULT 0,
+  UNIQUE ("day","platform")
+);
+
+-- finfolkdb.common.type-logbook-base/DiveSession 
+CREATE TABLE IF NOT EXISTS "finfolk"."DiveSession" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('DiveSession')::"finfolk"."EnumClassType") STORED,
+  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
+  "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "site_id" UUID REFERENCES "finfolk"."Site"("id"),
+  "detail" JSONB NOT NULL DEFAULT '{}',
+  "audit_id" UUID NOT NULL,
+  "rev_id" UUID NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("id","owner_id"),
+  UNIQUE ("audit_id"),
+  UNIQUE ("rev_id"),
+  CONSTRAINT fk_dive_session_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id),
+  CONSTRAINT fk_dive_session_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id)
+);
+CREATE INDEX ON "finfolk"."DiveSession" ("owner_id");
+CREATE INDEX ON "finfolk"."DiveSession" ("site_id");
 
 -- finfolkdb.common.type-messaging-base/EnumMessagingProvider 
 DO $$
 BEGIN
-  CREATE TYPE "finfolk"."EnumMessagingProvider" AS ENUM ('instagram','tiktok','app');
+  CREATE TYPE "finfolk"."EnumMessagingProvider" AS ENUM ('instagram','tiktok','app','mock');
 EXCEPTION WHEN OTHERS THEN
 END;
 $$ LANGUAGE 'plpgsql';
@@ -618,6 +981,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."MessagingApplication" (
 -- finfolkdb.common.type-messaging-base/MessagingAccount 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingAccount" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "social_account_id" UUID REFERENCES "finfolk"."SocialAccount"("id"),
   "key" TEXT,
   "application_id" UUID NOT NULL REFERENCES "finfolk"."MessagingApplication"("id"),
   "provider" "finfolk"."EnumMessagingProvider" NOT NULL,
@@ -637,6 +1001,10 @@ CREATE TABLE IF NOT EXISTS "finfolk"."MessagingAccount" (
   "last_reply_at" BIGINT,
   "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "backoff_until" BIGINT,
+  "action_checkpoint" UUID,
+  "delivery_checkpoint" UUID,
+  "event_checkpoint" UUID,
+  "proof_checkpoint" UUID,
   "provider_scope" TEXT,
   UNIQUE ("id","application_id"),
   UNIQUE ("key"),
@@ -646,6 +1014,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."MessagingAccount" (
   CONSTRAINT commands_array CHECK (jsonb_typeof("enabled_commands") = 'array'),
   CONSTRAINT pilot_array CHECK (jsonb_typeof("pilot_sender_ids") = 'array')
 );
+CREATE INDEX ON "finfolk"."MessagingAccount" ("social_account_id");
 CREATE INDEX ON "finfolk"."MessagingAccount" ("application_id");
 
 -- finfolkdb.common.type-messaging-base/MessagingAudit 
@@ -694,6 +1063,7 @@ CREATE INDEX ON "finfolk"."MessagingOauthState" ("account_id");
 -- finfolkdb.common.type-messaging-base/MessagingIdentity 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingIdentity" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "social_account_id" UUID REFERENCES "finfolk"."SocialAccount"("id"),
   "account_id" UUID NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
   "external_id" TEXT NOT NULL,
   "user_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
@@ -761,17 +1131,285 @@ CREATE TABLE IF NOT EXISTS "finfolk"."MessagingReceipt" (
 );
 CREATE INDEX ON "finfolk"."MessagingReceipt" ("account_id");
 
--- finfolkdb.common.type-messaging-base/MessagingOutbox 
+-- finfolkdb.common.type-messaging-base/__work_indexes__ 
+CREATE INDEX IF NOT EXISTS "MessagingReceipt_ready" ON "finfolk"."MessagingReceipt" ("account_id","status","next_attempt_at");
+CREATE INDEX IF NOT EXISTS "MessagingMessage_history" ON "finfolk"."MessagingMessage" ("conversation_id","time_created","id");
+
+-- finfolkdb.common.type-social-workflow/SocialEvent 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialEvent" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "provider" "finfolk"."EnumSocialProvider" NOT NULL,
+  "namespace" TEXT NOT NULL,
+  "key" TEXT NOT NULL,
+  "account_id" UUID REFERENCES "finfolk"."SocialAccount"("id"),
+  "inbox_id" UUID REFERENCES "finfolk"."MessagingAccount"("id"),
+  "message_id" UUID REFERENCES "finfolk"."MessagingMessage"("id"),
+  "channel" "finfolk"."EnumSocialCommandContext" NOT NULL DEFAULT 'message',
+  "generation" INTEGER NOT NULL DEFAULT 1,
+  "account_generation" INTEGER NOT NULL DEFAULT 1,
+  "fingerprint" TEXT,
+  "sent_at" BIGINT,
+  "deadline" BIGINT,
+  "payload" JSONB NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'queued',
+  "attempts" INTEGER NOT NULL DEFAULT 0,
+  "error" TEXT,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("id","inbox_id"),
+  UNIQUE ("id","account_id"),
+  UNIQUE ("provider","namespace","key"),
+  CONSTRAINT nonnegative_attempts CHECK ("attempts" >= 0)
+);
+CREATE INDEX ON "finfolk"."SocialEvent" ("inbox_id");
+
+-- finfolkdb.common.type-social-workflow/SocialConnectionProof 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialConnectionProof" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."SocialAccount"("id"),
+  "user_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "connection_id" UUID REFERENCES "finfolk"."SocialConnection"("id"),
+  "event_id" UUID REFERENCES "finfolk"."SocialEvent"("id"),
+  "inbox_id" UUID REFERENCES "finfolk"."MessagingAccount"("id"),
+  "receipt_id" UUID REFERENCES "finfolk"."MessagingReceipt"("id"),
+  "kind" "finfolk"."EnumSocialProofKind" NOT NULL,
+  "token_hash" TEXT NOT NULL,
+  "nonce_hash" TEXT,
+  "flow_key" TEXT,
+  "generation" INTEGER NOT NULL,
+  "status" "finfolk"."EnumSocialProofStatus" NOT NULL DEFAULT 'pending',
+  "expires_at" BIGINT NOT NULL,
+  "verified_at" BIGINT,
+  "consumed_at" BIGINT,
+  "consumed_version" UUID,
+  "error" TEXT NOT NULL DEFAULT '',
+  "provider_data" JSONB NOT NULL DEFAULT '{}',
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("token_hash"),
+  CONSTRAINT hashed_token CHECK ("regexp_like"("token_hash",'^[a-f0-9]{64}$')),
+  CONSTRAINT positive_generation CHECK ("generation" > 0),
+  CONSTRAINT oauth_binding CHECK (("kind" != 'oauth') OR ("nonce_hash" IS NOT NULL AND "flow_key" IS NOT NULL AND "regexp_like"("nonce_hash",'^[a-f0-9]{64}$') AND "regexp_like"("flow_key",'^[a-f0-9]{64}$'))),
+  CONSTRAINT consumed_bound CHECK (("status" != 'consumed') OR ("user_id" IS NOT NULL AND "connection_id" IS NOT NULL AND "consumed_at" IS NOT NULL AND "consumed_version" IS NOT NULL)),
+  CONSTRAINT verified_evidence CHECK ((("status" != 'verified') AND ("status" != 'consumed')) OR "verified_at" IS NOT NULL),
+  CONSTRAINT object_provider_data CHECK (jsonb_typeof("provider_data") = 'object'),
+  CONSTRAINT fk_social_connection_proof_event_account FOREIGN KEY (account_id,event_id) REFERENCES "finfolk"."SocialEvent"(account_id,id),
+  CONSTRAINT fk_social_connection_proof_event_inbox FOREIGN KEY (event_id,inbox_id) REFERENCES "finfolk"."SocialEvent"(id,inbox_id)
+);
+CREATE INDEX ON "finfolk"."SocialConnectionProof" ("account_id");
+CREATE INDEX ON "finfolk"."SocialConnectionProof" ("inbox_id");
+
+-- finfolkdb.common.type-social-workflow/SocialSource 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialSource" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "provider" "finfolk"."EnumSocialProvider" NOT NULL,
+  "namespace" TEXT NOT NULL,
+  "key" TEXT NOT NULL,
+  "account_id" UUID REFERENCES "finfolk"."SocialAccount"("id"),
+  "kind" "finfolk"."EnumSocialSourceKind" NOT NULL,
+  "configuration" JSONB NOT NULL DEFAULT '{}',
+  "checkpoint" TEXT,
+  "last_success" BIGINT,
+  "next_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "lease" UUID,
+  "lease_until" BIGINT,
+  "failures" INTEGER NOT NULL DEFAULT 0,
+  "status" "finfolk"."EnumSocialSourceStatus" NOT NULL DEFAULT 'ready',
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("provider","namespace","key"),
+  CONSTRAINT object_configuration CHECK (jsonb_typeof("configuration") = 'object'),
+  CONSTRAINT nonnegative_failures CHECK ("failures" >= 0),
+  CONSTRAINT paired_lease CHECK (("lease" IS NULL AND "lease_until" IS NULL) OR ("lease" IS NOT NULL AND "lease_until" IS NOT NULL))
+);
+
+-- finfolkdb.common.type-social-workflow/SocialSuppressedSource 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialSuppressedSource" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "provider" "finfolk"."EnumSocialProvider" NOT NULL,
+  "namespace" TEXT NOT NULL,
+  "external_author_id" TEXT NOT NULL,
+  "reason" TEXT NOT NULL DEFAULT '',
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("provider","namespace","external_author_id")
+);
+
+-- finfolkdb.common.type-social-workflow/SocialDiscovery 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialDiscovery" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('SocialDiscovery')::"finfolk"."EnumClassType") STORED,
+  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."SocialAccount"("id"),
+  "source_id" UUID REFERENCES "finfolk"."SocialSource"("id"),
+  "external_id" TEXT NOT NULL,
+  "url" TEXT NOT NULL,
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "site_id" UUID REFERENCES "finfolk"."Site"("id"),
+  "post_id" UUID REFERENCES "finfolk"."SocialPost"("id"),
+  "candidates" JSONB NOT NULL DEFAULT '[]',
+  "caption" TEXT NOT NULL DEFAULT '',
+  "posted_at" BIGINT,
+  "state" "finfolk"."EnumSocialDiscoveryStatus" NOT NULL DEFAULT 'pending',
+  "automatic" BOOLEAN NOT NULL DEFAULT false,
+  "sources" JSONB NOT NULL DEFAULT '[]',
+  "checked_at" BIGINT,
+  "provider_data" JSONB NOT NULL DEFAULT '{}',
+  "audit_id" UUID NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("account_id","external_id"),
+  UNIQUE ("audit_id"),
+  CONSTRAINT array_candidates CHECK (jsonb_typeof("candidates") = 'array'),
+  CONSTRAINT array_sources CHECK (jsonb_typeof("sources") = 'array'),
+  CONSTRAINT object_provider_data CHECK (jsonb_typeof("provider_data") = 'object'),
+  CONSTRAINT published_post CHECK (("state" != 'published') OR "post_id" IS NOT NULL),
+  CONSTRAINT fk_social_discovery_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id)
+);
+
+-- finfolkdb.common.type-social-workflow/SocialDiscoveryReport 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialDiscoveryReport" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "discovery_id" UUID NOT NULL REFERENCES "finfolk"."SocialDiscovery"("id") ON DELETE CASCADE,
+  "reason" "finfolk"."EnumSocialDiscoveryReportReason" NOT NULL,
+  "day" DATE NOT NULL DEFAULT (now())::DATE,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("discovery_id","reason","day")
+);
+
+-- finfolkdb.common.type-social-workflow/SocialCommand 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialCommand" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "event_id" UUID REFERENCES "finfolk"."SocialEvent"("id"),
+  "inbox_id" UUID REFERENCES "finfolk"."MessagingAccount"("id"),
+  "generation" INTEGER NOT NULL DEFAULT 1,
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."SocialAccount"("id"),
+  "key" TEXT NOT NULL,
+  "context" "finfolk"."EnumSocialCommandContext" NOT NULL,
+  "external_actor_id" TEXT NOT NULL,
+  "external_media_id" TEXT,
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "connection_id" UUID REFERENCES "finfolk"."SocialConnection"("id"),
+  "identity_version" UUID,
+  "command" TEXT NOT NULL,
+  "args" JSONB NOT NULL DEFAULT '{}',
+  "source_url" TEXT,
+  "comment_at" BIGINT,
+  "received_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "state" "finfolk"."EnumSocialCommandStatus" NOT NULL DEFAULT 'new',
+  "result" JSONB NOT NULL DEFAULT '{}',
+  "site_id" UUID REFERENCES "finfolk"."Site"("id"),
+  "visit_day" DATE,
+  "reply" TEXT,
+  "send_state" "finfolk"."EnumSocialCommandSendState" NOT NULL DEFAULT 'pending',
+  "external_reply_id" TEXT,
+  "send_started_at" BIGINT,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("id","inbox_id"),
+  UNIQUE ("id","event_id"),
+  UNIQUE ("id","account_id"),
+  UNIQUE ("event_id"),
+  UNIQUE ("account_id","key"),
+  CONSTRAINT object_args CHECK (jsonb_typeof("args") = 'object'),
+  CONSTRAINT fk_social_command_source_inbox FOREIGN KEY (event_id,inbox_id) REFERENCES "finfolk"."SocialEvent"(id,inbox_id),
+  CONSTRAINT fk_social_command_source_account FOREIGN KEY (event_id,account_id) REFERENCES "finfolk"."SocialEvent"(id,account_id)
+);
+
+-- finfolkdb.common.type-social-workflow/SocialAction 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialAction" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('SocialAction')::"finfolk"."EnumClassType") STORED,
+  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
+  "event_id" UUID REFERENCES "finfolk"."SocialEvent"("id"),
+  "command_id" UUID REFERENCES "finfolk"."SocialCommand"("id"),
+  "inbox_id" UUID REFERENCES "finfolk"."MessagingAccount"("id"),
+  "generation" INTEGER NOT NULL DEFAULT 1,
+  "account_generation" INTEGER NOT NULL DEFAULT 1,
+  "attempts" INTEGER NOT NULL DEFAULT 0 CHECK ("attempts" = "finfolk".as_bounded_integer("attempts",0,2147483647)),
+  "lease" UUID,
+  "lease_until" BIGINT,
+  "deadline" BIGINT,
+  "next_attempt_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "error_code" TEXT,
+  "result" JSONB NOT NULL DEFAULT '{}' CHECK ("result" = "finfolk".as_jsonb("result")),
+  "account_id" UUID NOT NULL REFERENCES "finfolk"."SocialAccount"("id"),
+  "source_id" TEXT NOT NULL,
+  "kind" "finfolk"."EnumSocialActionKind" NOT NULL,
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "state" TEXT NOT NULL DEFAULT 'review',
+  "data" JSONB NOT NULL DEFAULT '{}' CHECK ("data" = "finfolk".as_jsonb("data")),
+  "member_confirmed" BOOLEAN NOT NULL DEFAULT false,
+  "session_id" UUID REFERENCES "finfolk"."DiveSession"("id"),
+  "audit_id" UUID NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("account_id","source_id","kind"),
+  UNIQUE ("audit_id"),
+  CONSTRAINT paired_lease CHECK (("lease" IS NULL AND "lease_until" IS NULL) OR ("lease" IS NOT NULL AND "lease_until" IS NOT NULL)),
+  CONSTRAINT running_lease CHECK ((("state" = 'running') AND "lease" IS NOT NULL) OR (("state" != 'running') AND "lease" IS NULL)),
+  CONSTRAINT fk_social_action_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id),
+  CONSTRAINT fk_social_action_command_event FOREIGN KEY (event_id,command_id) REFERENCES "finfolk"."SocialCommand"(event_id,id),
+  CONSTRAINT fk_social_action_command_inbox FOREIGN KEY (command_id,inbox_id) REFERENCES "finfolk"."SocialCommand"(id,inbox_id),
+  CONSTRAINT fk_social_action_command_account FOREIGN KEY (command_id,account_id) REFERENCES "finfolk"."SocialCommand"(id,account_id)
+);
+CREATE INDEX ON "finfolk"."SocialAction" ("inbox_id");
+
+-- finfolkdb.common.type-social-workflow/__action_indexes__ 
+CREATE INDEX IF NOT EXISTS "SocialAction_ready" ON "finfolk"."SocialAction" ("inbox_id","state","next_attempt_at");
+
+-- finfolkdb.common.type-social-workflow/SocialRateLimit 
+CREATE TABLE IF NOT EXISTS "finfolk"."SocialRateLimit" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "provider" "finfolk"."EnumSocialProvider" NOT NULL,
+  "namespace" TEXT NOT NULL,
+  "purpose" TEXT NOT NULL,
+  "bucket" TEXT NOT NULL,
+  "count" INTEGER NOT NULL DEFAULT 0,
+  "resets_at" BIGINT NOT NULL,
+  "prompted_at" BIGINT,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("provider","namespace","purpose","bucket"),
+  CONSTRAINT nonnegative_count CHECK ("count" >= 0)
+);
+
+-- finfolkdb.common.type-messaging-delivery/MessagingOutbox 
 CREATE TABLE IF NOT EXISTS "finfolk"."MessagingOutbox" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "account_id" UUID NOT NULL REFERENCES "finfolk"."MessagingAccount"("id"),
-  "receipt_id" UUID NOT NULL REFERENCES "finfolk"."MessagingReceipt"("id"),
-  "message_id" UUID NOT NULL REFERENCES "finfolk"."MessagingMessage"("id"),
-  "body" TEXT NOT NULL,
+  "event_id" UUID REFERENCES "finfolk"."SocialEvent"("id"),
+  "command_id" UUID REFERENCES "finfolk"."SocialCommand"("id"),
+  "channel" "finfolk"."EnumSocialCommandContext" NOT NULL DEFAULT 'message',
+  "recipient" TEXT,
+  "thread" TEXT,
+  "comment" TEXT,
+  "receipt_id" UUID REFERENCES "finfolk"."MessagingReceipt"("id"),
+  "message_id" UUID REFERENCES "finfolk"."MessagingMessage"("id"),
+  "body" TEXT NOT NULL CHECK ("body" = "finfolk".as_bounded_text("body",0,2000)),
   "correlation_id" UUID NOT NULL,
   "generation" INTEGER NOT NULL,
   "state" "finfolk"."EnumMessagingOutboxStatus" NOT NULL DEFAULT 'pending',
-  "attempts" INTEGER NOT NULL DEFAULT 0,
+  "attempts" INTEGER NOT NULL DEFAULT 0 CHECK ("attempts" = "finfolk".as_bounded_integer("attempts",0,2147483647)),
   "lease" UUID,
   "lease_until" BIGINT,
   "next_attempt_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
@@ -781,22 +1419,23 @@ CREATE TABLE IF NOT EXISTS "finfolk"."MessagingOutbox" (
   "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "body_ciphertext" TEXT,
+  "cipher_context" JSONB NOT NULL DEFAULT '{}' CHECK ("cipher_context" = "finfolk".as_jsonb("cipher_context")),
   "reply_kind" "finfolk"."EnumMessagingOutboxReplyKind" NOT NULL DEFAULT 'text',
+  UNIQUE ("command_id"),
   UNIQUE ("receipt_id"),
   UNIQUE ("message_id"),
-  CONSTRAINT body_limit CHECK (length("body") <= 2000),
   CONSTRAINT sending_lease CHECK ((("state" = 'sending') AND "lease" IS NOT NULL) OR (("state" != 'sending') AND "lease" IS NULL)),
-  CONSTRAINT attempts CHECK ("attempts" >= 0),
   CONSTRAINT lease_pair CHECK (("lease" IS NULL AND "lease_until" IS NULL) OR ("lease" IS NOT NULL AND "lease_until" IS NOT NULL)),
+  CONSTRAINT fk_messaging_outbox_event_inbox FOREIGN KEY (account_id,event_id) REFERENCES "finfolk"."SocialEvent"(inbox_id,id),
+  CONSTRAINT fk_messaging_outbox_command_inbox FOREIGN KEY (account_id,command_id) REFERENCES "finfolk"."SocialCommand"(inbox_id,id),
   CONSTRAINT fk_messaging_outbox_receipt_scope FOREIGN KEY (account_id,receipt_id) REFERENCES "finfolk"."MessagingReceipt"(account_id,id),
-  CONSTRAINT fk_messaging_outbox_message_scope FOREIGN KEY (account_id,message_id) REFERENCES "finfolk"."MessagingMessage"(account_id,id)
+  CONSTRAINT fk_messaging_outbox_message_scope FOREIGN KEY (account_id,message_id) REFERENCES "finfolk"."MessagingMessage"(account_id,id),
+  CONSTRAINT fk_messaging_outbox_command_event FOREIGN KEY (event_id,command_id) REFERENCES "finfolk"."SocialCommand"(event_id,id)
 );
 CREATE INDEX ON "finfolk"."MessagingOutbox" ("account_id");
 
--- finfolkdb.common.type-messaging-base/__work_indexes__ 
-CREATE INDEX IF NOT EXISTS "MessagingReceipt_ready" ON "finfolk"."MessagingReceipt" ("account_id","status","next_attempt_at");
+-- finfolkdb.common.type-messaging-delivery/__delivery_indexes__ 
 CREATE INDEX IF NOT EXISTS "MessagingOutbox_ready" ON "finfolk"."MessagingOutbox" ("account_id","state","next_attempt_at");
-CREATE INDEX IF NOT EXISTS "MessagingMessage_history" ON "finfolk"."MessagingMessage" ("conversation_id","time_created","id");
 
 -- finfolkdb.fn.messaging.messaging-manage/ret-messaging-account 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_account(
@@ -810,6 +1449,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_account(
     WITH j_ret AS (  
       SELECT
         "id",
+        "social_account_id",
         "key",
         "application_id",
         "provider",
@@ -829,6 +1469,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_account(
         "last_reply_at",
         "time_updated",
         "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
       WHERE "id" = i_account AND "application_id" = i_application
@@ -889,7 +1533,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".is_messaging_participant_allowed(
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_conversation;
     WITH j_ret AS (  
-      SELECT "id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+      SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
       WHERE "id" = (o_conversation ->> 'participant_id')::UUID
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_identity;
@@ -921,6 +1565,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
     WITH j_ret AS (  
       SELECT
         "id",
+        "social_account_id",
         "key",
         "application_id",
         "provider",
@@ -940,6 +1585,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
         "last_reply_at",
         "time_updated",
         "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
       WHERE "id" = i_account AND "application_id" = i_application
@@ -1031,7 +1680,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
             LIMIT 1)
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_thread;
           WITH j_ret AS (  
-            SELECT "id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+            SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
             WHERE "id" = (o_thread ->> 'participant_id')::UUID
             LIMIT 1)
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_sender;
@@ -1072,7 +1721,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
         o_identity JSONB;
       BEGIN
         WITH j_ret AS (  
-          SELECT "id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+          SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
           WHERE "account_id" = i_account AND "external_id" = v_sender
           LIMIT 1)
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_identity;
@@ -1080,7 +1729,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_message(
           DECLARE
           o_new JSONB;
         BEGIN
-          WITH j_ret AS (INSERT INTO "finfolk"."MessagingIdentity" ("account_id","external_id") VALUES ((i_account)::UUID,(v_sender)::TEXT) RETURNING "id","account_id","external_id","user_id")
+          WITH j_ret AS (INSERT INTO "finfolk"."MessagingIdentity" ("account_id","external_id") VALUES ((i_account)::UUID,(v_sender)::TEXT) RETURNING "id","social_account_id","account_id","external_id","user_id")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_new;
             o_identity := o_new;
         END;
@@ -1264,6 +1913,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
       RETURNING
         "id",
         "account_id",
+        "event_id",
+        "command_id",
+        "channel",
+        "recipient",
+        "thread",
+        "comment",
         "receipt_id",
         "message_id",
         "body",
@@ -1280,6 +1935,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
         "time_created",
         "time_updated",
         "body_ciphertext",
+        "cipher_context",
         "reply_kind")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_uncertain;
     WITH j_ret AS (  
@@ -1292,6 +1948,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
       RETURNING
         "id",
         "account_id",
+        "event_id",
+        "command_id",
+        "channel",
+        "recipient",
+        "thread",
+        "comment",
         "receipt_id",
         "message_id",
         "body",
@@ -1308,6 +1970,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
         "time_created",
         "time_updated",
         "body_ciphertext",
+        "cipher_context",
         "reply_kind")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_cancelled;
     WITH j_ret AS (  
@@ -1319,6 +1982,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
       RETURNING
         "id",
         "account_id",
+        "event_id",
+        "command_id",
+        "channel",
+        "recipient",
+        "thread",
+        "comment",
         "receipt_id",
         "message_id",
         "body",
@@ -1335,6 +2004,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_messaging_work(
         "time_created",
         "time_updated",
         "body_ciphertext",
+        "cipher_context",
         "reply_kind")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_deadline;
     RETURN jsonb_build_object('ok',true);
@@ -1416,7 +2086,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
           LIMIT 1)
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_conversation;
         WITH j_ret AS (  
-          SELECT "id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+          SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
           WHERE "id" = (o_conversation ->> 'participant_id')::UUID
           AND "account_id" = i_account
           LIMIT 1)
@@ -1452,7 +2122,42 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
         END IF;
         DECLARE
           o_claim JSONB;
+          o_linked JSONB;
+          v_user UUID;
         BEGIN
+          WITH j_ret AS (  
+            SELECT
+              "id",
+              "user_id",
+              "account_id",
+              "status",
+              "identity_version",
+              "generation",
+              "credential_ciphertext",
+              "access_expires_at",
+              "refresh_expires_at",
+              "credential_lease",
+              "lease_until",
+              "share_posts",
+              "public_points",
+              "capabilities",
+              "granted_scopes",
+              "cursor",
+              "last_success",
+              "next_at",
+              "failures",
+              "provider_data",
+              "audit_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            FROM "finfolk"."SocialConnection"
+            WHERE "account_id" = (o_participant ->> 'social_account_id')::UUID
+            AND "status" = ('active')::"finfolk"."EnumSocialConnectionStatus"
+            LIMIT 1)
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_linked;
+          v_user := null;
           WITH j_ret AS (  
             UPDATE "finfolk"."MessagingReceipt" SET
               "status" = ('processing')::"finfolk"."EnumMessagingReceiptStatus",
@@ -1476,6 +2181,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
               "correlation_id",
               "time_created")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_claim;
+          IF (o_account ->> 'provider') = 'app' THEN
+            v_user := (o_participant ->> 'user_id')::UUID;
+          ELSE
+            v_user := (o_linked ->> 'user_id')::UUID;
+          END IF;
           RETURN jsonb_build_object(
             'receipt',
             o_claim,
@@ -1486,7 +2196,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
             'senderId',
             o_participant ->> 'external_id',
             'userId',
-            (o_participant ->> 'user_id')::UUID
+            v_user
           );
         END;
       END;
@@ -1601,13 +2311,19 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
               (i_account)::UUID,
               (i_receipt)::UUID,
               (o_message ->> 'id')::UUID,
-              (i_reply)::TEXT,
+              "finfolk".as_bounded_text((i_reply)::TEXT,0,2000),
               (o_receipt ->> 'correlation_id')::UUID,
               (o_receipt ->> 'generation')::INTEGER,
               (o_receipt ->> 'deadline')::BIGINT
             ) RETURNING
               "id",
               "account_id",
+              "event_id",
+              "command_id",
+              "channel",
+              "recipient",
+              "thread",
+              "comment",
               "receipt_id",
               "message_id",
               "body",
@@ -1624,6 +2340,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_message(
               "time_created",
               "time_updated",
               "body_ciphertext",
+              "cipher_context",
               "reply_kind")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_outbox;
           null;
@@ -1747,6 +2464,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
         SELECT
           "id",
           "account_id",
+          "event_id",
+          "command_id",
+          "channel",
+          "recipient",
+          "thread",
+          "comment",
           "receipt_id",
           "message_id",
           "body",
@@ -1763,6 +2486,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
           "time_created",
           "time_updated",
           "body_ciphertext",
+          "cipher_context",
           "reply_kind"
         FROM "finfolk"."MessagingOutbox"
         WHERE "account_id" = i_account
@@ -1804,7 +2528,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
           LIMIT 1)
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_conversation;
         WITH j_ret AS (  
-          SELECT "id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+          SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
           WHERE "id" = (o_conversation ->> 'participant_id')::UUID
           LIMIT 1)
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_identity;
@@ -1820,6 +2544,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
               RETURNING
                 "id",
                 "account_id",
+                "event_id",
+                "command_id",
+                "channel",
+                "recipient",
+                "thread",
+                "comment",
                 "receipt_id",
                 "message_id",
                 "body",
@@ -1836,6 +2566,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
                 "time_created",
                 "time_updated",
                 "body_ciphertext",
+                "cipher_context",
                 "reply_kind")
             SELECT to_jsonb(j_ret) FROM j_ret INTO o_cancelled;
             RETURN null;
@@ -1847,7 +2578,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
           WITH j_ret AS (  
             UPDATE "finfolk"."MessagingOutbox" SET
               "state" = ('sending')::"finfolk"."EnumMessagingOutboxStatus",
-              "attempts" = ((o_outbox ->> 'attempts')::INTEGER + 1)::INTEGER,
+              "attempts" = "finfolk".as_bounded_integer(
+              ((o_outbox ->> 'attempts')::INTEGER + 1)::INTEGER,
+              0,
+              2147483647
+            ),
               "lease" = (uuid_generate_v4())::UUID,
               "lease_until" = ((1000000 * extract(epoch FROM now()))::BIGINT + 60000000)::BIGINT,
               "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
@@ -1855,6 +2590,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
             RETURNING
               "id",
               "account_id",
+              "event_id",
+              "command_id",
+              "channel",
+              "recipient",
+              "thread",
+              "comment",
               "receipt_id",
               "message_id",
               "body",
@@ -1871,6 +2612,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_delivery(
               "time_created",
               "time_updated",
               "body_ciphertext",
+              "cipher_context",
               "reply_kind")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_claim;
           RETURN jsonb_build_object(
@@ -1912,6 +2654,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
       SELECT
         "id",
         "account_id",
+        "event_id",
+        "command_id",
+        "channel",
+        "recipient",
+        "thread",
+        "comment",
         "receipt_id",
         "message_id",
         "body",
@@ -1928,6 +2676,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
         "time_created",
         "time_updated",
         "body_ciphertext",
+        "cipher_context",
         "reply_kind"
       FROM "finfolk"."MessagingOutbox"
       WHERE "id" = i_delivery
@@ -1979,6 +2728,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
           RETURNING
             "id",
             "account_id",
+            "event_id",
+            "command_id",
+            "channel",
+            "recipient",
+            "thread",
+            "comment",
             "receipt_id",
             "message_id",
             "body",
@@ -1995,6 +2750,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
             "time_created",
             "time_updated",
             "body_ciphertext",
+            "cipher_context",
             "reply_kind")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_finished;
         o_audit := "finfolk_rpc".record_messaging_audit(
@@ -2243,253 +2999,3081 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".consume_messaging_oauth(
 
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-logbook-base/DiveSession 
-CREATE TABLE IF NOT EXISTS "finfolk"."DiveSession" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('DiveSession')::"finfolk"."EnumClassType") STORED,
-  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
-  "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "beach_id" UUID REFERENCES "finfolk"."Beach"("id"),
-  "detail" JSONB NOT NULL DEFAULT '{}',
-  "audit_id" UUID NOT NULL,
-  "rev_id" UUID NOT NULL,
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  UNIQUE ("id","owner_id"),
-  UNIQUE ("audit_id"),
-  UNIQUE ("rev_id"),
-  CONSTRAINT fk_dive_session_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id),
-  CONSTRAINT fk_dive_session_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id)
-);
-CREATE INDEX ON "finfolk"."DiveSession" ("owner_id");
-CREATE INDEX ON "finfolk"."DiveSession" ("beach_id");
+-- finfolkdb.fn.helper.helper-access/is-user-blocked 
+CREATE OR REPLACE FUNCTION "finfolk".is_user_blocked(
+  i_viewer UUID,
+  i_owner UUID
+) RETURNS BOOLEAN AS $$
 
--- finfolkdb.common.type-social-instagram/InstagramSource 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramSource" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "key" TEXT NOT NULL,
-  "kind" "finfolk"."EnumInstagramSourceType" NOT NULL,
-  "data" JSONB NOT NULL DEFAULT '{}',
-  "checkpoint" TEXT,
-  "last_success" BIGINT,
-  "next_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "lease_until" BIGINT,
-  "failures" INTEGER NOT NULL DEFAULT 0,
-  "status" TEXT NOT NULL DEFAULT 'ready',
-  UNIQUE ("key")
-);
+  DECLARE
+    v_forward BOOLEAN;
+    v_reverse BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."UserBlock"
+    WHERE "owner_id" = i_viewer AND "target_id" = i_owner) INTO v_forward;
+    SELECT exists(SELECT 1 FROM "finfolk"."UserBlock"
+    WHERE "owner_id" = i_owner AND "target_id" = i_viewer) INTO v_reverse;
+    RETURN v_forward OR v_reverse;
+  END;
 
--- finfolkdb.common.type-social-instagram/InstagramSuppressedSource 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramSuppressedSource" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "author_id" TEXT NOT NULL,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  UNIQUE ("author_id")
-);
+$$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-social-instagram/InstagramAction 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramAction" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "source_id" TEXT NOT NULL,
-  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "sender_id" TEXT,
-  "kind" "finfolk"."EnumInstagramActionType" NOT NULL,
-  "state" TEXT NOT NULL DEFAULT 'review',
-  "data" JSONB NOT NULL DEFAULT '{}',
-  "member_confirmed" BOOLEAN NOT NULL DEFAULT false,
-  "session_id" UUID REFERENCES "finfolk"."DiveSession"("id"),
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  UNIQUE ("source_id","kind")
-);
+-- finfolkdb.fn.helper.helper-access/is-user-active 
+CREATE OR REPLACE FUNCTION "finfolk".is_user_active(
+  i_user UUID
+) RETURNS BOOLEAN AS $$
 
--- finfolkdb.common.type-social-instagram/InstagramAudit 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramAudit" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "action_id" UUID REFERENCES "finfolk"."InstagramAction"("id") ON DELETE CASCADE,
-  "actor" TEXT NOT NULL,
-  "event" TEXT NOT NULL,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
-);
+  DECLARE
+    v_active BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."User"
+    WHERE "id" = i_user AND "deleted" = false) INTO v_active;
+    RETURN v_active;
+  END;
 
--- finfolkdb.common.type-social-instagram/InstagramConnection 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramConnection" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "handle" TEXT NOT NULL,
-  "sender_id" TEXT,
-  "status" TEXT NOT NULL DEFAULT 'pending',
-  "challenge_hash" TEXT,
-  "expires_at" BIGINT,
-  "public_points" BOOLEAN NOT NULL DEFAULT false,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "share_posts" BOOLEAN NOT NULL DEFAULT false,
-  "media_owner_id" TEXT,
-  "provider_scope" TEXT NOT NULL DEFAULT 'facebook-login:legacy',
-  "identity_version" UUID NOT NULL DEFAULT gen_random_uuid(),
-  UNIQUE ("user_id")
-);
+$$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-social-instagram/InstagramClaim 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramClaim" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "code_hash" TEXT,
-  "state" "finfolk"."EnumInstagramClaimStatus" NOT NULL DEFAULT 'waiting',
-  "sender_id" TEXT,
-  "handle" TEXT,
-  "error" TEXT NOT NULL DEFAULT '',
-  "expires_at" BIGINT NOT NULL,
-  "follow_checked_at" BIGINT,
-  "review_requested_at" BIGINT,
-  "verified_by" TEXT,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "claim_id" UUID NOT NULL DEFAULT gen_random_uuid(),
-  "provider_scope" TEXT NOT NULL DEFAULT 'facebook-login:legacy',
-  UNIQUE ("user_id"),
-  UNIQUE ("code_hash"),
-  UNIQUE ("claim_id")
-);
+-- finfolkdb.common.fn-system-util/auth-uid 
+CREATE OR REPLACE FUNCTION "finfolk".auth_uid() RETURNS UUID AS $$
 
--- finfolkdb.common.type-social-instagram/InstagramCommentIdentity 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramCommentIdentity" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "namespace" TEXT NOT NULL,
-  "actor_id" TEXT,
-  "sender_id" TEXT NOT NULL,
-  "handle" TEXT NOT NULL,
-  "challenge_hash" TEXT,
-  "expires_at" BIGINT,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "connection_scope" TEXT NOT NULL DEFAULT 'facebook-login:legacy',
-  "connection_version" UUID,
-  UNIQUE ("user_id"),
-  UNIQUE ("namespace","actor_id"),
-  UNIQUE ("challenge_hash")
-);
+  SELECT (nullif(current_setting('finfolk.actor_id',true),''))::UUID;
 
--- finfolkdb.common.type-social-instagram/InstagramDiscovery 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramDiscovery" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "media_id" TEXT,
-  "url" TEXT NOT NULL,
-  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "author_id" TEXT,
-  "author" TEXT,
-  "beach_id" UUID REFERENCES "finfolk"."Beach"("id"),
-  "candidates" JSONB NOT NULL DEFAULT '[]',
-  "caption" TEXT NOT NULL DEFAULT '',
-  "posted_at" BIGINT,
-  "state" "finfolk"."EnumInstagramDiscoveryStatus" NOT NULL DEFAULT 'pending',
-  "automatic" BOOLEAN NOT NULL DEFAULT false,
-  "sources" JSONB NOT NULL DEFAULT '[]',
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "checked_at" BIGINT,
-  UNIQUE ("media_id"),
-  UNIQUE ("url"),
-  CONSTRAINT check_0 CHECK ("media_id" IS NULL OR "regexp_like"("media_id",'^[0-9]{1,40}$'))
-);
+$$ LANGUAGE 'sql';
 
--- finfolkdb.common.type-social-instagram/InstagramDiscoveryAudit 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramDiscoveryAudit" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "discovery_id" UUID REFERENCES "finfolk"."InstagramDiscovery"("id") ON DELETE CASCADE,
-  "actor" TEXT NOT NULL,
-  "event" TEXT NOT NULL,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
-);
+-- finfolkdb.common.fn-system-util/as-iso-time 
+CREATE OR REPLACE FUNCTION "finfolk".as_iso_time(
+  i_time BIGINT
+) RETURNS TEXT AS $$
 
--- finfolkdb.common.type-social-instagram/InstagramPostReport 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramPostReport" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "discovery_id" UUID NOT NULL REFERENCES "finfolk"."InstagramDiscovery"("id") ON DELETE CASCADE,
-  "reason" "finfolk"."EnumInstagramPostReportReason" NOT NULL,
-  "day" DATE NOT NULL DEFAULT (to_timestamp((1000000 * extract(epoch FROM now()))::BIGINT / 1000000.0))::DATE,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  UNIQUE ("discovery_id","reason","day")
-);
+  SELECT to_char(
+    "timezone"('UTC',to_timestamp((i_time)::NUMERIC / 1000000)),
+    'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
+  );
 
--- finfolkdb.common.type-social-instagram/InstagramCommand 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramCommand" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "key" TEXT,
-  "context" "finfolk"."EnumInstagramCommandContext" NOT NULL,
-  "actor_id" TEXT NOT NULL,
-  "namespace" TEXT NOT NULL,
-  "media_id" TEXT,
-  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "command" TEXT NOT NULL,
-  "args" JSONB NOT NULL DEFAULT '{}',
-  "source_url" TEXT,
-  "comment_at" BIGINT,
-  "received_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "state" "finfolk"."EnumInstagramCommandStatus" NOT NULL DEFAULT 'new',
-  "result" TEXT,
-  "beach_id" UUID REFERENCES "finfolk"."Beach"("id"),
-  "visit_day" DATE,
-  "reply" TEXT,
-  "send_state" "finfolk"."EnumInstagramCommandSendState" NOT NULL DEFAULT 'pending',
-  "reply_id" TEXT,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "send_started_at" BIGINT,
-  UNIQUE ("key")
-);
+$$ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE;
 
--- finfolkdb.common.type-social-instagram/InstagramEvent 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramEvent" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "key" TEXT,
-  "payload" JSONB NOT NULL,
-  "status" TEXT NOT NULL DEFAULT 'queued',
-  "attempts" INTEGER NOT NULL DEFAULT 0,
-  "error" TEXT,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  UNIQUE ("key")
-);
+-- finfolkdb.fn.helper.helper-entity/insert-base-addons 
+CREATE OR REPLACE FUNCTION "finfolk".insert_base_addons(
+  i_class_table TEXT,
+  i_class_ref UUID,
+  i_current JSONB,
+  o_op JSONB
+) RETURNS JSONB AS $$
 
--- finfolkdb.common.type-social-instagram/InstagramDmLimit 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramDmLimit" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "sender_id" TEXT NOT NULL,
-  "minute" BIGINT NOT NULL DEFAULT div((1000000 * extract(epoch FROM now()))::BIGINT,60000000) * 60000000,
-  "count" INTEGER NOT NULL DEFAULT 0,
-  "prompted_at" BIGINT,
-  UNIQUE ("sender_id")
-);
+  DECLARE
+    o_audit JSONB;
+    o_current JSONB;
+    o_log JSONB;
+    o_rev JSONB;
+    o_revision JSONB;
+  BEGIN
+    o_current := "finfolk".as_jsonb(i_current);
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."Rev" (
+        "class_table",
+        "class_context",
+        "class_ref",
+        "index",
+        "current",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        (i_class_table)::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (i_class_ref)::UUID,
+        (1)::INTEGER,
+        (o_current)::JSONB,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","class_ref","index","current","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."Audit" (
+        "class_table",
+        "class_context",
+        "class_ref",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        (i_class_table)::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (i_class_ref)::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","class_ref","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."RevLog" (
+        "class_table",
+        "class_context",
+        "rev_id",
+        "version",
+        "deltas",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        (i_class_table)::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        ((o_rev ->> 'id')::UUID)::UUID,
+        (1)::INTEGER,
+        (o_current)::JSONB,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_revision;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."AuditLog" (
+        "class_table",
+        "class_context",
+        "audit_id",
+        "entry",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        (i_class_table)::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        ((o_audit ->> 'id')::UUID)::UUID,
+        "finfolk".as_jsonb((jsonb_build_object('event','create'))::JSONB),
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","audit_id","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
+    RETURN jsonb_build_object('rev',(o_rev ->> 'id')::UUID,'audit',(o_audit ->> 'id')::UUID);
+  END;
 
--- finfolkdb.common.type-social-instagram/InstagramConnectCode 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramConnectCode" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "code_hash" TEXT NOT NULL,
-  "sender_id" TEXT NOT NULL,
-  "handle" TEXT NOT NULL,
-  "provider_scope" TEXT NOT NULL,
-  "generation" INTEGER NOT NULL,
-  "event_id" UUID NOT NULL REFERENCES "finfolk"."MessagingReceipt"("id") ON DELETE CASCADE,
-  "expires_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT + 600000000,
-  "invalidated" BOOLEAN NOT NULL DEFAULT false,
-  "consumed_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "consumed_version" UUID,
-  "consumed_at" BIGINT,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  UNIQUE ("code_hash"),
-  UNIQUE ("event_id")
-);
+$$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-social-instagram/InstagramConnectLimit 
-CREATE TABLE IF NOT EXISTS "finfolk"."InstagramConnectLimit" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "bucket" TEXT NOT NULL,
-  "count" INTEGER NOT NULL,
-  "resets_at" BIGINT NOT NULL,
-  UNIQUE ("bucket")
-);
+-- finfolkdb.fn.user.user-manage-posts/insert-social-post 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_social_post(
+  i_owner UUID,
+  i_beach UUID,
+  i_url TEXT,
+  i_platform TEXT,
+  i_handle TEXT,
+  i_consent BOOLEAN,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_base JSONB;
+    o_post JSONB;
+    v_id UUID;
+  BEGIN
+    v_id := uuid_generate_v4();
+    o_base := "finfolk".insert_base_addons(
+      'SocialPost',
+      v_id,
+      jsonb_build_object('url',i_url,'platform',i_platform),
+      o_op
+    );
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."SocialPost" (
+        "id",
+        "owner_id",
+        "site_id",
+        "url",
+        "platform",
+        "creator_handle",
+        "public_consent",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      ) VALUES (
+        (v_id)::UUID,
+        (i_owner)::UUID,
+        (i_beach)::UUID,
+        (i_url)::TEXT,
+        (i_platform)::"finfolk"."EnumSocialProvider",
+        (i_handle)::TEXT,
+        (i_consent)::BOOLEAN,
+        (o_base ->> 'audit')::UUID,
+        (o_base ->> 'rev')::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING
+        "id",
+        "owner_id",
+        "site_id",
+        "url",
+        "platform",
+        "creator_handle",
+        "status",
+        "public_consent",
+        "rejection_reason",
+        "reviewed_by_id",
+        "reviewed_at",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_post;
+    RETURN o_post;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-manage-posts/ret-social-post-public 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_social_post_public(
+  i_post_id UUID,
+  i_viewer UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_post JSONB;
+    v_owner UUID;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "owner_id",
+        "site_id",
+        "url",
+        "platform",
+        "creator_handle",
+        "time_created"
+      FROM "finfolk"."SocialPost"
+      WHERE "id" = i_post_id
+      AND "status" = ('approved')::"finfolk"."EnumSocialPostStatus"
+      AND "public_consent" = true
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_post;
+    v_owner := (o_post ->> 'owner_id')::UUID;
+    IF o_post IS NULL OR NOT "finfolk".is_user_active(v_owner) OR "finfolk".is_user_blocked(i_viewer,v_owner) THEN
+      RETURN null;
+    END IF;
+    RETURN jsonb_build_object(
+      'id',
+      (o_post ->> 'id')::UUID,
+      'site_id',
+      (o_post ->> 'site_id')::UUID,
+      'url',
+      o_post ->> 'url',
+      'platform',
+      o_post ->> 'platform',
+      'creator_handle',
+      o_post ->> 'creator_handle',
+      'created_at',
+      "finfolk".as_iso_time((o_post ->> 'time_created')::BIGINT)
+    );
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/create-social-audit 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".create_social_audit(
+  i_table TEXT,
+  i_id UUID,
+  o_op JSONB
+) RETURNS UUID AS $$
+
+  DECLARE
+    o_audit JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."Audit" (
+        "class_table",
+        "class_context",
+        "class_ref",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        (i_table)::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (i_id)::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","class_ref","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
+    RETURN (o_audit ->> 'id')::UUID;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/record-social-audit 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".record_social_audit(
+  i_table TEXT,
+  i_audit UUID,
+  i_event TEXT,
+  o_op JSONB
+) RETURNS UUID AS $$
+
+  DECLARE
+    o_log JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."AuditLog" (
+        "class_table",
+        "class_context",
+        "audit_id",
+        "entry",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        (i_table)::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (i_audit)::UUID,
+        "finfolk".as_jsonb((jsonb_build_object('event',i_event))::JSONB),
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","audit_id","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
+    RETURN (o_log ->> 'id')::UUID;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/insert-social-account 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_social_account(
+  i_provider TEXT,
+  i_namespace TEXT,
+  i_external_id TEXT,
+  i_handle TEXT,
+  i_display_name TEXT,
+  i_provider_data JSONB,
+  o_op JSONB
+) RETURNS UUID AS $$
+
+  DECLARE
+    o_data JSONB;
+  BEGIN
+    o_data := "finfolk".as_jsonb(i_provider_data);
+    IF NOT ((i_provider = 'instagram') OR (i_provider = 'tiktok') OR (i_provider = 'mock')) OR (coalesce(btrim(i_namespace),'') = '') OR (coalesce(btrim(i_external_id),'') = '') THEN
+      RAISE EXCEPTION 'Provider, namespace and external account identity are required';
+    END IF;
+    PERFORM "pg_advisory_xact_lock"("hashtextextended"(
+      (jsonb_build_array(i_provider,i_namespace,i_external_id))::TEXT,
+      0
+    ));
+    DECLARE
+      o_existing JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "provider",
+          "namespace",
+          "external_id",
+          "handle",
+          "display_name",
+          "generation",
+          "provider_data",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialAccount"
+        WHERE "provider" = (i_provider)::"finfolk"."EnumSocialProvider"
+        AND "namespace" = i_namespace
+        AND "external_id" = i_external_id
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_existing;
+      IF o_existing is not null  THEN
+        RETURN (o_existing ->> 'id')::UUID;
+      END IF;
+      DECLARE
+        o_account JSONB;
+        v_audit UUID;
+        v_id UUID;
+        v_log UUID;
+      BEGIN
+        v_id := uuid_generate_v4();
+        v_audit := "finfolk_rpc".create_social_audit('SocialAccount',v_id,o_op);
+        WITH j_ret AS (  
+          INSERT INTO "finfolk"."SocialAccount" (
+            "id",
+            "provider",
+            "namespace",
+            "external_id",
+            "handle",
+            "display_name",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          ) VALUES (
+            (v_id)::UUID,
+            (i_provider)::"finfolk"."EnumSocialProvider",
+            (i_namespace)::TEXT,
+            (i_external_id)::TEXT,
+            (coalesce(i_handle,''))::TEXT,
+            (coalesce(i_display_name,''))::TEXT,
+            (o_data)::JSONB,
+            (v_audit)::UUID,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'time')::BIGINT,
+            (o_op ->> 'time')::BIGINT
+          ) RETURNING
+            "id",
+            "provider",
+            "namespace",
+            "external_id",
+            "handle",
+            "display_name",
+            "generation",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+        v_log := "finfolk_rpc".record_social_audit('SocialAccount',v_audit,'created',o_op);
+        RETURN v_id;
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/begin-social-proof 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".begin_social_proof(
+  i_account UUID,
+  i_user UUID,
+  i_kind TEXT,
+  i_token_hash TEXT,
+  i_nonce_hash TEXT,
+  i_flow_key TEXT,
+  i_ttl INTEGER,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_account JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = i_account
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    IF o_account IS NULL OR (i_user IS NOT NULL AND NOT "finfolk".is_user_active(i_user)) OR i_token_hash IS NULL OR NOT "regexp_like"(i_token_hash,'^[a-f0-9]{64}$') OR ((i_kind = 'oauth') AND (NOT coalesce("regexp_like"(i_nonce_hash,'^[a-f0-9]{64}$'),false) OR NOT coalesce("regexp_like"(i_flow_key,'^[a-f0-9]{64}$'),false))) OR i_ttl IS NULL OR (i_ttl < 30) OR (i_ttl > 900) THEN
+      RAISE EXCEPTION 'Invalid social proof intent';
+    END IF;
+    DECLARE
+      o_proof JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        INSERT INTO "finfolk"."SocialConnectionProof" (
+          "account_id",
+          "user_id",
+          "kind",
+          "token_hash",
+          "nonce_hash",
+          "flow_key",
+          "generation",
+          "expires_at",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        ) VALUES (
+          (i_account)::UUID,
+          (i_user)::UUID,
+          (i_kind)::"finfolk"."EnumSocialProofKind",
+          (i_token_hash)::TEXT,
+          (i_nonce_hash)::TEXT,
+          (i_flow_key)::TEXT,
+          (o_account ->> 'generation')::INTEGER,
+          ((1000000 * extract(epoch FROM now()))::BIGINT + ((i_ttl)::BIGINT * 1000000))::BIGINT,
+          (o_op ->> 'id')::UUID,
+          (o_op ->> 'id')::UUID,
+          (o_op ->> 'time')::BIGINT,
+          (o_op ->> 'time')::BIGINT
+        ) RETURNING
+          "id",
+          "account_id",
+          "user_id",
+          "connection_id",
+          "event_id",
+          "inbox_id",
+          "receipt_id",
+          "kind",
+          "token_hash",
+          "nonce_hash",
+          "flow_key",
+          "generation",
+          "status",
+          "expires_at",
+          "verified_at",
+          "consumed_at",
+          "consumed_version",
+          "error",
+          "provider_data",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_proof;
+      RETURN jsonb_build_object(
+        'id',
+        (o_proof ->> 'id')::UUID,
+        'expiresAt',
+        o_proof -> 'expires_at'
+      );
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/verify-social-proof 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".verify_social_proof(
+  i_proof UUID,
+  i_evidence JSONB,
+  o_op JSONB
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_evidence JSONB;
+    o_initial JSONB;
+    o_proof JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "user_id",
+        "connection_id",
+        "event_id",
+        "inbox_id",
+        "receipt_id",
+        "kind",
+        "token_hash",
+        "nonce_hash",
+        "flow_key",
+        "generation",
+        "status",
+        "expires_at",
+        "verified_at",
+        "consumed_at",
+        "consumed_version",
+        "error",
+        "provider_data",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnectionProof"
+      WHERE "id" = i_proof
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_initial;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = (o_initial ->> 'account_id')::UUID
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "user_id",
+        "connection_id",
+        "event_id",
+        "inbox_id",
+        "receipt_id",
+        "kind",
+        "token_hash",
+        "nonce_hash",
+        "flow_key",
+        "generation",
+        "status",
+        "expires_at",
+        "verified_at",
+        "consumed_at",
+        "consumed_version",
+        "error",
+        "provider_data",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnectionProof"
+      WHERE "id" = i_proof
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_proof;
+    o_evidence := "finfolk".as_jsonb(i_evidence);
+    IF o_proof IS NULL OR o_account IS NULL OR ((o_proof ->> 'status') != 'pending') OR ((o_proof ->> 'expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_proof ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) THEN
+      RETURN false;
+    END IF;
+    IF (jsonb_typeof(o_evidence -> 'verified') != 'boolean') OR NOT coalesce((o_evidence ->> 'verified')::BOOLEAN,false) OR (coalesce(o_evidence ->> 'provider','') != (o_account ->> 'provider')) OR (coalesce(o_evidence ->> 'namespace','') != (o_account ->> 'namespace')) OR (coalesce(o_evidence ->> 'externalId','') != (o_account ->> 'external_id')) THEN
+      RAISE EXCEPTION 'Verified social evidence does not match its provider account';
+    END IF;
+    DECLARE
+      o_verified JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialConnectionProof" SET
+          "status" = ('verified')::"finfolk"."EnumSocialProofStatus",
+          "verified_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT,
+          "provider_data" = (o_evidence)::JSONB,
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "id" = i_proof
+        RETURNING
+          "id",
+          "account_id",
+          "user_id",
+          "connection_id",
+          "event_id",
+          "inbox_id",
+          "receipt_id",
+          "kind",
+          "token_hash",
+          "nonce_hash",
+          "flow_key",
+          "generation",
+          "status",
+          "expires_at",
+          "verified_at",
+          "consumed_at",
+          "consumed_version",
+          "error",
+          "provider_data",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_verified;
+      RETURN true;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/connect-social-account 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".connect_social_account(
+  i_user UUID,
+  i_proof UUID,
+  i_token_hash TEXT,
+  i_nonce_hash TEXT,
+  i_flow_key TEXT,
+  i_ciphertext TEXT,
+  i_access_expires BIGINT,
+  i_refresh_expires BIGINT,
+  i_capabilities JSONB,
+  i_scopes JSONB,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_initial JSONB;
+    o_proof JSONB;
+    v_account UUID;
+    v_version UUID;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "user_id",
+        "connection_id",
+        "event_id",
+        "inbox_id",
+        "receipt_id",
+        "kind",
+        "token_hash",
+        "nonce_hash",
+        "flow_key",
+        "generation",
+        "status",
+        "expires_at",
+        "verified_at",
+        "consumed_at",
+        "consumed_version",
+        "error",
+        "provider_data",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnectionProof"
+      WHERE "id" = i_proof
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_initial;
+    v_account := (o_initial ->> 'account_id')::UUID;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = v_account
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "user_id",
+        "connection_id",
+        "event_id",
+        "inbox_id",
+        "receipt_id",
+        "kind",
+        "token_hash",
+        "nonce_hash",
+        "flow_key",
+        "generation",
+        "status",
+        "expires_at",
+        "verified_at",
+        "consumed_at",
+        "consumed_version",
+        "error",
+        "provider_data",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnectionProof"
+      WHERE "id" = i_proof
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_proof;
+    v_version := uuid_generate_v4();
+    IF NOT "finfolk".is_user_active(i_user) OR o_account IS NULL OR o_proof IS NULL OR ((o_proof ->> 'status') != 'verified') OR i_token_hash IS NULL OR ((o_proof ->> 'token_hash') != i_token_hash) OR (coalesce(o_proof ->> 'nonce_hash','') != coalesce(i_nonce_hash,'')) OR (coalesce(o_proof ->> 'flow_key','') != coalesce(i_flow_key,'')) OR ((o_proof ->> 'expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_proof ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) OR (o_proof ->> 'user_id' IS NOT NULL AND ((o_proof ->> 'user_id')::UUID != i_user)) THEN
+      RETURN null;
+    END IF;
+    IF (jsonb_typeof(i_capabilities) != 'array') OR (jsonb_typeof(i_scopes) != 'array') OR (i_access_expires IS NOT NULL AND (i_access_expires <= (1000000 * extract(epoch FROM now()))::BIGINT)) OR (i_refresh_expires IS NOT NULL AND (i_refresh_expires <= (1000000 * extract(epoch FROM now()))::BIGINT)) THEN
+      RAISE EXCEPTION 'Invalid social authorization scope or expiry';
+    END IF;
+    DECLARE
+      o_current JSONB;
+      v_audit UUID;
+      v_id UUID;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "user_id",
+          "account_id",
+          "status",
+          "identity_version",
+          "generation",
+          "credential_ciphertext",
+          "access_expires_at",
+          "refresh_expires_at",
+          "credential_lease",
+          "lease_until",
+          "share_posts",
+          "public_points",
+          "capabilities",
+          "granted_scopes",
+          "cursor",
+          "last_success",
+          "next_at",
+          "failures",
+          "provider_data",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialConnection"
+        WHERE "account_id" = v_account
+        AND "status" != ('revoked')::"finfolk"."EnumSocialConnectionStatus"
+        LIMIT 1
+        FOR UPDATE)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_current;
+      v_id := coalesce((o_current ->> 'id')::UUID,uuid_generate_v4());
+      v_audit := coalesce(
+        (o_current ->> 'audit_id')::UUID,
+        "finfolk_rpc".create_social_audit('SocialConnection',v_id,o_op)
+      );
+      IF o_current IS NOT NULL AND ((o_current ->> 'user_id')::UUID != i_user) THEN
+        RAISE EXCEPTION 'Social account already has another member connection';
+      END IF;
+      IF o_current is null  THEN
+        DECLARE
+        o_new JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            INSERT INTO "finfolk"."SocialConnection" (
+              "id",
+              "user_id",
+              "account_id",
+              "audit_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            ) VALUES (
+              (v_id)::UUID,
+              (i_user)::UUID,
+              (v_account)::UUID,
+              (v_audit)::UUID,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'time')::BIGINT,
+              (o_op ->> 'time')::BIGINT
+            ) RETURNING
+              "id",
+              "user_id",
+              "account_id",
+              "status",
+              "identity_version",
+              "generation",
+              "credential_ciphertext",
+              "access_expires_at",
+              "refresh_expires_at",
+              "credential_lease",
+              "lease_until",
+              "share_posts",
+              "public_points",
+              "capabilities",
+              "granted_scopes",
+              "cursor",
+              "last_success",
+              "next_at",
+              "failures",
+              "provider_data",
+              "audit_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_new;
+          null;
+      END;
+      END IF;
+      DECLARE
+        o_consumed JSONB;
+        o_generation JSONB;
+        o_saved JSONB;
+        v_log UUID;
+      BEGIN
+        WITH j_ret AS (  
+          UPDATE "finfolk"."SocialConnection" SET
+            "status" = ('active')::"finfolk"."EnumSocialConnectionStatus",
+            "identity_version" = (v_version)::UUID,
+            "generation" = (coalesce((o_current ->> 'generation')::INTEGER,0) + 1)::INTEGER,
+            "credential_ciphertext" = (i_ciphertext)::TEXT,
+            "access_expires_at" = (i_access_expires)::BIGINT,
+            "refresh_expires_at" = (i_refresh_expires)::BIGINT,
+            "credential_lease" = (null)::UUID,
+            "lease_until" = (null)::BIGINT,
+            "share_posts" = (false)::BOOLEAN,
+            "public_points" = (false)::BOOLEAN,
+            "capabilities" = (i_capabilities)::JSONB,
+            "granted_scopes" = (i_scopes)::JSONB,
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "id" = v_id
+          RETURNING
+            "id",
+            "user_id",
+            "account_id",
+            "status",
+            "identity_version",
+            "generation",
+            "credential_ciphertext",
+            "access_expires_at",
+            "refresh_expires_at",
+            "credential_lease",
+            "lease_until",
+            "share_posts",
+            "public_points",
+            "capabilities",
+            "granted_scopes",
+            "cursor",
+            "last_success",
+            "next_at",
+            "failures",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+        WITH j_ret AS (  
+          UPDATE "finfolk"."SocialConnectionProof" SET
+            "user_id" = (i_user)::UUID,
+            "connection_id" = (v_id)::UUID,
+            "status" = ('consumed')::"finfolk"."EnumSocialProofStatus",
+            "consumed_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT,
+            "consumed_version" = (v_version)::UUID,
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "id" = i_proof
+          RETURNING
+            "id",
+            "account_id",
+            "user_id",
+            "connection_id",
+            "event_id",
+            "inbox_id",
+            "receipt_id",
+            "kind",
+            "token_hash",
+            "nonce_hash",
+            "flow_key",
+            "generation",
+            "status",
+            "expires_at",
+            "verified_at",
+            "consumed_at",
+            "consumed_version",
+            "error",
+            "provider_data",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_consumed;
+        WITH j_ret AS (  
+          UPDATE "finfolk"."SocialAccount" SET
+            "generation" = ((o_account ->> 'generation')::INTEGER + 1)::INTEGER,
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "id" = v_account
+          RETURNING
+            "id",
+            "provider",
+            "namespace",
+            "external_id",
+            "handle",
+            "display_name",
+            "generation",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_generation;
+        v_log := "finfolk_rpc".record_social_audit('SocialConnection',v_audit,'connected',o_op);
+        RETURN jsonb_build_object(
+          'id',
+          v_id,
+          'accountId',
+          v_account,
+          'identityVersion',
+          v_version,
+          'status',
+          'active',
+          'sharePosts',
+          false,
+          'publicPoints',
+          false
+        );
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/set-social-sharing 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".set_social_sharing(
+  i_user UUID,
+  i_connection UUID,
+  i_version UUID,
+  i_share BOOLEAN,
+  i_points BOOLEAN,
+  o_op JSONB
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    o_row JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "user_id",
+        "account_id",
+        "status",
+        "identity_version",
+        "generation",
+        "credential_ciphertext",
+        "access_expires_at",
+        "refresh_expires_at",
+        "credential_lease",
+        "lease_until",
+        "share_posts",
+        "public_points",
+        "capabilities",
+        "granted_scopes",
+        "cursor",
+        "last_success",
+        "next_at",
+        "failures",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnection"
+      WHERE "id" = i_connection
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_row;
+    IF NOT "finfolk".is_user_active(i_user) OR o_row IS NULL OR ((o_row ->> 'user_id')::UUID != i_user) OR ((o_row ->> 'identity_version')::UUID != i_version) OR ((o_row ->> 'status') != 'active') OR i_share IS NULL OR i_points IS NULL THEN
+      RETURN false;
+    END IF;
+    DECLARE
+      o_saved JSONB;
+      v_log UUID;
+    BEGIN
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialConnection" SET
+          "share_posts" = (i_share)::BOOLEAN,
+          "public_points" = (i_points)::BOOLEAN,
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "id" = i_connection
+        RETURNING
+          "id",
+          "user_id",
+          "account_id",
+          "status",
+          "identity_version",
+          "generation",
+          "credential_ciphertext",
+          "access_expires_at",
+          "refresh_expires_at",
+          "credential_lease",
+          "lease_until",
+          "share_posts",
+          "public_points",
+          "capabilities",
+          "granted_scopes",
+          "cursor",
+          "last_success",
+          "next_at",
+          "failures",
+          "provider_data",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+      v_log := "finfolk_rpc".record_social_audit(
+        'SocialConnection',
+        (o_row ->> 'audit_id')::UUID,
+        'sharing-updated',
+        o_op
+      );
+      RETURN true;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/disconnect-social-account 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".disconnect_social_account(
+  i_user UUID,
+  i_connection UUID,
+  i_version UUID,
+  o_op JSONB
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_initial JSONB;
+    o_row JSONB;
+    v_account UUID;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "user_id",
+        "account_id",
+        "status",
+        "identity_version",
+        "generation",
+        "credential_ciphertext",
+        "access_expires_at",
+        "refresh_expires_at",
+        "credential_lease",
+        "lease_until",
+        "share_posts",
+        "public_points",
+        "capabilities",
+        "granted_scopes",
+        "cursor",
+        "last_success",
+        "next_at",
+        "failures",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnection"
+      WHERE "id" = i_connection
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_initial;
+    v_account := (o_initial ->> 'account_id')::UUID;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = v_account
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "user_id",
+        "account_id",
+        "status",
+        "identity_version",
+        "generation",
+        "credential_ciphertext",
+        "access_expires_at",
+        "refresh_expires_at",
+        "credential_lease",
+        "lease_until",
+        "share_posts",
+        "public_points",
+        "capabilities",
+        "granted_scopes",
+        "cursor",
+        "last_success",
+        "next_at",
+        "failures",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnection"
+      WHERE "id" = i_connection
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_row;
+    IF o_row IS NULL OR ((o_row ->> 'user_id')::UUID != i_user) OR ((o_row ->> 'identity_version')::UUID != i_version) OR ((o_row ->> 'status') = 'revoked') THEN
+      RETURN false;
+    END IF;
+    DECLARE
+      o_generation JSONB;
+      o_proofs JSONB;
+      o_revoked JSONB;
+      v_log UUID;
+    BEGIN
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialConnection" SET
+          "status" = ('revoked')::"finfolk"."EnumSocialConnectionStatus",
+          "identity_version" = (uuid_generate_v4())::UUID,
+          "generation" = ((o_row ->> 'generation')::INTEGER + 1)::INTEGER,
+          "credential_ciphertext" = (null)::TEXT,
+          "access_expires_at" = (null)::BIGINT,
+          "refresh_expires_at" = (null)::BIGINT,
+          "credential_lease" = (null)::UUID,
+          "lease_until" = (null)::BIGINT,
+          "share_posts" = (false)::BOOLEAN,
+          "public_points" = (false)::BOOLEAN,
+          "capabilities" = ('[]')::JSONB,
+          "granted_scopes" = ('[]')::JSONB,
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "id" = i_connection
+        RETURNING
+          "id",
+          "user_id",
+          "account_id",
+          "status",
+          "identity_version",
+          "generation",
+          "credential_ciphertext",
+          "access_expires_at",
+          "refresh_expires_at",
+          "credential_lease",
+          "lease_until",
+          "share_posts",
+          "public_points",
+          "capabilities",
+          "granted_scopes",
+          "cursor",
+          "last_success",
+          "next_at",
+          "failures",
+          "provider_data",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_revoked;
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialAccount" SET
+          "generation" = ((o_account ->> 'generation')::INTEGER + 1)::INTEGER,
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "id" = v_account
+        RETURNING
+          "id",
+          "provider",
+          "namespace",
+          "external_id",
+          "handle",
+          "display_name",
+          "generation",
+          "provider_data",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_generation;
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialConnectionProof" SET
+          "status" = ('revoked')::"finfolk"."EnumSocialProofStatus",
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "account_id" = v_account AND "status" IN ('pending','verified')
+        RETURNING
+          "id",
+          "account_id",
+          "user_id",
+          "connection_id",
+          "event_id",
+          "inbox_id",
+          "receipt_id",
+          "kind",
+          "token_hash",
+          "nonce_hash",
+          "flow_key",
+          "generation",
+          "status",
+          "expires_at",
+          "verified_at",
+          "consumed_at",
+          "consumed_version",
+          "error",
+          "provider_data",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_proofs;
+      v_log := "finfolk_rpc".record_social_audit(
+        'SocialConnection',
+        (o_row ->> 'audit_id')::UUID,
+        'disconnected',
+        o_op
+      );
+      RETURN true;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/insert-social-discovery 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_social_discovery(
+  i_account UUID,
+  i_source UUID,
+  i_external_id TEXT,
+  i_url TEXT,
+  i_owner UUID,
+  i_beach UUID,
+  i_caption TEXT,
+  i_candidates JSONB,
+  i_provider_data JSONB,
+  o_op JSONB
+) RETURNS UUID AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_data JSONB;
+    o_source JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = i_account
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "key",
+        "account_id",
+        "kind",
+        "configuration",
+        "checkpoint",
+        "last_success",
+        "next_at",
+        "lease",
+        "lease_until",
+        "failures",
+        "status",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialSource"
+      WHERE "id" = i_source
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_source;
+    o_data := "finfolk".as_jsonb(i_provider_data);
+    IF o_account IS NULL OR (coalesce(i_external_id,'') = '') OR NOT coalesce("starts_with"(i_url,'https://'),false) OR (jsonb_typeof(i_candidates) != 'array') OR (i_source IS NOT NULL AND (o_source IS NULL OR ((o_source ->> 'provider') != (o_account ->> 'provider')) OR ((o_source ->> 'namespace') != (o_account ->> 'namespace')) OR (o_source ->> 'account_id' IS NOT NULL AND ((o_source ->> 'account_id')::UUID != i_account)))) THEN
+      RAISE EXCEPTION 'Discovery does not match its source and provider account';
+    END IF;
+    DECLARE
+      o_existing JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "account_id",
+          "source_id",
+          "external_id",
+          "url",
+          "owner_id",
+          "site_id",
+          "post_id",
+          "candidates",
+          "caption",
+          "posted_at",
+          "state",
+          "automatic",
+          "sources",
+          "checked_at",
+          "provider_data",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialDiscovery"
+        WHERE "account_id" = i_account AND "external_id" = i_external_id
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_existing;
+      IF o_existing is not null  THEN
+        RETURN (o_existing ->> 'id')::UUID;
+      END IF;
+      DECLARE
+        o_discovery JSONB;
+        v_audit UUID;
+        v_id UUID;
+        v_log UUID;
+      BEGIN
+        v_id := uuid_generate_v4();
+        v_audit := "finfolk_rpc".create_social_audit('SocialDiscovery',v_id,o_op);
+        WITH j_ret AS (  
+          INSERT INTO "finfolk"."SocialDiscovery" (
+            "id",
+            "account_id",
+            "source_id",
+            "external_id",
+            "url",
+            "owner_id",
+            "site_id",
+            "candidates",
+            "caption",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          ) VALUES (
+            (v_id)::UUID,
+            (i_account)::UUID,
+            (i_source)::UUID,
+            (i_external_id)::TEXT,
+            (i_url)::TEXT,
+            (i_owner)::UUID,
+            (i_beach)::UUID,
+            (i_candidates)::JSONB,
+            (coalesce(i_caption,''))::TEXT,
+            (o_data)::JSONB,
+            (v_audit)::UUID,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'time')::BIGINT,
+            (o_op ->> 'time')::BIGINT
+          ) RETURNING
+            "id",
+            "account_id",
+            "source_id",
+            "external_id",
+            "url",
+            "owner_id",
+            "site_id",
+            "post_id",
+            "candidates",
+            "caption",
+            "posted_at",
+            "state",
+            "automatic",
+            "sources",
+            "checked_at",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_discovery;
+        v_log := "finfolk_rpc".record_social_audit('SocialDiscovery',v_audit,'discovered',o_op);
+        RETURN v_id;
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/publish-social-discovery 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".publish_social_discovery(
+  i_discovery UUID,
+  i_post UUID,
+  o_op JSONB
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_post JSONB;
+    o_row JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "source_id",
+        "external_id",
+        "url",
+        "owner_id",
+        "site_id",
+        "post_id",
+        "candidates",
+        "caption",
+        "posted_at",
+        "state",
+        "automatic",
+        "sources",
+        "checked_at",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialDiscovery"
+      WHERE "id" = i_discovery
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_row;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = (o_row ->> 'account_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "owner_id",
+        "site_id",
+        "url",
+        "platform",
+        "creator_handle",
+        "status",
+        "public_consent",
+        "rejection_reason",
+        "reviewed_by_id",
+        "reviewed_at",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialPost"
+      WHERE "id" = i_post
+      LIMIT 1
+      FOR SHARE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_post;
+    IF o_row IS NULL OR o_post IS NULL OR o_row ->> 'owner_id' IS NULL OR o_row ->> 'site_id' IS NULL OR NOT "finfolk".is_user_active((o_post ->> 'owner_id')::UUID) OR ((o_row ->> 'owner_id')::UUID != (o_post ->> 'owner_id')::UUID) OR ((o_row ->> 'site_id')::UUID != (o_post ->> 'site_id')::UUID) OR ((o_account ->> 'provider') != (o_post ->> 'platform')) OR ((o_row ->> 'url') != (o_post ->> 'url')) OR ((o_post ->> 'status') != 'approved') OR NOT coalesce((o_post ->> 'public_consent')::BOOLEAN,false) THEN
+      RETURN false;
+    END IF;
+    DECLARE
+      o_saved JSONB;
+      v_log UUID;
+    BEGIN
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialDiscovery" SET
+          "post_id" = (i_post)::UUID,
+          "state" = ('published')::"finfolk"."EnumSocialDiscoveryStatus",
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "id" = i_discovery
+        RETURNING
+          "id",
+          "account_id",
+          "source_id",
+          "external_id",
+          "url",
+          "owner_id",
+          "site_id",
+          "post_id",
+          "candidates",
+          "caption",
+          "posted_at",
+          "state",
+          "automatic",
+          "sources",
+          "checked_at",
+          "provider_data",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+      v_log := "finfolk_rpc".record_social_audit(
+        'SocialDiscovery',
+        (o_row ->> 'audit_id')::UUID,
+        'published',
+        o_op
+      );
+      RETURN true;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-manage/ret-social-discovery-public 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_social_discovery_public(
+  i_discovery UUID,
+  i_viewer UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_row JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "source_id",
+        "external_id",
+        "url",
+        "owner_id",
+        "site_id",
+        "post_id",
+        "candidates",
+        "caption",
+        "posted_at",
+        "state",
+        "automatic",
+        "sources",
+        "checked_at",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialDiscovery"
+      WHERE "id" = i_discovery
+      AND "state" = ('published')::"finfolk"."EnumSocialDiscoveryStatus"
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_row;
+    IF o_row is null  THEN
+      RETURN null;
+    END IF;
+    RETURN "finfolk_rpc".ret_social_post_public((o_row ->> 'post_id')::UUID,i_viewer);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-actions/enqueue-social-action 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".enqueue_social_action(
+  i_command UUID,
+  i_kind TEXT,
+  o_op JSONB
+) RETURNS UUID AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_command JSONB;
+    o_event JSONB;
+    v_id UUID;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "event_id",
+        "inbox_id",
+        "generation",
+        "account_id",
+        "key",
+        "context",
+        "external_actor_id",
+        "external_media_id",
+        "owner_id",
+        "connection_id",
+        "identity_version",
+        "command",
+        "args",
+        "source_url",
+        "comment_at",
+        "received_at",
+        "state",
+        "result",
+        "site_id",
+        "visit_day",
+        "reply",
+        "send_state",
+        "external_reply_id",
+        "send_started_at",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialCommand"
+      WHERE "id" = i_command
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_command;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "key",
+        "account_id",
+        "inbox_id",
+        "message_id",
+        "channel",
+        "generation",
+        "account_generation",
+        "fingerprint",
+        "sent_at",
+        "deadline",
+        "payload",
+        "status",
+        "attempts",
+        "error",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialEvent"
+      WHERE "id" = (o_command ->> 'event_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = (o_command ->> 'account_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    v_id := uuid_generate_v4();
+    IF o_command IS NULL OR o_event IS NULL OR o_account IS NULL OR ((o_command ->> 'state') != 'waiting') OR NOT ((i_kind = 'verify-account') OR (i_kind = 'prepare-link')) THEN
+      RAISE EXCEPTION 'Invalid external social action';
+    END IF;
+    DECLARE
+      o_action JSONB;
+      v_audit UUID;
+      v_log UUID;
+    BEGIN
+      v_audit := "finfolk_rpc".create_social_audit('SocialAction',v_id,o_op);
+      WITH j_ret AS (  
+        INSERT INTO "finfolk"."SocialAction" (
+          "id",
+          "event_id",
+          "command_id",
+          "inbox_id",
+          "generation",
+          "account_generation",
+          "deadline",
+          "account_id",
+          "source_id",
+          "kind",
+          "state",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        ) VALUES (
+          (v_id)::UUID,
+          ((o_event ->> 'id')::UUID)::UUID,
+          (i_command)::UUID,
+          (o_command ->> 'inbox_id')::UUID,
+          (o_event ->> 'generation')::INTEGER,
+          (o_account ->> 'generation')::INTEGER,
+          (least(
+          (o_event ->> 'deadline')::BIGINT,
+          (1000000 * extract(epoch FROM now()))::BIGINT + 600000000
+        ))::BIGINT,
+          ((o_account ->> 'id')::UUID)::UUID,
+          (i_command)::TEXT,
+          (i_kind)::"finfolk"."EnumSocialActionKind",
+          ('pending')::TEXT,
+          (v_audit)::UUID,
+          (o_op ->> 'id')::UUID,
+          (o_op ->> 'id')::UUID,
+          (o_op ->> 'time')::BIGINT,
+          (o_op ->> 'time')::BIGINT
+        ) RETURNING
+          "id",
+          "event_id",
+          "command_id",
+          "inbox_id",
+          "generation",
+          "account_generation",
+          "attempts",
+          "lease",
+          "lease_until",
+          "deadline",
+          "next_attempt_at",
+          "error_code",
+          "result",
+          "account_id",
+          "source_id",
+          "kind",
+          "owner_id",
+          "state",
+          "data",
+          "member_confirmed",
+          "session_id",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_action;
+      v_log := "finfolk_rpc".record_social_audit('SocialAction',v_audit,'queued',o_op);
+      RETURN v_id;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-actions/finish-social-command-reply 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".finish_social_command_reply(
+  i_command UUID,
+  i_body TEXT,
+  i_ciphertext TEXT,
+  i_context JSONB,
+  i_result JSONB,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_command JSONB;
+    o_event JSONB;
+    o_payload JSONB;
+    v_body TEXT;
+    v_inbox UUID;
+    v_message UUID;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "event_id",
+        "inbox_id",
+        "generation",
+        "account_id",
+        "key",
+        "context",
+        "external_actor_id",
+        "external_media_id",
+        "owner_id",
+        "connection_id",
+        "identity_version",
+        "command",
+        "args",
+        "source_url",
+        "comment_at",
+        "received_at",
+        "state",
+        "result",
+        "site_id",
+        "visit_day",
+        "reply",
+        "send_state",
+        "external_reply_id",
+        "send_started_at",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialCommand"
+      WHERE "id" = i_command
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_command;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "key",
+        "account_id",
+        "inbox_id",
+        "message_id",
+        "channel",
+        "generation",
+        "account_generation",
+        "fingerprint",
+        "sent_at",
+        "deadline",
+        "payload",
+        "status",
+        "attempts",
+        "error",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialEvent"
+      WHERE "id" = (o_command ->> 'event_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+    o_payload := (o_event -> 'payload');
+    v_inbox := (o_command ->> 'inbox_id')::UUID;
+    v_body := CASE WHEN i_ciphertext IS NOT NULL THEN '[Private connection code]'
+    WHEN true THEN i_body
+    END;
+    v_message := null;
+    IF (o_event ->> 'channel') = 'message' THEN
+      DECLARE
+      o_incoming JSONB;
+        o_outgoing JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          SELECT
+            "id",
+            "account_id",
+            "conversation_id",
+            "direction",
+            "external_id",
+            "body",
+            "metadata",
+            "sent_at",
+            "time_created"
+          FROM "finfolk"."MessagingMessage"
+          WHERE "id" = (o_event ->> 'message_id')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_incoming;
+        WITH j_ret AS (  
+          INSERT INTO "finfolk"."MessagingMessage" ("account_id","conversation_id","direction","body","metadata") VALUES (
+            (v_inbox)::UUID,
+            (o_incoming ->> 'conversation_id')::UUID,
+            ('outbound')::"finfolk"."EnumMessagingDirection",
+            (v_body)::TEXT,
+            ('{}')::JSONB
+          ) RETURNING
+            "id",
+            "account_id",
+            "conversation_id",
+            "direction",
+            "external_id",
+            "body",
+            "metadata",
+            "sent_at",
+            "time_created")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_outgoing;
+        v_message := (o_outgoing ->> 'id')::UUID;
+    END;
+    END IF;
+    DECLARE
+      o_delivery JSONB;
+      o_finished JSONB;
+      o_finished_event JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        INSERT INTO "finfolk"."MessagingOutbox" (
+          "account_id",
+          "event_id",
+          "command_id",
+          "channel",
+          "recipient",
+          "thread",
+          "comment",
+          "message_id",
+          "body",
+          "correlation_id",
+          "generation",
+          "deadline",
+          "body_ciphertext",
+          "cipher_context",
+          "reply_kind"
+        ) VALUES (
+          (v_inbox)::UUID,
+          ((o_event ->> 'id')::UUID)::UUID,
+          (i_command)::UUID,
+          (o_event ->> 'channel')::"finfolk"."EnumSocialCommandContext",
+          (o_payload ->> 'senderId')::TEXT,
+          (CASE WHEN (o_event ->> 'channel') = 'message' THEN o_payload ->> 'conversationId'
+        WHEN true THEN null
+        END)::TEXT,
+          (CASE WHEN (o_event ->> 'channel') = 'message' THEN null
+        WHEN true THEN o_payload ->> 'messageId'
+        END)::TEXT,
+          (v_message)::UUID,
+          "finfolk".as_bounded_text((v_body)::TEXT,0,2000),
+          (uuid_generate_v4())::UUID,
+          (o_event ->> 'generation')::INTEGER,
+          (least((o_event ->> 'deadline')::BIGINT,coalesce(
+          (i_result ->> 'expiresAt')::BIGINT,
+          (o_event ->> 'deadline')::BIGINT
+        )))::BIGINT,
+          (i_ciphertext)::TEXT,
+          "finfolk".as_jsonb((coalesce(i_context,('{}')::JSONB))::JSONB),
+          (CASE WHEN i_ciphertext IS NULL THEN 'text'
+        WHEN true THEN 'connect_code'
+        END)::"finfolk"."EnumMessagingOutboxReplyKind"
+        ) RETURNING
+          "id",
+          "account_id",
+          "event_id",
+          "command_id",
+          "channel",
+          "recipient",
+          "thread",
+          "comment",
+          "receipt_id",
+          "message_id",
+          "body",
+          "correlation_id",
+          "generation",
+          "state",
+          "attempts",
+          "lease",
+          "lease_until",
+          "next_attempt_at",
+          "deadline",
+          "provider_message_id",
+          "error_code",
+          "time_created",
+          "time_updated",
+          "body_ciphertext",
+          "cipher_context",
+          "reply_kind")
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_delivery;
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialCommand" SET
+          "state" = ('done')::"finfolk"."EnumSocialCommandStatus",
+          "result" = (i_result)::JSONB,
+          "reply" = (v_body)::TEXT,
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "id" = i_command
+        RETURNING
+          "id",
+          "event_id",
+          "inbox_id",
+          "generation",
+          "account_id",
+          "key",
+          "context",
+          "external_actor_id",
+          "external_media_id",
+          "owner_id",
+          "connection_id",
+          "identity_version",
+          "command",
+          "args",
+          "source_url",
+          "comment_at",
+          "received_at",
+          "state",
+          "result",
+          "site_id",
+          "visit_day",
+          "reply",
+          "send_state",
+          "external_reply_id",
+          "send_started_at",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_finished;
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialEvent" SET
+          "status" = ('completed')::TEXT,
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "id" = (o_event ->> 'id')::UUID
+        RETURNING
+          "id",
+          "provider",
+          "namespace",
+          "key",
+          "account_id",
+          "inbox_id",
+          "message_id",
+          "channel",
+          "generation",
+          "account_generation",
+          "fingerprint",
+          "sent_at",
+          "deadline",
+          "payload",
+          "status",
+          "attempts",
+          "error",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_finished_event;
+      RETURN jsonb_build_object(
+        'commandId',
+        i_command,
+        'status',
+        'completed',
+        'deliveryId',
+        (o_delivery ->> 'id')::UUID
+      );
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-actions/retire-social-code-deliveries 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".retire_social_code_deliveries(
+  i_account UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_proof JSONB;
+    o_proofs JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "user_id",
+        "connection_id",
+        "event_id",
+        "inbox_id",
+        "receipt_id",
+        "kind",
+        "token_hash",
+        "nonce_hash",
+        "flow_key",
+        "generation",
+        "status",
+        "expires_at",
+        "verified_at",
+        "consumed_at",
+        "consumed_version",
+        "error",
+        "provider_data",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnectionProof"
+      WHERE "account_id" = i_account AND "status" IN ('pending','verified'))
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_proofs;
+    o_proof := null;
+    FOR o_proof IN SELECT jsonb_array_elements(coalesce(o_proofs,('[]')::JSONB)) LOOP
+      DECLARE
+        o_cancelled JSONB;
+        o_uncertain JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          UPDATE "finfolk"."MessagingOutbox" SET
+            "state" = ('cancelled')::"finfolk"."EnumMessagingOutboxStatus",
+            "error_code" = ('proof_replaced')::TEXT,
+            "body_ciphertext" = (null)::TEXT,
+            "cipher_context" = "finfolk".as_jsonb(('{}')::JSONB)
+          WHERE "event_id" = (o_proof ->> 'event_id')::UUID
+          AND "state" = ('pending')::"finfolk"."EnumMessagingOutboxStatus"
+          AND "reply_kind" = ('connect_code')::"finfolk"."EnumMessagingOutboxReplyKind"
+          RETURNING
+            "id",
+            "account_id",
+            "event_id",
+            "command_id",
+            "channel",
+            "recipient",
+            "thread",
+            "comment",
+            "receipt_id",
+            "message_id",
+            "body",
+            "correlation_id",
+            "generation",
+            "state",
+            "attempts",
+            "lease",
+            "lease_until",
+            "next_attempt_at",
+            "deadline",
+            "provider_message_id",
+            "error_code",
+            "time_created",
+            "time_updated",
+            "body_ciphertext",
+            "cipher_context",
+            "reply_kind")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_cancelled;
+        WITH j_ret AS (  
+          UPDATE "finfolk"."MessagingOutbox" SET
+            "state" = ('uncertain')::"finfolk"."EnumMessagingOutboxStatus",
+            "lease" = (null)::UUID,
+            "lease_until" = (null)::BIGINT,
+            "error_code" = ('proof_replaced')::TEXT,
+            "body_ciphertext" = (null)::TEXT,
+            "cipher_context" = "finfolk".as_jsonb(('{}')::JSONB)
+          WHERE "event_id" = (o_proof ->> 'event_id')::UUID
+          AND "state" = ('sending')::"finfolk"."EnumMessagingOutboxStatus"
+          AND "reply_kind" = ('connect_code')::"finfolk"."EnumMessagingOutboxReplyKind"
+          RETURNING
+            "id",
+            "account_id",
+            "event_id",
+            "command_id",
+            "channel",
+            "recipient",
+            "thread",
+            "comment",
+            "receipt_id",
+            "message_id",
+            "body",
+            "correlation_id",
+            "generation",
+            "state",
+            "attempts",
+            "lease",
+            "lease_until",
+            "next_attempt_at",
+            "deadline",
+            "provider_message_id",
+            "error_code",
+            "time_created",
+            "time_updated",
+            "body_ciphertext",
+            "cipher_context",
+            "reply_kind")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_uncertain;
+        null;
+      END;
+    END LOOP;
+    RETURN ('{}')::JSONB;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-actions/expire-social-action 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".expire_social_action(
+  o_action JSONB,
+  i_error TEXT,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_command JSONB;
+    o_event JSONB;
+    o_expired JSONB;
+    v_log UUID;
+  BEGIN
+    WITH j_ret AS (  
+      UPDATE "finfolk"."SocialAction" SET
+        "lease" = (null)::UUID,
+        "lease_until" = (null)::BIGINT,
+        "error_code" = (i_error)::TEXT,
+        "state" = ('expired')::TEXT,
+        "op_updated" = (o_op ->> 'id')::UUID,
+        "time_updated" = (o_op ->> 'time')::BIGINT
+      WHERE "id" = (o_action ->> 'id')::UUID
+      RETURNING
+        "id",
+        "event_id",
+        "command_id",
+        "inbox_id",
+        "generation",
+        "account_generation",
+        "attempts",
+        "lease",
+        "lease_until",
+        "deadline",
+        "next_attempt_at",
+        "error_code",
+        "result",
+        "account_id",
+        "source_id",
+        "kind",
+        "owner_id",
+        "state",
+        "data",
+        "member_confirmed",
+        "session_id",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_expired;
+    WITH j_ret AS (  
+      UPDATE "finfolk"."SocialCommand" SET
+        "state" = ('expired')::"finfolk"."EnumSocialCommandStatus",
+        "result" = (jsonb_build_object('error',i_error))::JSONB,
+        "op_updated" = (o_op ->> 'id')::UUID,
+        "time_updated" = (o_op ->> 'time')::BIGINT
+      WHERE "id" = (o_action ->> 'command_id')::UUID
+      RETURNING
+        "id",
+        "event_id",
+        "inbox_id",
+        "generation",
+        "account_id",
+        "key",
+        "context",
+        "external_actor_id",
+        "external_media_id",
+        "owner_id",
+        "connection_id",
+        "identity_version",
+        "command",
+        "args",
+        "source_url",
+        "comment_at",
+        "received_at",
+        "state",
+        "result",
+        "site_id",
+        "visit_day",
+        "reply",
+        "send_state",
+        "external_reply_id",
+        "send_started_at",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_command;
+    WITH j_ret AS (  
+      UPDATE "finfolk"."SocialEvent" SET
+        "status" = ('expired')::TEXT,
+        "error" = (i_error)::TEXT,
+        "op_updated" = (o_op ->> 'id')::UUID,
+        "time_updated" = (o_op ->> 'time')::BIGINT
+      WHERE "id" = (o_action ->> 'event_id')::UUID
+      RETURNING
+        "id",
+        "provider",
+        "namespace",
+        "key",
+        "account_id",
+        "inbox_id",
+        "message_id",
+        "channel",
+        "generation",
+        "account_generation",
+        "fingerprint",
+        "sent_at",
+        "deadline",
+        "payload",
+        "status",
+        "attempts",
+        "error",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_event;
+    v_log := "finfolk_rpc".record_social_audit('SocialAction',(o_action ->> 'audit_id')::UUID,'expired',o_op);
+    RETURN ('{}')::JSONB;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-actions/claim-social-action 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_social_action(
+  i_application UUID,
+  i_inbox UUID,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_inbox JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Social inbox outside application scope';
+    END IF;
+    IF ((o_inbox ->> 'mode') = 'disabled') OR ((o_inbox ->> 'backoff_until')::BIGINT > (1000000 * extract(epoch FROM now()))::BIGINT) THEN
+      RETURN null;
+    END IF;
+    DECLARE
+      o_action JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "event_id",
+          "command_id",
+          "inbox_id",
+          "generation",
+          "account_generation",
+          "attempts",
+          "lease",
+          "lease_until",
+          "deadline",
+          "next_attempt_at",
+          "error_code",
+          "result",
+          "account_id",
+          "source_id",
+          "kind",
+          "owner_id",
+          "state",
+          "data",
+          "member_confirmed",
+          "session_id",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialAction"
+        WHERE "inbox_id" = i_inbox
+        AND "state" = 'pending'
+        AND "next_attempt_at" <= (1000000 * extract(epoch FROM now()))::BIGINT
+        ORDER BY "time_created","id" ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_action;
+      IF o_action is null  THEN
+        RETURN null;
+      END IF;
+      DECLARE
+        o_account JSONB;
+        o_event JSONB;
+        v_lease UUID;
+      BEGIN
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "provider",
+            "namespace",
+            "external_id",
+            "handle",
+            "display_name",
+            "generation",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialAccount"
+          WHERE "id" = (o_action ->> 'account_id')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "provider",
+            "namespace",
+            "key",
+            "account_id",
+            "inbox_id",
+            "message_id",
+            "channel",
+            "generation",
+            "account_generation",
+            "fingerprint",
+            "sent_at",
+            "deadline",
+            "payload",
+            "status",
+            "attempts",
+            "error",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialEvent"
+          WHERE "id" = (o_action ->> 'event_id')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+        v_lease := uuid_generate_v4();
+        IF NOT jsonb_exists(o_inbox -> 'enabled_commands','connect') OR ((o_action ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_action ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_action ->> 'account_generation')::INTEGER != (o_account ->> 'generation')::INTEGER) OR (((o_inbox ->> 'mode') = 'pilot') AND NOT jsonb_exists(
+          o_inbox -> 'pilot_sender_ids',
+          (o_event -> 'payload') ->> 'senderId'
+        )) THEN
+          PERFORM "finfolk_rpc".expire_social_action(o_action,'action_expired',o_op);
+          RETURN null;
+        END IF;
+        DECLARE
+          o_claimed JSONB;
+          v_log UUID;
+        BEGIN
+          WITH j_ret AS (  
+            UPDATE "finfolk"."SocialAction" SET
+              "attempts" = "finfolk".as_bounded_integer(
+              ((o_action ->> 'attempts')::INTEGER + 1)::INTEGER,
+              0,
+              2147483647
+            ),
+              "lease" = (v_lease)::UUID,
+              "lease_until" = ((1000000 * extract(epoch FROM now()))::BIGINT + 30000000)::BIGINT,
+              "state" = ('running')::TEXT,
+              "op_updated" = (o_op ->> 'id')::UUID,
+              "time_updated" = (o_op ->> 'time')::BIGINT
+            WHERE "id" = (o_action ->> 'id')::UUID
+            RETURNING
+              "id",
+              "event_id",
+              "command_id",
+              "inbox_id",
+              "generation",
+              "account_generation",
+              "attempts",
+              "lease",
+              "lease_until",
+              "deadline",
+              "next_attempt_at",
+              "error_code",
+              "result",
+              "account_id",
+              "source_id",
+              "kind",
+              "owner_id",
+              "state",
+              "data",
+              "member_confirmed",
+              "session_id",
+              "audit_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_claimed;
+          v_log := "finfolk_rpc".record_social_audit('SocialAction',(o_action ->> 'audit_id')::UUID,'claimed',o_op);
+          RETURN jsonb_build_object('id',(o_action ->> 'id')::UUID,'lease',v_lease,'kind',o_action ->> 'kind','deadline',o_action -> 'deadline','binding',jsonb_build_object(
+            'actionId',
+            (o_action ->> 'id')::UUID,
+            'lease',
+            v_lease,
+            'inboxId',
+            i_inbox,
+            'eventId',
+            o_action -> 'event_id',
+            'generation',
+            o_action -> 'generation',
+            'accountGeneration',
+            o_action -> 'account_generation'
+          ),'request',jsonb_build_object(
+            'provider',
+            o_account ->> 'provider',
+            'namespace',
+            o_account ->> 'namespace',
+            'externalId',
+            o_account ->> 'external_id',
+            'codeLength',
+            8,
+            'alphabet',
+            'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
+            'prefix',
+            'Your FinFolk connection code: ',
+            'suffix',
+            '. Enter it in your FinFolk account within 10 minutes.'
+          ));
+        END;
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-actions/complete-social-action 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_action(
+  i_application UUID,
+  i_inbox UUID,
+  i_action UUID,
+  i_lease UUID,
+  i_outcome TEXT,
+  i_result JSONB,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_action JSONB;
+    o_inbox JSONB;
+    o_initial JSONB;
+    o_result JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "event_id",
+        "command_id",
+        "inbox_id",
+        "generation",
+        "account_generation",
+        "attempts",
+        "lease",
+        "lease_until",
+        "deadline",
+        "next_attempt_at",
+        "error_code",
+        "result",
+        "account_id",
+        "source_id",
+        "kind",
+        "owner_id",
+        "state",
+        "data",
+        "member_confirmed",
+        "session_id",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAction"
+      WHERE "id" = i_action AND "inbox_id" = i_inbox
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_initial;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = (o_initial ->> 'account_id')::UUID
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "event_id",
+        "command_id",
+        "inbox_id",
+        "generation",
+        "account_generation",
+        "attempts",
+        "lease",
+        "lease_until",
+        "deadline",
+        "next_attempt_at",
+        "error_code",
+        "result",
+        "account_id",
+        "source_id",
+        "kind",
+        "owner_id",
+        "state",
+        "data",
+        "member_confirmed",
+        "session_id",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAction"
+      WHERE "id" = i_action AND "inbox_id" = i_inbox
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_action;
+    o_result := "finfolk".as_jsonb(i_result);
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Social inbox outside application scope';
+    END IF;
+    IF o_action IS NULL OR i_lease IS NULL OR ((o_action ->> 'state') != 'running') OR ((o_action ->> 'lease')::UUID != i_lease) OR ((o_action ->> 'lease_until')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_action ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_inbox ->> 'mode') = 'disabled') OR NOT jsonb_exists(o_inbox -> 'enabled_commands','connect') OR ((o_action ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_action ->> 'account_generation')::INTEGER != (o_account ->> 'generation')::INTEGER) THEN
+      RETURN null;
+    END IF;
+    DECLARE
+      o_binding JSONB;
+      o_event JSONB;
+      v_command UUID;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "provider",
+          "namespace",
+          "key",
+          "account_id",
+          "inbox_id",
+          "message_id",
+          "channel",
+          "generation",
+          "account_generation",
+          "fingerprint",
+          "sent_at",
+          "deadline",
+          "payload",
+          "status",
+          "attempts",
+          "error",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialEvent"
+        WHERE "id" = (o_action ->> 'event_id')::UUID
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+      v_command := (o_action ->> 'command_id')::UUID;
+      o_binding := jsonb_build_object(
+        'actionId',
+        i_action,
+        'lease',
+        i_lease,
+        'inboxId',
+        i_inbox,
+        'eventId',
+        o_action -> 'event_id',
+        'generation',
+        o_action -> 'generation',
+        'accountGeneration',
+        o_action -> 'account_generation'
+      );
+      IF ((o_inbox ->> 'mode') = 'pilot') AND NOT jsonb_exists(
+        o_inbox -> 'pilot_sender_ids',
+        (o_event -> 'payload') ->> 'senderId'
+      ) THEN
+        RETURN null;
+      END IF;
+      IF i_outcome IS NULL OR NOT ((i_outcome = 'success') OR (i_outcome = 'retry') OR (i_outcome = 'failed')) OR (coalesce(o_result -> 'binding',('{}')::JSONB) != o_binding) THEN
+        RAISE EXCEPTION 'External action result does not match its claim';
+      END IF;
+      IF i_outcome != 'success' THEN
+        DECLARE
+        o_failed JSONB;
+          v_log UUID;
+          v_retry BOOLEAN;
+      BEGIN
+        v_retry := ((i_outcome = 'retry') AND ((o_action ->> 'attempts')::INTEGER < 3));
+          WITH j_ret AS (  
+            UPDATE "finfolk"."SocialAction" SET
+              "lease" = (null)::UUID,
+              "lease_until" = (null)::BIGINT,
+              "next_attempt_at" = ((1000000 * extract(epoch FROM now()))::BIGINT + ((o_action ->> 'attempts')::INTEGER * 30000000))::BIGINT,
+              "error_code" = ('external_effect_failed')::TEXT,
+              "state" = (CASE WHEN v_retry THEN 'pending'
+            WHEN true THEN 'failed'
+            END)::TEXT,
+              "op_updated" = (o_op ->> 'id')::UUID,
+              "time_updated" = (o_op ->> 'time')::BIGINT
+            WHERE "id" = i_action
+            RETURNING
+              "id",
+              "event_id",
+              "command_id",
+              "inbox_id",
+              "generation",
+              "account_generation",
+              "attempts",
+              "lease",
+              "lease_until",
+              "deadline",
+              "next_attempt_at",
+              "error_code",
+              "result",
+              "account_id",
+              "source_id",
+              "kind",
+              "owner_id",
+              "state",
+              "data",
+              "member_confirmed",
+              "session_id",
+              "audit_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_failed;
+          v_log := "finfolk_rpc".record_social_audit('SocialAction',(o_action ->> 'audit_id')::UUID,CASE WHEN v_retry THEN 'retry'
+          WHEN true THEN 'failed'
+          END,o_op);
+          IF NOT v_retry THEN
+            PERFORM "finfolk_rpc".finish_social_command_reply(
+              v_command,
+              'Unable to verify your social account. Try /connect again later.',
+              null,
+              null,
+              ('{"error":"external_effect_failed"}')::JSONB,
+              o_op
+            );
+          END IF;
+          RETURN jsonb_build_object('id',i_action,'status',CASE WHEN v_retry THEN 'pending'
+          WHEN true THEN 'failed'
+          END);
+      END;
+      END IF;
+      IF (o_action ->> 'kind') = 'verify-account' THEN
+        IF ((((((o_result - 'binding') - 'provider') - 'namespace') - 'externalId') - 'eligible') != ('{}')::JSONB) OR (coalesce(o_result ->> 'provider','') != (o_account ->> 'provider')) OR (coalesce(o_result ->> 'namespace','') != (o_account ->> 'namespace')) OR (coalesce(o_result ->> 'externalId','') != (o_account ->> 'external_id')) OR (coalesce(jsonb_typeof(o_result -> 'eligible'),'null') != 'boolean') THEN
+          RAISE EXCEPTION 'Provider evidence does not match the requested identity';
+        END IF;
+        IF (o_result ->> 'eligible')::BOOLEAN THEN
+          DECLARE
+        v_next UUID;
+      BEGIN
+        v_next := "finfolk_rpc".enqueue_social_action(v_command,'prepare-link',o_op);
+            null;
+      END;
+        ELSE
+          PERFORM "finfolk_rpc".finish_social_command_reply(
+            v_command,
+            'This social account is not eligible to connect.',
+            null,
+            null,
+            ('{"error":"account_ineligible"}')::JSONB,
+            o_op
+          );
+        END IF;
+      ELSIF (o_action ->> 'kind') = 'prepare-link' THEN
+        DECLARE
+        v_ciphertext TEXT;
+          v_code TEXT;
+          v_hash TEXT;
+      BEGIN
+        v_code := (o_result ->> 'code');
+          v_hash := (o_result ->> 'tokenHash');
+          v_ciphertext := (o_result ->> 'ciphertext');
+          IF (((((o_result - 'binding') - 'code') - 'tokenHash') - 'ciphertext') != ('{}')::JSONB) OR v_code IS NULL OR (jsonb_typeof(o_result -> 'code') != 'string') OR NOT "regexp_like"(v_code,'^[A-Z0-9]{8}$') OR v_hash IS NULL OR (jsonb_typeof(o_result -> 'tokenHash') != 'string') OR (v_hash != "encode"("digest"(v_code,'sha256'),'hex')) OR v_ciphertext IS NULL OR (jsonb_typeof(o_result -> 'ciphertext') != 'string') OR (length(v_ciphertext) < 40) OR (length(v_ciphertext) > 8192) THEN
+            RAISE EXCEPTION 'Invalid connection code preparation';
+          END IF;
+          PERFORM "finfolk_rpc".retire_social_code_deliveries((o_account ->> 'id')::UUID);
+          DECLARE
+            o_old JSONB;
+            o_proof JSONB;
+          BEGIN
+            WITH j_ret AS (  
+              UPDATE "finfolk"."SocialConnectionProof" SET
+                "status" = ('revoked')::"finfolk"."EnumSocialProofStatus",
+                "op_updated" = (o_op ->> 'id')::UUID,
+                "time_updated" = (o_op ->> 'time')::BIGINT
+              WHERE "account_id" = (o_account ->> 'id')::UUID
+              AND "status" IN ('pending','verified')
+              RETURNING
+                "id",
+                "account_id",
+                "user_id",
+                "connection_id",
+                "event_id",
+                "inbox_id",
+                "receipt_id",
+                "kind",
+                "token_hash",
+                "nonce_hash",
+                "flow_key",
+                "generation",
+                "status",
+                "expires_at",
+                "verified_at",
+                "consumed_at",
+                "consumed_version",
+                "error",
+                "provider_data",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated")
+            SELECT jsonb_agg(j_ret) FROM j_ret INTO o_old;
+            WITH j_ret AS (  
+              INSERT INTO "finfolk"."SocialConnectionProof" (
+                "account_id",
+                "event_id",
+                "inbox_id",
+                "kind",
+                "token_hash",
+                "generation",
+                "status",
+                "expires_at",
+                "verified_at",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated"
+              ) VALUES (
+                ((o_account ->> 'id')::UUID)::UUID,
+                ((o_event ->> 'id')::UUID)::UUID,
+                (i_inbox)::UUID,
+                ('message')::"finfolk"."EnumSocialProofKind",
+                (v_hash)::TEXT,
+                (o_account ->> 'generation')::INTEGER,
+                ('verified')::"finfolk"."EnumSocialProofStatus",
+                ((1000000 * extract(epoch FROM now()))::BIGINT + 600000000)::BIGINT,
+                (1000000 * extract(epoch FROM now()))::BIGINT,
+                (o_op ->> 'id')::UUID,
+                (o_op ->> 'id')::UUID,
+                (o_op ->> 'time')::BIGINT,
+                (o_op ->> 'time')::BIGINT
+              ) RETURNING
+                "id",
+                "account_id",
+                "user_id",
+                "connection_id",
+                "event_id",
+                "inbox_id",
+                "receipt_id",
+                "kind",
+                "token_hash",
+                "nonce_hash",
+                "flow_key",
+                "generation",
+                "status",
+                "expires_at",
+                "verified_at",
+                "consumed_at",
+                "consumed_version",
+                "error",
+                "provider_data",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated")
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_proof;
+            PERFORM "finfolk_rpc".finish_social_command_reply(v_command,null,v_ciphertext,o_binding,jsonb_build_object(
+              'proofId',
+              (o_proof ->> 'id')::UUID,
+              'expiresAt',
+              o_proof -> 'expires_at'
+            ),o_op);
+          END;
+      END;
+      ELSE
+        RAISE EXCEPTION 'Unsupported external action kind';
+      END IF;
+      DECLARE
+        o_finished JSONB;
+        v_log UUID;
+      BEGIN
+        WITH j_ret AS (  
+          UPDATE "finfolk"."SocialAction" SET
+            "lease" = (null)::UUID,
+            "lease_until" = (null)::BIGINT,
+            "error_code" = (null)::TEXT,
+            "result" = "finfolk".as_jsonb(('{"ok":true}')::JSONB),
+            "state" = ('completed')::TEXT,
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "id" = i_action
+          RETURNING
+            "id",
+            "event_id",
+            "command_id",
+            "inbox_id",
+            "generation",
+            "account_generation",
+            "attempts",
+            "lease",
+            "lease_until",
+            "deadline",
+            "next_attempt_at",
+            "error_code",
+            "result",
+            "account_id",
+            "source_id",
+            "kind",
+            "owner_id",
+            "state",
+            "data",
+            "member_confirmed",
+            "session_id",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_finished;
+        v_log := "finfolk_rpc".record_social_audit(
+          'SocialAction',
+          (o_action ->> 'audit_id')::UUID,
+          'completed',
+          o_op
+        );
+        RETURN jsonb_build_object('id',i_action,'status','completed');
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-user-access/EnumAccessSetting 
 DO $$
@@ -2636,64 +6220,6 @@ CREATE TABLE IF NOT EXISTS "finfolk"."AccessInviteEmail" (
 CREATE UNIQUE INDEX IF NOT EXISTS "AccessRoleOwner" ON "finfolk"."AccessRole" ("class_table","class_context","access_id") WHERE ("level" = 'owner') AND ("is_active" = true);
 CREATE UNIQUE INDEX IF NOT EXISTS "AccessRequestPending" ON "finfolk"."AccessRequest" ("class_table","class_context","access_id","from_id") WHERE "status" = 'pending';
 
--- finfolkdb.common.type-social-base/Social 
-CREATE TABLE IF NOT EXISTS "finfolk"."Social" (
-  "id" UUID DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType",
-  "class_ref" UUID NOT NULL,
-  "op_created" UUID,
-  "time_created" BIGINT,
-  PRIMARY KEY (id,class_table),
-  UNIQUE ("class_table","class_ref")
-);
-
--- finfolkdb.common.type-social-base/EnumSocialHandleType 
-DO $$
-BEGIN
-  CREATE TYPE "finfolk"."EnumSocialHandleType" AS ENUM ('instagram','tiktok');
-EXCEPTION WHEN OTHERS THEN
-END;
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.common.type-social-base/SocialHandle 
-CREATE TABLE IF NOT EXISTS "finfolk"."SocialHandle" (
-  "id" UUID DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType",
-  "social_id" UUID NOT NULL,
-  "type" "finfolk"."EnumSocialHandleType" NOT NULL,
-  "handle" TEXT NOT NULL,
-  "is_verified" BOOLEAN NOT NULL DEFAULT false,
-  "verified_at" BIGINT,
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  PRIMARY KEY (id,class_table),
-  UNIQUE ("class_table","type","handle"),
-  CONSTRAINT fk_social_handle_social FOREIGN KEY (class_table,social_id) REFERENCES "finfolk"."Social"(class_table,id) ON DELETE CASCADE
-);
-
--- finfolkdb.common.type-social-base/ret-social-url 
-CREATE OR REPLACE FUNCTION "finfolk".ret_social_url(
-  i_identity TEXT
-) RETURNS TEXT AS $$
-
-  SELECT CASE split_part(i_identity,':',1)
-    WHEN 'instagram' THEN 'https://www.instagram.com/' || split_part(i_identity,':',2) || '/'
-    WHEN 'tiktok' THEN 'https://www.tiktok.com/@' || split_part(i_identity,':',2)
-    END;
-
-$$ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE;
-
--- finfolkdb.common.type-social-base/ret-social-urls 
-CREATE OR REPLACE FUNCTION "finfolk".ret_social_urls(
-  i_identities JSONB
-) RETURNS JSONB AS $$
-
-  SELECT coalesce(jsonb_agg("finfolk".ret_social_url("value")),('[]')::JSONB) FROM jsonb_array_elements_text(coalesce(i_identities,('[]')::JSONB)) WHERE "finfolk".ret_social_url("value") IS NOT NULL;
-
-$$ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE;
-
 -- finfolkdb.common.type-directory-base/DirectoryListing 
 CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryListing" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -2749,97 +6275,6 @@ CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryRun" (
   "time_created" BIGINT,
   "time_updated" BIGINT
 );
-
--- finfolkdb.fn.helper.helper-entity/insert-base-addons 
-CREATE OR REPLACE FUNCTION "finfolk".insert_base_addons(
-  i_class_table TEXT,
-  i_class_ref UUID,
-  i_current JSONB,
-  o_op JSONB
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_audit JSONB;
-    o_current JSONB;
-    o_log JSONB;
-    o_rev JSONB;
-    o_revision JSONB;
-  BEGIN
-    o_current := "finfolk".as_jsonb(i_current);
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."Rev" (
-        "class_table",
-        "class_context",
-        "class_ref",
-        "index",
-        "current",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        (i_class_table)::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        (i_class_ref)::UUID,
-        (1)::INTEGER,
-        (o_current)::JSONB,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","class_ref","index","current","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."Audit" (
-        "class_table",
-        "class_context",
-        "class_ref",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        (i_class_table)::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        (i_class_ref)::UUID,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","class_ref","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."RevLog" (
-        "class_table",
-        "class_context",
-        "rev_id",
-        "version",
-        "deltas",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        (i_class_table)::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        ((o_rev ->> 'id')::UUID)::UUID,
-        (1)::INTEGER,
-        (o_current)::JSONB,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_revision;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."AuditLog" (
-        "class_table",
-        "class_context",
-        "audit_id",
-        "entry",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        (i_class_table)::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        ((o_audit ->> 'id')::UUID)::UUID,
-        "finfolk".as_jsonb((jsonb_build_object('event','create'))::JSONB),
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","audit_id","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
-    RETURN jsonb_build_object('rev',(o_rev ->> 'id')::UUID,'audit',(o_audit ->> 'id')::UUID);
-  END;
-
-$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.directory.directory-manage/insert-directory-listing 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_directory_listing(
@@ -2985,47 +6420,13 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_directory_public(
 
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.fn.helper.helper-access/is-user-blocked 
-CREATE OR REPLACE FUNCTION "finfolk".is_user_blocked(
-  i_viewer UUID,
-  i_owner UUID
-) RETURNS BOOLEAN AS $$
-
-  DECLARE
-    v_forward BOOLEAN;
-    v_reverse BOOLEAN;
-  BEGIN
-    SELECT exists(SELECT 1 FROM "finfolk"."UserBlock"
-    WHERE "owner_id" = i_viewer AND "target_id" = i_owner) INTO v_forward;
-    SELECT exists(SELECT 1 FROM "finfolk"."UserBlock"
-    WHERE "owner_id" = i_owner AND "target_id" = i_viewer) INTO v_reverse;
-    RETURN v_forward OR v_reverse;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.helper.helper-access/is-user-active 
-CREATE OR REPLACE FUNCTION "finfolk".is_user_active(
-  i_user UUID
-) RETURNS BOOLEAN AS $$
-
-  DECLARE
-    v_active BOOLEAN;
-  BEGIN
-    SELECT exists(SELECT 1 FROM "finfolk"."User"
-    WHERE "id" = i_user AND "deleted" = false) INTO v_active;
-    RETURN v_active;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
 -- finfolkdb.common.type-trip-base/Trip 
 CREATE TABLE IF NOT EXISTS "finfolk"."Trip" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Trip')::"finfolk"."EnumClassType") STORED,
   "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
   "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
   "start_date" DATE NOT NULL,
   "end_date" DATE NOT NULL,
   "detail" JSONB NOT NULL DEFAULT '{}',
@@ -3042,7 +6443,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."Trip" (
   CONSTRAINT fk_trip_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id)
 );
 CREATE INDEX ON "finfolk"."Trip" ("owner_id");
-CREATE INDEX ON "finfolk"."Trip" ("beach_id");
+CREATE INDEX ON "finfolk"."Trip" ("site_id");
 
 -- finfolkdb.common.type-trip-base/TripImport 
 CREATE TABLE IF NOT EXISTS "finfolk"."TripImport" (
@@ -3111,7 +6512,7 @@ $$ LANGUAGE 'plpgsql';
 CREATE TABLE IF NOT EXISTS "finfolk"."TripPublication" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "trip_id" UUID NOT NULL REFERENCES "finfolk"."Trip"("id") ON DELETE CASCADE,
-  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
   "status" "finfolk"."EnumTripPublicationStatus" NOT NULL DEFAULT 'pending',
   "public_consent" BOOLEAN NOT NULL DEFAULT false,
   "published_at" BIGINT,
@@ -3126,25 +6527,6 @@ CREATE TABLE IF NOT EXISTS "finfolk"."TripPublication" (
 
 -- finfolkdb.common.type-trip-base/__trip_import_indexes__ 
 CREATE UNIQUE INDEX IF NOT EXISTS "TripImportActive" ON "finfolk"."TripImport" ("trip_id") WHERE "is_active";
-
--- finfolkdb.common.fn-system-util/auth-uid 
-CREATE OR REPLACE FUNCTION "finfolk".auth_uid() RETURNS UUID AS $$
-
-  SELECT ("nullif"(current_setting('finfolk.actor_id',true),''))::UUID;
-
-$$ LANGUAGE 'sql';
-
--- finfolkdb.common.fn-system-util/as-iso-time 
-CREATE OR REPLACE FUNCTION "finfolk".as_iso_time(
-  i_time BIGINT
-) RETURNS TEXT AS $$
-
-  SELECT to_char(
-    "timezone"('UTC',to_timestamp((i_time)::NUMERIC / 1000000)),
-    'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
-  );
-
-$$ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE;
 
 -- finfolkdb.fn.user.user-manage-trips/insert-trip 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_trip(
@@ -3166,7 +6548,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_trip(
       INSERT INTO "finfolk"."Trip" (
         "id",
         "owner_id",
-        "beach_id",
+        "site_id",
         "start_date",
         "end_date",
         "detail",
@@ -3192,7 +6574,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_trip(
       ) RETURNING
         "id",
         "owner_id",
-        "beach_id",
+        "site_id",
         "start_date",
         "end_date",
         "detail",
@@ -3225,7 +6607,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_owned(
       SELECT
         "id",
         "owner_id",
-        "beach_id",
+        "site_id",
         "start_date",
         "end_date",
         "detail",
@@ -3268,7 +6650,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_owned(
     END IF;
     RETURN jsonb_build_object('id',(o_trip ->> 'id')::UUID,'draft',(o_trip -> 'detail') || jsonb_build_object(
       'beachId',
-      (o_trip ->> 'beach_id')::UUID,
+      (o_trip ->> 'site_id')::UUID,
       'start',
       o_trip ->> 'start_date',
       'end',
@@ -3293,7 +6675,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_trip_import(
       SELECT
         "id",
         "owner_id",
-        "beach_id",
+        "site_id",
         "start_date",
         "end_date",
         "audit_id",
@@ -3382,7 +6764,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_trip_import_batch(
       SELECT
         "id",
         "owner_id",
-        "beach_id",
+        "site_id",
         "start_date",
         "end_date",
         "audit_id",
@@ -3804,7 +7186,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_publication_snapshot(
     o_publication JSONB;
   BEGIN
     WITH j_ret AS (  
-      SELECT "beach_id","detail" FROM "finfolk"."TripPublication"
+      SELECT "site_id","detail" FROM "finfolk"."TripPublication"
       WHERE "trip_id" = i_trip_id
       AND "status" = (i_status)::"finfolk"."EnumTripPublicationStatus"
       LIMIT 1)
@@ -3812,7 +7194,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_publication_snapshot(
     IF o_publication is null  THEN
       RETURN null;
     END IF;
-    RETURN (o_publication -> 'detail') || jsonb_build_object('beachId',(o_publication ->> 'beach_id')::UUID);
+    RETURN (o_publication -> 'detail') || jsonb_build_object('beachId',(o_publication ->> 'site_id')::UUID);
   END;
 
 $$ LANGUAGE 'plpgsql';
@@ -3837,7 +7219,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
       SELECT
         "id",
         "owner_id",
-        "beach_id",
+        "site_id",
         "start_date",
         "end_date",
         "audit_id",
@@ -3884,7 +7266,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
         AND "status" = ('complete')::"finfolk"."EnumTripImportStatus"
         LIMIT 1)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_active;
-      IF (i_revision != (o_rev ->> 'index')::INTEGER) OR (o_snapshot ->> 'beachId')::UUID IS NULL OR ((o_snapshot ->> 'beachId')::UUID != (o_trip ->> 'beach_id')::UUID) THEN
+      IF (i_revision != (o_rev ->> 'index')::INTEGER) OR (o_snapshot ->> 'beachId')::UUID IS NULL OR ((o_snapshot ->> 'beachId')::UUID != (o_trip ->> 'site_id')::UUID) THEN
         RETURN null;
       END IF;
       IF o_active is null  THEN
@@ -3899,7 +7281,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
           RETURNING
             "id",
             "trip_id",
-            "beach_id",
+            "site_id",
             "status",
             "public_consent",
             "published_at",
@@ -3919,7 +7301,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
               RETURNING
                 "id",
                 "trip_id",
-                "beach_id",
+                "site_id",
                 "status",
                 "public_consent",
                 "published_at",
@@ -3949,7 +7331,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
             WITH j_ret AS (  
               INSERT INTO "finfolk"."TripPublication" (
                 "trip_id",
-                "beach_id",
+                "site_id",
                 "status",
                 "public_consent",
                 "published_at",
@@ -3972,7 +7354,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_trip_publication(
               ) RETURNING
                 "id",
                 "trip_id",
-                "beach_id",
+                "site_id",
                 "status",
                 "public_consent",
                 "published_at",
@@ -4025,7 +7407,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_public(
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_trip;
     WITH j_ret AS (  
-      SELECT "beach_id","published_at","detail" FROM "finfolk"."TripPublication"
+      SELECT "site_id","published_at","detail" FROM "finfolk"."TripPublication"
       WHERE "trip_id" = i_trip_id
       AND "status" = ('published')::"finfolk"."EnumTripPublicationStatus"
       AND "public_consent" = true
@@ -4045,7 +7427,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_trip_public(
       'story',
       o_data ->> 'story',
       'beachId',
-      (o_publication ->> 'beach_id')::UUID,
+      (o_publication ->> 'site_id')::UUID,
       'beachName',
       o_data ->> 'beachName',
       'timezone',
@@ -4118,7 +7500,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".review_trip_publication(
           RETURNING
             "id",
             "trip_id",
-            "beach_id",
+            "site_id",
             "status",
             "public_consent",
             "published_at",
@@ -4140,7 +7522,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".review_trip_publication(
           RETURNING
             "id",
             "trip_id",
-            "beach_id",
+            "site_id",
             "status",
             "public_consent",
             "published_at",
@@ -4164,7 +7546,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".review_trip_publication(
           RETURNING
             "id",
             "trip_id",
-            "beach_id",
+            "site_id",
             "status",
             "public_consent",
             "published_at",
@@ -4186,7 +7568,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".review_trip_publication(
           RETURNING
             "id",
             "trip_id",
-            "beach_id",
+            "site_id",
             "status",
             "public_consent",
             "published_at",
@@ -4255,7 +7637,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".withdraw_trip_publication(
         RETURNING
           "id",
           "trip_id",
-          "beach_id",
+          "site_id",
           "status",
           "public_consent",
           "published_at",
@@ -4363,7 +7745,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".update_trip_draft(
       BEGIN
         WITH j_ret AS (  
           UPDATE "finfolk"."Trip" SET
-            "beach_id" = (o_draft ->> 'beachId')::UUID,
+            "site_id" = (o_draft ->> 'beachId')::UUID,
             "start_date" = (v_start)::DATE,
             "end_date" = (v_end)::DATE,
             "detail" = "finfolk".as_jsonb((((o_draft - 'beachId') - 'start') - 'end')::JSONB),
@@ -4373,7 +7755,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".update_trip_draft(
           RETURNING
             "id",
             "owner_id",
-            "beach_id",
+            "site_id",
             "start_date",
             "end_date",
             "audit_id",
@@ -4462,7 +7844,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."UserInvitationJoin" (
 CREATE TABLE IF NOT EXISTS "finfolk"."UserPointsEntry" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "action_id" UUID NOT NULL REFERENCES "finfolk"."InstagramAction"("id"),
+  "action_id" UUID NOT NULL REFERENCES "finfolk"."SocialAction"("id"),
   "day" DATE NOT NULL,
   "points" INTEGER NOT NULL DEFAULT 1,
   "reversed" BOOLEAN NOT NULL DEFAULT false,
@@ -4479,67 +7861,6 @@ CREATE TABLE IF NOT EXISTS "finfolk"."UserRequestLimit" (
   "minute" BIGINT NOT NULL,
   "count" INTEGER NOT NULL,
   UNIQUE ("user_id")
-);
-
--- finfolkdb.common.type-social-post/SocialPost 
-CREATE TABLE IF NOT EXISTS "finfolk"."SocialPost" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('SocialPost')::"finfolk"."EnumClassType") STORED,
-  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
-  "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
-  "url" TEXT NOT NULL,
-  "platform" "finfolk"."EnumSocialHandleType" NOT NULL,
-  "creator_handle" TEXT NOT NULL DEFAULT '',
-  "status" "finfolk"."EnumSocialPostStatus" NOT NULL DEFAULT 'pending',
-  "public_consent" BOOLEAN NOT NULL DEFAULT false,
-  "rejection_reason" TEXT NOT NULL DEFAULT '',
-  "reviewed_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "reviewed_at" BIGINT,
-  "audit_id" UUID NOT NULL,
-  "rev_id" UUID NOT NULL,
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  UNIQUE ("owner_id","beach_id","url"),
-  UNIQUE ("audit_id"),
-  UNIQUE ("rev_id"),
-  CONSTRAINT fk_social_post_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id),
-  CONSTRAINT fk_social_post_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id)
-);
-CREATE INDEX ON "finfolk"."SocialPost" ("owner_id");
-CREATE INDEX ON "finfolk"."SocialPost" ("beach_id");
-CREATE INDEX ON "finfolk"."SocialPost" ("status");
-
--- finfolkdb.common.type-social-post/SocialPostReport 
-CREATE TABLE IF NOT EXISTS "finfolk"."SocialPostReport" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "post_id" UUID NOT NULL REFERENCES "finfolk"."SocialPost"("id") ON DELETE CASCADE,
-  "reporter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "reason" TEXT NOT NULL,
-  "status" "finfolk"."EnumSocialPostReportStatus" NOT NULL DEFAULT 'open',
-  "resolved_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "resolved_at" BIGINT,
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  UNIQUE ("post_id","reporter_id"),
-  CONSTRAINT bounded_reason CHECK ((length("reason") >= 1) AND (length("reason") <= 1000))
-);
-CREATE INDEX ON "finfolk"."SocialPostReport" ("status");
-
--- finfolkdb.common.type-social-post/SocialReferral 
-CREATE TABLE IF NOT EXISTS "finfolk"."SocialReferral" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "day" DATE NOT NULL DEFAULT ("timezone"(
-    'Australia/Sydney',
-    to_timestamp((1000000 * extract(epoch FROM now()))::BIGINT / 1000000.0)
-  ))::DATE,
-  "platform" "finfolk"."EnumSocialHandleType" NOT NULL,
-  "clicks" BIGINT NOT NULL DEFAULT 0,
-  UNIQUE ("day","platform")
 );
 
 -- finfolkdb.common.type-event/Event 
@@ -4749,6 +8070,220 @@ CREATE TABLE IF NOT EXISTS "finfolk"."FinnieEntry" (
   UNIQUE ("account_id","reference"),
   CONSTRAINT nonzero_amount CHECK ("amount" != 0)
 );
+
+-- finfolkdb.fn.social.social-commands/social-command-registry 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".social_command_registry() RETURNS JSONB AS $$
+BEGIN
+  RETURN ('{"help":{"public":true},"ping":{"public":true},"site":{"public":true},"privacy":{"public":true},"status":{"public":true},"connect":{"public":true,"privateChannel":true},"disconnect":{"member":true,"privateChannel":true},"whoami":{"member":true,"privateChannel":true,"mockOnly":true}}')::JSONB;
+END;
+$$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
+
+-- finfolkdb.fn.social.social-commands/parse-social-command 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".parse_social_command(
+  i_channel TEXT,
+  i_text TEXT
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_policy JSONB;
+    o_registry JSONB;
+    v_args TEXT;
+    v_name TEXT;
+    v_text TEXT;
+    v_topic TEXT;
+  BEGIN
+    v_text := btrim(coalesce(i_text,''));
+    v_name := '';
+    v_args := '';
+    v_topic := '';
+    o_registry := "finfolk_rpc".social_command_registry();
+    o_policy := null;
+    IF NOT ((i_channel = 'message') OR (i_channel = 'mention') OR (i_channel = 'owned')) THEN
+      RAISE EXCEPTION 'Unknown social command channel';
+    END IF;
+    IF (length(v_text) > 2000) OR ("strpos"(v_text,"chr"(10)) > 0) OR ("strpos"(v_text,"chr"(13)) > 0) THEN
+      RETURN jsonb_build_object('command','help','error','one_command','args',('{}')::JSONB);
+    END IF;
+    IF (i_channel = 'mention') AND NOT coalesce("regexp_like"(
+      v_text,
+      '(^|[[:space:]])@finfolk[.]com[.]au([!?,]?)([[:space:]]|$)',
+      'i'
+    ),false) THEN
+      RETURN jsonb_build_object('command','none','args',('{}')::JSONB);
+    END IF;
+    IF i_channel != 'message' THEN
+      v_text := btrim(regexp_replace(
+        v_text,
+        '(^|[[:space:]])@finfolk[.]com[.]au([!?,]?)([[:space:]]|$)',
+        ' ',
+        'gi'
+      ));
+    END IF;
+    IF lower(v_text) = 'help' THEN
+      v_text := '/help';
+    END IF;
+    IF NOT "starts_with"(v_text,'/') THEN
+      RETURN jsonb_build_object('command','none','args',('{}')::JSONB);
+    END IF;
+    v_name := lower(regexp_replace(v_text,'^/([A-Za-z]+).*$','\1'));
+    v_args := btrim(regexp_replace(v_text,'^/[A-Za-z]+',''));
+    IF v_name = 'menu' THEN
+      v_name := 'help';
+    END IF;
+    IF v_name = 'claim' THEN
+      RETURN jsonb_build_object('command','help','guidance','claim_retired','args',('{}')::JSONB);
+    END IF;
+    IF NOT jsonb_exists(o_registry,v_name) THEN
+      RETURN jsonb_build_object('command','help','error','unknown_command','args',('{}')::JSONB);
+    END IF;
+    o_policy := (o_registry -> v_name);
+    IF (i_channel != 'message') AND coalesce((o_policy ->> 'privateChannel')::BOOLEAN,false) THEN
+      RETURN jsonb_build_object(
+        'command',
+        'help',
+        'guidance',
+        'use_dm',
+        'args',
+        jsonb_build_object('command',v_name)
+      );
+    END IF;
+    IF v_name = 'help' THEN
+      v_topic := lower(v_args);
+      IF NOT ((v_topic = '') OR (v_topic = 'account') OR (v_topic = 'diagnostics')) THEN
+        RETURN jsonb_build_object('command','help','error','unknown_topic','args',('{}')::JSONB);
+      END IF;
+      RETURN jsonb_build_object(
+        'command',
+        'help',
+        'args',
+        jsonb_build_object('topic',v_topic),
+        'policy',
+        o_policy
+      );
+    END IF;
+    IF v_args != '' THEN
+      RETURN jsonb_build_object(
+        'command',
+        'help',
+        'error',
+        'unexpected_arguments',
+        'args',
+        jsonb_build_object('command',v_name)
+      );
+    END IF;
+    RETURN jsonb_build_object('command',v_name,'args',('{}')::JSONB,'policy',o_policy);
+  END;
+
+$$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
+
+-- finfolkdb.fn.social.social-commands/social-command-help 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".social_command_help(
+  i_channel TEXT,
+  i_provider TEXT,
+  i_enabled JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_policy JSONB;
+    o_registry JSONB;
+    v_help TEXT;
+    v_name TEXT;
+  BEGIN
+    o_registry := "finfolk_rpc".social_command_registry();
+    v_help := 'Available commands:';
+    v_name := null;
+    o_policy := null;
+    IF jsonb_typeof(i_enabled) != 'array' THEN
+      RAISE EXCEPTION 'Enabled commands must be an array';
+    END IF;
+    FOR v_name IN SELECT jsonb_array_elements_text(i_enabled) LOOP
+      o_policy := (o_registry -> v_name);
+      IF o_policy IS NOT NULL AND ((i_channel = 'message') OR NOT coalesce((o_policy ->> 'privateChannel')::BOOLEAN,false)) AND ((i_provider = 'mock') OR NOT coalesce((o_policy ->> 'mockOnly')::BOOLEAN,false)) THEN
+        v_help := "concat"(v_help,"chr"(10),'/',v_name);
+      END IF;
+    END LOOP;
+    RETURN jsonb_build_object('reply',v_help);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-commands/social-public-reply 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".social_public_reply(
+  i_parsed JSONB,
+  i_channel TEXT,
+  i_provider TEXT,
+  i_enabled JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    v_command TEXT;
+    v_guidance TEXT;
+    v_topic TEXT;
+  BEGIN
+    v_command := (i_parsed ->> 'command');
+    v_guidance := (i_parsed ->> 'guidance');
+    v_topic := ((i_parsed -> 'args') ->> 'topic');
+    IF (v_guidance IS NOT NULL OR i_parsed ->> 'error' IS NOT NULL) AND NOT jsonb_exists(i_enabled,'help') THEN
+      RETURN null;
+    END IF;
+    IF v_guidance = 'use_dm' THEN
+      RETURN jsonb_build_object(
+        'reply',
+        'For account commands, send a DM to @finfolk.com.au. Connection codes and personal details are never posted in comments.'
+      );
+    END IF;
+    IF v_guidance = 'claim_retired' THEN
+      RETURN jsonb_build_object(
+        'reply',
+        '/claim is retired. Send /connect in a DM to link your FinFolk account.'
+      );
+    END IF;
+    IF i_parsed ->> 'error' is not null  THEN
+      RETURN jsonb_build_object(
+        'reply',
+        'Please send one supported command at a time. Send /help for available commands.'
+      );
+    END IF;
+    IF NOT jsonb_exists(i_enabled,v_command) THEN
+      RETURN null;
+    END IF;
+    IF v_command = 'ping' THEN
+      RETURN jsonb_build_object('reply','Pong.');
+    END IF;
+    IF v_command = 'site' THEN
+      RETURN jsonb_build_object('reply','Explore FinFolk: https://finfolk.com.au');
+    END IF;
+    IF v_command = 'privacy' THEN
+      RETURN jsonb_build_object(
+        'reply',
+        'Privacy and deletion information: https://api.finfolk.com.au/privacy'
+      );
+    END IF;
+    IF v_command = 'help' THEN
+      IF (v_topic = 'diagnostics') AND NOT jsonb_exists(i_enabled,'ping') THEN
+        RETURN jsonb_build_object('reply','Diagnostics are not enabled.');
+      END IF;
+      IF (v_topic = 'account') AND NOT jsonb_exists(i_enabled,'connect') THEN
+        RETURN jsonb_build_object(
+          'reply',
+          'Account linking is not enabled. Manage existing connections privately on FinFolk.'
+        );
+      END IF;
+      IF v_topic = 'account' THEN
+        RETURN jsonb_build_object(
+          'reply',
+          'Send /connect in a DM, then enter the private code in your signed-in FinFolk account. Connecting never enables public sharing automatically.'
+        );
+      END IF;
+      IF v_topic = 'diagnostics' THEN
+        RETURN jsonb_build_object('reply','Send /ping to check that FinFolk is responding.');
+      END IF;
+      RETURN "finfolk_rpc".social_command_help(i_channel,i_provider,i_enabled);
+    END IF;
+    RETURN null;
+  END;
+
+$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-user-report/UserReport 
 CREATE TABLE IF NOT EXISTS "finfolk"."UserReport" (
@@ -4997,6 +8532,228 @@ CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentJob" (
   CONSTRAINT check_1 CHECK (("lease_token" IS NULL AND "lease_until" IS NULL) OR ("lease_token" IS NOT NULL AND "lease_until" IS NOT NULL))
 );
 
+-- finfolkdb.fn.social.social-policy/social-member-allowed 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".social_member_allowed(
+  o_inbox JSONB,
+  i_user UUID
+) RETURNS BOOLEAN AS $$
+BEGIN
+  IF NOT "finfolk".is_user_active(i_user) THEN
+    RETURN false;
+  END IF;
+  DECLARE
+    o_operated JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "user_id",
+        "account_id",
+        "status",
+        "identity_version",
+        "generation",
+        "credential_ciphertext",
+        "access_expires_at",
+        "refresh_expires_at",
+        "credential_lease",
+        "lease_until",
+        "share_posts",
+        "public_points",
+        "capabilities",
+        "granted_scopes",
+        "cursor",
+        "last_success",
+        "next_at",
+        "failures",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnection"
+      WHERE "account_id" = (o_inbox ->> 'social_account_id')::UUID
+      AND "status" = ('active')::"finfolk"."EnumSocialConnectionStatus"
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_operated;
+    RETURN NOT "finfolk".is_user_blocked(i_user,(o_operated ->> 'user_id')::UUID);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-policy/social-work-policy-error 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".social_work_policy_error(
+  o_inbox JSONB,
+  o_event JSONB,
+  o_command JSONB
+) RETURNS TEXT AS $$
+
+  DECLARE
+    v_name TEXT;
+  BEGIN
+    v_name := coalesce(
+      o_command ->> 'command',
+      ((o_event -> 'payload') -> 'parsed') ->> 'command'
+    );
+    IF o_event IS NULL OR ((o_event ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) THEN
+      RETURN 'generation_changed';
+    END IF;
+    IF (o_event ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT THEN
+      RETURN 'deadline_expired';
+    END IF;
+    IF ((o_inbox ->> 'mode') = 'pilot') AND NOT jsonb_exists(
+      o_inbox -> 'pilot_sender_ids',
+      (o_event -> 'payload') ->> 'senderId'
+    ) THEN
+      RETURN 'audience_changed';
+    END IF;
+    IF (v_name != 'none') AND NOT jsonb_exists(o_inbox -> 'enabled_commands',v_name) THEN
+      RETURN 'command_disabled';
+    END IF;
+    IF (v_name = 'whoami') AND ((o_inbox ->> 'provider') != 'mock') THEN
+      RETURN 'mock_only';
+    END IF;
+    IF ((o_event ->> 'channel') = 'message') AND ((v_name = 'connect') OR (v_name = 'status') OR (v_name = 'whoami')) THEN
+      DECLARE
+      o_account JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          SELECT
+            "id",
+            "provider",
+            "namespace",
+            "external_id",
+            "handle",
+            "display_name",
+            "generation",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialAccount"
+          WHERE "id" = (o_event ->> 'account_id')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+        IF (o_event ->> 'account_generation')::INTEGER != (o_account ->> 'generation')::INTEGER THEN
+          RETURN 'identity_changed';
+        END IF;
+    END;
+    END IF;
+    IF o_command ->> 'owner_id' IS NOT NULL AND ((v_name = 'status') OR (v_name = 'whoami')) THEN
+      DECLARE
+      o_connection JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          SELECT
+            "id",
+            "user_id",
+            "account_id",
+            "status",
+            "identity_version",
+            "generation",
+            "credential_ciphertext",
+            "access_expires_at",
+            "refresh_expires_at",
+            "credential_lease",
+            "lease_until",
+            "share_posts",
+            "public_points",
+            "capabilities",
+            "granted_scopes",
+            "cursor",
+            "last_success",
+            "next_at",
+            "failures",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialConnection"
+          WHERE "id" = (o_command ->> 'connection_id')::UUID
+          AND "status" = ('active')::"finfolk"."EnumSocialConnectionStatus"
+          LIMIT 1
+          FOR SHARE)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_connection;
+        IF o_connection IS NULL OR o_command ->> 'identity_version' IS NULL OR ((o_connection ->> 'account_id')::UUID != (o_event ->> 'account_id')::UUID) OR ((o_connection ->> 'user_id')::UUID != (o_command ->> 'owner_id')::UUID) OR ((o_connection ->> 'identity_version')::UUID != (o_command ->> 'identity_version')::UUID) OR NOT "finfolk_rpc".social_member_allowed(o_inbox,(o_command ->> 'owner_id')::UUID) THEN
+          RETURN 'member_restricted';
+        END IF;
+    END;
+    END IF;
+    IF (o_command -> 'result') ->> 'postId' is not null  THEN
+      DECLARE
+      o_post JSONB;
+        o_viewer JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          SELECT
+            "id",
+            "owner_id",
+            "site_id",
+            "url",
+            "platform",
+            "creator_handle",
+            "status",
+            "public_consent",
+            "rejection_reason",
+            "reviewed_by_id",
+            "reviewed_at",
+            "audit_id",
+            "rev_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialPost"
+          WHERE "id" = ((o_command -> 'result') ->> 'postId')::UUID
+          LIMIT 1
+          FOR SHARE)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_post;
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "user_id",
+            "account_id",
+            "status",
+            "identity_version",
+            "generation",
+            "credential_ciphertext",
+            "access_expires_at",
+            "refresh_expires_at",
+            "credential_lease",
+            "lease_until",
+            "share_posts",
+            "public_points",
+            "capabilities",
+            "granted_scopes",
+            "cursor",
+            "last_success",
+            "next_at",
+            "failures",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialConnection"
+          WHERE "account_id" = (o_event ->> 'account_id')::UUID
+          AND "status" = ('active')::"finfolk"."EnumSocialConnectionStatus"
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_viewer;
+        IF o_post IS NULL OR ((o_post ->> 'status') != 'approved') OR NOT (o_post ->> 'public_consent')::BOOLEAN OR ((o_post ->> 'url') != (o_command ->> 'source_url')) OR NOT "finfolk".is_user_active((o_post ->> 'owner_id')::UUID) OR "finfolk".is_user_blocked((o_viewer ->> 'user_id')::UUID,(o_post ->> 'owner_id')::UUID) THEN
+          RETURN 'publication_withdrawn';
+        END IF;
+    END;
+    END IF;
+    RETURN null;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
 -- finfolkdb.fn.messaging.messaging-chat/receive-chat-message 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
   i_application UUID,
@@ -5013,6 +8770,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
     WITH j_ret AS (  
       SELECT
         "id",
+        "social_account_id",
         "key",
         "application_id",
         "provider",
@@ -5032,6 +8790,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
         "last_reply_at",
         "time_updated",
         "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
       WHERE "id" = i_account AND "application_id" = i_application
@@ -5145,7 +8907,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_chat_history(
         LIMIT 1)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_conversation;
       WITH j_ret AS (  
-        SELECT "id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+        SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
         WHERE "id" = (o_conversation ->> 'participant_id')::UUID
         AND "account_id" = i_account
         AND "external_id" = i_subject
@@ -5155,6 +8917,1648 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_chat_history(
         RETURN ('[]')::JSONB;
       END IF;
       RETURN "finfolk_rpc".ret_messaging_history(i_application,i_account,(o_conversation ->> 'id')::UUID);
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-connections/invalidate-social-personal-work 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".invalidate_social_personal_work(
+  i_account UUID,
+  i_exclude_command UUID,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_actions JSONB;
+    o_command JSONB;
+    o_commands JSONB;
+    o_proofs JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      UPDATE "finfolk"."SocialConnectionProof" SET
+        "status" = ('revoked')::"finfolk"."EnumSocialProofStatus",
+        "op_updated" = (o_op ->> 'id')::UUID,
+        "time_updated" = (o_op ->> 'time')::BIGINT
+      WHERE "account_id" = i_account AND "status" IN ('pending','verified')
+      RETURNING
+        "id",
+        "account_id",
+        "user_id",
+        "connection_id",
+        "event_id",
+        "inbox_id",
+        "receipt_id",
+        "kind",
+        "token_hash",
+        "nonce_hash",
+        "flow_key",
+        "generation",
+        "status",
+        "expires_at",
+        "verified_at",
+        "consumed_at",
+        "consumed_version",
+        "error",
+        "provider_data",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_proofs;
+    WITH j_ret AS (  
+      UPDATE "finfolk"."SocialAction" SET
+        "lease" = (null)::UUID,
+        "lease_until" = (null)::BIGINT,
+        "error_code" = ('identity_changed')::TEXT,
+        "state" = ('expired')::TEXT,
+        "op_updated" = (o_op ->> 'id')::UUID,
+        "time_updated" = (o_op ->> 'time')::BIGINT
+      WHERE "account_id" = i_account AND "state" IN ('pending','running')
+      RETURNING
+        "id",
+        "event_id",
+        "command_id",
+        "inbox_id",
+        "generation",
+        "account_generation",
+        "attempts",
+        "lease",
+        "lease_until",
+        "deadline",
+        "next_attempt_at",
+        "error_code",
+        "result",
+        "account_id",
+        "source_id",
+        "kind",
+        "owner_id",
+        "state",
+        "data",
+        "member_confirmed",
+        "session_id",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_actions;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "event_id",
+        "inbox_id",
+        "generation",
+        "account_id",
+        "key",
+        "context",
+        "external_actor_id",
+        "external_media_id",
+        "owner_id",
+        "connection_id",
+        "identity_version",
+        "command",
+        "args",
+        "source_url",
+        "comment_at",
+        "received_at",
+        "state",
+        "result",
+        "site_id",
+        "visit_day",
+        "reply",
+        "send_state",
+        "external_reply_id",
+        "send_started_at",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialCommand"
+      WHERE "account_id" = i_account
+      AND "command" IN ('connect','disconnect','status','whoami'))
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_commands;
+    o_command := null;
+    FOR o_command IN SELECT jsonb_array_elements(coalesce(o_commands,('[]')::JSONB)) LOOP
+      IF i_exclude_command IS NULL OR ((o_command ->> 'id')::UUID != i_exclude_command) THEN
+        DECLARE
+        o_cancelled JSONB;
+          o_uncertain JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            UPDATE "finfolk"."MessagingOutbox" SET
+              "state" = ('cancelled')::"finfolk"."EnumMessagingOutboxStatus",
+              "error_code" = ('identity_changed')::TEXT,
+              "body_ciphertext" = (null)::TEXT,
+              "cipher_context" = "finfolk".as_jsonb(('{}')::JSONB)
+            WHERE "command_id" = (o_command ->> 'id')::UUID
+            AND "state" = ('pending')::"finfolk"."EnumMessagingOutboxStatus"
+            RETURNING
+              "id",
+              "account_id",
+              "event_id",
+              "command_id",
+              "channel",
+              "recipient",
+              "thread",
+              "comment",
+              "receipt_id",
+              "message_id",
+              "body",
+              "correlation_id",
+              "generation",
+              "state",
+              "attempts",
+              "lease",
+              "lease_until",
+              "next_attempt_at",
+              "deadline",
+              "provider_message_id",
+              "error_code",
+              "time_created",
+              "time_updated",
+              "body_ciphertext",
+              "cipher_context",
+              "reply_kind")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_cancelled;
+          WITH j_ret AS (  
+            UPDATE "finfolk"."MessagingOutbox" SET
+              "state" = ('uncertain')::"finfolk"."EnumMessagingOutboxStatus",
+              "lease" = (null)::UUID,
+              "lease_until" = (null)::BIGINT,
+              "error_code" = ('identity_changed')::TEXT,
+              "body_ciphertext" = (null)::TEXT,
+              "cipher_context" = "finfolk".as_jsonb(('{}')::JSONB)
+            WHERE "command_id" = (o_command ->> 'id')::UUID
+            AND "state" = ('sending')::"finfolk"."EnumMessagingOutboxStatus"
+            RETURNING
+              "id",
+              "account_id",
+              "event_id",
+              "command_id",
+              "channel",
+              "recipient",
+              "thread",
+              "comment",
+              "receipt_id",
+              "message_id",
+              "body",
+              "correlation_id",
+              "generation",
+              "state",
+              "attempts",
+              "lease",
+              "lease_until",
+              "next_attempt_at",
+              "deadline",
+              "provider_message_id",
+              "error_code",
+              "time_created",
+              "time_updated",
+              "body_ciphertext",
+              "cipher_context",
+              "reply_kind")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_uncertain;
+          null;
+      END;
+        IF ((o_command ->> 'state') = 'new') OR ((o_command ->> 'state') = 'waiting') THEN
+          DECLARE
+        o_event JSONB;
+            o_expired JSONB;
+      BEGIN
+        WITH j_ret AS (  
+              UPDATE "finfolk"."SocialCommand" SET
+                "state" = ('expired')::"finfolk"."EnumSocialCommandStatus",
+                "op_updated" = (o_op ->> 'id')::UUID,
+                "time_updated" = (o_op ->> 'time')::BIGINT
+              WHERE "id" = (o_command ->> 'id')::UUID
+              RETURNING
+                "id",
+                "event_id",
+                "inbox_id",
+                "generation",
+                "account_id",
+                "key",
+                "context",
+                "external_actor_id",
+                "external_media_id",
+                "owner_id",
+                "connection_id",
+                "identity_version",
+                "command",
+                "args",
+                "source_url",
+                "comment_at",
+                "received_at",
+                "state",
+                "result",
+                "site_id",
+                "visit_day",
+                "reply",
+                "send_state",
+                "external_reply_id",
+                "send_started_at",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated")
+            SELECT jsonb_agg(j_ret) FROM j_ret INTO o_expired;
+            WITH j_ret AS (  
+              UPDATE "finfolk"."SocialEvent" SET
+                "status" = ('expired')::TEXT,
+                "op_updated" = (o_op ->> 'id')::UUID,
+                "time_updated" = (o_op ->> 'time')::BIGINT
+              WHERE "id" = (o_command ->> 'event_id')::UUID
+              RETURNING
+                "id",
+                "provider",
+                "namespace",
+                "key",
+                "account_id",
+                "inbox_id",
+                "message_id",
+                "channel",
+                "generation",
+                "account_generation",
+                "fingerprint",
+                "sent_at",
+                "deadline",
+                "payload",
+                "status",
+                "attempts",
+                "error",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated")
+            SELECT jsonb_agg(j_ret) FROM j_ret INTO o_event;
+            null;
+      END;
+        END IF;
+      END IF;
+    END LOOP;
+    RETURN jsonb_build_object('invalidated',true);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-connections/redeem-social-connection 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".redeem_social_connection(
+  i_application UUID,
+  i_inbox UUID,
+  i_user UUID,
+  i_code TEXT,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_inbox JSONB;
+    v_code TEXT;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    v_code := upper(regexp_replace(coalesce(i_code,''),'[[:space:]-]','','g'));
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Social inbox outside application scope';
+    END IF;
+    IF ((o_inbox ->> 'mode') = 'disabled') OR NOT "finfolk_rpc".social_member_allowed(o_inbox,i_user) OR (length(coalesce(i_code,'')) > 100) OR NOT "regexp_like"(v_code,'^[A-Z0-9]{8}$') THEN
+      RETURN null;
+    END IF;
+    DECLARE
+      o_event JSONB;
+      o_proof JSONB;
+      v_hash TEXT;
+    BEGIN
+      v_hash := "encode"("digest"(v_code,'sha256'),'hex');
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "account_id",
+          "user_id",
+          "connection_id",
+          "event_id",
+          "inbox_id",
+          "receipt_id",
+          "kind",
+          "token_hash",
+          "nonce_hash",
+          "flow_key",
+          "generation",
+          "status",
+          "expires_at",
+          "verified_at",
+          "consumed_at",
+          "consumed_version",
+          "error",
+          "provider_data",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialConnectionProof"
+        WHERE "token_hash" = v_hash
+        AND "kind" = ('message')::"finfolk"."EnumSocialProofKind"
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_proof;
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "provider",
+          "namespace",
+          "key",
+          "account_id",
+          "inbox_id",
+          "message_id",
+          "channel",
+          "generation",
+          "account_generation",
+          "fingerprint",
+          "sent_at",
+          "deadline",
+          "payload",
+          "status",
+          "attempts",
+          "error",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialEvent"
+        WHERE "id" = (o_proof ->> 'event_id')::UUID
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+      IF o_proof IS NULL OR o_event IS NULL OR ((o_event ->> 'inbox_id')::UUID != i_inbox) OR ((o_event ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_proof ->> 'status') != 'verified') OR (((o_inbox ->> 'mode') = 'pilot') AND NOT jsonb_exists(
+        o_inbox -> 'pilot_sender_ids',
+        (o_event -> 'payload') ->> 'senderId'
+      )) THEN
+        RETURN null;
+      END IF;
+      DECLARE
+        o_connected JSONB;
+      BEGIN
+        o_connected := "finfolk_rpc".connect_social_account(
+          i_user,
+          (o_proof ->> 'id')::UUID,
+          v_hash,
+          null,
+          null,
+          null,
+          null,
+          null,
+          ('[]')::JSONB,
+          ('[]')::JSONB,
+          o_op
+        );
+        IF o_connected is not null  THEN
+          PERFORM "finfolk_rpc".invalidate_social_personal_work((o_proof ->> 'account_id')::UUID,null,o_op);
+        END IF;
+        RETURN o_connected;
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-connections/disconnect-social-connection 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".disconnect_social_connection(
+  i_application UUID,
+  i_inbox UUID,
+  i_user UUID,
+  i_connection UUID,
+  i_version UUID,
+  i_command UUID,
+  o_op JSONB
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_connection JSONB;
+    o_identity JSONB;
+    o_inbox JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "user_id",
+        "account_id",
+        "status",
+        "identity_version",
+        "generation",
+        "credential_ciphertext",
+        "access_expires_at",
+        "refresh_expires_at",
+        "credential_lease",
+        "lease_until",
+        "share_posts",
+        "public_points",
+        "capabilities",
+        "granted_scopes",
+        "cursor",
+        "last_success",
+        "next_at",
+        "failures",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnection"
+      WHERE "id" = i_connection
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_connection;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = (o_connection ->> 'account_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    WITH j_ret AS (  
+      SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+      WHERE "account_id" = i_inbox
+      AND "social_account_id" = (o_account ->> 'id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_identity;
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Social inbox outside application scope';
+    END IF;
+    IF o_identity IS NULL OR o_connection IS NULL OR NOT "finfolk".is_user_active(i_user) THEN
+      RETURN false;
+    END IF;
+    IF NOT "finfolk_rpc".disconnect_social_account(i_user,i_connection,i_version,o_op) THEN
+      RETURN false;
+    END IF;
+    PERFORM "finfolk_rpc".invalidate_social_personal_work((o_account ->> 'id')::UUID,i_command,o_op);
+    RETURN true;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-events/receive-social-event 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_social_event(
+  i_application UUID,
+  i_inbox UUID,
+  i_envelope JSONB,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_inbox JSONB;
+    o_input JSONB;
+    v_body TEXT;
+    v_channel TEXT;
+    v_deadline BIGINT;
+    v_fingerprint TEXT;
+    v_key TEXT;
+    v_message TEXT;
+    v_namespace TEXT;
+    v_provider TEXT;
+    v_sender TEXT;
+    v_sent BIGINT;
+    v_thread TEXT;
+  BEGIN
+    o_input := "finfolk".as_jsonb(i_envelope);
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    v_provider := (o_inbox ->> 'provider');
+    v_channel := (o_input ->> 'channel');
+    v_sender := (o_input ->> 'senderId');
+    v_message := (o_input ->> 'messageId');
+    v_thread := (o_input ->> 'conversationId');
+    v_body := (o_input ->> 'body');
+    v_sent := (o_input ->> 'sentAt')::BIGINT;
+    v_deadline := (o_input ->> 'deadline')::BIGINT;
+    v_namespace := null;
+    v_key := null;
+    v_fingerprint := null;
+    IF o_inbox IS NULL OR (v_provider = 'app') THEN
+      RAISE EXCEPTION 'External social inbox is outside application scope';
+    END IF;
+    IF jsonb_exists(o_input,'application') OR jsonb_exists(o_input,'inbox') OR jsonb_exists(o_input,'namespace') OR jsonb_exists(o_input,'userId') OR jsonb_exists(o_input,'ownerId') OR jsonb_exists(o_input,'handler') OR v_channel IS NULL OR NOT ((v_channel = 'message') OR (v_channel = 'mention') OR (v_channel = 'owned')) OR (jsonb_typeof(o_input -> 'senderId') != 'string') OR (coalesce(v_sender,'') = '') OR (length(v_sender) > 500) OR (jsonb_typeof(o_input -> 'messageId') != 'string') OR (coalesce(v_message,'') = '') OR (length(v_message) > 500) OR (jsonb_typeof(o_input -> 'body') != 'string') OR (length(v_body) > 2000) OR ((v_channel = 'message') AND ((jsonb_typeof(o_input -> 'conversationId') != 'string') OR (coalesce(v_thread,'') = '') OR (length(v_thread) > 500))) OR v_sent IS NULL OR v_deadline IS NULL OR (v_sent <= 0) OR (v_sent > ((1000000 * extract(epoch FROM now()))::BIGINT + 300000000)) OR (v_deadline <= v_sent) OR (v_deadline > (v_sent + 604800000000)) THEN
+      RAISE EXCEPTION 'Invalid normalized social event';
+    END IF;
+    v_namespace := (jsonb_build_array(v_provider,i_application,i_inbox,CASE WHEN v_channel = 'message' THEN 'message'
+    WHEN true THEN 'comment'
+    END))::TEXT;
+    v_key := "concat"(CASE WHEN v_channel = 'message' THEN 'message:'
+    WHEN true THEN 'comment:'
+    END,v_message);
+    v_fingerprint := "encode"("digest"((o_input - 'eventId')::TEXT,'sha256'),'hex');
+    DECLARE
+      o_existing JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "provider",
+          "namespace",
+          "key",
+          "account_id",
+          "inbox_id",
+          "message_id",
+          "channel",
+          "generation",
+          "account_generation",
+          "fingerprint",
+          "sent_at",
+          "deadline",
+          "payload",
+          "status",
+          "attempts",
+          "error",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialEvent"
+        WHERE "provider" = (v_provider)::"finfolk"."EnumSocialProvider"
+        AND "namespace" = v_namespace
+        AND "key" = v_key
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_existing;
+      IF o_existing is not null  THEN
+        IF (o_existing ->> 'fingerprint') != v_fingerprint THEN
+          RAISE EXCEPTION 'Conflicting duplicate social event';
+        END IF;
+        RETURN jsonb_build_object('id',(o_existing ->> 'id')::UUID,'duplicate',true);
+      END IF;
+      DECLARE
+        o_account JSONB;
+        o_parsed JSONB;
+        o_payload JSONB;
+        v_account UUID;
+        v_message_id UUID;
+      BEGIN
+        v_account := "finfolk_rpc".insert_social_account(
+          v_provider,
+          (jsonb_build_array(v_provider,i_application,i_inbox))::TEXT,
+          v_sender,
+          '',
+          '',
+          ('{}')::JSONB,
+          o_op
+        );
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "provider",
+            "namespace",
+            "external_id",
+            "handle",
+            "display_name",
+            "generation",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialAccount"
+          WHERE "id" = v_account
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+        o_parsed := "finfolk_rpc".parse_social_command(v_channel,v_body);
+        o_payload := (((o_input - 'body') - 'eventId') || jsonb_build_object('parsed',o_parsed));
+        v_message_id := null;
+        IF (o_parsed ->> 'command') = 'none' THEN
+          o_payload := (o_payload || jsonb_build_object('body',v_body));
+        END IF;
+        IF v_channel = 'message' THEN
+          DECLARE
+          o_identity JSONB;
+        BEGIN
+          WITH j_ret AS (  
+              SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+              WHERE "account_id" = i_inbox AND "external_id" = v_sender
+              LIMIT 1)
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_identity;
+            IF o_identity is null  THEN
+              DECLARE
+              o_new JSONB;
+            BEGIN
+              WITH j_ret AS (INSERT INTO "finfolk"."MessagingIdentity" ("social_account_id","account_id","external_id") VALUES ((v_account)::UUID,(i_inbox)::UUID,(v_sender)::TEXT) RETURNING "id","social_account_id","account_id","external_id","user_id")
+                SELECT to_jsonb(j_ret) FROM j_ret INTO o_new;
+                o_identity := o_new;
+            END;
+            END IF;
+            IF o_identity ->> 'social_account_id' IS NULL OR ((o_identity ->> 'social_account_id')::UUID != v_account) THEN
+              RAISE EXCEPTION 'Conflicting social participant binding';
+            END IF;
+            DECLARE
+              o_thread JSONB;
+            BEGIN
+              WITH j_ret AS (  
+                SELECT "id","account_id","participant_id","external_id" FROM "finfolk"."MessagingConversation"
+                WHERE "account_id" = i_inbox AND "external_id" = v_thread
+                LIMIT 1)
+              SELECT to_jsonb(j_ret) FROM j_ret INTO o_thread;
+              IF o_thread is null  THEN
+                DECLARE
+                o_new JSONB;
+              BEGIN
+                WITH j_ret AS (  
+                    INSERT INTO "finfolk"."MessagingConversation" ("account_id","participant_id","external_id") VALUES (
+                      (i_inbox)::UUID,
+                      ((o_identity ->> 'id')::UUID)::UUID,
+                      (v_thread)::TEXT
+                    ) RETURNING "id","account_id","participant_id","external_id")
+                  SELECT to_jsonb(j_ret) FROM j_ret INTO o_new;
+                  o_thread := o_new;
+              END;
+              END IF;
+              IF (o_thread ->> 'participant_id')::UUID != (o_identity ->> 'id')::UUID THEN
+                RAISE EXCEPTION 'Conversation participant mismatch';
+              END IF;
+              DECLARE
+                o_message JSONB;
+              BEGIN
+                WITH j_ret AS (  
+                  INSERT INTO "finfolk"."MessagingMessage" (
+                    "account_id",
+                    "conversation_id",
+                    "direction",
+                    "external_id",
+                    "body",
+                    "metadata",
+                    "sent_at"
+                  ) VALUES (
+                    (i_inbox)::UUID,
+                    ((o_thread ->> 'id')::UUID)::UUID,
+                    ('inbound')::"finfolk"."EnumMessagingDirection",
+                    (v_message)::TEXT,
+                    (v_body)::TEXT,
+                    ('{}')::JSONB,
+                    (v_sent)::BIGINT
+                  ) RETURNING
+                    "id",
+                    "account_id",
+                    "conversation_id",
+                    "direction",
+                    "external_id",
+                    "body",
+                    "metadata",
+                    "sent_at",
+                    "time_created")
+                SELECT to_jsonb(j_ret) FROM j_ret INTO o_message;
+                v_message_id := (o_message ->> 'id')::UUID;
+              END;
+            END;
+        END;
+        END IF;
+        DECLARE
+          o_event JSONB;
+        BEGIN
+          WITH j_ret AS (  
+            INSERT INTO "finfolk"."SocialEvent" (
+              "provider",
+              "namespace",
+              "key",
+              "account_id",
+              "inbox_id",
+              "message_id",
+              "channel",
+              "generation",
+              "account_generation",
+              "fingerprint",
+              "sent_at",
+              "deadline",
+              "payload",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            ) VALUES (
+              (v_provider)::"finfolk"."EnumSocialProvider",
+              (v_namespace)::TEXT,
+              (v_key)::TEXT,
+              (v_account)::UUID,
+              (i_inbox)::UUID,
+              (v_message_id)::UUID,
+              (v_channel)::"finfolk"."EnumSocialCommandContext",
+              (o_inbox ->> 'generation')::INTEGER,
+              (o_account ->> 'generation')::INTEGER,
+              (v_fingerprint)::TEXT,
+              (v_sent)::BIGINT,
+              (v_deadline)::BIGINT,
+              (o_payload)::JSONB,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'time')::BIGINT,
+              (o_op ->> 'time')::BIGINT
+            ) RETURNING
+              "id",
+              "provider",
+              "namespace",
+              "key",
+              "account_id",
+              "inbox_id",
+              "message_id",
+              "channel",
+              "generation",
+              "account_generation",
+              "fingerprint",
+              "sent_at",
+              "deadline",
+              "payload",
+              "status",
+              "attempts",
+              "error",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+          RETURN jsonb_build_object('id',(o_event ->> 'id')::UUID,'duplicate',false);
+        END;
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-events/reserve-social-rate 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".reserve_social_rate(
+  i_provider TEXT,
+  i_namespace TEXT,
+  i_sender TEXT,
+  i_purpose TEXT,
+  i_window INTEGER,
+  i_limit INTEGER,
+  o_op JSONB
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    o_rate JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "purpose",
+        "bucket",
+        "count",
+        "resets_at",
+        "prompted_at",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialRateLimit"
+      WHERE "provider" = (i_provider)::"finfolk"."EnumSocialProvider"
+      AND "namespace" = i_namespace
+      AND "purpose" = i_purpose
+      AND "bucket" = i_sender
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rate;
+    IF o_rate is null  THEN
+      DECLARE
+      o_new JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          INSERT INTO "finfolk"."SocialRateLimit" (
+            "provider",
+            "namespace",
+            "purpose",
+            "bucket",
+            "count",
+            "resets_at",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          ) VALUES (
+            (i_provider)::"finfolk"."EnumSocialProvider",
+            (i_namespace)::TEXT,
+            (i_purpose)::TEXT,
+            (i_sender)::TEXT,
+            (1)::INTEGER,
+            ((1000000 * extract(epoch FROM now()))::BIGINT + ((i_window)::BIGINT * 1000000))::BIGINT,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'time')::BIGINT,
+            (o_op ->> 'time')::BIGINT
+          ) RETURNING
+            "id",
+            "provider",
+            "namespace",
+            "purpose",
+            "bucket",
+            "count",
+            "resets_at",
+            "prompted_at",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_new;
+        RETURN true;
+    END;
+    END IF;
+    DECLARE
+      v_count INTEGER;
+      v_reset BIGINT;
+    BEGIN
+      v_count := ((o_rate ->> 'count')::INTEGER + 1);
+      v_reset := (o_rate ->> 'resets_at')::BIGINT;
+      IF v_reset <= (1000000 * extract(epoch FROM now()))::BIGINT THEN
+        v_count := 1;
+        v_reset := ((1000000 * extract(epoch FROM now()))::BIGINT + ((i_window)::BIGINT * 1000000));
+      END IF;
+      DECLARE
+        o_saved JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          UPDATE "finfolk"."SocialRateLimit" SET
+            "count" = (v_count)::INTEGER,
+            "resets_at" = (v_reset)::BIGINT,
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "id" = (o_rate ->> 'id')::UUID
+          RETURNING
+            "id",
+            "provider",
+            "namespace",
+            "purpose",
+            "bucket",
+            "count",
+            "resets_at",
+            "prompted_at",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+        RETURN v_count <= i_limit;
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-events/reserve-social-command-rate 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".reserve_social_command_rate(
+  i_provider TEXT,
+  i_namespace TEXT,
+  i_sender TEXT,
+  o_op JSONB
+) RETURNS BOOLEAN AS $$
+BEGIN
+  RETURN "finfolk_rpc".reserve_social_rate(i_provider,i_namespace,i_sender,'command',60,30,o_op);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-events/process-social-event 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".process_social_event(
+  i_application UUID,
+  i_inbox UUID,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_inbox JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Social inbox outside application scope';
+    END IF;
+    IF ((o_inbox ->> 'mode') = 'disabled') OR ((o_inbox ->> 'backoff_until')::BIGINT > (1000000 * extract(epoch FROM now()))::BIGINT) THEN
+      RETURN null;
+    END IF;
+    DECLARE
+      o_event JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "provider",
+          "namespace",
+          "key",
+          "account_id",
+          "inbox_id",
+          "message_id",
+          "channel",
+          "generation",
+          "account_generation",
+          "fingerprint",
+          "sent_at",
+          "deadline",
+          "payload",
+          "status",
+          "attempts",
+          "error",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialEvent"
+        WHERE "inbox_id" = i_inbox AND "status" = 'queued'
+        ORDER BY "time_created","id" ASC
+        LIMIT 1
+        FOR UPDATE SKIP LOCKED)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+      IF o_event is null  THEN
+        RETURN null;
+      END IF;
+      DECLARE
+        o_command JSONB;
+        o_connection JSONB;
+        o_parsed JSONB;
+        o_payload JSONB;
+        o_result JSONB;
+        v_channel TEXT;
+        v_event UUID;
+        v_identity_namespace TEXT;
+        v_name TEXT;
+        v_owner UUID;
+        v_reply TEXT;
+        v_state TEXT;
+        v_status TEXT;
+      BEGIN
+        v_event := (o_event ->> 'id')::UUID;
+        v_identity_namespace := (jsonb_build_array(o_inbox ->> 'provider',i_application,i_inbox))::TEXT;
+        o_payload := (o_event -> 'payload');
+        o_parsed := ((o_event -> 'payload') -> 'parsed');
+        v_channel := (o_event ->> 'channel');
+        v_name := ((o_payload -> 'parsed') ->> 'command');
+        v_status := 'completed';
+        v_state := 'done';
+        v_reply := null;
+        o_result := ('{}')::JSONB;
+        o_connection := null;
+        v_owner := null;
+        o_command := null;
+        IF ((o_event ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_event ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR (((o_inbox ->> 'mode') = 'pilot') AND NOT jsonb_exists(o_inbox -> 'pilot_sender_ids',o_payload ->> 'senderId')) THEN
+          DECLARE
+          o_expired JSONB;
+        BEGIN
+          WITH j_ret AS (  
+              UPDATE "finfolk"."SocialEvent" SET
+                "status" = ('expired')::TEXT,
+                "op_updated" = (o_op ->> 'id')::UUID,
+                "time_updated" = (o_op ->> 'time')::BIGINT
+              WHERE "id" = v_event
+              RETURNING
+                "id",
+                "provider",
+                "namespace",
+                "key",
+                "account_id",
+                "inbox_id",
+                "message_id",
+                "channel",
+                "generation",
+                "account_generation",
+                "fingerprint",
+                "sent_at",
+                "deadline",
+                "payload",
+                "status",
+                "attempts",
+                "error",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated")
+            SELECT jsonb_agg(j_ret) FROM j_ret INTO o_expired;
+            RETURN jsonb_build_object('id',v_event,'status','expired');
+        END;
+        END IF;
+        IF v_name = 'none' THEN
+          DECLARE
+          o_ignored JSONB;
+        BEGIN
+          WITH j_ret AS (  
+              UPDATE "finfolk"."SocialEvent" SET
+                "status" = ('completed')::TEXT,
+                "op_updated" = (o_op ->> 'id')::UUID,
+                "time_updated" = (o_op ->> 'time')::BIGINT
+              WHERE "id" = v_event
+              RETURNING
+                "id",
+                "provider",
+                "namespace",
+                "key",
+                "account_id",
+                "inbox_id",
+                "message_id",
+                "channel",
+                "generation",
+                "account_generation",
+                "fingerprint",
+                "sent_at",
+                "deadline",
+                "payload",
+                "status",
+                "attempts",
+                "error",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated")
+            SELECT jsonb_agg(j_ret) FROM j_ret INTO o_ignored;
+            RETURN jsonb_build_object('id',v_event,'status','ignored');
+        END;
+        END IF;
+        IF (v_name = 'connect') OR ((v_name = 'status') AND (v_channel = 'message')) OR (v_name = 'whoami') OR (v_name = 'disconnect') THEN
+          DECLARE
+          o_account JSONB;
+            o_current JSONB;
+        BEGIN
+          WITH j_ret AS (  
+              SELECT
+                "id",
+                "provider",
+                "namespace",
+                "external_id",
+                "handle",
+                "display_name",
+                "generation",
+                "provider_data",
+                "audit_id",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated"
+              FROM "finfolk"."SocialAccount"
+              WHERE "id" = (o_event ->> 'account_id')::UUID
+              LIMIT 1
+              FOR UPDATE)
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+            WITH j_ret AS (  
+              SELECT
+                "id",
+                "user_id",
+                "account_id",
+                "status",
+                "identity_version",
+                "generation",
+                "credential_ciphertext",
+                "access_expires_at",
+                "refresh_expires_at",
+                "credential_lease",
+                "lease_until",
+                "share_posts",
+                "public_points",
+                "capabilities",
+                "granted_scopes",
+                "cursor",
+                "last_success",
+                "next_at",
+                "failures",
+                "provider_data",
+                "audit_id",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated"
+              FROM "finfolk"."SocialConnection"
+              WHERE "account_id" = (o_event ->> 'account_id')::UUID
+              AND "status" = ('active')::"finfolk"."EnumSocialConnectionStatus"
+              LIMIT 1
+              FOR SHARE)
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_current;
+            IF (o_event ->> 'account_generation')::INTEGER != (o_account ->> 'generation')::INTEGER THEN
+              DECLARE
+              o_expired JSONB;
+            BEGIN
+              WITH j_ret AS (  
+                  UPDATE "finfolk"."SocialEvent" SET
+                    "status" = ('expired')::TEXT,
+                    "op_updated" = (o_op ->> 'id')::UUID,
+                    "time_updated" = (o_op ->> 'time')::BIGINT
+                  WHERE "id" = v_event
+                  RETURNING
+                    "id",
+                    "provider",
+                    "namespace",
+                    "key",
+                    "account_id",
+                    "inbox_id",
+                    "message_id",
+                    "channel",
+                    "generation",
+                    "account_generation",
+                    "fingerprint",
+                    "sent_at",
+                    "deadline",
+                    "payload",
+                    "status",
+                    "attempts",
+                    "error",
+                    "op_created",
+                    "op_updated",
+                    "time_created",
+                    "time_updated")
+                SELECT jsonb_agg(j_ret) FROM j_ret INTO o_expired;
+                RETURN jsonb_build_object('id',v_event,'status','expired');
+            END;
+            END IF;
+            o_connection := o_current;
+            v_owner := (o_current ->> 'user_id')::UUID;
+            IF ((v_name = 'disconnect') AND NOT "finfolk".is_user_active(v_owner)) OR ((v_name != 'disconnect') AND NOT "finfolk_rpc".social_member_allowed(o_inbox,v_owner)) THEN
+              v_owner := null;
+            END IF;
+        END;
+        END IF;
+        IF NOT "finfolk_rpc".reserve_social_command_rate(
+          o_inbox ->> 'provider',
+          v_identity_namespace,
+          o_payload ->> 'senderId',
+          o_op
+        ) THEN
+          v_status := 'rejected';
+          v_state := 'limited';
+          o_result := jsonb_build_object('error','rate_limited');
+        ELSE
+          DECLARE
+          o_public JSONB;
+        BEGIN
+          o_public := "finfolk_rpc".social_public_reply(
+              o_parsed,
+              v_channel,
+              o_inbox ->> 'provider',
+              o_inbox -> 'enabled_commands'
+            );
+            v_reply := (o_public ->> 'reply');
+            IF v_reply is null  THEN
+              IF NOT jsonb_exists(o_inbox -> 'enabled_commands',v_name) THEN
+                v_status := 'rejected';
+                v_state := 'rejected';
+                o_result := jsonb_build_object('error','command_disabled');
+              ELSIF (v_name = 'whoami') AND ((o_inbox ->> 'provider') != 'mock') THEN
+                v_status := 'rejected';
+                v_state := 'rejected';
+                o_result := jsonb_build_object('error','mock_only');
+              ELSIF (v_name = 'connect') AND o_connection IS NOT NULL THEN
+                v_reply := 'This social account is already connected to FinFolk.';
+              ELSIF (v_name = 'connect') AND NOT "finfolk_rpc".reserve_social_rate(
+                o_inbox ->> 'provider',
+                v_identity_namespace,
+                o_payload ->> 'senderId',
+                'connect',
+                3600,
+                3,
+                o_op
+              ) THEN
+                v_state := 'limited';
+                v_status := 'rejected';
+                o_result := jsonb_build_object('error','connect_rate_limited');
+              ELSIF v_name = 'disconnect' THEN
+                IF v_owner IS NOT NULL AND "finfolk_rpc".disconnect_social_connection(
+                  i_application,
+                  i_inbox,
+                  v_owner,
+                  (o_connection ->> 'id')::UUID,
+                  (o_connection ->> 'identity_version')::UUID,
+                  null,
+                  o_op
+                ) THEN
+                  v_reply := 'Your social account is disconnected from FinFolk.';
+                  o_result := jsonb_build_object('disconnected',true);
+                ELSE
+                  v_reply := 'Connect your account first.';
+                END IF;
+              ELSIF (v_name = 'status') AND (v_channel != 'message') THEN
+                DECLARE
+              o_post JSONB;
+            BEGIN
+              WITH j_ret AS (  
+                    SELECT
+                      "id",
+                      "owner_id",
+                      "site_id",
+                      "url",
+                      "platform",
+                      "creator_handle",
+                      "status",
+                      "public_consent",
+                      "rejection_reason",
+                      "reviewed_by_id",
+                      "reviewed_at",
+                      "audit_id",
+                      "rev_id",
+                      "op_created",
+                      "op_updated",
+                      "time_created",
+                      "time_updated"
+                    FROM "finfolk"."SocialPost"
+                    WHERE "url" = o_payload ->> 'url'
+                    AND "status" = ('approved')::"finfolk"."EnumSocialPostStatus"
+                    AND "public_consent" = true
+                    LIMIT 1)
+                  SELECT to_jsonb(j_ret) FROM j_ret INTO o_post;
+                  v_reply := 'This post has not been published on FinFolk.';
+                  IF o_post IS NOT NULL AND "finfolk".is_user_active((o_post ->> 'owner_id')::UUID) THEN
+                    o_result := jsonb_build_object('postId',(o_post ->> 'id')::UUID);
+                    v_reply := "concat"(
+                      'Published on FinFolk: https://finfolk.com.au/?view=maps&site=',
+                      o_post ->> 'site_id'
+                    );
+                  END IF;
+            END;
+              ELSIF (v_name = 'whoami') OR (v_name = 'status') THEN
+                o_result := jsonb_build_object('member',v_owner);
+                v_reply := CASE WHEN v_owner IS NULL THEN 'Connect your account first.'
+            WHEN true THEN 'Your account is connected to FinFolk.'
+            END;
+              ELSE
+                v_status := 'waiting';
+                v_state := 'waiting';
+                o_result := jsonb_build_object('effect',v_name);
+              END IF;
+            END IF;
+        END;
+        END IF;
+        DECLARE
+          o_new_command JSONB;
+        BEGIN
+          WITH j_ret AS (  
+            INSERT INTO "finfolk"."SocialCommand" (
+              "event_id",
+              "inbox_id",
+              "generation",
+              "account_id",
+              "key",
+              "context",
+              "external_actor_id",
+              "external_media_id",
+              "owner_id",
+              "connection_id",
+              "identity_version",
+              "command",
+              "args",
+              "source_url",
+              "state",
+              "result",
+              "reply",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            ) VALUES (
+              (v_event)::UUID,
+              (i_inbox)::UUID,
+              (o_inbox ->> 'generation')::INTEGER,
+              (o_event ->> 'account_id')::UUID,
+              (o_event ->> 'key')::TEXT,
+              (v_channel)::"finfolk"."EnumSocialCommandContext",
+              (o_payload ->> 'senderId')::TEXT,
+              (o_payload ->> 'mediaId')::TEXT,
+              (v_owner)::UUID,
+              (CASE WHEN v_owner IS NULL THEN null
+            WHEN true THEN (o_connection ->> 'id')::UUID
+            END)::UUID,
+              (CASE WHEN v_owner IS NULL THEN null
+            WHEN true THEN (o_connection ->> 'identity_version')::UUID
+            END)::UUID,
+              (v_name)::TEXT,
+              (o_parsed -> 'args')::JSONB,
+              (o_payload ->> 'url')::TEXT,
+              (v_state)::"finfolk"."EnumSocialCommandStatus",
+              (o_result)::JSONB,
+              (v_reply)::TEXT,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'time')::BIGINT,
+              (o_op ->> 'time')::BIGINT
+            ) RETURNING
+              "id",
+              "event_id",
+              "inbox_id",
+              "generation",
+              "account_id",
+              "key",
+              "context",
+              "external_actor_id",
+              "external_media_id",
+              "owner_id",
+              "connection_id",
+              "identity_version",
+              "command",
+              "args",
+              "source_url",
+              "comment_at",
+              "received_at",
+              "state",
+              "result",
+              "site_id",
+              "visit_day",
+              "reply",
+              "send_state",
+              "external_reply_id",
+              "send_started_at",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_new_command;
+          o_command := o_new_command;
+        END;
+        IF (v_state = 'waiting') AND (v_name = 'connect') THEN
+          DECLARE
+          v_action UUID;
+        BEGIN
+          v_action := "finfolk_rpc".enqueue_social_action((o_command ->> 'id')::UUID,'verify-account',o_op);
+            null;
+        END;
+        END IF;
+        IF v_reply is not null  THEN
+          DECLARE
+          v_outgoing UUID;
+        BEGIN
+          v_outgoing := null;
+            IF v_channel = 'message' THEN
+              DECLARE
+              o_incoming JSONB;
+                o_outgoing JSONB;
+            BEGIN
+              WITH j_ret AS (  
+                  SELECT
+                    "id",
+                    "account_id",
+                    "conversation_id",
+                    "direction",
+                    "external_id",
+                    "body",
+                    "metadata",
+                    "sent_at",
+                    "time_created"
+                  FROM "finfolk"."MessagingMessage"
+                  WHERE "id" = (o_event ->> 'message_id')::UUID
+                  LIMIT 1)
+                SELECT to_jsonb(j_ret) FROM j_ret INTO o_incoming;
+                WITH j_ret AS (  
+                  INSERT INTO "finfolk"."MessagingMessage" ("account_id","conversation_id","direction","body","metadata") VALUES (
+                    (i_inbox)::UUID,
+                    (o_incoming ->> 'conversation_id')::UUID,
+                    ('outbound')::"finfolk"."EnumMessagingDirection",
+                    (v_reply)::TEXT,
+                    ('{}')::JSONB
+                  ) RETURNING
+                    "id",
+                    "account_id",
+                    "conversation_id",
+                    "direction",
+                    "external_id",
+                    "body",
+                    "metadata",
+                    "sent_at",
+                    "time_created")
+                SELECT to_jsonb(j_ret) FROM j_ret INTO o_outgoing;
+                v_outgoing := (o_outgoing ->> 'id')::UUID;
+            END;
+            END IF;
+            DECLARE
+              o_delivery JSONB;
+            BEGIN
+              WITH j_ret AS (  
+                INSERT INTO "finfolk"."MessagingOutbox" (
+                  "account_id",
+                  "event_id",
+                  "command_id",
+                  "channel",
+                  "recipient",
+                  "thread",
+                  "comment",
+                  "message_id",
+                  "body",
+                  "correlation_id",
+                  "generation",
+                  "deadline"
+                ) VALUES (
+                  (i_inbox)::UUID,
+                  (v_event)::UUID,
+                  ((o_command ->> 'id')::UUID)::UUID,
+                  (v_channel)::"finfolk"."EnumSocialCommandContext",
+                  (o_payload ->> 'senderId')::TEXT,
+                  (CASE WHEN v_channel = 'message' THEN o_payload ->> 'conversationId'
+                WHEN true THEN null
+                END)::TEXT,
+                  (CASE WHEN v_channel = 'message' THEN null
+                WHEN true THEN o_payload ->> 'messageId'
+                END)::TEXT,
+                  (v_outgoing)::UUID,
+                  "finfolk".as_bounded_text((v_reply)::TEXT,0,2000),
+                  (uuid_generate_v4())::UUID,
+                  (o_event ->> 'generation')::INTEGER,
+                  (o_event ->> 'deadline')::BIGINT
+                ) RETURNING
+                  "id",
+                  "account_id",
+                  "event_id",
+                  "command_id",
+                  "channel",
+                  "recipient",
+                  "thread",
+                  "comment",
+                  "receipt_id",
+                  "message_id",
+                  "body",
+                  "correlation_id",
+                  "generation",
+                  "state",
+                  "attempts",
+                  "lease",
+                  "lease_until",
+                  "next_attempt_at",
+                  "deadline",
+                  "provider_message_id",
+                  "error_code",
+                  "time_created",
+                  "time_updated",
+                  "body_ciphertext",
+                  "cipher_context",
+                  "reply_kind")
+              SELECT to_jsonb(j_ret) FROM j_ret INTO o_delivery;
+              null;
+            END;
+        END;
+        END IF;
+        DECLARE
+          o_finished JSONB;
+        BEGIN
+          WITH j_ret AS (  
+            UPDATE "finfolk"."SocialEvent" SET
+              "status" = (v_status)::TEXT,
+              "attempts" = ((o_event ->> 'attempts')::INTEGER + 1)::INTEGER,
+              "op_updated" = (o_op ->> 'id')::UUID,
+              "time_updated" = (o_op ->> 'time')::BIGINT
+            WHERE "id" = v_event
+            RETURNING
+              "id",
+              "provider",
+              "namespace",
+              "key",
+              "account_id",
+              "inbox_id",
+              "message_id",
+              "channel",
+              "generation",
+              "account_generation",
+              "fingerprint",
+              "sent_at",
+              "deadline",
+              "payload",
+              "status",
+              "attempts",
+              "error",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_finished;
+          RETURN jsonb_build_object(
+            'id',
+            v_event,
+            'commandId',
+            (o_command ->> 'id')::UUID,
+            'status',
+            v_status
+          );
+        END;
+      END;
     END;
   END;
 
@@ -5177,6 +10581,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
     WITH j_ret AS (  
       SELECT
         "id",
+        "social_account_id",
         "key",
         "application_id",
         "provider",
@@ -5196,6 +10601,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
         "last_reply_at",
         "time_updated",
         "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
       WHERE "id" = i_account AND "application_id" = i_application
@@ -5230,6 +10639,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
         WHERE "id" = i_account
         RETURNING
           "id",
+          "social_account_id",
           "key",
           "application_id",
           "provider",
@@ -5249,6 +10659,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_messaging_authorization(
           "last_reply_at",
           "time_updated",
           "backoff_until",
+          "action_checkpoint",
+          "delivery_checkpoint",
+          "event_checkpoint",
+          "proof_checkpoint",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_saved;
       o_reconciled := "finfolk_rpc".reconcile_messaging_work(i_application,i_account);
@@ -5285,6 +10699,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
     WITH j_ret AS (  
       SELECT
         "id",
+        "social_account_id",
         "key",
         "application_id",
         "provider",
@@ -5304,6 +10719,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
         "last_reply_at",
         "time_updated",
         "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
       WHERE "id" = i_account AND "application_id" = i_application
@@ -5348,6 +10767,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
         WHERE "id" = i_account
         RETURNING
           "id",
+          "social_account_id",
           "key",
           "application_id",
           "provider",
@@ -5367,6 +10787,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_messaging_account(
           "last_reply_at",
           "time_updated",
           "backoff_until",
+          "action_checkpoint",
+          "delivery_checkpoint",
+          "event_checkpoint",
+          "proof_checkpoint",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_active;
       o_audit := "finfolk_rpc".record_messaging_audit(i_application,i_account,'account_activated',uuid_generate_v4());
@@ -5390,6 +10814,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
     WITH j_ret AS (  
       SELECT
         "id",
+        "social_account_id",
         "key",
         "application_id",
         "provider",
@@ -5409,6 +10834,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
         "last_reply_at",
         "time_updated",
         "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
       WHERE "id" = i_account AND "application_id" = i_application
@@ -5437,6 +10866,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
         WHERE "id" = i_account
         RETURNING
           "id",
+          "social_account_id",
           "key",
           "application_id",
           "provider",
@@ -5456,6 +10886,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
           "last_reply_at",
           "time_updated",
           "backoff_until",
+          "action_checkpoint",
+          "delivery_checkpoint",
+          "event_checkpoint",
+          "proof_checkpoint",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_disabled;
       IF i_disconnect THEN
@@ -5470,6 +10904,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
             WHERE "id" = i_account
             RETURNING
               "id",
+              "social_account_id",
               "key",
               "application_id",
               "provider",
@@ -5489,6 +10924,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".disable_messaging_account(
               "last_reply_at",
               "time_updated",
               "backoff_until",
+              "action_checkpoint",
+              "delivery_checkpoint",
+              "event_checkpoint",
+              "proof_checkpoint",
               "provider_scope")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_cleared;
           null;
@@ -5520,6 +10959,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
     WITH j_ret AS (  
       SELECT
         "id",
+        "social_account_id",
         "key",
         "application_id",
         "provider",
@@ -5539,6 +10979,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
         "last_reply_at",
         "time_updated",
         "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
       WHERE "id" = i_account AND "application_id" = i_application
@@ -5561,6 +11005,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
         WHERE "id" = i_account
         RETURNING
           "id",
+          "social_account_id",
           "key",
           "application_id",
           "provider",
@@ -5580,6 +11025,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_messaging_refresh(
           "last_reply_at",
           "time_updated",
           "backoff_until",
+          "action_checkpoint",
+          "delivery_checkpoint",
+          "event_checkpoint",
+          "proof_checkpoint",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_claim;
       RETURN o_claim;
@@ -5612,6 +11061,7 @@ BEGIN
       AND "credential_lease" = i_lease
       RETURNING
         "id",
+        "social_account_id",
         "key",
         "application_id",
         "provider",
@@ -5631,6 +11081,10 @@ BEGIN
         "last_reply_at",
         "time_updated",
         "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
         "provider_scope")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_release;
     RETURN jsonb_build_object('released',o_release IS NOT NULL);
@@ -5657,6 +11111,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
     WITH j_ret AS (  
       SELECT
         "id",
+        "social_account_id",
         "key",
         "application_id",
         "provider",
@@ -5676,6 +11131,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
         "last_reply_at",
         "time_updated",
         "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
         "provider_scope"
       FROM "finfolk"."MessagingAccount"
       WHERE "id" = i_account
@@ -5707,6 +11166,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
         WHERE "id" = i_account
         RETURNING
           "id",
+          "social_account_id",
           "key",
           "application_id",
           "provider",
@@ -5726,6 +11186,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_messaging_refresh(
           "last_reply_at",
           "time_updated",
           "backoff_until",
+          "action_checkpoint",
+          "delivery_checkpoint",
+          "event_checkpoint",
+          "proof_checkpoint",
           "provider_scope")
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_saved;
       o_audit := "finfolk_rpc".record_messaging_audit(
@@ -5794,11 +11258,11 @@ CREATE TABLE IF NOT EXISTS "finfolk"."GeoFeature" (
 -- finfolkdb.common.type-import-base/SiteLocation 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteLocation" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
   "area_id" UUID REFERENCES "finfolk"."GeoArea"("id"),
   "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
   "geometry" JSONB NOT NULL,
-  UNIQUE ("beach_id")
+  UNIQUE ("site_id")
 );
 
 -- finfolkdb.common.type-import-base/DepthDatasetAsset 
@@ -5820,6 +11284,75 @@ CREATE TABLE IF NOT EXISTS "finfolk"."GeoBoundary" (
   UNIQUE ("key")
 );
 
+-- finfolkdb.fn.social.social-interop/new-social-operation 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".new_social_operation(
+  i_actor UUID
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk".op_fn('social-adapter',i_actor,('{}')::JSONB);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-interop/ret-social-adapter-scope 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_social_adapter_scope(
+  i_application UUID,
+  i_inbox UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_inbox JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Social inbox outside application scope';
+    END IF;
+    RETURN jsonb_build_object(
+      'applicationId',
+      i_application,
+      'inboxId',
+      i_inbox,
+      'provider',
+      o_inbox ->> 'provider',
+      'accountId',
+      o_inbox ->> 'account_id',
+      'namespace',
+      (jsonb_build_array(o_inbox ->> 'provider',i_application,i_inbox))::TEXT
+    );
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
 -- finfolkdb.common.type-site-base/SiteCatalog 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteCatalog" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -5834,14 +11367,14 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SiteCatalog" (
 -- finfolkdb.common.type-site-base/SiteProfile 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteProfile" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "beach_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
   "revision" BIGINT NOT NULL,
   "waterbody" "finfolk"."EnumSiteProfileWaterbody" NOT NULL,
   "access_mode" "finfolk"."EnumSiteProfileAccessMode" NOT NULL,
   "status" "finfolk"."EnumSiteProfileStatus" NOT NULL,
   "payload" JSONB NOT NULL,
   "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  UNIQUE ("beach_id")
+  UNIQUE ("site_id")
 );
 
 -- finfolkdb.common.type-site-base/SiteImport 
@@ -5856,7 +11389,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SiteImport" (
 -- finfolkdb.common.type-site-base/SiteRevision 
 CREATE TABLE IF NOT EXISTS "finfolk"."SiteRevision" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "site_id" UUID NOT NULL REFERENCES "finfolk"."Beach"("id"),
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
   "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
   "import_id" UUID REFERENCES "finfolk"."SiteImport"("id") ON DELETE CASCADE,
   "base_revision" BIGINT NOT NULL DEFAULT 0,
@@ -5908,13 +11441,15 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SiteTideStation" (
 CREATE TABLE IF NOT EXISTS "finfolk"."MediaImport" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "owner_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "platform" "finfolk"."EnumMediaImportPlatform" NOT NULL,
+  "connection_id" UUID REFERENCES "finfolk"."SocialConnection"("id"),
+  "provider_namespace" TEXT NOT NULL DEFAULT '',
+  "platform" "finfolk"."EnumSocialProvider" NOT NULL,
   "provider_id" TEXT NOT NULL,
   "url" TEXT NOT NULL,
   "kind" TEXT NOT NULL DEFAULT 'post',
   "posted_at" BIGINT,
   "day" DATE,
-  "beach_id" UUID REFERENCES "finfolk"."Beach"("id"),
+  "site_id" UUID REFERENCES "finfolk"."Site"("id"),
   "location_name" TEXT NOT NULL DEFAULT '',
   "candidates" JSONB NOT NULL DEFAULT '[]',
   "notes" TEXT NOT NULL DEFAULT '',
@@ -5926,11 +11461,242 @@ CREATE TABLE IF NOT EXISTS "finfolk"."MediaImport" (
   "op_updated" UUID,
   "time_created" BIGINT,
   "time_updated" BIGINT,
-  UNIQUE ("owner_id","platform","provider_id"),
+  UNIQUE ("owner_id","provider_namespace","platform","provider_id"),
   CONSTRAINT array_candidates CHECK (jsonb_typeof("candidates") = 'array'),
-  CONSTRAINT fk_media_import_session_owner FOREIGN KEY (owner_id,session_id) REFERENCES "finfolk"."DiveSession"(owner_id,id)
+  CONSTRAINT fk_media_import_session_owner FOREIGN KEY (owner_id,session_id) REFERENCES "finfolk"."DiveSession"(owner_id,id),
+  CONSTRAINT fk_media_import_connection_owner FOREIGN KEY (owner_id,connection_id) REFERENCES "finfolk"."SocialConnection"(user_id,id)
 );
 CREATE INDEX ON "finfolk"."MediaImport" ("owner_id");
+
+-- finfolkdb.fn.site.site-note-revision/site-note-version 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".site_note_version(
+  i_rev UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_rev JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","class_ref","index","current","op_created","time_created" FROM "finfolk"."Rev"
+      WHERE "class_table" = ('SiteNote')::"finfolk"."EnumClassType"
+      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
+      AND "id" = i_rev
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+    IF o_rev is null  THEN
+      RETURN null;
+    END IF;
+    RETURN jsonb_build_object('revision',o_rev -> 'index');
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-revision/insert-site-note 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_site_note(
+  i_id UUID,
+  i_site UUID,
+  i_author UUID,
+  i_topic TEXT,
+  i_body TEXT,
+  i_observed DATE,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_current JSONB;
+    o_log JSONB;
+    o_note JSONB;
+    o_rev JSONB;
+  BEGIN
+    o_current := jsonb_build_object(
+      'site_id',
+      i_site,
+      'author_id',
+      i_author,
+      'topic',
+      i_topic,
+      'body',
+      i_body,
+      'observed_on',
+      i_observed,
+      'withdrawn',
+      false,
+      'hidden',
+      false
+    );
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."Rev" (
+        "class_table",
+        "class_context",
+        "class_ref",
+        "index",
+        "current",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('SiteNote')::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (i_id)::UUID,
+        (1)::INTEGER,
+        (o_current)::JSONB,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","class_ref","index","current","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."RevLog" (
+        "class_table",
+        "class_context",
+        "rev_id",
+        "version",
+        "deltas",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('SiteNote')::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        ((o_rev ->> 'id')::UUID)::UUID,
+        (1)::INTEGER,
+        (o_current)::JSONB,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."SiteNote" (
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      ) VALUES (
+        (i_id)::UUID,
+        (i_site)::UUID,
+        (i_author)::UUID,
+        (i_topic)::"finfolk"."EnumSiteNoteTopic",
+        "finfolk".as_bounded_text((i_body)::TEXT,10,1000),
+        "finfolk".as_finite_date((i_observed)::DATE),
+        ((o_rev ->> 'id')::UUID)::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+    RETURN o_note || "finfolk_rpc".site_note_version((o_rev ->> 'id')::UUID);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-revision/record-site-note-revision 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".record_site_note_revision(
+  i_note UUID,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_current JSONB;
+    o_log JSONB;
+    o_note JSONB;
+    o_rev JSONB;
+    o_saved JSONB;
+    v_rev UUID;
+    v_version INTEGER;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SiteNote"
+      WHERE "id" = i_note
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+    v_rev := (o_note ->> 'rev_id')::UUID;
+    WITH j_ret AS (  
+      SELECT "id","class_ref","index","current","op_created","time_created" FROM "finfolk"."Rev"
+      WHERE "class_table" = ('SiteNote')::"finfolk"."EnumClassType"
+      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
+      AND "id" = v_rev
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+    WITH j_ret AS (  
+      SELECT
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden"
+      FROM "finfolk"."SiteNote"
+      WHERE "id" = i_note
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_current;
+    v_version := ((o_rev ->> 'index')::INTEGER + 1);
+    WITH j_ret AS (  
+      UPDATE "finfolk"."Rev" SET
+        "index" = (v_version)::INTEGER,
+        "current" = (o_current)::JSONB
+      WHERE "class_table" = ('SiteNote')::"finfolk"."EnumClassType"
+      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
+      AND "id" = v_rev
+      RETURNING "id","class_ref","index","current","op_created","time_created")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."RevLog" (
+        "class_table",
+        "class_context",
+        "rev_id",
+        "version",
+        "deltas",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('SiteNote')::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (v_rev)::UUID,
+        (v_version)::INTEGER,
+        (o_current)::JSONB,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
+    RETURN jsonb_build_object('revision',v_version);
+  END;
+
+$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/is-site-note-member 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".is_site_note_member(
@@ -5967,10 +11733,10 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".is_site_note_site(
     v_private BOOLEAN;
     v_site BOOLEAN;
   BEGIN
-    SELECT exists(SELECT 1 FROM "finfolk"."Beach"
+    SELECT exists(SELECT 1 FROM "finfolk"."Site"
     WHERE "id" = i_site) INTO v_site;
     SELECT exists(SELECT 1 FROM "finfolk"."SiteProfile"
-    WHERE "beach_id" = i_site
+    WHERE "site_id" = i_site
     AND "status" != ('published')::"finfolk"."EnumSiteProfileStatus") INTO v_private;
     RETURN v_site AND NOT v_private;
   END;
@@ -5994,6 +11760,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
 
   DECLARE
     o_note JSONB;
+    o_raw JSONB;
     o_user JSONB;
     v_author UUID;
     v_upvoted BOOLEAN;
@@ -6001,20 +11768,23 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
     WITH j_ret AS (  
       SELECT
         "id",
-        "beach_id",
+        "site_id",
         "author_id",
         "topic",
         "body",
         "observed_on",
         "withdrawn",
         "hidden",
-        "revision",
+        "rev_id",
+        "op_created",
+        "op_updated",
         "time_created",
         "time_updated"
       FROM "finfolk"."SiteNote"
       WHERE "id" = i_note AND "hidden" = false AND "withdrawn" = false
       LIMIT 1)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_raw;
+    o_note := (o_raw || "finfolk_rpc".site_note_version((o_raw ->> 'rev_id')::UUID));
     v_author := (o_note ->> 'author_id')::UUID;
     WITH j_ret AS (  
       SELECT "profile" FROM "finfolk"."User"
@@ -6023,14 +11793,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
     SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteVote"
     WHERE "note_id" = i_note AND "voter_id" = i_viewer) INTO v_upvoted;
-    IF o_note IS NULL OR NOT "finfolk_rpc".is_site_note_site((o_note ->> 'beach_id')::UUID) OR NOT "finfolk_rpc".is_site_note_member(v_author) OR "finfolk".is_user_blocked(i_viewer,v_author) THEN
+    IF o_note IS NULL OR NOT "finfolk_rpc".is_site_note_site((o_note ->> 'site_id')::UUID) OR NOT "finfolk_rpc".is_site_note_member(v_author) OR "finfolk".is_user_blocked(i_viewer,v_author) THEN
       RETURN null;
     END IF;
     RETURN jsonb_build_object(
       'id',
       i_note,
       'site',
-      (o_note ->> 'beach_id')::UUID,
+      (o_note ->> 'site_id')::UUID,
       'topic',
       o_note ->> 'topic',
       'text',
@@ -6075,7 +11845,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_notes(
       RAISE EXCEPTION 'Invalid notes filter';
     END IF;
     SELECT coalesce(jsonb_agg("value"),('[]')::JSONB) FROM (  
-      SELECT "finfolk_rpc".ret_site_note("id",v_viewer) AS "value" FROM "finfolk"."SiteNote" WHERE ("beach_id" = i_site) AND NOT "withdrawn" AND NOT "hidden" AND ((i_topic = 'all') OR (("topic")::TEXT = i_topic)) AND "finfolk_rpc".ret_site_note("id",v_viewer) IS NOT NULL ORDER BY
+      SELECT "finfolk_rpc".ret_site_note("id",v_viewer) AS "value" FROM "finfolk"."SiteNote" WHERE ("site_id" = i_site) AND NOT "withdrawn" AND NOT "hidden" AND ((i_topic = 'all') OR (("topic")::TEXT = i_topic)) AND "finfolk_rpc".ret_site_note("id",v_viewer) IS NOT NULL ORDER BY
         0 - CASE WHEN i_sort = 'helpful' THEN "finfolk_rpc".site_note_score("id")
       WHEN true THEN 0
       END,
@@ -6101,9 +11871,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
 ) RETURNS JSONB AS $$
 
   DECLARE
+    o_op JSONB;
     v_user UUID;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('save-site-note',v_user,('{}')::JSONB);
     PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_id)::TEXT,0));
     DECLARE
       o_existing JSONB;
@@ -6111,7 +11883,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
       v_body TEXT;
     BEGIN
       WITH j_ret AS (  
-        SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Beach"
+        SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
         WHERE "id" = i_site
         LIMIT 1)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
@@ -6119,14 +11891,16 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
       WITH j_ret AS (  
         SELECT
           "id",
-          "beach_id",
+          "site_id",
           "author_id",
           "topic",
           "body",
           "observed_on",
           "withdrawn",
           "hidden",
-          "revision",
+          "rev_id",
+          "op_created",
+          "op_updated",
           "time_created",
           "time_updated"
         FROM "finfolk"."SiteNote"
@@ -6140,35 +11914,20 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
         RAISE EXCEPTION 'Check the site, topic, note length and observation date';
       END IF;
       IF o_existing is not null  THEN
-        IF ((o_existing ->> 'author_id')::UUID != v_user) OR ((o_existing ->> 'beach_id')::UUID != i_site) OR ((o_existing ->> 'topic') != i_topic) OR ((o_existing ->> 'body') != v_body) OR (coalesce(o_existing ->> 'observed_on','') != coalesce((i_observed)::TEXT,'')) THEN
+        IF ((o_existing ->> 'author_id')::UUID != v_user) OR ((o_existing ->> 'site_id')::UUID != i_site) OR ((o_existing ->> 'topic') != i_topic) OR ((o_existing ->> 'body') != v_body) OR (coalesce(o_existing ->> 'observed_on','') != coalesce((i_observed)::TEXT,'')) THEN
           RAISE EXCEPTION 'This note identifier was already used';
         END IF;
-        RETURN jsonb_build_object('id',i_id,'revision',(o_existing ->> 'revision')::INTEGER);
+        RETURN jsonb_build_object(
+          'id',
+          i_id,
+          'revision',
+          ("finfolk_rpc".site_note_version((o_existing ->> 'rev_id')::UUID) ->> 'revision')::INTEGER
+        );
       END IF;
       DECLARE
         o_note JSONB;
       BEGIN
-        WITH j_ret AS (  
-          INSERT INTO "finfolk"."SiteNote" ("id","beach_id","author_id","topic","body","observed_on") VALUES (
-            (i_id)::UUID,
-            (i_site)::UUID,
-            (v_user)::UUID,
-            (i_topic)::"finfolk"."EnumSiteNoteTopic",
-            (v_body)::TEXT,
-            (i_observed)::DATE
-          ) RETURNING
-            "id",
-            "beach_id",
-            "author_id",
-            "topic",
-            "body",
-            "observed_on",
-            "withdrawn",
-            "hidden",
-            "revision",
-            "time_created",
-            "time_updated")
-        SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+        o_note := "finfolk_rpc".insert_site_note(i_id,i_site,v_user,i_topic,v_body,i_observed,o_op);
         RETURN jsonb_build_object('id',i_id,'revision',1);
       END;
     END;
@@ -6185,25 +11944,29 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
 
   DECLARE
     o_note JSONB;
+    o_op JSONB;
     v_user UUID;
     v_voted BOOLEAN;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('set-site-note-vote',v_user,('{}')::JSONB);
     WITH j_ret AS (  
       SELECT
         "id",
-        "beach_id",
+        "site_id",
         "author_id",
         "topic",
         "body",
         "observed_on",
         "withdrawn",
         "hidden",
-        "revision",
+        "rev_id",
+        "op_created",
+        "op_updated",
         "time_created",
         "time_updated"
       FROM "finfolk"."SiteNote"
-      WHERE "id" = i_note AND "beach_id" = i_site
+      WHERE "id" = i_note AND "site_id" = i_site
       LIMIT 1
       FOR UPDATE)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
@@ -6217,7 +11980,29 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
         DECLARE
       o_write JSONB;
     BEGIN
-      WITH j_ret AS (INSERT INTO "finfolk"."SiteNoteVote" ("note_id","voter_id") VALUES ((i_note)::UUID,(v_user)::UUID) RETURNING "id","note_id","voter_id","time_created")
+      WITH j_ret AS (  
+            INSERT INTO "finfolk"."SiteNoteVote" (
+              "note_id",
+              "voter_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            ) VALUES (
+              (i_note)::UUID,
+              (v_user)::UUID,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'time')::BIGINT,
+              (o_op ->> 'time')::BIGINT
+            ) RETURNING
+              "id",
+              "note_id",
+              "voter_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
           null;
     END;
@@ -6228,7 +12013,14 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
     BEGIN
       WITH j_ret AS (  
           DELETE FROM "finfolk"."SiteNoteVote" WHERE "note_id" = i_note AND "voter_id" = v_user
-          RETURNING "id","note_id","voter_id","time_created")
+          RETURNING
+            "id",
+            "note_id",
+            "voter_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
         SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
         null;
     END;
@@ -6248,27 +12040,33 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_withdrawn(
 
   DECLARE
     o_note JSONB;
+    o_op JSONB;
+    o_raw JSONB;
     v_user UUID;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('set-site-note-withdrawn',v_user,('{}')::JSONB);
     WITH j_ret AS (  
       SELECT
         "id",
-        "beach_id",
+        "site_id",
         "author_id",
         "topic",
         "body",
         "observed_on",
         "withdrawn",
         "hidden",
-        "revision",
+        "rev_id",
+        "op_created",
+        "op_updated",
         "time_created",
         "time_updated"
       FROM "finfolk"."SiteNote"
-      WHERE "id" = i_note AND "beach_id" = i_site AND "author_id" = v_user
+      WHERE "id" = i_note AND "site_id" = i_site AND "author_id" = v_user
       LIMIT 1
       FOR UPDATE)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_raw;
+    o_note := (o_raw || "finfolk_rpc".site_note_version((o_raw ->> 'rev_id')::UUID));
     IF o_note IS NULL OR i_withdrawn IS NULL THEN
       RAISE EXCEPTION 'That note is unavailable';
     END IF;
@@ -6282,23 +12080,25 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_withdrawn(
       WITH j_ret AS (  
           UPDATE "finfolk"."SiteNote" SET
             "withdrawn" = (i_withdrawn)::BOOLEAN,
-            "revision" = (i_revision + 1)::INTEGER,
-            "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
           WHERE "id" = i_note
           RETURNING
             "id",
-            "beach_id",
+            "site_id",
             "author_id",
             "topic",
             "body",
             "observed_on",
             "withdrawn",
             "hidden",
-            "revision",
+            "rev_id",
+            "op_created",
+            "op_updated",
             "time_created",
             "time_updated")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_saved;
-        o_note := o_saved;
+        o_note := (o_saved || "finfolk_rpc".record_site_note_revision(i_note,o_op));
     END;
     END IF;
     RETURN jsonb_build_object(
@@ -6322,26 +12122,30 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".report_site_note(
 
   DECLARE
     o_note JSONB;
+    o_op JSONB;
     v_reason TEXT;
     v_reported BOOLEAN;
     v_user UUID;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('report-site-note',v_user,('{}')::JSONB);
     WITH j_ret AS (  
       SELECT
         "id",
-        "beach_id",
+        "site_id",
         "author_id",
         "topic",
         "body",
         "observed_on",
         "withdrawn",
         "hidden",
-        "revision",
+        "rev_id",
+        "op_created",
+        "op_updated",
         "time_created",
         "time_updated"
       FROM "finfolk"."SiteNote"
-      WHERE "id" = i_note AND "beach_id" = i_site
+      WHERE "id" = i_note AND "site_id" = i_site
       LIMIT 1
       FOR UPDATE)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
@@ -6356,13 +12160,32 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".report_site_note(
       o_write JSONB;
     BEGIN
       WITH j_ret AS (  
-          INSERT INTO "finfolk"."SiteNoteReport" ("note_id","reporter_id","reason") VALUES ((i_note)::UUID,(v_user)::UUID,(v_reason)::TEXT) RETURNING
+          INSERT INTO "finfolk"."SiteNoteReport" (
+            "note_id",
+            "reporter_id",
+            "reason",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          ) VALUES (
+            (i_note)::UUID,
+            (v_user)::UUID,
+            "finfolk".as_bounded_text((v_reason)::TEXT,1,1000),
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'time')::BIGINT,
+            (o_op ->> 'time')::BIGINT
+          ) RETURNING
             "id",
             "note_id",
             "reporter_id",
             "reason",
+            "resolved_at",
+            "op_created",
+            "op_updated",
             "time_created",
-            "resolved_at")
+            "time_updated")
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
         null;
     END;
@@ -6380,9 +12203,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
 ) RETURNS JSONB AS $$
 
   DECLARE
+    o_op JSONB;
     v_user UUID;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('moderate-site-note',v_user,('{}')::JSONB);
     IF coalesce(current_setting('finfolk.directory_admin',true),'false') != 'true' THEN
       RAISE EXCEPTION 'Administrator access required';
     END IF;
@@ -6392,18 +12217,20 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
       WITH j_ret AS (  
         SELECT
           "id",
-          "beach_id",
+          "site_id",
           "author_id",
           "topic",
           "body",
           "observed_on",
           "withdrawn",
           "hidden",
-          "revision",
+          "rev_id",
+          "op_created",
+          "op_updated",
           "time_created",
           "time_updated"
         FROM "finfolk"."SiteNote"
-        WHERE "id" = i_note AND "beach_id" = i_site
+        WHERE "id" = i_note AND "site_id" = i_site
         LIMIT 1
         FOR UPDATE)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
@@ -6412,27 +12239,31 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
       END IF;
       IF (o_note ->> 'hidden')::BOOLEAN != i_hidden THEN
         DECLARE
-        o_write JSONB;
+        o_version JSONB;
+          o_write JSONB;
       BEGIN
         WITH j_ret AS (  
             UPDATE "finfolk"."SiteNote" SET
               "hidden" = (i_hidden)::BOOLEAN,
-              "revision" = ((o_note ->> 'revision')::INTEGER + 1)::INTEGER,
-              "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+              "op_updated" = (o_op ->> 'id')::UUID,
+              "time_updated" = (o_op ->> 'time')::BIGINT
             WHERE "id" = i_note
             RETURNING
               "id",
-              "beach_id",
+              "site_id",
               "author_id",
               "topic",
               "body",
               "observed_on",
               "withdrawn",
               "hidden",
-              "revision",
+              "rev_id",
+              "op_created",
+              "op_updated",
               "time_created",
               "time_updated")
           SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
+          o_version := "finfolk_rpc".record_site_note_revision(i_note,o_op);
           null;
       END;
       END IF;
@@ -6441,143 +12272,25 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
       BEGIN
         WITH j_ret AS (  
           UPDATE "finfolk"."SiteNoteReport" SET
-            "resolved_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+            "resolved_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT,
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
           WHERE "note_id" = i_note AND "resolved_at" IS NULL
           RETURNING
             "id",
             "note_id",
             "reporter_id",
             "reason",
+            "resolved_at",
+            "op_created",
+            "op_updated",
             "time_created",
-            "resolved_at")
+            "time_updated")
         SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
         null;
       END;
       RETURN jsonb_build_object('id',i_note,'hidden',i_hidden);
     END;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.user.user-manage-posts/insert-social-post 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_social_post(
-  i_owner UUID,
-  i_beach UUID,
-  i_url TEXT,
-  i_platform TEXT,
-  i_handle TEXT,
-  i_consent BOOLEAN,
-  o_op JSONB
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_base JSONB;
-    o_post JSONB;
-    v_id UUID;
-  BEGIN
-    v_id := uuid_generate_v4();
-    o_base := "finfolk".insert_base_addons(
-      'SocialPost',
-      v_id,
-      jsonb_build_object('url',i_url,'platform',i_platform),
-      o_op
-    );
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."SocialPost" (
-        "id",
-        "owner_id",
-        "beach_id",
-        "url",
-        "platform",
-        "creator_handle",
-        "public_consent",
-        "audit_id",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated"
-      ) VALUES (
-        (v_id)::UUID,
-        (i_owner)::UUID,
-        (i_beach)::UUID,
-        (i_url)::TEXT,
-        (i_platform)::"finfolk"."EnumSocialHandleType",
-        (i_handle)::TEXT,
-        (i_consent)::BOOLEAN,
-        (o_base ->> 'audit')::UUID,
-        (o_base ->> 'rev')::UUID,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING
-        "id",
-        "owner_id",
-        "beach_id",
-        "url",
-        "platform",
-        "creator_handle",
-        "status",
-        "public_consent",
-        "rejection_reason",
-        "reviewed_by_id",
-        "reviewed_at",
-        "audit_id",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_post;
-    RETURN o_post;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.user.user-manage-posts/ret-social-post-public 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_social_post_public(
-  i_post_id UUID,
-  i_viewer UUID
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_post JSONB;
-    v_owner UUID;
-  BEGIN
-    WITH j_ret AS (  
-      SELECT
-        "id",
-        "owner_id",
-        "beach_id",
-        "url",
-        "platform",
-        "creator_handle",
-        "time_created"
-      FROM "finfolk"."SocialPost"
-      WHERE "id" = i_post_id
-      AND "status" = ('approved')::"finfolk"."EnumSocialPostStatus"
-      AND "public_consent" = true
-      LIMIT 1)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_post;
-    v_owner := (o_post ->> 'owner_id')::UUID;
-    IF o_post IS NULL OR NOT "finfolk".is_user_active(v_owner) OR "finfolk".is_user_blocked(i_viewer,v_owner) THEN
-      RETURN null;
-    END IF;
-    RETURN jsonb_build_object(
-      'id',
-      (o_post ->> 'id')::UUID,
-      'beach_id',
-      (o_post ->> 'beach_id')::UUID,
-      'url',
-      o_post ->> 'url',
-      'platform',
-      o_post ->> 'platform',
-      'creator_handle',
-      o_post ->> 'creator_handle',
-      'created_at',
-      "finfolk".as_iso_time((o_post ->> 'time_created')::BIGINT)
-    );
   END;
 
 $$ LANGUAGE 'plpgsql';
@@ -6603,7 +12316,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_dive_session(
       INSERT INTO "finfolk"."DiveSession" (
         "id",
         "owner_id",
-        "beach_id",
+        "site_id",
         "detail",
         "audit_id",
         "rev_id",
@@ -6625,7 +12338,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_dive_session(
       ) RETURNING
         "id",
         "owner_id",
-        "beach_id",
+        "site_id",
         "detail",
         "audit_id",
         "rev_id",
@@ -6649,7 +12362,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_dive_session_owned(
     o_session JSONB;
   BEGIN
     WITH j_ret AS (  
-      SELECT "id","owner_id","beach_id","detail" FROM "finfolk"."DiveSession"
+      SELECT "id","owner_id","site_id","detail" FROM "finfolk"."DiveSession"
       WHERE "id" = i_session_id AND "owner_id" = i_owner
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_session;
@@ -6662,35 +12375,1821 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_dive_session_owned(
       'ownerId',
       (o_session ->> 'owner_id')::UUID,
       'beachId',
-      coalesce(o_session ->> 'beach_id','')
+      coalesce(o_session ->> 'site_id','')
     );
   END;
 
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-social-tiktok/TiktokConnection 
-CREATE TABLE IF NOT EXISTS "finfolk"."TiktokConnection" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "app_id" TEXT NOT NULL,
-  "open_id" TEXT,
-  "display_name" TEXT NOT NULL DEFAULT '',
-  "status" "finfolk"."EnumTiktokConnectionStatus" NOT NULL DEFAULT 'pending',
-  "credential_ciphertext" TEXT,
-  "access_expires_at" BIGINT,
-  "refresh_expires_at" BIGINT,
-  "oauth_hash" TEXT,
-  "oauth_expires_at" BIGINT,
-  "oauth_nonce_hash" TEXT,
-  "last_success" BIGINT,
-  "next_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "lease_until" BIGINT,
-  "cursor" TEXT,
-  "failures" INTEGER NOT NULL DEFAULT 0,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  UNIQUE ("user_id"),
-  UNIQUE ("app_id","open_id")
-);
+-- finfolkdb.fn.social.social-messaging/receive-social-message 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_social_message(
+  i_application UUID,
+  i_inbox UUID,
+  i_namespace TEXT,
+  i_envelope JSONB,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_inbox JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Messaging account outside application scope';
+    END IF;
+    IF (o_inbox ->> 'provider') = 'app' THEN
+      RAISE EXCEPTION 'External provider required';
+    END IF;
+    DECLARE
+      o_identity JSONB;
+      o_received JSONB;
+      v_account UUID;
+    BEGIN
+      v_account := "finfolk_rpc".insert_social_account(
+        o_inbox ->> 'provider',
+        i_namespace,
+        i_envelope ->> 'senderId',
+        '',
+        '',
+        ('{}')::JSONB,
+        o_op
+      );
+      o_received := "finfolk_rpc".receive_message(i_application,i_inbox,i_envelope);
+      WITH j_ret AS (  
+        SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+        WHERE "account_id" = i_inbox
+        AND "external_id" = i_envelope ->> 'senderId'
+        LIMIT 1
+        FOR UPDATE)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_identity;
+      IF o_identity ->> 'social_account_id' IS NOT NULL AND ((o_identity ->> 'social_account_id')::UUID != v_account) THEN
+        RAISE EXCEPTION 'Conflicting social identity binding';
+      END IF;
+      DECLARE
+        o_bound JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          UPDATE "finfolk"."MessagingIdentity" SET
+            "social_account_id" = (v_account)::UUID,
+            "user_id" = (null)::UUID
+          WHERE "id" = (o_identity ->> 'id')::UUID
+          RETURNING "id","social_account_id","account_id","external_id","user_id")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_bound;
+        RETURN o_received;
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-messaging/resolve-social-member 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".resolve_social_member(
+  i_inbox UUID,
+  i_sender TEXT
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_connection JSONB;
+    o_identity JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+      WHERE "account_id" = i_inbox AND "external_id" = i_sender
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_identity;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "user_id",
+        "account_id",
+        "status",
+        "identity_version",
+        "generation",
+        "credential_ciphertext",
+        "access_expires_at",
+        "refresh_expires_at",
+        "credential_lease",
+        "lease_until",
+        "share_posts",
+        "public_points",
+        "capabilities",
+        "granted_scopes",
+        "cursor",
+        "last_success",
+        "next_at",
+        "failures",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnection"
+      WHERE "account_id" = (o_identity ->> 'social_account_id')::UUID
+      AND "status" = ('active')::"finfolk"."EnumSocialConnectionStatus"
+      LIMIT 1
+      FOR SHARE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_connection;
+    IF o_connection IS NULL OR NOT "finfolk".is_user_active((o_connection ->> 'user_id')::UUID) THEN
+      RETURN null;
+    END IF;
+    RETURN jsonb_build_object(
+      'userId',
+      o_connection -> 'user_id',
+      'identityVersion',
+      o_connection -> 'identity_version',
+      'connectionId',
+      o_connection -> 'id'
+    );
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-messaging/begin-social-message-proof 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".begin_social_message_proof(
+  i_inbox UUID,
+  i_sender TEXT,
+  i_receipt UUID,
+  i_hash TEXT,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_identity JSONB;
+    o_message JSONB;
+    o_receipt JSONB;
+    o_thread JSONB;
+    v_account UUID;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","social_account_id","account_id","external_id","user_id" FROM "finfolk"."MessagingIdentity"
+      WHERE "account_id" = i_inbox AND "external_id" = i_sender
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_identity;
+    v_account := (o_identity ->> 'social_account_id')::UUID;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = v_account
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "external_event_id",
+        "message_id",
+        "status",
+        "generation",
+        "attempts",
+        "lease",
+        "lease_until",
+        "next_attempt_at",
+        "deadline",
+        "result",
+        "correlation_id",
+        "time_created"
+      FROM "finfolk"."MessagingReceipt"
+      WHERE "id" = i_receipt AND "account_id" = i_inbox
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_receipt;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "conversation_id",
+        "direction",
+        "external_id",
+        "body",
+        "metadata",
+        "sent_at",
+        "time_created"
+      FROM "finfolk"."MessagingMessage"
+      WHERE "id" = (o_receipt ->> 'message_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_message;
+    WITH j_ret AS (  
+      SELECT "id","account_id","participant_id","external_id" FROM "finfolk"."MessagingConversation"
+      WHERE "id" = (o_message ->> 'conversation_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_thread;
+    IF o_account IS NULL OR o_receipt IS NULL OR ((o_thread ->> 'participant_id')::UUID != (o_identity ->> 'id')::UUID) THEN
+      RAISE EXCEPTION 'Proof receipt does not match sender';
+    END IF;
+    DECLARE
+      o_bound JSONB;
+      o_old JSONB;
+      o_proof JSONB;
+      v_ok BOOLEAN;
+    BEGIN
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialConnectionProof" SET
+          "status" = ('revoked')::"finfolk"."EnumSocialProofStatus",
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "account_id" = v_account AND "status" IN ('pending','verified')
+        RETURNING
+          "id",
+          "account_id",
+          "user_id",
+          "connection_id",
+          "event_id",
+          "inbox_id",
+          "receipt_id",
+          "kind",
+          "token_hash",
+          "nonce_hash",
+          "flow_key",
+          "generation",
+          "status",
+          "expires_at",
+          "verified_at",
+          "consumed_at",
+          "consumed_version",
+          "error",
+          "provider_data",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_old;
+      o_proof := "finfolk_rpc".begin_social_proof(v_account,null,'message',i_hash,null,null,600,o_op);
+      WITH j_ret AS (  
+        UPDATE "finfolk"."SocialConnectionProof" SET
+          "receipt_id" = (i_receipt)::UUID,
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "id" = (o_proof ->> 'id')::UUID
+        RETURNING
+          "id",
+          "account_id",
+          "user_id",
+          "connection_id",
+          "event_id",
+          "inbox_id",
+          "receipt_id",
+          "kind",
+          "token_hash",
+          "nonce_hash",
+          "flow_key",
+          "generation",
+          "status",
+          "expires_at",
+          "verified_at",
+          "consumed_at",
+          "consumed_version",
+          "error",
+          "provider_data",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_bound;
+      v_ok := "finfolk_rpc".verify_social_proof((o_proof ->> 'id')::UUID,jsonb_build_object(
+        'verified',
+        true,
+        'provider',
+        o_account -> 'provider',
+        'namespace',
+        o_account -> 'namespace',
+        'externalId',
+        o_account -> 'external_id'
+      ),o_op);
+      RETURN o_proof;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-delivery/social-delivery-result 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".social_delivery_result(
+  o_delivery JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN jsonb_build_object(
+    'id',
+    (o_delivery ->> 'id')::UUID,
+    'state',
+    o_delivery ->> 'state',
+    'attempts',
+    o_delivery -> 'attempts',
+    'nextAttemptAt',
+    o_delivery -> 'next_attempt_at',
+    'providerMessageId',
+    o_delivery ->> 'provider_message_id'
+  );
+END;
+$$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
+
+-- finfolkdb.fn.social.social-delivery/record-social-delivery-audit 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".record_social_delivery_audit(
+  i_application UUID,
+  o_delivery JSONB,
+  i_event TEXT
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_audit JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."MessagingAudit" ("account_id","actor","event","correlation_id") VALUES (
+        (o_delivery ->> 'account_id')::UUID,
+        (i_application)::TEXT,
+        (i_event)::TEXT,
+        (o_delivery ->> 'correlation_id')::UUID
+      ) RETURNING
+        "id",
+        "account_id",
+        "actor",
+        "event",
+        "correlation_id",
+        "time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
+    RETURN ('{}')::JSONB;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-delivery/social-delivery-policy-error 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".social_delivery_policy_error(
+  o_inbox JSONB,
+  o_event JSONB,
+  o_command JSONB,
+  o_delivery JSONB
+) RETURNS TEXT AS $$
+
+  DECLARE
+    o_payload JSONB;
+    v_error TEXT;
+  BEGIN
+    v_error := "finfolk_rpc".social_work_policy_error(o_inbox,o_event,o_command);
+    o_payload := (o_event -> 'payload');
+    IF v_error is not null  THEN
+      RETURN v_error;
+    END IF;
+    IF (o_delivery ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT THEN
+      RETURN 'deadline_expired';
+    END IF;
+    IF ((o_delivery ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_delivery ->> 'channel') != (o_event ->> 'channel')) OR (coalesce(o_delivery ->> 'recipient','') != (o_payload ->> 'senderId')) OR (((o_delivery ->> 'channel') = 'message') AND (coalesce(o_delivery ->> 'thread','') != (o_payload ->> 'conversationId'))) OR (((o_delivery ->> 'channel') != 'message') AND (coalesce(o_delivery ->> 'comment','') != (o_payload ->> 'messageId'))) THEN
+      RETURN 'destination_changed';
+    END IF;
+    IF (o_delivery ->> 'reply_kind') = 'connect_code' THEN
+      DECLARE
+      o_account JSONB;
+        o_proof JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          SELECT
+            "id",
+            "account_id",
+            "user_id",
+            "connection_id",
+            "event_id",
+            "inbox_id",
+            "receipt_id",
+            "kind",
+            "token_hash",
+            "nonce_hash",
+            "flow_key",
+            "generation",
+            "status",
+            "expires_at",
+            "verified_at",
+            "consumed_at",
+            "consumed_version",
+            "error",
+            "provider_data",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialConnectionProof"
+          WHERE "id" = ((o_command -> 'result') ->> 'proofId')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_proof;
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "provider",
+            "namespace",
+            "external_id",
+            "handle",
+            "display_name",
+            "generation",
+            "provider_data",
+            "audit_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialAccount"
+          WHERE "id" = (o_event ->> 'account_id')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+        IF o_proof IS NULL OR ((o_proof ->> 'status') != 'verified') OR ((o_proof ->> 'event_id')::UUID != (o_event ->> 'id')::UUID) OR ((o_proof ->> 'account_id')::UUID != (o_account ->> 'id')::UUID) OR ((o_proof ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) OR ((o_proof ->> 'expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR o_delivery ->> 'body_ciphertext' IS NULL THEN
+          RETURN 'proof_invalid';
+        END IF;
+    END;
+    END IF;
+    IF ((o_delivery ->> 'state') = 'pending') AND ((o_delivery ->> 'attempts')::INTEGER >= 5) THEN
+      RETURN 'attempts_exhausted';
+    END IF;
+    RETURN null;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-delivery/claim-social-delivery 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_social_delivery(
+  i_application UUID,
+  i_inbox UUID,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_inbox JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Social inbox outside application scope';
+    END IF;
+    IF ((o_inbox ->> 'mode') = 'disabled') OR ((o_inbox ->> 'backoff_until')::BIGINT > (1000000 * extract(epoch FROM now()))::BIGINT) THEN
+      RETURN null;
+    END IF;
+    DECLARE
+      o_delivery JSONB;
+      o_ready JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "account_id",
+          "event_id",
+          "command_id",
+          "channel",
+          "recipient",
+          "thread",
+          "comment",
+          "receipt_id",
+          "message_id",
+          "body",
+          "correlation_id",
+          "generation",
+          "state",
+          "attempts",
+          "lease",
+          "lease_until",
+          "next_attempt_at",
+          "deadline",
+          "provider_message_id",
+          "error_code",
+          "time_created",
+          "time_updated",
+          "body_ciphertext",
+          "cipher_context",
+          "reply_kind"
+        FROM "finfolk"."MessagingOutbox"
+        WHERE "account_id" = i_inbox
+        AND "state" = ('pending')::"finfolk"."EnumMessagingOutboxStatus"
+        AND "next_attempt_at" <= (1000000 * extract(epoch FROM now()))::BIGINT
+        ORDER BY "time_created","id" ASC
+        LIMIT 100
+        FOR UPDATE SKIP LOCKED)
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_ready;
+      o_delivery := null;
+      FOR o_delivery IN SELECT jsonb_array_elements(coalesce(o_ready,('[]')::JSONB)) LOOP
+        IF o_delivery ->> 'command_id' is not null  THEN
+          DECLARE
+          o_command JSONB;
+            o_event JSONB;
+            v_error TEXT;
+        BEGIN
+          WITH j_ret AS (  
+              SELECT
+                "id",
+                "event_id",
+                "inbox_id",
+                "generation",
+                "account_id",
+                "key",
+                "context",
+                "external_actor_id",
+                "external_media_id",
+                "owner_id",
+                "connection_id",
+                "identity_version",
+                "command",
+                "args",
+                "source_url",
+                "comment_at",
+                "received_at",
+                "state",
+                "result",
+                "site_id",
+                "visit_day",
+                "reply",
+                "send_state",
+                "external_reply_id",
+                "send_started_at",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated"
+              FROM "finfolk"."SocialCommand"
+              WHERE "id" = (o_delivery ->> 'command_id')::UUID
+              LIMIT 1)
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_command;
+            WITH j_ret AS (  
+              SELECT
+                "id",
+                "provider",
+                "namespace",
+                "key",
+                "account_id",
+                "inbox_id",
+                "message_id",
+                "channel",
+                "generation",
+                "account_generation",
+                "fingerprint",
+                "sent_at",
+                "deadline",
+                "payload",
+                "status",
+                "attempts",
+                "error",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated"
+              FROM "finfolk"."SocialEvent"
+              WHERE "id" = (o_delivery ->> 'event_id')::UUID
+              LIMIT 1)
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+            v_error := "finfolk_rpc".social_delivery_policy_error(o_inbox,o_event,o_command,o_delivery);
+            IF v_error is not null  THEN
+              DECLARE
+              o_expired JSONB;
+            BEGIN
+              WITH j_ret AS (  
+                  UPDATE "finfolk"."MessagingOutbox" SET
+                    "state" = (CASE WHEN v_error = 'deadline_expired' THEN 'expired'
+                  WHEN v_error = 'attempts_exhausted' THEN 'failed'
+                  WHEN true THEN 'cancelled'
+                  END)::"finfolk"."EnumMessagingOutboxStatus",
+                    "error_code" = (v_error)::TEXT,
+                    "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT,
+                    "body_ciphertext" = (null)::TEXT,
+                    "cipher_context" = "finfolk".as_jsonb(('{}')::JSONB)
+                  WHERE "id" = (o_delivery ->> 'id')::UUID
+                  RETURNING
+                    "id",
+                    "account_id",
+                    "event_id",
+                    "command_id",
+                    "channel",
+                    "recipient",
+                    "thread",
+                    "comment",
+                    "receipt_id",
+                    "message_id",
+                    "body",
+                    "correlation_id",
+                    "generation",
+                    "state",
+                    "attempts",
+                    "lease",
+                    "lease_until",
+                    "next_attempt_at",
+                    "deadline",
+                    "provider_message_id",
+                    "error_code",
+                    "time_created",
+                    "time_updated",
+                    "body_ciphertext",
+                    "cipher_context",
+                    "reply_kind")
+                SELECT to_jsonb(j_ret) FROM j_ret INTO o_expired;
+                null;
+            END;
+            ELSE
+              DECLARE
+              o_claimed JSONB;
+                v_lease UUID;
+            BEGIN
+              v_lease := uuid_generate_v4();
+                WITH j_ret AS (  
+                  UPDATE "finfolk"."MessagingOutbox" SET
+                    "state" = ('sending')::"finfolk"."EnumMessagingOutboxStatus",
+                    "attempts" = "finfolk".as_bounded_integer(
+                    ((o_delivery ->> 'attempts')::INTEGER + 1)::INTEGER,
+                    0,
+                    2147483647
+                  ),
+                    "lease" = (v_lease)::UUID,
+                    "lease_until" = ((1000000 * extract(epoch FROM now()))::BIGINT + 60000000)::BIGINT,
+                    "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+                  WHERE "id" = (o_delivery ->> 'id')::UUID
+                  RETURNING
+                    "id",
+                    "account_id",
+                    "event_id",
+                    "command_id",
+                    "channel",
+                    "recipient",
+                    "thread",
+                    "comment",
+                    "receipt_id",
+                    "message_id",
+                    "body",
+                    "correlation_id",
+                    "generation",
+                    "state",
+                    "attempts",
+                    "lease",
+                    "lease_until",
+                    "next_attempt_at",
+                    "deadline",
+                    "provider_message_id",
+                    "error_code",
+                    "time_created",
+                    "time_updated",
+                    "body_ciphertext",
+                    "cipher_context",
+                    "reply_kind")
+                SELECT to_jsonb(j_ret) FROM j_ret INTO o_claimed;
+                PERFORM "finfolk_rpc".record_social_delivery_audit(i_application,o_claimed,'delivery_claimed');
+                RETURN jsonb_build_object('id',(o_claimed ->> 'id')::UUID,'lease',v_lease,'deadline',o_claimed -> 'deadline','provider',o_inbox ->> 'provider','accountId',o_inbox ->> 'account_id','destination',jsonb_build_object('channel',o_claimed ->> 'channel','recipientId',o_claimed ->> 'recipient','conversationId',CASE WHEN (o_claimed ->> 'channel') = 'message' THEN o_claimed ->> 'thread'
+                WHEN true THEN null
+                END,'commentId',o_claimed ->> 'comment'),'payload',jsonb_build_object(
+                  'body',
+                  o_claimed ->> 'body',
+                  'ciphertext',
+                  o_claimed ->> 'body_ciphertext',
+                  'cipherContext',
+                  o_claimed -> 'cipher_context',
+                  'replyKind',
+                  o_claimed ->> 'reply_kind'
+                ));
+            END;
+            END IF;
+        END;
+        END IF;
+      END LOOP;
+      RETURN null;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-delivery/complete-social-delivery 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_delivery(
+  i_application UUID,
+  i_inbox UUID,
+  i_delivery UUID,
+  i_lease UUID,
+  i_outcome TEXT,
+  i_provider_id TEXT,
+  i_retry_after INTEGER,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_delivery JSONB;
+    o_inbox JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "event_id",
+        "command_id",
+        "channel",
+        "recipient",
+        "thread",
+        "comment",
+        "receipt_id",
+        "message_id",
+        "body",
+        "correlation_id",
+        "generation",
+        "state",
+        "attempts",
+        "lease",
+        "lease_until",
+        "next_attempt_at",
+        "deadline",
+        "provider_message_id",
+        "error_code",
+        "time_created",
+        "time_updated",
+        "body_ciphertext",
+        "cipher_context",
+        "reply_kind"
+      FROM "finfolk"."MessagingOutbox"
+      WHERE "id" = i_delivery AND "account_id" = i_inbox
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_delivery;
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Social inbox outside application scope';
+    END IF;
+    IF o_delivery IS NULL OR o_delivery ->> 'command_id' IS NULL OR i_lease IS NULL OR ((o_delivery ->> 'state') != 'sending') OR ((o_delivery ->> 'lease')::UUID != i_lease) OR ((o_delivery ->> 'lease_until')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) THEN
+      RETURN null;
+    END IF;
+    IF i_outcome IS NULL OR NOT ((i_outcome = 'accepted') OR (i_outcome = 'retry') OR (i_outcome = 'failed') OR (i_outcome = 'uncertain')) OR ((i_outcome = 'accepted') AND ((coalesce(i_provider_id,'') = '') OR (length(i_provider_id) > 500))) OR ((i_outcome = 'retry') AND i_retry_after IS NOT NULL AND ((i_retry_after < 1) OR (i_retry_after > 3600))) THEN
+      RAISE EXCEPTION 'Invalid social delivery outcome';
+    END IF;
+    DECLARE
+      v_error TEXT;
+      v_next BIGINT;
+      v_state TEXT;
+    BEGIN
+      v_state := CASE WHEN i_outcome = 'accepted' THEN 'provider_accepted'
+      WHEN true THEN i_outcome
+      END;
+      v_error := null;
+      v_next := (o_delivery ->> 'next_attempt_at')::BIGINT;
+      IF i_outcome = 'retry' THEN
+        DECLARE
+        o_command JSONB;
+          o_event JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            SELECT
+              "id",
+              "event_id",
+              "inbox_id",
+              "generation",
+              "account_id",
+              "key",
+              "context",
+              "external_actor_id",
+              "external_media_id",
+              "owner_id",
+              "connection_id",
+              "identity_version",
+              "command",
+              "args",
+              "source_url",
+              "comment_at",
+              "received_at",
+              "state",
+              "result",
+              "site_id",
+              "visit_day",
+              "reply",
+              "send_state",
+              "external_reply_id",
+              "send_started_at",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            FROM "finfolk"."SocialCommand"
+            WHERE "id" = (o_delivery ->> 'command_id')::UUID
+            LIMIT 1)
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_command;
+          WITH j_ret AS (  
+            SELECT
+              "id",
+              "provider",
+              "namespace",
+              "key",
+              "account_id",
+              "inbox_id",
+              "message_id",
+              "channel",
+              "generation",
+              "account_generation",
+              "fingerprint",
+              "sent_at",
+              "deadline",
+              "payload",
+              "status",
+              "attempts",
+              "error",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            FROM "finfolk"."SocialEvent"
+            WHERE "id" = (o_delivery ->> 'event_id')::UUID
+            LIMIT 1)
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+          v_error := "finfolk_rpc".social_delivery_policy_error(o_inbox,o_event,o_command,o_delivery);
+          IF v_error IS NULL AND ((o_delivery ->> 'attempts')::INTEGER >= 5) THEN
+            v_error := 'attempts_exhausted';
+          END IF;
+          v_state := CASE WHEN v_error = 'deadline_expired' THEN 'expired'
+          WHEN v_error = 'attempts_exhausted' THEN 'failed'
+          WHEN v_error IS NOT NULL THEN 'cancelled'
+          WHEN true THEN 'pending'
+          END;
+          v_next := ((1000000 * extract(epoch FROM now()))::BIGINT + (1000000 * greatest(
+            coalesce(i_retry_after,1),
+            30 * ("power"(2,(o_delivery ->> 'attempts')::INTEGER - 1))::INTEGER
+          )));
+      END;
+      END IF;
+      DECLARE
+        o_finished JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          UPDATE "finfolk"."MessagingOutbox" SET
+            "state" = (v_state)::"finfolk"."EnumMessagingOutboxStatus",
+            "lease" = (null)::UUID,
+            "lease_until" = (null)::BIGINT,
+            "next_attempt_at" = (v_next)::BIGINT,
+            "provider_message_id" = (CASE WHEN i_outcome = 'accepted' THEN i_provider_id
+          WHEN true THEN null
+          END)::TEXT,
+            "error_code" = (v_error)::TEXT,
+            "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT,
+            "body_ciphertext" = (CASE WHEN v_state = 'pending' THEN o_delivery ->> 'body_ciphertext'
+          WHEN true THEN null
+          END)::TEXT,
+            "cipher_context" = "finfolk".as_jsonb((CASE WHEN v_state = 'pending' THEN o_delivery -> 'cipher_context'
+          WHEN true THEN ('{}')::JSONB
+          END)::JSONB)
+          WHERE "id" = i_delivery
+          RETURNING
+            "id",
+            "account_id",
+            "event_id",
+            "command_id",
+            "channel",
+            "recipient",
+            "thread",
+            "comment",
+            "receipt_id",
+            "message_id",
+            "body",
+            "correlation_id",
+            "generation",
+            "state",
+            "attempts",
+            "lease",
+            "lease_until",
+            "next_attempt_at",
+            "deadline",
+            "provider_message_id",
+            "error_code",
+            "time_created",
+            "time_updated",
+            "body_ciphertext",
+            "cipher_context",
+            "reply_kind")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_finished;
+        IF (i_outcome = 'accepted') AND o_delivery ->> 'message_id' IS NOT NULL THEN
+          DECLARE
+          o_message JSONB;
+        BEGIN
+          WITH j_ret AS (  
+              UPDATE "finfolk"."MessagingMessage" SET
+                "external_id" = (i_provider_id)::TEXT,
+                "sent_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+              WHERE "id" = (o_delivery ->> 'message_id')::UUID
+              AND "account_id" = i_inbox
+              RETURNING
+                "id",
+                "account_id",
+                "conversation_id",
+                "direction",
+                "external_id",
+                "body",
+                "metadata",
+                "sent_at",
+                "time_created")
+            SELECT jsonb_agg(j_ret) FROM j_ret INTO o_message;
+            null;
+        END;
+        END IF;
+        PERFORM "finfolk_rpc".record_social_delivery_audit(i_application,o_finished,"concat"('delivery_',v_state));
+        RETURN "finfolk_rpc".social_delivery_result(o_finished);
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-delivery/reconcile-social-work 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".reconcile_social_work(
+  i_application UUID,
+  i_inbox UUID,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_inbox JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    IF o_inbox is null  THEN
+      RAISE EXCEPTION 'Social inbox outside application scope';
+    END IF;
+    DECLARE
+      o_action JSONB;
+      o_actions JSONB;
+      v_action_cursor UUID;
+      v_action_read INTEGER;
+      v_actions INTEGER;
+      v_deliveries INTEGER;
+      v_delivery_cursor UUID;
+      v_delivery_read INTEGER;
+      v_event_cursor UUID;
+      v_event_read INTEGER;
+      v_events INTEGER;
+      v_proof_cursor UUID;
+      v_proof_read INTEGER;
+      v_proofs INTEGER;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "event_id",
+          "command_id",
+          "inbox_id",
+          "generation",
+          "account_generation",
+          "attempts",
+          "lease",
+          "lease_until",
+          "deadline",
+          "next_attempt_at",
+          "error_code",
+          "result",
+          "account_id",
+          "source_id",
+          "kind",
+          "owner_id",
+          "state",
+          "data",
+          "member_confirmed",
+          "session_id",
+          "audit_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SocialAction"
+        WHERE "inbox_id" = i_inbox
+        AND "state" IN ('pending','running')
+        AND "id" > coalesce(
+          (o_inbox ->> 'action_checkpoint')::UUID,
+          ('00000000-0000-0000-0000-000000000000')::UUID
+        )
+        ORDER BY "id" ASC
+        LIMIT 100
+        FOR UPDATE SKIP LOCKED)
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_actions;
+      o_action := null;
+      v_action_cursor := null;
+      v_delivery_cursor := null;
+      v_event_cursor := null;
+      v_proof_cursor := null;
+      v_action_read := jsonb_array_length(coalesce(o_actions,('[]')::JSONB));
+      v_delivery_read := 0;
+      v_event_read := 0;
+      v_proof_read := 0;
+      v_actions := 0;
+      v_proofs := 0;
+      v_deliveries := 0;
+      v_events := 0;
+      FOR o_action IN SELECT jsonb_array_elements(coalesce(o_actions,('[]')::JSONB)) LOOP
+        IF v_action_read = 100 THEN
+          v_action_cursor := (o_action ->> 'id')::UUID;
+        END IF;
+        DECLARE
+          o_command JSONB;
+          o_event JSONB;
+          v_error TEXT;
+        BEGIN
+          WITH j_ret AS (  
+            SELECT
+              "id",
+              "event_id",
+              "inbox_id",
+              "generation",
+              "account_id",
+              "key",
+              "context",
+              "external_actor_id",
+              "external_media_id",
+              "owner_id",
+              "connection_id",
+              "identity_version",
+              "command",
+              "args",
+              "source_url",
+              "comment_at",
+              "received_at",
+              "state",
+              "result",
+              "site_id",
+              "visit_day",
+              "reply",
+              "send_state",
+              "external_reply_id",
+              "send_started_at",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            FROM "finfolk"."SocialCommand"
+            WHERE "id" = (o_action ->> 'command_id')::UUID
+            LIMIT 1)
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_command;
+          WITH j_ret AS (  
+            SELECT
+              "id",
+              "provider",
+              "namespace",
+              "key",
+              "account_id",
+              "inbox_id",
+              "message_id",
+              "channel",
+              "generation",
+              "account_generation",
+              "fingerprint",
+              "sent_at",
+              "deadline",
+              "payload",
+              "status",
+              "attempts",
+              "error",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            FROM "finfolk"."SocialEvent"
+            WHERE "id" = (o_action ->> 'event_id')::UUID
+            LIMIT 1)
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+          v_error := "finfolk_rpc".social_work_policy_error(o_inbox,o_event,o_command);
+          IF (o_action ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT THEN
+            v_error := 'deadline_expired';
+          END IF;
+          IF ((o_action ->> 'generation')::INTEGER != (o_event ->> 'generation')::INTEGER) OR ((o_action ->> 'account_generation')::INTEGER != (o_event ->> 'account_generation')::INTEGER) THEN
+            v_error := 'identity_changed';
+          END IF;
+          IF v_error is not null  THEN
+            PERFORM "finfolk_rpc".expire_social_action(o_action,v_error,o_op);
+            v_actions := (v_actions + 1);
+          ELSIF ((o_action ->> 'state') = 'running') AND ((o_action ->> 'lease_until')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) THEN
+            DECLARE
+            o_recovered JSONB;
+              v_log UUID;
+              v_retry BOOLEAN;
+          BEGIN
+            v_retry := ((o_action ->> 'attempts')::INTEGER < 3);
+              WITH j_ret AS (  
+                UPDATE "finfolk"."SocialAction" SET
+                  "lease" = (null)::UUID,
+                  "lease_until" = (null)::BIGINT,
+                  "next_attempt_at" = ((1000000 * extract(epoch FROM now()))::BIGINT + (30000000 * (o_action ->> 'attempts')::INTEGER))::BIGINT,
+                  "error_code" = ('lease_expired')::TEXT,
+                  "state" = (CASE WHEN v_retry THEN 'pending'
+                WHEN true THEN 'failed'
+                END)::TEXT,
+                  "op_updated" = (o_op ->> 'id')::UUID,
+                  "time_updated" = (o_op ->> 'time')::BIGINT
+                WHERE "id" = (o_action ->> 'id')::UUID
+                RETURNING
+                  "id",
+                  "event_id",
+                  "command_id",
+                  "inbox_id",
+                  "generation",
+                  "account_generation",
+                  "attempts",
+                  "lease",
+                  "lease_until",
+                  "deadline",
+                  "next_attempt_at",
+                  "error_code",
+                  "result",
+                  "account_id",
+                  "source_id",
+                  "kind",
+                  "owner_id",
+                  "state",
+                  "data",
+                  "member_confirmed",
+                  "session_id",
+                  "audit_id",
+                  "op_created",
+                  "op_updated",
+                  "time_created",
+                  "time_updated")
+              SELECT jsonb_agg(j_ret) FROM j_ret INTO o_recovered;
+              v_log := "finfolk_rpc".record_social_audit(
+                'SocialAction',
+                (o_action ->> 'audit_id')::UUID,
+                'lease_expired',
+                o_op
+              );
+              IF NOT v_retry THEN
+                PERFORM "finfolk_rpc".finish_social_command_reply(
+                  (o_command ->> 'id')::UUID,
+                  'Unable to verify your social account. Try /connect again later.',
+                  null,
+                  null,
+                  ('{"error":"external_effect_failed"}')::JSONB,
+                  o_op
+                );
+              END IF;
+              v_actions := (v_actions + 1);
+          END;
+          END IF;
+        END;
+      END LOOP;
+      DECLARE
+        o_delivery JSONB;
+        o_pending JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "account_id",
+            "event_id",
+            "command_id",
+            "channel",
+            "recipient",
+            "thread",
+            "comment",
+            "receipt_id",
+            "message_id",
+            "body",
+            "correlation_id",
+            "generation",
+            "state",
+            "attempts",
+            "lease",
+            "lease_until",
+            "next_attempt_at",
+            "deadline",
+            "provider_message_id",
+            "error_code",
+            "time_created",
+            "time_updated",
+            "body_ciphertext",
+            "cipher_context",
+            "reply_kind"
+          FROM "finfolk"."MessagingOutbox"
+          WHERE "account_id" = i_inbox
+          AND "state" IN ('pending','sending')
+          AND "id" > coalesce(
+            (o_inbox ->> 'delivery_checkpoint')::UUID,
+            ('00000000-0000-0000-0000-000000000000')::UUID
+          )
+          ORDER BY "id" ASC
+          LIMIT 100
+          FOR UPDATE SKIP LOCKED)
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_pending;
+        o_delivery := null;
+        v_delivery_read := jsonb_array_length(coalesce(o_pending,('[]')::JSONB));
+        FOR o_delivery IN SELECT jsonb_array_elements(coalesce(o_pending,('[]')::JSONB)) LOOP
+          IF v_delivery_read = 100 THEN
+            v_delivery_cursor := (o_delivery ->> 'id')::UUID;
+          END IF;
+          IF o_delivery ->> 'command_id' is not null  THEN
+            DECLARE
+            o_command JSONB;
+              o_event JSONB;
+              v_error TEXT;
+          BEGIN
+            WITH j_ret AS (  
+                SELECT
+                  "id",
+                  "event_id",
+                  "inbox_id",
+                  "generation",
+                  "account_id",
+                  "key",
+                  "context",
+                  "external_actor_id",
+                  "external_media_id",
+                  "owner_id",
+                  "connection_id",
+                  "identity_version",
+                  "command",
+                  "args",
+                  "source_url",
+                  "comment_at",
+                  "received_at",
+                  "state",
+                  "result",
+                  "site_id",
+                  "visit_day",
+                  "reply",
+                  "send_state",
+                  "external_reply_id",
+                  "send_started_at",
+                  "op_created",
+                  "op_updated",
+                  "time_created",
+                  "time_updated"
+                FROM "finfolk"."SocialCommand"
+                WHERE "id" = (o_delivery ->> 'command_id')::UUID
+                LIMIT 1)
+              SELECT to_jsonb(j_ret) FROM j_ret INTO o_command;
+              WITH j_ret AS (  
+                SELECT
+                  "id",
+                  "provider",
+                  "namespace",
+                  "key",
+                  "account_id",
+                  "inbox_id",
+                  "message_id",
+                  "channel",
+                  "generation",
+                  "account_generation",
+                  "fingerprint",
+                  "sent_at",
+                  "deadline",
+                  "payload",
+                  "status",
+                  "attempts",
+                  "error",
+                  "op_created",
+                  "op_updated",
+                  "time_created",
+                  "time_updated"
+                FROM "finfolk"."SocialEvent"
+                WHERE "id" = (o_delivery ->> 'event_id')::UUID
+                LIMIT 1)
+              SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+              v_error := "finfolk_rpc".social_delivery_policy_error(o_inbox,o_event,o_command,o_delivery);
+              IF ((o_delivery ->> 'state') = 'sending') AND ((o_delivery ->> 'lease_until')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) THEN
+                v_error := 'lease_expired';
+              END IF;
+              IF v_error is not null  THEN
+                DECLARE
+                o_expired JSONB;
+                  v_state TEXT;
+              BEGIN
+                v_state := CASE WHEN (o_delivery ->> 'state') = 'sending' THEN 'uncertain'
+                  WHEN v_error = 'deadline_expired' THEN 'expired'
+                  WHEN v_error = 'attempts_exhausted' THEN 'failed'
+                  WHEN true THEN 'cancelled'
+                  END;
+                  WITH j_ret AS (  
+                    UPDATE "finfolk"."MessagingOutbox" SET
+                      "state" = (v_state)::"finfolk"."EnumMessagingOutboxStatus",
+                      "lease" = (null)::UUID,
+                      "lease_until" = (null)::BIGINT,
+                      "error_code" = (v_error)::TEXT,
+                      "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT,
+                      "body_ciphertext" = (null)::TEXT,
+                      "cipher_context" = "finfolk".as_jsonb(('{}')::JSONB)
+                    WHERE "id" = (o_delivery ->> 'id')::UUID
+                    RETURNING
+                      "id",
+                      "account_id",
+                      "event_id",
+                      "command_id",
+                      "channel",
+                      "recipient",
+                      "thread",
+                      "comment",
+                      "receipt_id",
+                      "message_id",
+                      "body",
+                      "correlation_id",
+                      "generation",
+                      "state",
+                      "attempts",
+                      "lease",
+                      "lease_until",
+                      "next_attempt_at",
+                      "deadline",
+                      "provider_message_id",
+                      "error_code",
+                      "time_created",
+                      "time_updated",
+                      "body_ciphertext",
+                      "cipher_context",
+                      "reply_kind")
+                  SELECT to_jsonb(j_ret) FROM j_ret INTO o_expired;
+                  PERFORM "finfolk_rpc".record_social_delivery_audit(i_application,o_expired,"concat"('delivery_',v_state));
+                  v_deliveries := (v_deliveries + 1);
+              END;
+              END IF;
+          END;
+          END IF;
+        END LOOP;
+      END;
+      DECLARE
+        o_event JSONB;
+        o_pending JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "provider",
+            "namespace",
+            "key",
+            "account_id",
+            "inbox_id",
+            "message_id",
+            "channel",
+            "generation",
+            "account_generation",
+            "fingerprint",
+            "sent_at",
+            "deadline",
+            "payload",
+            "status",
+            "attempts",
+            "error",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialEvent"
+          WHERE "inbox_id" = i_inbox
+          AND "status" IN ('queued','waiting')
+          AND "id" > coalesce(
+            (o_inbox ->> 'event_checkpoint')::UUID,
+            ('00000000-0000-0000-0000-000000000000')::UUID
+          )
+          ORDER BY "id" ASC
+          LIMIT 100
+          FOR UPDATE SKIP LOCKED)
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_pending;
+        o_event := null;
+        v_event_read := jsonb_array_length(coalesce(o_pending,('[]')::JSONB));
+        FOR o_event IN SELECT jsonb_array_elements(coalesce(o_pending,('[]')::JSONB)) LOOP
+          IF v_event_read = 100 THEN
+            v_event_cursor := (o_event ->> 'id')::UUID;
+          END IF;
+          DECLARE
+            o_command JSONB;
+            v_error TEXT;
+          BEGIN
+            WITH j_ret AS (  
+              SELECT
+                "id",
+                "event_id",
+                "inbox_id",
+                "generation",
+                "account_id",
+                "key",
+                "context",
+                "external_actor_id",
+                "external_media_id",
+                "owner_id",
+                "connection_id",
+                "identity_version",
+                "command",
+                "args",
+                "source_url",
+                "comment_at",
+                "received_at",
+                "state",
+                "result",
+                "site_id",
+                "visit_day",
+                "reply",
+                "send_state",
+                "external_reply_id",
+                "send_started_at",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated"
+              FROM "finfolk"."SocialCommand"
+              WHERE "event_id" = (o_event ->> 'id')::UUID
+              LIMIT 1)
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_command;
+            v_error := "finfolk_rpc".social_work_policy_error(o_inbox,o_event,o_command);
+            IF v_error is not null  THEN
+              DECLARE
+              o_expired JSONB;
+                o_expired_command JSONB;
+            BEGIN
+              WITH j_ret AS (  
+                  UPDATE "finfolk"."SocialEvent" SET
+                    "status" = ('expired')::TEXT,
+                    "error" = (v_error)::TEXT,
+                    "op_updated" = (o_op ->> 'id')::UUID,
+                    "time_updated" = (o_op ->> 'time')::BIGINT
+                  WHERE "id" = (o_event ->> 'id')::UUID
+                  RETURNING
+                    "id",
+                    "provider",
+                    "namespace",
+                    "key",
+                    "account_id",
+                    "inbox_id",
+                    "message_id",
+                    "channel",
+                    "generation",
+                    "account_generation",
+                    "fingerprint",
+                    "sent_at",
+                    "deadline",
+                    "payload",
+                    "status",
+                    "attempts",
+                    "error",
+                    "op_created",
+                    "op_updated",
+                    "time_created",
+                    "time_updated")
+                SELECT jsonb_agg(j_ret) FROM j_ret INTO o_expired;
+                WITH j_ret AS (  
+                  UPDATE "finfolk"."SocialCommand" SET
+                    "state" = ('expired')::"finfolk"."EnumSocialCommandStatus",
+                    "result" = (jsonb_build_object('error',v_error))::JSONB,
+                    "op_updated" = (o_op ->> 'id')::UUID,
+                    "time_updated" = (o_op ->> 'time')::BIGINT
+                  WHERE "event_id" = (o_event ->> 'id')::UUID
+                  RETURNING
+                    "id",
+                    "event_id",
+                    "inbox_id",
+                    "generation",
+                    "account_id",
+                    "key",
+                    "context",
+                    "external_actor_id",
+                    "external_media_id",
+                    "owner_id",
+                    "connection_id",
+                    "identity_version",
+                    "command",
+                    "args",
+                    "source_url",
+                    "comment_at",
+                    "received_at",
+                    "state",
+                    "result",
+                    "site_id",
+                    "visit_day",
+                    "reply",
+                    "send_state",
+                    "external_reply_id",
+                    "send_started_at",
+                    "op_created",
+                    "op_updated",
+                    "time_created",
+                    "time_updated")
+                SELECT jsonb_agg(j_ret) FROM j_ret INTO o_expired_command;
+                v_events := (v_events + 1);
+            END;
+            END IF;
+          END;
+        END LOOP;
+      END;
+      DECLARE
+        o_proof JSONB;
+        o_proofs JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "account_id",
+            "user_id",
+            "connection_id",
+            "event_id",
+            "inbox_id",
+            "receipt_id",
+            "kind",
+            "token_hash",
+            "nonce_hash",
+            "flow_key",
+            "generation",
+            "status",
+            "expires_at",
+            "verified_at",
+            "consumed_at",
+            "consumed_version",
+            "error",
+            "provider_data",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialConnectionProof"
+          WHERE "inbox_id" = i_inbox
+          AND "status" IN ('pending','verified')
+          AND "id" > coalesce(
+            (o_inbox ->> 'proof_checkpoint')::UUID,
+            ('00000000-0000-0000-0000-000000000000')::UUID
+          )
+          ORDER BY "id" ASC
+          LIMIT 100
+          FOR UPDATE SKIP LOCKED)
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_proofs;
+        o_proof := null;
+        v_proof_read := jsonb_array_length(coalesce(o_proofs,('[]')::JSONB));
+        FOR o_proof IN SELECT jsonb_array_elements(coalesce(o_proofs,('[]')::JSONB)) LOOP
+          IF v_proof_read = 100 THEN
+            v_proof_cursor := (o_proof ->> 'id')::UUID;
+          END IF;
+          DECLARE
+            o_account JSONB;
+            o_event JSONB;
+            v_status TEXT;
+          BEGIN
+            WITH j_ret AS (  
+              SELECT
+                "id",
+                "provider",
+                "namespace",
+                "key",
+                "account_id",
+                "inbox_id",
+                "message_id",
+                "channel",
+                "generation",
+                "account_generation",
+                "fingerprint",
+                "sent_at",
+                "deadline",
+                "payload",
+                "status",
+                "attempts",
+                "error",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated"
+              FROM "finfolk"."SocialEvent"
+              WHERE "id" = (o_proof ->> 'event_id')::UUID
+              LIMIT 1)
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+            WITH j_ret AS (  
+              SELECT
+                "id",
+                "provider",
+                "namespace",
+                "external_id",
+                "handle",
+                "display_name",
+                "generation",
+                "provider_data",
+                "audit_id",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated"
+              FROM "finfolk"."SocialAccount"
+              WHERE "id" = (o_proof ->> 'account_id')::UUID
+              LIMIT 1)
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+            v_status := null;
+            IF (o_proof ->> 'expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT THEN
+              v_status := 'expired';
+            END IF;
+            IF ((o_event ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_proof ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) THEN
+              v_status := 'revoked';
+            END IF;
+            IF v_status is not null  THEN
+              DECLARE
+              o_expired JSONB;
+            BEGIN
+              WITH j_ret AS (  
+                  UPDATE "finfolk"."SocialConnectionProof" SET
+                    "status" = (v_status)::"finfolk"."EnumSocialProofStatus",
+                    "op_updated" = (o_op ->> 'id')::UUID,
+                    "time_updated" = (o_op ->> 'time')::BIGINT
+                  WHERE "id" = (o_proof ->> 'id')::UUID
+                  RETURNING
+                    "id",
+                    "account_id",
+                    "user_id",
+                    "connection_id",
+                    "event_id",
+                    "inbox_id",
+                    "receipt_id",
+                    "kind",
+                    "token_hash",
+                    "nonce_hash",
+                    "flow_key",
+                    "generation",
+                    "status",
+                    "expires_at",
+                    "verified_at",
+                    "consumed_at",
+                    "consumed_version",
+                    "error",
+                    "provider_data",
+                    "op_created",
+                    "op_updated",
+                    "time_created",
+                    "time_updated")
+                SELECT jsonb_agg(j_ret) FROM j_ret INTO o_expired;
+                v_proofs := (v_proofs + 1);
+            END;
+            END IF;
+          END;
+        END LOOP;
+      END;
+      DECLARE
+        o_checkpoint JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          UPDATE "finfolk"."MessagingAccount" SET
+            "action_checkpoint" = (v_action_cursor)::UUID,
+            "delivery_checkpoint" = (v_delivery_cursor)::UUID,
+            "event_checkpoint" = (v_event_cursor)::UUID,
+            "proof_checkpoint" = (v_proof_cursor)::UUID
+          WHERE "id" = i_inbox
+          RETURNING
+            "id",
+            "social_account_id",
+            "key",
+            "application_id",
+            "provider",
+            "account_id",
+            "username",
+            "credential_ciphertext",
+            "token_expires_at",
+            "credential_lease",
+            "credential_lease_until",
+            "mode",
+            "enabled_commands",
+            "pilot_sender_ids",
+            "generation",
+            "checks",
+            "last_webhook_at",
+            "last_command_at",
+            "last_reply_at",
+            "time_updated",
+            "backoff_until",
+            "action_checkpoint",
+            "delivery_checkpoint",
+            "event_checkpoint",
+            "proof_checkpoint",
+            "provider_scope")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_checkpoint;
+        RETURN jsonb_build_object(
+          'actions',
+          v_actions,
+          'deliveries',
+          v_deliveries,
+          'events',
+          v_events,
+          'proofs',
+          v_proofs,
+          'scanned',
+          v_action_read + v_delivery_read + v_event_read + v_proof_read,
+          'more',
+          (v_action_read = 100) OR (v_delivery_read = 100) OR (v_event_read = 100) OR (v_proof_read = 100)
+        );
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
 
 
 -- Native directory HTTP contract; transaction identity is set by the trusted server.
