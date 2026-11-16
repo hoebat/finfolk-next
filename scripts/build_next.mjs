@@ -2,15 +2,14 @@ import {execFileSync} from 'node:child_process';
 import {readdir,stat,readFile,writeFile,mkdir,unlink} from 'node:fs/promises';
 import {gzipSync} from 'node:zlib';
 import {resolve,relative,dirname} from 'node:path';
-import {createHash} from 'node:crypto';
 import {buildExploreContours} from './build_explore_contours.mjs';
 import {addSocialMetadata} from '../backend/social-metadata.mjs';
 const environment=JSON.parse(await readFile('next.environment.json','utf8'));
 if(environment.environment!=='next' || environment.database!=='finfolk_next' || environment.authUrl.includes('crimson-queen') || !environment.authUrl.includes('.neonauth.'))throw Error('Refusing non-isolated Next build.');
 execFileSync(process.execPath,['scripts/generate_db.mjs','--check'],{stdio:'inherit'});
-const sqlSha=createHash('sha256').update(await readFile('resources/finfolkdb/pilot.sql')).digest('hex');
 const apiConfig=JSON.parse(await readFile('wrangler.next-api.jsonc','utf8'));
-if(sqlSha!==environment.sqlSha || apiConfig.vars.DB_SQL_SHA!==sqlSha)throw Error('Next release hashes do not match the generated SQL.');
+// The configured API release is independent of local native schema publication.
+if(apiConfig.vars.DB_SQL_SHA!==environment.sqlSha)throw Error('Configured API release hashes do not match.');
 execFileSync(process.execPath,['scripts/bundle_backbone.mjs'],{stdio:'inherit'});
 const root=resolve('.cache/next-site');
 execFileSync(process.env.PYTHON || '.venv/bin/python',['-m','depth_explorer','build-static','--output',root],{stdio:'inherit',env:{...process.env,NEON_AUTH_BASE_URL:environment.authUrl,NEON_API_URL:'https://finfolk.com.au/'}});

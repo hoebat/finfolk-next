@@ -1,10 +1,13 @@
 (ns finfolkbuild.db.legacy
-  "Frozen release fixtures for the pre-entity API; never an active schema model."
+  "Historical JSON metadata for compatibility and coverage; SQL publication is owned by finfolkdb."
   (:require [clojure.java.io :as io]
             [std.json :as json]))
 
 (defn artifact
   [name]
+  (when-not (.endsWith ^String name ".json")
+    (throw (ex-info "SQL snapshots are retired; generate the current finfolkdb schema"
+                    {:artifact name :reason :retired-sql-source})))
   (slurp (io/resource (str "finfolkbuild/legacy/" name))))
 
 (defn declarations
@@ -16,13 +19,5 @@
                    :constraints (get spec "constraints")}]))
     (json/read (artifact "catalog.json"))))
 
-(defn sql [] (artifact "pilot.sql"))
 (defn contracts [] (artifact "contracts.json"))
-(defn schema-sql [] (artifact "site-schema.sql"))
 (defn indexes-json [] (artifact "indexes.json"))
-
-(defn publish!
-  [root]
-  (let [file (io/file root "resources/finfolkdb/schema.sql")]
-    (io/make-parents file)
-    (spit file (artifact "schema.sql"))))
