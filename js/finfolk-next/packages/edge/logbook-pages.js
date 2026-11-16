@@ -3,7 +3,7 @@ export async function loadLogbook(read,inputs,actor){
   let config = inputs["config"];
   if(inputs["session"]){
     let entry = await read("session",{"id":inputs["session"]});
-    if((entry["visibility"] != "public") && (entry["ownerId"] != actor)){
+    if(!entry || ((entry["visibility"] != "public") && (entry["ownerId"] != actor))){
       throw new Error("This session is private. Sign in with its owner account.");
     }
     return {
