@@ -27,3 +27,8 @@ js/finfolk-next/site/web-main/public/
 # Emacs lock and autosave files
 **/.#*
 **/#*#
+
+# Independently generated app.manage slice modules
+/generated/slices/
+
+/generated/verification/

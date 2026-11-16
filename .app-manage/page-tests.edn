@@ -1,0 +1,38 @@
+{:revision 0
+ :cases
+ {"logbook-ownership"
+  {:steps
+   [{:id "create" :page "logbook-editor" :kind "action" :member "save"
+     :payload {:values {:notes "Workbench proof" :visibility "public" :photos ["untrusted"]}}
+     :expect {:contains {:owner-id "20000000-0000-0000-0000-000000000001"
+                         :detail {:notes "Workbench proof" :visibility "private" :photos []}}}}
+    {:id "read" :page "logbook" :kind "model" :member "session"
+     :payload {:id {:$ref ["create" "result" "id"]}}
+     :expect {:contains {:notes "Workbench proof" :visibility "private" :photos []
+                         :ownerId "20000000-0000-0000-0000-000000000001"}}}
+    {:id "page" :page "logbook" :kind "page"
+     :inputs {:session {:$ref ["create" "result" "id"]} :config {}}
+     :expect {:contains {:entry {:notes "Workbench proof" :visibility "private"}
+                         :profile {:id "20000000-0000-0000-0000-000000000001" :display-name "Alice"}}}}
+    {:id "bob-read" :actor "bob" :page "logbook" :kind "model" :member "session"
+     :payload {:id {:$ref ["create" "result" "id"]}} :expect {:equals nil}}
+    {:id "bob-page" :actor "bob" :page "logbook" :kind "page"
+     :inputs {:session {:$ref ["create" "result" "id"]} :config {}}
+     :expect {:error {:message "This session is private. Sign in with its owner account."}}}]}
+  "logbook-branches"
+  {:steps
+   [{:id "ensure" :page "logbook" :kind "page" :inputs {:config {:title "Logbook"}}
+     :expect {:equals {:config {:title "Logbook"}}}}
+    {:id "profile" :page "logbook" :kind "page"
+     :inputs {:profile "20000000-0000-0000-0000-000000000002" :config {}}
+     :expect {:contains {:profile {:display-name "Bob" :id "20000000-0000-0000-0000-000000000002"}}}}
+    {:id "invalid-site" :page "logbook-editor" :kind "action" :member "save"
+     :payload {:values {:invalidSite true}} :expect {:error {:code "23503"}}}]}
+  "model-contracts"
+  {:steps
+   [{:id "resolve-session" :page "logbook" :kind "resolve" :member "session"
+     :payload {:id "fixture-id"} :expect {:contains {:name "session" :values {:id "fixture-id"}}}}
+    {:id "invalid-report" :page "public-report" :kind "resolve" :member "report"
+     :inputs {:id "invalid"} :expect {:error {:message "Choose a valid trip report."}}}
+    {:id "missing-binding" :page "public-report" :kind "resolve" :member "report"
+     :expect {:error {:message "Missing page binding: id"}}}]}}}

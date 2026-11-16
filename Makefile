@@ -6,6 +6,8 @@ export PYTHON := $(ROOT)/.venv/bin/python
 export WRANGLER_SEND_METRICS := false
 .PHONY: help bootstrap generate check-generated test test-db test-browser build dev deploy deploy-api db-release
 help:
+	@echo 'manage manage-preview manage-plan manage-check manage-build demo-logbook build-page-verifier test-page-models'
+	@echo 'generate-db-sql generate-db-json check-generated-db-sql check-generated-db-json'
 	@echo 'bootstrap generate check-generated test test-db test-browser build dev deploy db-release generate-db check-generated-db test-db-types scaffold-db-common test-db-common'
 bootstrap:
 	bash scripts/bootstrap.sh
@@ -62,13 +64,7 @@ test-db-types: check-generated-db
 	node scripts/test_database.mjs --types
 
 .PHONY: test-db-messaging
-test-db-messaging: check-generated-db
-	node tests/test_messaging_preflight.mjs
-	node tests/test_entity_messaging_worker.mjs
-	node tests/test_messaging_transport.mjs
-	node tests/test_messaging_authorization.mjs
-	lein run -m finfolkdb.test
-	node scripts/test_database.mjs --messaging
+test-db-messaging: test-db-social
 
 .PHONY: scaffold-db-common test-db-common
 scaffold-db-common:
@@ -111,3 +107,74 @@ test-db-local-status:
 	node scripts/local_supabase.mjs status
 test-db-runtime:
 	node --test tests/test_local_supabase.mjs
+
+.PHONY: test-db-mock mock-social
+test-db-mock: test-db-social
+mock-social:
+	node scripts/mock_social.mjs $(or $(ARGS),start)
+
+.PHONY: test-db-note-revisions
+test-db-note-revisions: check-generated-db
+	node scripts/test_database.mjs --note-revisions
+
+.PHONY: test-db-social
+test-db-social: check-generated-db
+	node scripts/test_database.mjs --clojure-social
+
+.PHONY: test-app-integration
+test-app-integration:
+	lein run -m app.manage finfolkbuild.project.application/PROJECT test
+
+# Whole-project app.manage UI and its existing Next.js application preview.
+LEIN_FLAGS ?=
+MANAGE_PORT ?= 8131
+PREVIEW_PORT ?= 3010
+export PREVIEW_PORT
+.PHONY: manage manage-plan manage-check manage-build manage-preview
+manage:
+	lein $(LEIN_FLAGS) manage --port $(MANAGE_PORT)
+manage-plan:
+	lein $(LEIN_FLAGS) app plan
+manage-check:
+	lein $(LEIN_FLAGS) app check
+manage-build:
+	lein $(LEIN_FLAGS) app build
+manage-preview:
+	lein $(LEIN_FLAGS) run -m finfolkbuild.project.preview
+
+.PHONY: generate-db-sql generate-db-json check-generated-db-sql check-generated-db-json
+generate-db-sql:
+	lein $(LEIN_FLAGS) run -m finfolkdb.build --sql
+generate-db-json:
+	lein $(LEIN_FLAGS) run -m finfolkdb.build --json
+check-generated-db-sql:
+	lein $(LEIN_FLAGS) run -m finfolkdb.build --sql --check
+check-generated-db-json:
+	lein $(LEIN_FLAGS) run -m finfolkdb.build --json --check
+
+.PHONY: slice-status slice-logbook
+slice-status:
+	lein $(LEIN_FLAGS) run -m app.manage.slices finfolkbuild.project.management/PROJECT status
+slice-logbook:
+	lein $(LEIN_FLAGS) run -m app.manage.slices finfolkbuild.project.management/PROJECT build logbook backbone
+
+.PHONY: demo-logbook
+demo-logbook:
+	lein $(LEIN_FLAGS) run -m clojure.main -e "(require '[app.manage :as m] '[finfolkbuild.project.management :as p]) (prn (m/generate p/PROJECT {:targets [:logbook-demo] :write true})) (shutdown-agents)"
+	lein $(LEIN_FLAGS) run -m finfolkbuild.project.logbook-demo
+
+.PHONY: check-logbook-demo
+check-logbook-demo:
+	lein $(LEIN_FLAGS) run -m app.manage.slices finfolkbuild.project.management/PROJECT build logbook demo
+
+.PHONY: build-page-verifier test-page-models
+build-page-verifier:
+	lein $(LEIN_FLAGS) run -m clojure.main -e "(require '[app.manage :as m] '[finfolkbuild.project.management :as p]) (prn (m/generate p/PROJECT {:targets [:page-verifier] :write true})) (shutdown-agents)"
+test-page-models: build-page-verifier
+	lein $(LEIN_FLAGS) run -m app.manage.verify finfolkbuild.project.management/PROJECT run
+
+.PHONY: page-migration-status check-page-migration
+page-migration-status:
+	lein $(LEIN_FLAGS) run -m finfolkbuild.project.page-coverage
+check-page-migration:
+	lein $(LEIN_FLAGS) run -m clojure.main -e "(require '[app.manage.integration :as i]) (let [r (i/run! '[finfolkbuild.project.page-coverage-test])] (prn r) (shutdown-agents) (System/exit (if (= :ok (:status r)) 0 1)))"

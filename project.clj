@@ -5,7 +5,9 @@
 (defproject hoebat/finfolk-next "0.1.0"
   :description "FinFolk Clojure-authored database and substrate backbone"
   :dependencies [[org.clojure/clojure "1.11.1"]
+                 [org.clojure/data.json "2.4.0"]
                  [org.postgresql/postgresql "42.7.2"]
+                 [http-kit "2.8.0"]
                  [xyz.zcaudate/lang ~FOUNDATION_VERSION]
                  [xyz.zcaudate/postgres ~FOUNDATION_VERSION]
                  [xyz.zcaudate/js.core ~FOUNDATION_VERSION]
@@ -13,11 +15,13 @@
                  [xyz.zcaudate/xtalk.db ~FOUNDATION_VERSION]
                  [xyz.zcaudate/code.test ~FOUNDATION_VERSION]]
   :source-paths ["src" "src-app" "ref/foundation/src" "ref/foundation/src-lang"]
-  :resource-paths ["resources"]
+  :resource-paths ["resources" "ref/foundation/resources"]
   :test-paths ["test" "test-app"]
   :profiles {:dev {:dependencies [[zprint/zprint "1.3.0"]]
                    :source-paths ["dev"]}}
-  :aliases {"test" ["run" "-m" "code.test"]
+  :aliases {"manage" ["run" "-m" "app.manage.server" "finfolkbuild.project.management/PROJECT"]
+            "app" ["run" "-m" "app.manage" "finfolkbuild.project.management/PROJECT"]
+            "test" ["run" "-m" "code.test"]
             "zprint" ["run" "-m" "tooling.format"]
             "generate" ["run" "-m" "finfolkbuild.project.main"]}
   :jvm-opts ["-Xmx2g" "--enable-native-access=ALL-UNNAMED"])

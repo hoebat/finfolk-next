@@ -2,6 +2,49 @@
 
 The Clojure-authored database and substrate backbone for [finfolk.com.au](https://finfolk.com.au). This is the source of truth for FinFolk production development. The `hoebat/finfolk-app` implementation remains a frozen legacy copy; it is not a build dependency.
 
+## Project manager and previews
+
+Run `make manage` and open [FinFolk manager](http://127.0.0.1:8131).
+The Pipeline view covers database contracts, Clojure/XTalk publication, browser
+bundles, site assets, Next.js, the API and integration checks. **Previews** opens
+actual FinFolk routes, including the map, community, logbook, account and review
+screens, with desktop/mobile widths and a separate-tab option.
+
+`make manage-preview` reuses a running Next.js development server or starts one
+on port 3010. The manager discovers its port from Next's local development lock;
+start the preview before the manager. `FINFOLK_PREVIEW_ORIGIN` can override the
+preview origin; `MANAGE_PORT` selects the manager port. The preview retains the
+application's existing auth and API configuration.
+
+```sh
+make manage-preview          # reuse/start the actual Next app
+make manage                  # shared local management UI (port 8131)
+make manage-plan             # full target dependency graph
+make manage-check            # compare generated text artifacts with fresh publication
+make manage-build            # generate and run applicable build/integration checks
+```
+
+See [the management guide](docs/APP_MANAGE_INTEGRATION.md)
+for build ownership, checks and preview configuration.
+
+## Logbook lab
+
+Run `make demo-logbook` for an isolated local demo at
+[localhost:8132](http://127.0.0.1:8132), also available under app.manage's
+**Previews → Logbook lab · devtool**. It uses the emitted Substrate backbone and
+native PostgreSQL functions on local Supabase. The fixture actor switcher and
+live model/cache/request inspector let you create a private session, check
+Alice/Bob ownership and exercise a rejected write.
+
+`make check-logbook-demo` verifies the demo stage and records evidence in
+**Slices → Private logbook → Local demo & devtool**. Stop the demo with Ctrl-C
+to drop its owned database. Fixture identities are distinct from production Auth.
+
+In **Pages & models**, load `logbook-ownership` and click **Run / verify** to
+inspect page/model results, errors, trace, state and cache. `make build-page-verifier`
+generates the XTalk worker; `make test-page-models` replays the versioned saved
+checks on a fresh disposable local fixture. See [page verification](docs/APP_MANAGE_INTEGRATION.md#verify-in-the-ui).
+
 ## Native entity identities
 
 Fresh FinfolkDB entities use UUID IDs and UUID relationships, including addon
@@ -21,7 +64,7 @@ remain unchanged.
 
 | Authored source | Generated output |
 | --- | --- |
-| `src/finfolkdb` | `resources/finfolkdb/pilot.sql` and browser RPC contracts |
+| `src/finfolkdb` | Native SQL under `resources/finfolkdb` and separate JSON contracts |
 | `src-app/finfolk_web/groups` | The active browser operation registry, including HTTP bindings and invalidation domains |
 | `src-app/finfolk_web/lib` | `js/finfolk-next/packages/edge`: actor lifecycle, substrate models, xt.db cache, application state and public HTTP adapter |
 | Pinned `ref/foundation/src-lang` | Required `@xtalk/*` workspace packages under `js/finfolk-next/packages/libs` |
@@ -35,7 +78,7 @@ SQLite WASM 3.54.1 uses OPFS `opfs-sahpool`, with no cross-origin isolation head
 
 Large depth files and saved regions stay in IndexedDB. The device-storage panel reports both stores and applies a combined recent-cache budget, preserving pinned regions. Persistence is requested explicitly and remains subject to browser support and available storage. Without SharedWorker or OPFS, SQLite uses an in-memory dedicated/shared worker; a startup failure falls back to the existing memory runtime. Set `cacheBackend` to `memory` in configuration (or build with `NEXT_CACHE_BACKEND=memory`) to roll back the swap.
 
-The table declarations retain the StatsDB-style domain layout. The deployed SQL slice contains profile/check-in and identity functions. Table default/constraint metadata remains an inventory, not a replacement for the full migration history. All existing migrations and the SQL release hash are preserved. The SQL header retains its historical generator label to preserve those exact bytes.
+The table declarations retain the StatsDB-style domain layout. Current SQL is generated exclusively from `finfolkdb.*`; SQL outputs are disposable. SQL and JSON publication are separate manager targets. Historical SQL snapshots are retired; existing API paths still using the historical schema require native migration. Deployed API configuration is independent of local schema generation.
 
 ## Setup and workflow
 
@@ -72,15 +115,21 @@ For editor/REPL testing, run `make test-db-local-up` first, then start `lein rep
 
 `make scaffold-db-common` uses `code.manage` to add linked write/read facts and preserve authored application scenarios. Common tests exercise directory publication/privacy, event rollback and RSVP changes, owner-only logbooks, post consent/blocking, trip upload/publication protocols, provider messaging delivery, reward and request state, environment lease consistency, and foreign-key failures without partial writes. Catalog assertions remain in the independent local `--common-contracts` suite.
 
+The common suites follow the `statsdb` testing pattern: each namespace declares its JDBC `l/script-` dependencies and owns explicit `l/rt:restart`, `l/rt:teardown`, `l/rt:setup` and `l/rt:stop` hooks. `local/prepare!` and `local/cleanup!` only manage the isolated database schemas and lock. Require the domain modules and fixture operations used by a suite rather than the whole application scaffold. Social suites construct explicit provider workflows, inspect persisted rows, test rejected writes and remove their fixtures with `try`/`finally`. Run a single namespace directly with `lein test :only finfolkdb.common.type-social-account-test` after starting the local stack; the Make target additionally creates and removes a disposable suite database.
+
 `make test-db` uses the local Supabase project `finfolk-tests`, configured in `supabase/config.toml`. Each suite creates an empty `finfolk_test_*` database from `template0` and drops it on success or failure. The stack stays running for subsequent tests and REPL sessions. Supabase's main `postgres` database and managed Auth schemas are not reset or used as test fixtures. Tests continue to reproduce the production API grants and a synthetic Neon Auth table; this does not switch production authentication to Supabase.
 
 The API, database, Studio and test-mail ports are 55431, 55432, 55433 and 55434 respectively. Clojure SQL generation remains authoritative: local Supabase migration replay and automatic seeds are disabled, and the suites install their own generated schema or historical migration fixtures into their isolated databases. `FINFOLK_TEST_POSTGRES_URL` overrides must use a local PostgreSQL URL without query parameters. CI installs the same CLI version and runs the same test command. No Supabase account, hosted project link, access token or production credentials are needed. First startup downloads the local service images. Stop the previous plain PostgreSQL test container if it still occupies port 55432.
 
 `make test-db-runtime` checks local-only URL validation, stack reuse/startup and database cleanup without Docker. CLI state is kept in `.cache/supabase-cli`; the test tools only invoke local `start`, `status` and `stop` commands.
 
-`make generate` also publishes a complete fresh-install `resources/finfolkdb/schema.sql` through `def.make`. Its structure, permissions and required defaults are compared with the migrated database by `make test-db`. See [fresh-schema publication](docs/FRESH_SCHEMA.md); migrations remain the supported installation and upgrade path.
+`make generate-db-sql` publishes the current native `entity-schema.sql` and supporting SQL files. `make generate-db-json` publishes metadata separately. See [native schema publication](docs/FRESH_SCHEMA.md). The old snapshot publication and old fresh-vs-migrated schema comparison are retired.
 
-Database coverage includes domain-organized Clojure facts, all 47 table declarations, 426 constraints, identity/default metadata, 31 explicit indexes, all ten generated SQL functions, real role permissions, pooled actor isolation, concurrent operations, ownership and migration/release guards. The separate deployment-readiness marker is tested through the actual Next API Worker. The Instagram connection/queue suite also runs with independent PostgreSQL pool connections to exercise competing redemptions and transaction locks. A coverage manifest is written to `.cache/test-results/finfolkdb-coverage.json`; new tables and constraints require matching fixtures and assertions. Applied migrations and the published SQL hash remain immutable.
+Native database coverage is defined by the Clojure facts under `test/finfolkdb`
+and the native integration/cutover suites. Historical migration and old API tests
+still describe the retired schema; they must migrate before they can validate the
+current native publication. SQL generation is not constrained by historical output
+hashes. The deployed API's readiness marker remains its own release configuration.
 
 `make test-browser` runs Chromium, Firefox and WebKit against real SQLite/WASM and IndexedDB, including browser restarts, multiple tabs, writer handoff, offline reads, account erasure and saved-map preservation. CI installs the browsers and OS dependencies and publishes test reports/traces. These tests use synthetic identities; they do not sign in to the deployed site.
 
@@ -114,7 +163,7 @@ This builds and deploys `finfolk-next-api` and `finfolk-next-site` on `api.finfo
 
 After deployment check [production health](https://finfolk.com.au/_next/health), public routes, account/profile/check-in behavior and sign-out. Rollback uses the preceding Next Worker versions. The legacy repository must not publish to the production hostname. See [the cutover runbook](docs/MAIN_SITE_CUTOVER.md).
 
-No SQL installation is performed by generation or ordinary site deployment. For an intentional database release, create a new immutable migration, update release hashes together, and use `make db-release` with ignored `.env.next.local`. That command refuses another database or endpoint. Copy `.env.example` only as a starting point; never commit real credentials. Provider secrets remain in Cloudflare bindings/secrets.
+No SQL installation is performed by generation or ordinary site deployment. Use the explicit native rebuild/cutover workflow for schema installation. The old `make db-release` snapshot-replay entrypoint is retired and refuses execution. Copy `.env.example` only as a starting point; never commit real credentials. Provider secrets remain in Cloudflare bindings/secrets.
 
 `resources/migration/source.json` records the original source revision and imported working-copy hashes. The empty GitHub repository received a new initial history; the original working tree, its changes and its older worktrees were preserved.
 
@@ -157,3 +206,19 @@ Table formatting places the name below its metadata, aligns field/spec columns
 and entity options, keeps scalar field attributes together, and puts nested
 `:ref`, `:enum`, and `:sql` attributes on continuation lines. This changes layout
 only; field declarations, defaults, constraints and entry order are preserved.
+
+`defn.pg` and `defrun.pg` place a metadata-bearing function name on the next
+line with two-space indentation.
+
+Native mock social testing: `make test-db-mock` exercises signed HTTP webhooks, external identities, replies and account linking on local Supabase. `make mock-social` starts the interactive CLI harness. See [mock provider workflow](docs/MOCK_SOCIAL.md). Mock endpoints are local-only and are not registered in production Workers.
+
+`make test-db-note-revisions` verifies the native SiteNote entry defaults, column processors and transactional Rev/RevLog lifecycle on disposable local Supabase PostgreSQL.
+
+The active [PostgreSQL social and messaging plan](docs/SOCIAL_MESSAGING_DSL_PLAN.md)
+places command and workflow logic in the PostgreSQL DSL. Run `make test-db-social`
+for its Clojure Supabase scaffold tests under `test/finfolkdb/fn/social`.
+
+`make test-app-integration` runs the shared `app.manage` PostgreSQL + JavaScript
+runtime pilot with the actual account backbone and native logbook functions.
+Assertions live in Clojure facts; each run owns a fresh local Supabase database.
+See [application integration](docs/APP_MANAGE_INTEGRATION.md).

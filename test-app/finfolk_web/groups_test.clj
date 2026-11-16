@@ -22,9 +22,11 @@
                 finfolk-web.groups.site-notes/OPERATIONS]]
     [(= (count operations/DEFINITIONS) (reduce + (map count groups)))
      (= operations/DEFINITIONS (apply merge groups))]) => [true true])
-^{:id deployed-sql}
-(fact "site transactions are published with the member backbone"
-  (clojure.string/includes? (legacy/sql) "FUNCTION finfolk_rpc.site_publish") => true)
+^{:id retired-sql-source}
+(fact "historical metadata cannot be used as a SQL source"
+  (try (legacy/artifact "pilot.sql")
+       (catch clojure.lang.ExceptionInfo error (ex-data error)))
+  => {:artifact "pilot.sql" :reason :retired-sql-source})
 
 (defn coverage-error [entries declared templates statics patterns aliases]
   (try (routes/validate-coverage! entries declared templates statics patterns aliases)
