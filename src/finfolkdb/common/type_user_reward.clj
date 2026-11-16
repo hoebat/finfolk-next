@@ -3,14 +3,14 @@
   (:require [lang.core :as l]
             [postgres.entity :as et]
             [finfolkdb.common.type-domain-enum :as tde]
-            [finfolkdb.common.type-social-instagram :as tsi]
+            [finfolkdb.common.type-social-workflow :as tsi]
             [finfolkdb.common.type-system-base :as tsb]
             [finfolkdb.common.type-user :as tu]))
 
 (l/script :postgres
   {:require [[postgres.core :as pg]
              [finfolkdb.common.type-domain-enum :as tde]
-             [finfolkdb.common.type-social-instagram :as tsi]
+             [finfolkdb.common.type-social-workflow :as tsi]
              [finfolkdb.common.type-system-base :as tsb]
              [finfolkdb.common.type-user :as tu]]
    :static {:application ["finfolk-entity"]
@@ -71,7 +71,7 @@
                   :ref {:ns finfolkdb.common.type-user/User}
                   :sql {:cascade true :unique ["user_day"]}}
    :action       {:type :ref :required true
-                  :ref {:ns finfolkdb.common.type-social-instagram/InstagramAction}
+                  :ref {:ns finfolkdb.common.type-social-workflow/SocialAction}
                   :sql {:unique ["action"]}}
    :day          {:type :date :required true
                   :sql {:unique ["user_day"]}}

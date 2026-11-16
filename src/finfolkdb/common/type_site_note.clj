@@ -3,76 +3,69 @@
   (:require [lang.core :as l]
             [postgres.entity :as et]
             [finfolkdb.common.type-system-site :as sites]
-            [finfolkdb.common.type-user :as users]))
+            [finfolkdb.common.type-user :as users]
+            [finfolkdb.common.type-system-base :as system]
+            [finfolkdb.common.type-system-seed :as seed]))
 
 (l/script :postgres
   {:require [[postgres.core :as pg]
              [finfolkdb.common.type-system-site :as sites]
-             [finfolkdb.common.type-user :as users]]
+             [finfolkdb.common.type-user :as users]
+             [finfolkdb.common.type-system-base :as system]
+             [finfolkdb.common.type-system-seed :as seed]]
    :static {:application ["finfolk-entity"]
             :all         {:schema ["finfolk"]}}})
 
 (defenum.pg EnumSiteNoteTopic [:access :facilities :wildlife :conditions])
 
-;; Notes have their own explicit timestamps/revision. Votes are relationships,
+;; Notes use the shared revision stream. Votes are relationships,
 ;; not a cached counter, so account removal cannot leave an inflated score.
 (deftype.pg ^{:final true
               :! (et/E {:class  :0d/entry
-                        :id     {:type :uuid :primary true}
-                        :track  :track/none
-                        :access :none})}
+                        :addons [:rev]})}
   SiteNote
-  [:beach        {:type :ref :required true
-                  :ref {:ns finfolkdb.common.type-system-site/Beach}
-                  :sql {:cascade true :index true}}
-   :author       {:type :ref :required true
-                  :ref {:ns finfolkdb.common.type-user/User} :sql {:cascade true :index true}}
-   :topic        {:type :enum :required true
-                  :enum {:ns -/EnumSiteNoteTopic}}
-   :body         {:type :text :required true}
-   :observed-on  {:type :date}
-   :withdrawn    {:type :boolean :required true
-                  :sql {:default false}}
-   :hidden       {:type :boolean :required true
-                  :sql {:default false}}
-   :revision     {:type :integer :required true
-                  :sql {:default 1}}
-   :time-created {:type :long :required true
-                  :sql {:default (pg/time-us)}}
-   :time-updated {:type :long :required true
-                  :sql {:default (pg/time-us)}}]
-  {:constraints
-   {:bounded-body (and (>= (pg/length (pg/btrim #{"body"})) 10) (<= (pg/length #{"body"}) 1000))
-    :observation-required (or (not= #{"topic"} "conditions") [#{"observed_on"} :is-not-null])
-    :finite-observation (or [#{"observed_on"} :is-null] (#{"isfinite"} #{"observed_on"}))
-    :positive-revision (> #{"revision"} 0)}})
+  [:site        {:type :ref :required true
+                 :ref {:ns finfolkdb.common.type-system-site/Site}
+                 :sql {:cascade true :index true}}
+   :author      {:type :ref :required true
+                 :ref {:ns finfolkdb.common.type-user/User} :sql {:cascade true :index true}}
+   :topic       {:type :enum :required true
+                 :enum {:ns -/EnumSiteNoteTopic}}
+   :body        {:type :text :required true
+                 :sql {:process [[finfolkdb.common.type-system-seed/as-bounded-text 10 1000]]
+                       :constraint
+                       (== #{"body"}
+                           (finfolkdb.common.type-system-seed/as-bounded-text #{"body"} 10 1000))}}
+   :observed-on {:type :date
+                 :sql {:process [[finfolkdb.common.type-system-seed/as-finite-date]]
+                       :constraint (== #{"observed_on"}
+                                       (finfolkdb.common.type-system-seed/as-finite-date
+                                        #{"observed_on"}))}}
+   :withdrawn   {:type :boolean :required true
+                 :sql {:default false}}
+   :hidden      {:type :boolean :required true
+                 :sql {:default false}}]
+  {:constraints {:observation-required (or (not= #{"topic"} "conditions")
+                                           [#{"observed_on"} :is-not-null])}})
 
-(deftype.pg ^{:final true
-              :! (et/E {:class  :0d/entry
-                        :track  :track/none
-                        :access :none})}
+(deftype.pg ^{:final true :! (et/E {:class :0d/entry})}
   SiteNoteVote
-  [:note         {:type :ref :required true
-                  :ref {:ns -/SiteNote} :sql {:cascade true :unique ["entity_key"]}}
-   :voter        {:type :ref :required true
-                  :ref {:ns finfolkdb.common.type-user/User}
-                  :sql {:cascade true :index true :unique ["entity_key"]}}
-   :time-created {:type :long :required true
-                  :sql {:default (pg/time-us)}}])
+  [:note  {:type :ref :required true
+           :ref {:ns -/SiteNote} :sql {:cascade true :unique ["entity_key"]}}
+   :voter {:type :ref :required true
+           :ref {:ns finfolkdb.common.type-user/User}
+           :sql {:cascade true :index true :unique ["entity_key"]}}])
 
-(deftype.pg ^{:final true
-              :! (et/E {:class  :0d/entry
-                        :track  :track/none
-                        :access :none})}
+(deftype.pg ^{:final true :! (et/E {:class :0d/entry})}
   SiteNoteReport
-  [:note         {:type :ref :required true
-                  :ref {:ns -/SiteNote} :sql {:cascade true :unique ["entity_key"]}}
-   :reporter     {:type :ref :required true
-                  :ref {:ns finfolkdb.common.type-user/User}
-                  :sql {:cascade true :index true :unique ["entity_key"]}}
-   :reason       {:type :text :required true}
-   :time-created {:type :long :required true
-                  :sql {:default (pg/time-us)}}
-   :resolved-at  {:type :long}]
-  {:constraints {:bounded-reason (and (>= (pg/length (pg/btrim #{"reason"})) 1)
-                                      (<= (pg/length #{"reason"}) 1000))}})
+  [:note        {:type :ref :required true
+                 :ref {:ns -/SiteNote} :sql {:cascade true :unique ["entity_key"]}}
+   :reporter    {:type :ref :required true
+                 :ref {:ns finfolkdb.common.type-user/User}
+                 :sql {:cascade true :index true :unique ["entity_key"]}}
+   :reason      {:type :text :required true
+                 :sql {:process [[finfolkdb.common.type-system-seed/as-bounded-text 1 1000]]
+                       :constraint
+                       (== #{"reason"}
+                           (finfolkdb.common.type-system-seed/as-bounded-text #{"reason"} 1 1000))}}
+   :resolved-at {:type :long}])

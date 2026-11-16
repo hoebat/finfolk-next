@@ -5,7 +5,7 @@ Dive-site notes are authored in `src/finfolkdb/common/type_site_note.clj` and
 entities and server-only RPCs in the fresh entity schema. Historical migrations
 and the deployed legacy database remain unchanged.
 
-`SiteNote` belongs to a Beach and its author. Topics are access, facilities,
+`SiteNote` belongs to a Site and its author. Topics are access, facilities,
 wildlife and conditions. Text is bounded to 10–1,000 characters. Conditions
 require an observation date; future dates are rejected in the site's timezone.
 `SiteNoteVote` permits one upvote per member per note. Clients submit the desired
@@ -24,7 +24,7 @@ cannot bypass moderation.
 ## Server configuration
 
 No SQL or feature activation occurs during generation or builds. Provision a
-fresh native entity database and its managed-auth/native User and Beach records
+fresh native entity database and its managed-auth/native User and Site records
 through the existing native provisioning workflow. Never apply
 `entity-schema.sql` to the populated legacy application database.
 
@@ -63,3 +63,26 @@ checks generated page bindings and Worker connection gates. Run
 fresh local Next build to check member/guest behavior and desktop/phone layouts.
 The browser suite uses isolated transport fixtures; the database suite separately
 executes the same HTTP adapter against real PostgreSQL.
+
+## Native entry and revision model
+
+The native location entity is `Site`; related native columns use `site_id`.
+`SiteNote` uses `(et/E {:class :0d/entry :addons [:rev]})`, with inherited UUID
+identity and operation/time tracking. Votes and reports use normal `:0d/entry`
+defaults. There is no local note `revision` column: the HTTP `revision` value is
+projected from its scoped `Rev.index`. Creation initializes version 1 and its
+`RevLog`; withdrawal and moderation append snapshots in the same transaction as
+the note change. Repeating an already satisfied state does not add a revision.
+Stale versions fail, and rollback removes both the note mutation and history.
+
+Single-column bounds use the StatsDB column-processing pattern:
+`:sql {:process [[finfolkdb.common.type-system-seed/as-bounded-text 10 1000]]}`.
+Column-level checks invoke the same validator for direct SQL writes. Body and
+report-reason lengths are rejected rather than truncated; optional observation
+dates must be finite. The cross-column conditions/date requirement remains a
+table constraint.
+
+Run `make test-db-note-revisions` for UUID-native, live PostgreSQL coverage of
+revision history, idempotence, stale writes, moderation, rollback, column
+validation and the generated notes-server grants. This suite uses an isolated
+local database and a synthetic auth fixture; it never changes hosted auth.

@@ -50,17 +50,17 @@ try{
  // Provisioning managed auth is an external prerequisite. Only this disposable
  // local test uses a fixture table; the actual installer never invents one.
  await assert.rejects(installFreshDatabase(db,{root,manifest}),/Provision finfolk_api and managed authentication first/);
- assert.equal((await db.query("SELECT to_regclass('finfolk.\"Beach\"') AS t")).rows[0].t,null);
+ assert.equal((await db.query("SELECT to_regclass('finfolk.\"Site\"') AS t")).rows[0].t,null);
  await db.query(`DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
  CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean,email text);`);
  await db.query('CREATE SCHEMA finfolk_shop; CREATE TABLE finfolk_shop.existing(id integer)');
  await assert.rejects(installFreshDatabase(db,{root,manifest}),/empty finfolk_shop/);
- assert.equal((await db.query("SELECT to_regclass('finfolk.\"Beach\"') AS t")).rows[0].t,null);
+ assert.equal((await db.query("SELECT to_regclass('finfolk.\"Site\"') AS t")).rows[0].t,null);
  await db.query('DROP SCHEMA IF EXISTS finfolk_shop CASCADE');
  // A failure late in installation also rolls the entire native schema back.
  const grants=await readFile(join(root,'resources/finfolkdb/site-notes-grants.sql'),'utf8');await put('resources/finfolkdb/site-notes-grants.sql',grants+'\nINVALID INSTALL STATEMENT;');
  await assert.rejects(installFreshDatabase(db,{root}),/syntax error/);
- assert.equal((await db.query("SELECT to_regclass('finfolk.\"Beach\"') AS t")).rows[0].t,null);
+ assert.equal((await db.query("SELECT to_regclass('finfolk.\"Site\"') AS t")).rows[0].t,null);
  await put('resources/finfolkdb/site-notes-grants.sql',grants);await installFreshDatabase(db,{root,manifest});
  await assert.rejects(installFreshDatabase(db,{root,manifest}),/requires empty application schemas/);
  await assert.rejects(importReferenceRelease(db,manifest,{root,onBatch:()=>{throw Error('Injected batch failure');}}),/Injected batch failure/);
@@ -74,8 +74,8 @@ try{
  assert.equal((await db.query(`SELECT metadata->'native_inspections'->0->'raster_headers'->0->>'crs' AS crs FROM finfolk."DepthDataset" WHERE upstream_id='test-native'`)).rows[0].crs,'EPSG:4326');
  const snapshot=await projection();await importReferenceRelease(db,manifest,{root});assert.deepEqual(await projection(),snapshot,'Repeated release has identical semantic rows');
  assert.equal((await db.query('SELECT count(*)::int AS n FROM finfolk."DatabaseRelease"')).rows[0].n,1);
- const conflict=structuredClone(manifest);conflict.rows.Beach[0].name='Changed identity';await assert.rejects(importReferenceRelease(db,seal(conflict),{root}),e=>e.code==='23505');assert.deepEqual(await projection(),snapshot);
- const linked=(await db.query(`SELECT b.id,d.status,f.properties->>'depth_m' AS depth FROM finfolk."Beach" b JOIN finfolk."SiteLocation" l ON l.beach_id=b.id JOIN finfolk."GeoArea" a ON a.id=l.area_id JOIN finfolk."SiteRevision" r ON r.site_id=b.id JOIN finfolk."SiteDepthDataset" sd ON sd.revision_id=r.id JOIN finfolk."DepthDataset" d ON d.id=sd.dataset_id JOIN finfolk."GeoFeature" f ON f.dataset_id=d.id`)).rows;
+ const conflict=structuredClone(manifest);conflict.rows.Site[0].name='Changed identity';await assert.rejects(importReferenceRelease(db,seal(conflict),{root}),e=>e.code==='23505');assert.deepEqual(await projection(),snapshot);
+ const linked=(await db.query(`SELECT b.id,d.status,f.properties->>'depth_m' AS depth FROM finfolk."Site" b JOIN finfolk."SiteLocation" l ON l.site_id=b.id JOIN finfolk."GeoArea" a ON a.id=l.area_id JOIN finfolk."SiteRevision" r ON r.site_id=b.id JOIN finfolk."SiteDepthDataset" sd ON sd.revision_id=r.id JOIN finfolk."DepthDataset" d ON d.id=sd.dataset_id JOIN finfolk."GeoFeature" f ON f.dataset_id=d.id`)).rows;
  assert.deepEqual(linked,[{id:'test-beach',status:'staged',depth:'10'}]);
  assert.equal((await db.query("SELECT has_function_privilege('finfolk_api','finfolk_rpc.import_reference_batch(text,jsonb)','EXECUTE') AS allowed")).rows[0].allowed,false,'Importer is owner-only');
  await db.query('SET ROLE finfolk_api');await assert.rejects(db.query("SELECT finfolk_rpc.import_reference_batch('DataSource','[]')"),e=>e.code==='42501');await db.query('RESET ROLE');

@@ -8,7 +8,7 @@
             :all         {:schema ["finfolk"]}}})
 
 ;;
-;; Beach
+;; Site
 ;;
 
 (deftype.pg ^{:finfolk/legacy-tables ["beaches"]
@@ -17,7 +17,7 @@
                         :id     :id/v4
                         :track  :track/none
                         :access :none})}
-  Beach
+  Site
   [:key       {:type :text
                :sql {:unique ["key"]}}
    :name      {:type :text :required true}

@@ -14,7 +14,7 @@ const save=(id=randomUUID(),site='bondi',topic='access',text='Meet your group at
 try{
  await installEntities(db);for(const id of ['alice','bob','carol','unverified','banned'])await user(db,id,{displayName:id.toUpperCase(),privateField:'NEVER_PUBLIC'});
  await db.query(await readFile('resources/finfolkdb/site-notes-grants.sql','utf8'));
- await db.query(`UPDATE neon_auth."user" SET "emailVerified"=false WHERE id='unverified'; UPDATE neon_auth."user" SET banned=true WHERE id='banned'; INSERT INTO finfolk."Beach"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney'),('portsea','Portsea','Australia/Melbourne')`);
+ await db.query(`UPDATE neon_auth."user" SET "emailVerified"=false WHERE id='unverified'; UPDATE neon_auth."user" SET banned=true WHERE id='banned'; INSERT INTO finfolk."Site"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney'),('portsea','Portsea','Australia/Melbourne')`);
  assert.deepEqual(await list(),{notes:[],next:null});await actor('alice');
  await db.query('SET ROLE finfolk_site_notes');const roleNote=await save();assert.equal((await list()).notes.length,1);await db.query('RESET ROLE');await db.query('DELETE FROM finfolk."SiteNote" WHERE id=$1',[roleNote.id]);
  assert.equal((await db.query("SELECT has_function_privilege('finfolk_api','finfolk_rpc.save_site_note(text,uuid,text,text,date)','EXECUTE') AS allowed")).rows[0].allowed,false);
@@ -45,7 +45,7 @@ try{
  for(const id of ['', 'unverified','banned']){await actor(id);await assert.rejects(save(),/Verified/);await assert.rejects(rpc('set_site_note_vote',['bondi',note.id,true]),/Verified/);}
  await db.query(`UPDATE finfolk."User" SET deleted=true WHERE id='bob'`);assert.equal((await list()).notes.find(n=>n.id===note.id).score,0);await db.query(`UPDATE finfolk."User" SET deleted=false WHERE id='bob'`);
  await db.query(`UPDATE neon_auth."user" SET banned=true WHERE id='bob'`);assert.equal((await list()).notes.find(n=>n.id===note.id).score,0);await db.query(`UPDATE neon_auth."user" SET banned=false WHERE id='bob'`);
- await db.query(`INSERT INTO finfolk."SiteProfile"(beach_id,revision,waterbody,access_mode,status,payload) VALUES('bondi',1,'ocean','shore','archived','{}')`);assert.equal((await list()).notes.length,0);await actor('alice');await assert.rejects(save(),/Check the site/);await db.query('DELETE FROM finfolk."SiteProfile"');
+ await db.query(`INSERT INTO finfolk."SiteProfile"(site_id,revision,waterbody,access_mode,status,payload) VALUES('bondi',1,'ocean','shore','archived','{}')`);assert.equal((await list()).notes.length,0);await actor('alice');await assert.rejects(save(),/Check the site/);await db.query('DELETE FROM finfolk."SiteProfile"');
  // Parallel desired-state retries must create exactly one relationship.
  const pool=new pg.Pool({connectionString:process.env.FINFOLK_TEST_DATABASE_URL,max:5});
  try{await Promise.all(Array.from({length:8},async()=>{const c=await pool.connect();try{await actor('carol',false,c);return await rpc('set_site_note_vote',['bondi',note.id,true],c);}finally{c.release();}}));}finally{await pool.end();}

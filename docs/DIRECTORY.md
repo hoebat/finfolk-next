@@ -45,7 +45,8 @@ synthetic identities; no external provider or production database is contacted.
 Pilot real Brave searches and sender verification before public launch.
 
 Directory persistence now goes through generated `finfolk_rpc.directory_operation`
-functions preserved in `resources/finfolkbuild/legacy/pilot.sql`. The HTTP adapter
+historical functions from the retired SQL snapshot. Current SQL publication comes
+from the native `finfolkdb.*` declarations; these legacy API paths require native migration. The HTTP adapter
 sets actor and administrator context within each transaction. Direct directory
 table access is revoked from `finfolk_api`; only the generated entry point is
 executable. Brave calls happen between short database transactions.

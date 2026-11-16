@@ -25,7 +25,7 @@
         o-trip (pg/t:insert ttb/Trip
                  {:id v-id
                   :owner i-owner
-                  :beach (:uuid (:->> o-draft "beachId"))
+                  :site (:uuid (:->> o-draft "beachId"))
                   :start-date (:date (:->> o-draft "start"))
                   :end-date (:date (:->> o-draft "end"))
                   :detail (- (- (- o-draft "beachId") "start") "end")
@@ -43,7 +43,7 @@
   [:uuid i-trip-id :uuid i-owner]
   (let [o-trip (pg/t:get ttb/Trip
                  {:where {:id i-trip-id :owner i-owner}
-                  :returning #{:id :owner :beach :start-date :end-date :detail :rev}})
+                  :returning #{:id :owner :site :start-date :end-date :detail :rev}})
         o-active (pg/t:get ttb/TripImport {:where {:trip i-trip-id :is-active true}})
         o-rev (pg/t:get tsb/Rev
                 {:where
@@ -57,7 +57,7 @@
     (return (pg/jsonb-build-object "id" (:uuid (:->> o-trip "id"))
                                    "draft" (|| (:-> o-trip "detail")
                                                (pg/jsonb-build-object
-                                                "beachId" (:uuid (:->> o-trip "beach_id"))
+                                                "beachId" (:uuid (:->> o-trip "site_id"))
                                                 "start" (:->> o-trip "start_date")
                                                 "end" (:->> o-trip "end_date")))
                                    "revision" (:integer (:->> o-rev "index"))
@@ -221,11 +221,11 @@
   "Internal review projection; callers need explicit permissions."
   [:uuid i-trip-id :text i-status]
   (let [o-publication (pg/t:get ttb/TripPublication
-                        {:where {:trip i-trip-id :status i-status} :returning #{:detail :beach}})]
+                        {:where {:trip i-trip-id :status i-status} :returning #{:detail :site}})]
     (when [o-publication :is-null]
       (return nil))
     (return (|| (:-> o-publication "detail")
-                (pg/jsonb-build-object "beachId" (:uuid (:->> o-publication "beach_id")))))))
+                (pg/jsonb-build-object "beachId" (:uuid (:->> o-publication "site_id")))))))
 
 (defn.pg set-trip-publication
   "The trusted API supplies the server's moderation result, never a client flag."
@@ -234,7 +234,7 @@
   (let [o-trip (pg/t:get ttb/Trip
                  {:where {:id i-trip-id :owner i-owner}
                   :for [:update]
-                  :returning #{:id :owner :beach :start-date :end-date :rev :audit}})
+                  :returning #{:id :owner :site :start-date :end-date :rev :audit}})
         o-snapshot (tss/as-jsonb i-snapshot)]
     (when (or [o-trip :is-null] (not (ha/is-user-active i-owner)))
       (return nil))
@@ -248,7 +248,7 @@
                      {:where {:trip i-trip-id :is-active true :status "complete"}})]
       (when (or (not= i-revision (:integer (:->> o-rev "index")))
                 [(:uuid (:->> o-snapshot "beachId")) :is-null]
-                (not= (:uuid (:->> o-snapshot "beachId")) (:uuid (:->> o-trip "beach_id"))))
+                (not= (:uuid (:->> o-snapshot "beachId")) (:uuid (:->> o-trip "site_id"))))
         (return nil))
       (when [o-active :is-null]
         [:raise-exception "Import dives before publishing"])
@@ -265,7 +265,7 @@
             (:= v-time (pg/time-us)))
           (let [o-publication (pg/t:insert ttb/TripPublication
                                 {:trip i-trip-id
-                                 :beach (:uuid (:->> o-snapshot "beachId"))
+                                 :site (:uuid (:->> o-snapshot "beachId"))
                                  :detail (- o-snapshot "beachId")
                                  :status v-status
                                  :public-consent true
@@ -285,7 +285,7 @@
   (let [o-trip (pg/t:get ttb/Trip {:where {:id i-trip-id} :returning #{:id :owner}})
         o-publication (pg/t:get ttb/TripPublication
                         {:where {:trip i-trip-id :status "published" :public-consent true}
-                         :returning #{:detail :beach :published-at}})
+                         :returning #{:detail :site :published-at}})
         o-data (:-> o-publication "detail")]
     (when (or [o-trip :is-null]
               [o-publication :is-null]
@@ -295,7 +295,7 @@
                                    "title" (:->> o-data "title")
                                    "authorName" (:->> o-data "authorName")
                                    "story" (:->> o-data "story")
-                                   "beachId" (:uuid (:->> o-publication "beach_id"))
+                                   "beachId" (:uuid (:->> o-publication "site_id"))
                                    "beachName" (:->> o-data "beachName")
                                    "timezone" (:->> o-data "timezone")
                                    "start" (:->> o-data "start")
@@ -402,7 +402,7 @@
       (let [o-updated (pg/t:update ttb/Trip
                         {:where {:id i-trip-id :owner i-owner}
                          :set {:detail (- (- (- o-draft "beachId") "start") "end")
-                               :beach (:uuid (:->> o-draft "beachId"))
+                               :site (:uuid (:->> o-draft "beachId"))
                                :start-date v-start
                                :end-date v-end}
                          :track o-op})

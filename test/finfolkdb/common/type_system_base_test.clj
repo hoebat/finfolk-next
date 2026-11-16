@@ -9,11 +9,15 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.main.scaffold-001-entity :as main]
+   :require [[finfolkdb.fn.user.user-manage :as fixture-user]
+             [finfolkdb.fn.user.user-manage-logbook :as fixture-logbook]
+             [finfolkdb.fn.social.social-manage :as fixture-social]
              [finfolkdb.common.type-system-base :as t]
              [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.type-system-base/Op :added "0.1"}
 (fact "Op persists a linked entity and returns its created values"
@@ -57,4 +61,4 @@
 
 ^{:refer finfolkdb.common.type-system-base/op-fn :added "0.1"}
 (fact "op-fn executes directly on local PostgreSQL"
-  (:tag (t/op-fn "runtime-test" "alice" {})) => "runtime-test")
+  (:tag (t/op-fn "runtime-test" "26755e9c-346a-42f7-a7bf-029ea3b39862" {})) => "runtime-test")

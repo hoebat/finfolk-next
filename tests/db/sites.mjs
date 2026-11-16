@@ -42,7 +42,7 @@ try{
  const before=(await owner.query('SELECT count(*)::int AS n FROM finfolk.site_imports')).rows[0].n;
  assert.equal((await raw('/v1/admin/sites/imports',{actor:'alice',body:{format:'json',content:JSON.stringify([doc('bad',{point:[500,200]})])}})).status,400);assert.equal((await owner.query('SELECT count(*)::int AS n FROM finfolk.site_imports')).rows[0].n,before);
  const batch=await request('/v1/admin/sites/imports',{actor:'alice',body:{format:'json',content:JSON.stringify([doc('lake'),doc('import-boat',{waterbody:'ocean',access_mode:'boat_only',access_points:[{name:'Marina',mode:'departure',point:[145.1,-38.1],source_url:'https://example.org/boat'}]})])}});
- assert.deepEqual(batch.updates,['lake']);const versions=batch.drafts.sort((a,b)=>a.site_id.localeCompare(b.site_id)).map(r=>({id:r.id,version:String(r.version)}));
+ assert.deepEqual(batch.updates,['lake']);const versions=batch.drafts.sort((a,b)=>a.beach_id.localeCompare(b.beach_id)).map(r=>({id:r.id,version:String(r.version)}));
  await publish(await draft(doc('lake',{name:'Newer published lake'})));
  const failed=await raw('/v1/admin/sites/imports/'+batch.id+'/publish',{actor:'alice',body:{confirmed:true,versions}});assert.equal(failed.status,409);assert.equal((await raw('/v1/sites/import-boat')).status,404,'import rolls back earlier publications on later conflict');
  const boat=await draft(doc('boat',{waterbody:'ocean',access_mode:'boat_only',access_points:[{name:'Departure',mode:'departure',point:[145.1,-38.1],source_url:'https://example.org/departure'}]}));await publish(boat);assert.equal((await request('/v1/sites/boat')).entry_documented,false);

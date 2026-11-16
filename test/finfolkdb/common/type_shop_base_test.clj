@@ -9,11 +9,15 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.main.scaffold-001-entity :as main]
+   :require [[finfolkdb.fn.user.user-manage :as fixture-user]
+             [finfolkdb.fn.user.user-manage-logbook :as fixture-logbook]
+             [finfolkdb.fn.social.social-manage :as fixture-social]
              [finfolkdb.common.type-shop-base :as t]
              [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.type-shop-base/EnumFinnieRedemptionStatus :added "0.1"}
 (fact "EnumFinnieRedemptionStatus labels on local PostgreSQL"

@@ -95,8 +95,8 @@
                         :track  :track/none
                         :access :none})}
   SiteLocation
-  [:beach    {:type :ref :required true
-              :ref {:ns finfolkdb.common.type-system-site/Beach} :sql {:unique ["entity_key"]}}
+  [:site    {:type :ref :required true
+              :ref {:ns finfolkdb.common.type-system-site/Site} :sql {:unique ["entity_key"]}}
    :area     {:type :ref
               :ref {:ns finfolkdb.common.type-import-base/GeoArea}}
    :source   {:type :ref :required true

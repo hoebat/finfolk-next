@@ -18,7 +18,7 @@
 ;; Namespace relationships
 ;;
 ;; [managed auth] --identity--> [User] --relationships--> [UserBlock]
-;;                                  `--visits--> [UserCheckin] --> [Beach]
+;;                                  `--visits--> [UserCheckin] --> [Site]
 ;; [User] --social relationships--> [UserConnection]
 ;;
 ;; User
@@ -67,8 +67,8 @@
   UserCheckin
   [:user           {:type :ref :required true
                     :ref {:ns -/User} :sql {:cascade true :unique ["entity_key"]}}
-   :beach          {:type :ref :required true
-                    :ref {:ns finfolkdb.common.type-system-site/Beach}
+   :site          {:type :ref :required true
+                    :ref {:ns finfolkdb.common.type-system-site/Site}
                     :sql {:unique ["entity_key"]}}
    :visit-day      {:type :date :required true
                     :sql {:unique ["entity_key"]}}

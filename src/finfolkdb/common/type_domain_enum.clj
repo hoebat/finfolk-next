@@ -11,6 +11,21 @@
 ;; Domain Enums
 ;;
 
+;; Shared native social vocabulary. Provider-specific enums below remain only
+;; for immutable historical column contracts in COLUMN_ENUMS.
+(defenum.pg EnumSocialProvider [:instagram :tiktok :mock])
+(defenum.pg EnumSocialConnectionStatus [:pending :active :expired :revoked :failed])
+(defenum.pg EnumSocialProofKind [:oauth :message :comment :manual])
+(defenum.pg EnumSocialProofStatus [:pending :verified :consumed :expired :revoked :rejected])
+(defenum.pg EnumSocialSourceKind [:account :tags :hashtag :recheck])
+(defenum.pg EnumSocialSourceStatus [:ready :paused :failed])
+(defenum.pg EnumSocialActionKind [:reply :stats :dive :points :verify-account :prepare-link])
+(defenum.pg EnumSocialDiscoveryStatus [:pending :published :hidden :rejected :unavailable])
+(defenum.pg EnumSocialDiscoveryReportReason [:wrong_location :inappropriate :removed :other])
+(defenum.pg EnumSocialCommandContext [:mention :owned :message])
+(defenum.pg EnumSocialCommandStatus [:new :confirmation :done :cancelled :limited :waiting :expired :rejected])
+(defenum.pg EnumSocialCommandSendState [:pending :sending :sent :uncertain :skipped])
+
 (defenum.pg EnumSocialReferralPlatform [:instagram :tiktok])
 
 (defenum.pg EnumUserConnectionStatus [:pending :accepted :declined :removed])

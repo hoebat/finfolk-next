@@ -6,12 +6,16 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.main.scaffold-001-entity :as main]
+   :require [[finfolkdb.fn.user.user-manage :as fixture-user]
+             [finfolkdb.fn.user.user-manage-logbook :as fixture-logbook]
+             [finfolkdb.fn.social.social-manage :as fixture-social]
              [postgres.core :as pg]
              [finfolkdb.common.type-social-post :as t]
              [finfolkdb.fn.user.user-manage-posts :as posts]
              [finfolkdb.common.type-user :as users]]})
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.type-social-post/SocialPost :id consent-and-blocks}
 (fact "approval cannot invent consent and either direction of blocking hides a public post"
@@ -43,10 +47,10 @@
       {:owner "9d745d17-475e-5ddb-b3ec-4047ec80f348" :target "49e68bf7-802d-5a93-bc0f-c5758b12434c"}
       {:track {}})
     (posts/ret-social-post-public id "49e68bf7-802d-5a93-bc0f-c5758b12434c") => nil
-    (:id (posts/ret-social-post-public id "")) => id
+    (:id (posts/ret-social-post-public id nil)) => id
     (pg/t:update users/User
       {:track {} :where {:id "9d745d17-475e-5ddb-b3ec-4047ec80f348"} :set {:deleted true}})
-    (posts/ret-social-post-public id "") => nil))
+    (posts/ret-social-post-public id nil) => nil))
 
 ^{:refer finfolkdb.common.type-social-post/SocialReferral :id referral-identity}
 (fact "provider referrals round-trip independently and prevent duplicate provider identities"

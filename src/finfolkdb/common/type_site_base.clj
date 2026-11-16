@@ -47,8 +47,8 @@
                         :track  :track/none
                         :access :none})}
   SiteProfile
-  [:beach        {:type :ref :required true
-                  :ref {:ns finfolkdb.common.type-system-site/Beach}
+  [:site        {:type :ref :required true
+                  :ref {:ns finfolkdb.common.type-system-site/Site}
                   :sql {:unique ["entity_key"]}}
    :revision     {:type :bigint :required true}
    :waterbody    {:type :enum :required true
@@ -94,7 +94,7 @@
                         :access :none})}
   SiteRevision
   [:site          {:type :ref :required true
-                   :ref {:ns finfolkdb.common.type-system-site/Beach}}
+                   :ref {:ns finfolkdb.common.type-system-site/Site}}
    :owner         {:type :ref
                    :ref {:ns finfolkdb.common.type-user/User} :sql {:raw [:on-delete-set-null]}}
    :import        {:type :ref

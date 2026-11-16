@@ -11,10 +11,17 @@
    :require [[finfolkdb.common.fn-system-util :as t]
              [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.fn-system-util/auth-uid :added "0.1"}
 (fact "auth-uid executes directly on local PostgreSQL"
+  (t/auth-uid) => nil
+  (jdbc/transaction "26755e9c-346a-42f7-a7bf-029ea3b39862"
+                    #(jdbc/scalar % "SELECT finfolk.auth_uid()"))
+  =>
+  "26755e9c-346a-42f7-a7bf-029ea3b39862"
   (t/auth-uid) => nil)
 
 ^{:refer finfolkdb.common.fn-system-util/as-iso-time :added "0.1"}

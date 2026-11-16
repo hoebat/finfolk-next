@@ -8,19 +8,26 @@
 
 (def TEST_NAMESPACES
   '[finfolkbuild.testing.local-test finfolkdb.schema.type-namespaces-test
-    finfolkdb.schema.entity-catalog-test finfolkdb.schema.messaging-catalog-test])
+    finfolkdb.schema.entity-catalog-test finfolkdb.schema.messaging-catalog-test
+    finfolkdb.schema.social-catalog-test])
 
 (def LEGACY_TEST_NAMESPACES
   '[finfolkdb.common.fn-system-auth-test finfolkdb.fn.member.member-profile-test])
 
+(def SOCIAL_TEST_NAMESPACES
+  '[finfolkdb.fn.social.social-commands-test finfolkdb.fn.social.social-events-test
+    finfolkdb.fn.social.social-actions-test finfolkdb.fn.social.social-delivery-test])
+
 (defn checked-run!
   [modules]
-  (let [result (test/run modules)]
+  ;; A single namespace avoids the bulk runner swallowing setup exceptions.
+  (let [result (test/run (if (= 1 (count modules)) (first modules) modules))]
     (when (or (seq (:errored @executive/+latest+))
               (pos? (or (:skipped result) 0))
               (not (pos? (or (:passed result) 0)))
               (some pos? (map #(or (get result %) 0) [:throw :failed :timeout])))
       (throw (ex-info "Database behavior tests failed" {:modules modules :result result})))
+    (println "DATABASE_TEST_PASS:" modules (:passed result) "checks")
     result))
 
 (defn -main
@@ -30,21 +37,26 @@
     ;; Require first so unreadable or unresolvable types fail this command.
     (let [modules (case (vec args)
                     ["--common"] (common/test-namespaces)
+                    ["--social"] SOCIAL_TEST_NAMESPACES
                     ["--application-contracts"] '[finfolk-web.groups-test finfolkdb.catalog-test]
                     ["--common-contracts"] '[finfolkdb.schema.common-contracts-test]
                     ["--legacy"] LEGACY_TEST_NAMESPACES
                     [] TEST_NAMESPACES
-                    (if (and (= "--common" (first args))
+                    (if (and (#{"--common" "--social"} (first args))
                              (= 2 (count args))
-                             (some #{(symbol (second args))} (common/test-namespaces)))
+                             (some #{(symbol (second args))}
+                                   (if (= "--social" (first args))
+                                     SOCIAL_TEST_NAMESPACES
+                                     (common/test-namespaces))))
                       [(symbol (second args))]
                       (throw (ex-info "Unknown database test selection" {:args args}))))]
       (when (= "--common" (first args))
-        (common/check-coverage!)
+        (common/check-coverage!))
+      (when (#{"--common" "--social"} (first args))
         (local/acquire!))
-      (when-not (= "--common" (first args))
+      (when-not (#{"--common" "--social"} (first args))
         (binding [context/*eval-mode* false] (doseq [module modules] (require module))))
-      (binding [local/*suite* (= "--common" (first args))]
+      (binding [local/*suite* (boolean (#{"--common" "--social"} (first args)))]
         (if local/*suite*
           (do (doseq [module modules] (checked-run! [module]))
               (println "LOCAL_BEHAVIOR_PASS:" (count modules) "namespaces"))

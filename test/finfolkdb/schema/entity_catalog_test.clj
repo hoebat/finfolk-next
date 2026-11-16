@@ -7,6 +7,30 @@
 ;; Resolved Entity Contracts
 ;;
 
+(fact "site notes inherit entry tracking and use shared revisions and column validators"
+  (let [tables (catalog/declarations)
+        fields (into {} (map (juxt :name identity) (get-in tables ["SiteNote" :columns])))]
+    [(get-in fields ["id" :type]) (get-in fields ["rev" :reference :table])
+     (get-in fields ["time-created" :type]) (contains? fields "revision")
+     (boolean (get-in fields ["body" :spec :sql :process]))
+     (boolean (get-in fields ["body" :spec :sql :constraint]))
+     (set (keys (get-in tables ["SiteNote" :constraints])))])
+  =>
+  ["uuid" "Rev" "time" false true true #{:observation-required}])
+
+(fact "Site is the native location entity and all location references use it"
+  (let [tables (catalog/declarations)
+        references (for [[_ table] tables
+                         column (:columns table)
+                         :when (= "finfolkdb.common.type-system-site"
+                                  (str (get-in column [:reference :module])))]
+                     (get-in column [:reference :table]))]
+    [(contains? tables "Site") (contains? tables "Beach")
+     (get-in (coverage/current) [:mappings "beaches"])
+     (and (seq references) (every? #{"Site"} references))])
+  =>
+  [true false "Site" true])
+
 ^{:id inherited-addon-links}
 (fact "the catalog contains resolved addon fields, not only authored field vectors"
   (let [tables (catalog/declarations)

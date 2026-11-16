@@ -2,7 +2,9 @@
   "Reusable social provider identities and handles."
   (:require [lang.core :as l]
             [postgres.entity :as et]
-            [finfolkdb.common.type-system-base :as tsb]))
+            [finfolkdb.common.type-system-base :as tsb]
+            [finfolkdb.common.type-domain-enum :as domain]
+            [finfolkdb.common.type-social-account :as account]))
 
 ;;
 ;; Namespace relationships
@@ -12,7 +14,9 @@
 
 (l/script :postgres
   {:require [[postgres.core :as pg]
-             [finfolkdb.common.type-system-base :as tsb]]
+             [finfolkdb.common.type-system-base :as tsb]
+             [finfolkdb.common.type-domain-enum :as domain]
+             [finfolkdb.common.type-social-account :as account]]
    :static {:application ["finfolk-entity"]
             :all         {:schema ["finfolk"]}}})
 
@@ -34,7 +38,7 @@
 ;; SocialHandle
 ;;
 
-(defenum.pg EnumSocialHandleType [:instagram :tiktok])
+
 
 (deftype.pg ^{:finfolk/legacy-tables ["directory_socials"]
               :final true
@@ -45,8 +49,11 @@
                         :columns {:class-table {:sql {:unique ["handle"]}}}})}
   SocialHandle
   "A provider handle; uniqueness is scoped to the owning entity class."
-  [:type        {:type :enum :required true
-                 :enum {:ns -/EnumSocialHandleType} :sql {:unique ["handle"]}}
+  [:account     {:type :ref
+                 :ref {:ns finfolkdb.common.type-social-account/SocialAccount}}
+   :type        {:type :enum :required true
+                 :enum {:ns finfolkdb.common.type-domain-enum/EnumSocialProvider}
+                 :sql {:unique ["handle"]}}
    :handle      {:type :text :required true
                  :sql {:unique ["handle"]}}
    :is-verified {:type :boolean :required true
@@ -57,14 +64,16 @@
 ;; Public Social Links
 ;;
 
-(defn.pg ^{:%% :sql :- [:text] :props [:immutable :parallel-safe]} ret-social-url
+(defn.pg ^{:%% :sql :- [:text] :props [:immutable :parallel-safe]}
+  ret-social-url
   [:text i-identity]
   (case (pg/split-part i-identity ":" 1)
     "instagram" (|| "https://www.instagram.com/" (pg/split-part i-identity ":" 2) "/")
     "tiktok" (|| "https://www.tiktok.com/@" (pg/split-part i-identity ":" 2))
     nil))
 
-(defn.pg ^{:%% :sql :- [:jsonb] :props [:immutable :parallel-safe]} ret-social-urls
+(defn.pg ^{:%% :sql :- [:jsonb] :props [:immutable :parallel-safe]}
+  ret-social-urls
   [:jsonb i-identities]
   [:select (pg/coalesce (pg/jsonb-agg (-/ret-social-url #{"value"})) (:jsonb "[]")) :from
    (pg/jsonb-array-elements-text (pg/coalesce i-identities (:jsonb "[]"))) :where

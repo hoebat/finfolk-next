@@ -3,16 +3,18 @@
   (:use code.test))
 
 ^{:id shared-provider-contract}
-(fact "provider delivery is linked to generic receipts and messages"
+(fact "delivery links canonical commands and events to optional private messages"
   (let [tables (catalog/declarations)
         fields (fn [table] (into {} (map (juxt :name identity) (:columns (get tables table)))))]
     [(get-in (fields "MessagingAccount") ["application" :reference :table])
-     (get-in (fields "MessagingOutbox") ["receipt" :reference :table])
+     (get-in (fields "MessagingOutbox") ["event" :reference :table])
+     (get-in (fields "MessagingOutbox") ["command" :reference :table])
      (get-in (fields "MessagingOutbox") ["message" :reference :table])
-     (contains? (fields "MessagingOutbox") "event")
-     (get-in (fields "MessagingReceipt") ["account" :spec :foreign :message-scope :column])])
+     (boolean (get-in (fields "MessagingOutbox") ["message" :spec :required]))
+     (get-in (fields "MessagingOutbox") ["account" :spec :foreign :command-inbox :column])
+     (get-in (fields "MessagingOutbox") ["event" :spec :foreign :command-event :column])])
   =>
-  ["MessagingApplication" "MessagingReceipt" "MessagingMessage" false :account-id])
+  ["MessagingApplication" "SocialEvent" "SocialCommand" "MessagingMessage" false :inbox-id :event-id])
 
 ^{:id conversation-scope}
 (fact "conversation membership and history references enforce account ownership"

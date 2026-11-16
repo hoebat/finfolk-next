@@ -11,14 +11,19 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.main.scaffold-001-entity :as main]
+   :require [[finfolkdb.common.type-messaging-delivery :as delivery]
+             [finfolkdb.fn.user.user-manage :as fixture-user]
+             [finfolkdb.fn.user.user-manage-logbook :as fixture-logbook]
+             [finfolkdb.fn.social.social-manage :as fixture-social]
              [finfolkdb.common.type-messaging-base :as t]
              [postgres.core :as pg]
              [finfolkdb.fn.messaging.messaging-manage :as messaging]
              [finfolkdb.fn.messaging.messaging-oauth :as oauth]
              [finfolkdb.fn.messaging.messaging-authorization :as authorization]]})
 
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.type-messaging-base/EnumMessagingProvider :added "0.1"}
 (fact "EnumMessagingProvider labels on local PostgreSQL"
@@ -77,9 +82,9 @@
 (fact "MessagingReceipt persists a linked entity and returns its created values"
   (fixture/persisted! 'finfolkdb.common.type-messaging-base/MessagingReceipt) => true)
 
-^{:refer finfolkdb.common.type-messaging-base/MessagingOutbox :added "0.1"}
+^{:refer finfolkdb.common.type-messaging-delivery/MessagingOutbox :added "0.1"}
 (fact "MessagingOutbox persists a linked entity and returns its created values"
-  (fixture/persisted! 'finfolkdb.common.type-messaging-base/MessagingOutbox) => true)
+  (fixture/persisted! 'finfolkdb.common.type-messaging-delivery/MessagingOutbox) => true)
 
 (defn receive-message
   [application account envelope]

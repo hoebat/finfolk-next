@@ -9,14 +9,18 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.main.scaffold-001-entity :as main]
+   :require [[finfolkdb.fn.user.user-manage :as fixture-user]
+             [finfolkdb.fn.user.user-manage-logbook :as fixture-logbook]
+             [finfolkdb.fn.social.social-manage :as fixture-social]
              [finfolkdb.common.type-user :as t]
              [finfolkdb.fn.user.user-manage :as user]
              [finfolkdb.common.type-system-base :as system]
              [finfolkdb.common.type-system-site :as site]
              [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.type-user/User :added "0.1"}
 (fact "User persists a linked entity and returns its created values"
@@ -66,16 +70,16 @@
     {:owner "868fc9b0-9cdb-5c9f-8685-971e4f54af7e" :target "868fc9b0-9cdb-5c9f-8685-971e4f54af7e"})
   =>
   (throws)
-  (pg/t:insert site/Beach
+  (pg/t:insert site/Site
     {:id "6eff7c94-0076-5c57-b23f-bf00bd7984d6" :name "Bondi" :timezone "Australia/Sydney"})
   (pg/t:insert t/UserCheckin
     {:user "868fc9b0-9cdb-5c9f-8685-971e4f54af7e"
-     :beach "6eff7c94-0076-5c57-b23f-bf00bd7984d6"
+     :site "6eff7c94-0076-5c57-b23f-bf00bd7984d6"
      :visit-day "2026-11-05"})
   (pg/t:count t/UserCheckin {:where {:user "868fc9b0-9cdb-5c9f-8685-971e4f54af7e"}}) => 1
   (pg/t:insert t/UserCheckin
     {:user "868fc9b0-9cdb-5c9f-8685-971e4f54af7e"
-     :beach "6eff7c94-0076-5c57-b23f-bf00bd7984d6"
+     :site "6eff7c94-0076-5c57-b23f-bf00bd7984d6"
      :visit-day "2026-11-05"})
   =>
   (throws))

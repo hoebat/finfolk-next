@@ -3,7 +3,13 @@
   (:require [lang.core :as l]))
 
 (l/script :postgres
-  {:require [[finfolkdb.fn.user.user-manage :as user]
+  {:require [[finfolkdb.fn.social.social-interop :as social-interop]
+             [finfolkdb.fn.social.social-delivery :as social-delivery]
+             [finfolkdb.fn.social.social-events :as social-events]
+             [finfolkdb.fn.social.social-commands :as social-commands]
+             [finfolkdb.fn.social.social-messaging :as social-messaging]
+             [finfolkdb.fn.user.user-manage :as user]
+             [finfolkdb.fn.social.social-manage :as social-manage]
              [finfolkdb.common.type-user-activity :as activity]
              [finfolkdb.common.fn-system-util :as util]
              [finfolkdb.fn.directory.directory-manage :as directory]
@@ -17,8 +23,8 @@
              [finfolkdb.common.type-environment-base :as environment]
              [finfolkdb.common.type-import-base :as reference-import]
              [finfolkdb.common.type-site-base :as site]
-             [finfolkdb.common.type-social-instagram :as instagram]
-             [finfolkdb.common.type-social-tiktok :as tiktok]
+             [finfolkdb.common.type-social-account :as social-account]
+             [finfolkdb.common.type-social-workflow :as social-workflow]
              [finfolkdb.fn.messaging.messaging-manage :as messaging]
              [finfolkdb.fn.messaging.messaging-authorization :as messaging-auth]
              [finfolkdb.fn.messaging.messaging-oauth :as messaging-oauth]

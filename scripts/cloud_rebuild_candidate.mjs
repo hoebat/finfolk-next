@@ -57,7 +57,7 @@ try{
    if(canonical(actual)!==canonical(localProof.fingerprints[table]))throw Error('Cloud data differs from the accepted local rebuild: '+table);
    fingerprints[table]=actual;
   }
-  const sample=(await db.query(`SELECT b.id,p.payload->>'name' AS name,a.id AS area FROM finfolk."Beach" b JOIN finfolk."SiteProfile" p ON p.beach_id=b.id JOIN finfolk."SiteLocation" l ON l.beach_id=b.id JOIN finfolk."GeoArea" a ON a.id=l.area_id WHERE p.status='published' ORDER BY b.id LIMIT 1`)).rows[0];
+  const sample=(await db.query(`SELECT b.id,p.payload->>'name' AS name,a.id AS area FROM finfolk."Site" b JOIN finfolk."SiteProfile" p ON p.site_id=b.id JOIN finfolk."SiteLocation" l ON l.site_id=b.id JOIN finfolk."GeoArea" a ON a.id=l.area_id WHERE p.status='published' ORDER BY b.id LIMIT 1`)).rows[0];
   if(!sample?.id)throw Error('Native site/reference read failed');
   const report={...result,localSemanticParity:true,fingerprints,sample,branch:p.branch,verifiedAt:new Date().toISOString(),databaseBytes:(await db.query('SELECT pg_database_size(current_database())::text AS bytes')).rows[0].bytes,managedAuthPreserved:true,liveTrafficChanged:false};
   await writeFile('.cache/cloud-rebuild/database-acceptance.json',JSON.stringify(report)+'\n',{mode:0o600});

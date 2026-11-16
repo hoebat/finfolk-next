@@ -24,10 +24,10 @@ try{
   const user=(await db.query(`SELECT finfolk_rpc.insert_user($1,'{}',$2::jsonb) AS value`,[id,JSON.stringify(op)])).rows[0].value;
   assert.equal(user.id,id);assert.ok(user.rev_id);assert.ok(user.audit_id);assert.ok(user.activity_id);
  }
- await db.query(`INSERT INTO finfolk."Beach"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney');`);
- await db.query(`INSERT INTO finfolk."UserBlock"(owner_id,target_id) VALUES('alice','bob'); INSERT INTO finfolk."UserCheckin"(user_id,beach_id,visit_day) VALUES('alice','bondi','2026-11-04'); INSERT INTO finfolk."UserConnection"(user_id,target_id,requested_by_id,status) VALUES('alice','bob','alice','pending');`);
+ await db.query(`INSERT INTO finfolk."Site"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney');`);
+ await db.query(`INSERT INTO finfolk."UserBlock"(owner_id,target_id) VALUES('alice','bob'); INSERT INTO finfolk."UserCheckin"(user_id,site_id,visit_day) VALUES('alice','bondi','2026-11-04'); INSERT INTO finfolk."UserConnection"(user_id,target_id,requested_by_id,status) VALUES('alice','bob','alice','pending');`);
  await assert.rejects(db.query(`INSERT INTO finfolk."UserBlock"(owner_id,target_id) VALUES('alice','missing')`),error=>error.code==='23503');
- await assert.rejects(db.query(`INSERT INTO finfolk."UserCheckin"(user_id,beach_id,visit_day) VALUES('alice','missing','2026-11-04')`),error=>error.code==='23503');
+ await assert.rejects(db.query(`INSERT INTO finfolk."UserCheckin"(user_id,site_id,visit_day) VALUES('alice','missing','2026-11-04')`),error=>error.code==='23503');
  await assert.rejects(db.query(`UPDATE finfolk."UserConnection" SET status='invalid'`),error=>error.code==='22P02');
  await assert.rejects(db.query(`INSERT INTO finfolk."UserBlock"(owner_id,target_id) VALUES('alice','alice')`),error=>error.code==='23514');
  await assert.rejects(db.query(`INSERT INTO finfolk."UserConnection"(user_id,target_id,requested_by_id,status) VALUES('bob','alice','bob','pending')`),error=>error.code==='23514');

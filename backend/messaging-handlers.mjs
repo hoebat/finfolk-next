@@ -26,11 +26,11 @@ export function createFinFolkMessagingIdentityPolicy({db,verifyProviderEligibili
   const external=context.provider!=='app';
   let userId=context.senderId;
   if(external){
-   const value=await db.query(`SELECT user_id FROM finfolk."MessagingIdentity" WHERE account_id=$1 AND external_id=$2`,[context.account,context.senderId]);
-   userId=(Array.isArray(value)?value:value.rows)[0]?.user_id;
+   const value=await db.query(`SELECT finfolk_rpc.resolve_social_member($1::uuid,$2::text) AS identity`,[context.account,context.senderId]);
+   userId=(Array.isArray(value)?value:value.rows)[0]?.identity?.userId;
   }
   if(!userId)return null;
-  const output=await db.query(`SELECT u.id FROM finfolk."User" u JOIN neon_auth."user" a ON a.id::text=u.id
+  const output=await db.query(`SELECT u.id FROM finfolk."User" u JOIN neon_auth."user" a ON a.id::text=u.id::text
    WHERE u.id=$1 AND NOT u.deleted AND coalesce(a.banned,false)=false AND a."emailVerified"=true`,[userId]);
   if(!(Array.isArray(output)?output:output.rows).length)return null;
   const eligible=external?await verifyProviderEligibility({...context,userId})===true:true;

@@ -11,16 +11,18 @@
 ;; Authentication Context
 ;;
 
-(defn.pg ^{:%% :sql :- [:uuid]} auth-uid
+(defn.pg ^{:%% :sql :- [:uuid]}
+  auth-uid
   "Returns the identity set by the authenticated backend transaction."
   []
-  (:uuid (#{"nullif"} (pg/current-setting "finfolk.actor_id" true) "")))
+  (:uuid (nullif (pg/current-setting "finfolk.actor_id" true) "")))
 
 ;;
 ;; API Time Serialization
 ;;
 
-(defn.pg ^{:%% :sql :- [:text] :props [:immutable :parallel-safe]} as-iso-time
+(defn.pg ^{:%% :sql :- [:text] :props [:immutable :parallel-safe]}
+  as-iso-time
   "Serializes epoch microseconds as a UTC ISO timestamp at the API boundary."
   [:bigint i-time]
   (pg/to-char (#{"timezone"} "UTC" (pg/to-timestamp (/ (:numeric i-time) 1000000)))

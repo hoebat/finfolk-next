@@ -11,7 +11,7 @@
 ;;
 ;; Namespace relationships
 ;;
-;; [User] --owns--> [SocialPost] --site--> [Beach]
+;; [User] --owns--> [SocialPost] --site--> [Site]
 ;; [SocialPost] --reports--> [SocialPostReport] --reporter/reviewer--> [User]
 ;; [SocialPost] --addons--> [Rev / Audit]; public consent remains explicit.
 ;;
@@ -39,13 +39,13 @@
   [:owner            {:type :ref :required true
                       :ref {:ns finfolkdb.common.type-user/User}
                       :sql {:cascade true :index true :unique ["post_owner_url"]}}
-   :beach            {:type :ref :required true
-                      :ref {:ns finfolkdb.common.type-system-site/Beach}
+   :site            {:type :ref :required true
+                      :ref {:ns finfolkdb.common.type-system-site/Site}
                       :sql {:index true :unique ["post_owner_url"]}}
    :url              {:type :text :required true
                       :sql {:unique ["post_owner_url"]}}
    :platform         {:type :enum :required true
-                      :enum {:ns finfolkdb.common.type-social-base/EnumSocialHandleType}}
+                      :enum {:ns finfolkdb.common.type-domain-enum/EnumSocialProvider}}
    :creator-handle   {:type :text :required true
                       :sql {:default ""}}
    :status           {:type :enum :required true
@@ -96,7 +96,7 @@
                                      (pg/to-timestamp (/ (pg/time-us) 1000000.0))))
                     :unique ["entity_key"]}}
    :platform {:type :enum :required true
-              :enum {:ns finfolkdb.common.type-social-base/EnumSocialHandleType}
+              :enum {:ns finfolkdb.common.type-domain-enum/EnumSocialProvider}
               :sql {:unique ["entity_key"]}}
    :clicks   {:type :bigint :required true
               :sql {:default 0}}])

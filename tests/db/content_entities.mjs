@@ -5,7 +5,7 @@ import {installEntities,user,diveSession,socialPost,trip} from './fixtures/entit
 const db=await connect();
 try{
  await installEntities(db);for(const id of ['alice','bob','carol'])await user(db,id);
- await db.query(`INSERT INTO finfolk."Beach"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney')`);
+ await db.query(`INSERT INTO finfolk."Site"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney')`);
  const session=await diveSession(db),otherSession=await diveSession(db,'bob');
  assert.equal(session.detail.visibility,'private');assert.deepEqual(session.detail.photos,[]);assert.equal(session.detail.notes,'PRIVATE_SESSION_NOTE');
  const owned=(await db.query('SELECT finfolk_rpc.ret_dive_session_owned($1,$2) AS value',[session.id,'alice'])).rows[0].value;
@@ -23,7 +23,7 @@ try{
  assert.equal((await db.query('SELECT finfolk_rpc.ret_social_post_public($1,$2) AS value',[post.id,''])).rows[0].value,null,'Approval must not invent consent');
  await db.query(`UPDATE finfolk."SocialPost" SET public_consent=true WHERE id=$1`,[post.id]);
  const publicPost=(await db.query('SELECT finfolk_rpc.ret_social_post_public($1,$2) AS value',[post.id,'bob'])).rows[0].value;
- assert.deepEqual(Object.keys(publicPost).sort(),['beach_id','created_at','creator_handle','id','platform','url']);assert.equal(publicPost.beach_id,'bondi');assert.match(publicPost.created_at,/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
+ assert.deepEqual(Object.keys(publicPost).sort(),['site_id','created_at','creator_handle','id','platform','url']);assert.equal(publicPost.site_id,'bondi');assert.match(publicPost.created_at,/^\d{4}-\d\d-\d\dT\d\d:\d\d:\d\d\.\d{3}Z$/);
  await db.query(`INSERT INTO finfolk."UserBlock"(owner_id,target_id) VALUES('bob','alice')`);
  assert.equal((await db.query('SELECT finfolk_rpc.ret_social_post_public($1,$2) AS value',[post.id,'bob'])).rows[0].value,null);
  assert.ok((await db.query('SELECT finfolk_rpc.ret_social_post_public($1,$2) AS value',[post.id,''])).rows[0].value);

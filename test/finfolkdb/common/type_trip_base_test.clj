@@ -7,14 +7,17 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.main.scaffold-001-entity :as main]
+   :require [[finfolkdb.fn.user.user-manage :as fixture-user]
+             [finfolkdb.fn.user.user-manage-logbook :as fixture-logbook]
+             [finfolkdb.fn.social.social-manage :as fixture-social]
              [postgres.core :as pg]
              [finfolkdb.common.type-trip-base :as t]
              [finfolkdb.fn.user.user-manage-trips :as trips]]})
-(fact:global {:setup [(local/setup!) (fixture/member "5b06da94-2c1c-5009-9fe1-695bfe82855a")
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres) (fixture/member "5b06da94-2c1c-5009-9fe1-695bfe82855a")
                       (fixture/member "937b8e55-50e6-5d64-ab7c-31e73c425b56")
                       (fixture/beach "8932d946-9ae4-54ba-ba10-2ac92b1059e6")]
-              :teardown [(local/teardown!)]})
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 (defonce imported-trip (atom nil))
 (defn insert-trip [arg0 arg1 arg2] (trips/insert-trip arg0 arg1 arg2))
@@ -187,7 +190,7 @@
      snapshot (json/write {:title "Public trip"
                            :authorName "Alice"
                            :beachId "8932d946-9ae4-54ba-ba10-2ac92b1059e6"
-                           :beachName "Beach"
+                           :beachName "Site"
                            :timezone "Australia/Sydney"
                            :start "2026-11-01"
                            :end "2026-11-10"

@@ -10,7 +10,7 @@
 ;;
 ;; Namespace relationships
 ;;
-;; [User] --owns--> [Trip] --site--> [Beach]
+;; [User] --owns--> [Trip] --site--> [Site]
 ;; [Trip] --raw imports--> [TripImport] --rows/batches--> [TripDive / TripImportBatch]
 ;; [Trip] --public snapshots--> [TripPublication]; private draft edits are independent.
 ;; The active import is the unique active child, avoiding a circular root pointer.
@@ -37,8 +37,8 @@
   "A private trip draft. detail omits the separately linked beachId."
   [:owner      {:type :ref :required true
                 :ref {:ns finfolkdb.common.type-user/User} :sql {:cascade true :index true}}
-   :beach      {:type :ref :required true
-                :ref {:ns finfolkdb.common.type-system-site/Beach} :sql {:index true}}
+   :site      {:type :ref :required true
+                :ref {:ns finfolkdb.common.type-system-site/Site} :sql {:index true}}
    :start-date {:type :date :required true}
    :end-date   {:type :date :required true}]
   {:constraints {:ordered-dates (and (>= #{"end_date"} #{"start_date"})
@@ -109,8 +109,8 @@
   "A consented snapshot independent of the editable draft and private raw dives."
   [:trip           {:type :ref :required true
                     :ref {:ns -/Trip} :sql {:cascade true :unique ["publication_status"]}}
-   :beach          {:type :ref :required true
-                    :ref {:ns finfolkdb.common.type-system-site/Beach}}
+   :site          {:type :ref :required true
+                    :ref {:ns finfolkdb.common.type-system-site/Site}}
    :status         {:type :enum :required true
                     :enum {:ns -/EnumTripPublicationStatus}
                     :sql {:default "pending" :unique ["publication_status"]}}

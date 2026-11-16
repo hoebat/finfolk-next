@@ -123,9 +123,9 @@ export async function prepareReferenceRelease({root=process.cwd(),siteRoot='.cac
   if(!sources.has(doc.source_id))throw Error('Unregistered site source: '+doc.source_id);
   if(!areaMap.has(doc.area_id))throw Error('Unregistered site area: '+doc.area_id);
   const revision=uuid('site-revision:'+doc.id);
-  add('Beach',{id:doc.id,name:doc.name,timezone:doc.timezone,area_name:doc.area_name,state:doc.state_id});
-  add('SiteLocation',{beach_id:doc.id,area_id:doc.area_id,source_id:doc.source_id,geometry:validateGeometry({type:'Point',coordinates:doc.point})});
-  add('SiteProfile',{beach_id:doc.id,revision:1,waterbody:doc.waterbody,access_mode:doc.access_mode,status:'published',payload:doc});
+  add('Site',{id:doc.id,name:doc.name,timezone:doc.timezone,area_name:doc.area_name,state:doc.state_id});
+  add('SiteLocation',{site_id:doc.id,area_id:doc.area_id,source_id:doc.source_id,geometry:validateGeometry({type:'Point',coordinates:doc.point})});
+  add('SiteProfile',{site_id:doc.id,revision:1,waterbody:doc.waterbody,access_mode:doc.access_mode,status:'published',payload:doc});
   add('SiteRevision',{id:revision,site_id:doc.id,base_revision:0,version:1,status:'published',payload:doc,reason:'Initial sourced catalog import'});
   for(const [i,a]of doc.access_points.entries())add('SiteAccessPoint',{id:uuid('site-access:'+doc.id+':'+i),revision_id:revision,mode:a.mode,payload:a});
   for(const [i,d]of doc.depth_evidence.entries())add('SiteDepthEvidence',{id:uuid('site-depth:'+doc.id+':'+i),revision_id:revision,kind:d.kind,payload:d});
@@ -183,7 +183,7 @@ export async function verifyManifest(root,manifest){
 }
 export async function* referenceBatches(root,manifest,size=100){
  // Preserve FK order explicitly; the Clojure contract is a map, not an ordering API.
- const order=['DataSource','GeoArea','DataAsset','DepthDataset','DepthDatasetAsset','GeoFeature','GeoBoundary','Beach','SiteLocation','SiteProfile','SiteRevision','SiteAccessPoint','SiteDepthEvidence','SiteDepthDataset','TideStation','SiteTideStation','SiteCatalog'];
+ const order=['DataSource','GeoArea','DataAsset','DepthDataset','DepthDatasetAsset','GeoFeature','GeoBoundary','Site','SiteLocation','SiteProfile','SiteRevision','SiteAccessPoint','SiteDepthEvidence','SiteDepthDataset','TideStation','SiteTideStation','SiteCatalog'];
  for(const kind of order){
   if(kind==='GeoFeature'||kind==='GeoBoundary'){
    for(const descriptor of manifest.features.filter(f=>(f.kind||'GeoFeature')===kind)){const fs=await geojson(root,descriptor);let batch=[],bytes=0;

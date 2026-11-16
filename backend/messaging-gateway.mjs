@@ -84,8 +84,8 @@ export function createMessagingGateway({db,enabled=false,expectedDatabase,apiOri
   if(!enabled)fail(503,'Entity messaging is disabled.');
   const result=await db.query(`SELECT current_database() AS database,
    to_regclass('finfolk."MessagingOauthState"') IS NOT NULL
-   AND to_regprocedure('finfolk_rpc.receive_chat_message(text,text,text,text,text,integer)') IS NOT NULL
-   AND to_regprocedure('finfolk_rpc.consume_messaging_oauth(text,text,text,text,text,text)') IS NOT NULL AS ready`);
+   AND to_regprocedure('finfolk_rpc.receive_chat_message(uuid,uuid,text,text,text,integer)') IS NOT NULL
+   AND to_regprocedure('finfolk_rpc.consume_messaging_oauth(uuid,uuid,uuid,text,text,text)') IS NOT NULL AS ready`);
   const row=(Array.isArray(result)?result:result.rows)[0];
   if(row?.database!==expectedDatabase||row.ready!==true)fail(503,'Entity messaging database is not ready.');
  }

@@ -48,8 +48,9 @@ make check-generated-db # fail on stale generated database artifacts
 make test-db-types      # Clojure contracts + disposable live PostgreSQL suites
 ```
 
-`test-db-types` starts the pinned PostgreSQL 18 Docker image and creates a separate
-database per suite, then drops each database and stops its container. An existing
+`test-db-types` starts the local Supabase PostgreSQL 17 stack and creates a separate
+database per suite, then drops each database. The local stack stays running for
+subsequent suites and REPL sessions. An existing
 local server can be supplied through `FINFOLK_TEST_POSTGRES_URL`; remote servers
 are refused. Generation never connects to a database or installs SQL.
 
@@ -230,7 +231,7 @@ the same rerunnable import functions.
 | Environmental records | Import available station/reference metadata and sourced observations/predictions with validity and freshness; never mark old forecasts fresh or fabricate unavailable observations |
 | Cross-links | Create explicit native site/dataset/station relationships with evidence; envelope overlap remains a candidate relationship until actual coverage is verified |
 
-Use `DataSource`, `DepthDataset`, `TideStation`, `Beach`, native site/revision
+Use `DataSource`, `DepthDataset`, `TideStation`, `Site`, native site/revision
 entities and their links where they fit. Define any missing asset/spatial/source
 entities and import functions in Clojure before generating SQL. Store large raster
 assets in durable asset storage and import their verified references, footprints
@@ -363,10 +364,12 @@ unauthorized imports and late install/import failures are rejected atomically.
 
 The new import declarations also run through the local Clojure common-contract
 suite (`node scripts/test_database.mjs --common`) and the native type suite.
-The separate `make test-db-common` Neon runtime currently requires managed auth
-on the dedicated test branch: its site-note SQL joins `neon_auth."user"`, which
-that branch does not yet provide. Local tests provision a disposable auth fixture;
-no fake managed-auth table is installed on Neon to bypass this prerequisite.
+`make test-db-common` runs the Clojure JDBC suites on local Supabase in a disposable
+database. Like statsdb, each test namespace declares its own dependencies and
+explicit runtime lifecycle; common entity tests do not load the full application
+scaffold or its managed-auth-dependent site-note RPCs. The SQL/API integration
+suites separately provision a disposable auth fixture for those RPCs. No fake
+managed-auth table is installed on Neon to bypass a deployment prerequisite.
 
 ### Isolated cloud rollout
 

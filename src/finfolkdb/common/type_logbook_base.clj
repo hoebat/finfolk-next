@@ -9,7 +9,7 @@
 ;;
 ;; Namespace relationships
 ;;
-;; [User] --owns--> [DiveSession] --site--> [Beach]
+;; [User] --owns--> [DiveSession] --site--> [Site]
 ;; [DiveSession] --addons--> [Rev / Audit]; imported media links back to the session.
 ;;
 
@@ -35,5 +35,5 @@
   [:owner {:type :ref :required true
            :ref {:ns finfolkdb.common.type-user/User}
            :sql {:cascade true :index true :unique ["session_owner"]}}
-   :beach {:type :ref
-           :ref {:ns finfolkdb.common.type-system-site/Beach} :sql {:index true}}])
+   :site {:type :ref
+           :ref {:ns finfolkdb.common.type-system-site/Site} :sql {:index true}}])

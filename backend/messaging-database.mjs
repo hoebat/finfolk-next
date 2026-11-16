@@ -30,7 +30,7 @@ export function createMessagingDatabase({db,application,account}){
    try{
     // Model/provider requests run here, outside the completion transaction.
     const answer=await handler({message:work.message,provider:work.provider,senderId:work.senderId,userId:work.userId,
-     generation:work.receipt.generation,
+     application,account,receiptId:work.receipt.id,generation:work.receipt.generation,
      history:()=>call('history',[work.message.conversation_id])});
     if(!object(answer)||!object(answer.result??{})||!(answer.reply==null||typeof answer.reply==='string')||
        !(answer.apply==null||typeof answer.apply==='function'))throw Error('Invalid messaging handler result.');
@@ -40,7 +40,7 @@ export function createMessagingDatabase({db,application,account}){
      const applied=answer.apply?await answer.apply(query):undefined;
      if(applied!=null&&!object(applied))throw Error('Application mutations must return a result object.');
      const value=await call('complete',[work.receipt.id,work.receipt.lease,
-      JSON.stringify(applied??answer.result??{}),answer.reply??null],query);
+      JSON.stringify(applied??answer.result??{}),answer.render?answer.render(applied):answer.reply??null],query);
      if(!value)throw new StaleMessagingClaim();
      return value;
     });

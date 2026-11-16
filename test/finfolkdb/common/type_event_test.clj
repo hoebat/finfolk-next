@@ -6,13 +6,17 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.main.scaffold-001-entity :as main]
+   :require [[finfolkdb.fn.user.user-manage :as fixture-user]
+             [finfolkdb.fn.user.user-manage-logbook :as fixture-logbook]
+             [finfolkdb.fn.social.social-manage :as fixture-social]
              [postgres.core :as pg]
              [finfolkdb.common.type-event :as t]
              [finfolkdb.fn.event.event-manage :as events]
              [finfolkdb.fn.directory.directory-manage :as directory]
              [finfolkdb.common.type-system-base :as system]]})
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.type-event/Event :id create-and-rollback}
 (fact "events belong to their organiser and invalid dates leave no addon providers"

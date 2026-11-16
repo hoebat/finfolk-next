@@ -4,7 +4,7 @@ FinfolkDB is a PostgreSQL database authored in Clojure, organised around people,
 places, and their activities. Reusable infrastructure—revision history,
 auditing, access, and social identities—is attached through `et/E`.
 
-This walkthrough covers the current 93-table native source schema. Generating
+This walkthrough covers the current 88-table native source schema. Generating
 that schema and installing it are separate operations.
 
 ## Main business relationships
@@ -13,19 +13,19 @@ that schema and installing it are separate operations.
 flowchart LR
     User -->|owns| Trip
     User -->|records| DiveSession
-    Trip -->|at| Beach
-    DiveSession -->|at| Beach
+    Trip -->|at| Site
+    DiveSession -->|at| Site
     Trip --> TripImport
     TripImport --> TripDive
     Trip --> TripPublication
     DirectoryListing --> Event
 ```
 
-`User` and `Beach` are important anchors:
+`User` and `Site` are important anchors:
 
 - **User** represents an application member. Connections, blocks, check-ins,
   trips, and logbook entries refer to it.
-- **Beach** is the stable identity of a dive location. Its profile, proposed
+- **Site** is the stable identity of a dive location. Its profile, proposed
   revisions, access points, environmental evidence, and community notes live in
   related tables.
 - **DirectoryListing** represents a claimable directory page. Its owners and
@@ -129,12 +129,89 @@ proposal and review workflow.
 | Reference data | Sources, assets, datasets, geographic features, boundaries, and release manifests |
 | Environment | Provider targets, retained snapshots, freshness windows, and leased jobs |
 | Directory and events | Listings, ownership claims, invitations, events, and RSVPs |
-| Social | Provider connections, handles, imported posts, discovery, and moderation |
+| Social | Shared provider accounts, member connections, proofs, collection, discovery, and moderation |
 | Messaging | Accounts, identities, conversations, messages, processing receipts, and outbound delivery |
 | Rewards and shop | Invitations, points entries, wallets, items, and redemptions |
 
 Messaging separates receiving a provider event, processing it, and delivering a
 response. Receipts, leases, retries, and an outbox give each stage explicit state.
+
+## Shared social integration
+
+The native schema shares one model across Instagram and TikTok. Provider HTTP,
+OAuth exchanges, webhook verification, pagination and credential encryption
+belong to trusted server adapters.
+
+| Shared record | Responsibility |
+| --- | --- |
+| `SocialAccount` | Stable `(provider, namespace, external-id)` identity, independent of a mutable handle |
+| `SocialConnection` | Member authorization, encrypted credentials, capability/scopes, sharing consent and synchronization state |
+| `SocialConnectionProof` | Hashed, expiring, single-use evidence bound to an account generation and optional user |
+| `SocialSource` | Account, hashtag, tag or recheck collection configuration, checkpoints and leases |
+| `SocialDiscovery` | Provider-scoped media identity, location candidates, provenance and review state |
+| `SocialAction` | A proposed or confirmed action linked to an external account and optionally a member or session |
+| `SocialCommand`, `SocialEvent`, `SocialRateLimit` | Shared command processing, raw event intake and provider-scoped limits |
+
+`SocialSuppressedSource` and `SocialDiscoveryReport` retain suppression and
+moderation responsibilities. The common `Audit` and `AuditLog` providers replace
+the separate Instagram action/discovery audit tables. Historical table mappings
+remain in the generated coverage report; they are not executable data migrations.
+Historical provider enum declarations remain for the immutable legacy column
+contracts; new social tables use shared enums.
+
+A member may connect multiple accounts. An account has at most one non-revoked
+member connection. Revoked connection rows retain history. External identities
+in different provider namespaces are distinct even when their handles match.
+Additional provider details belong in `provider-data`; they do not independently
+establish authorization.
+
+The native RPC flow is:
+
+```text
+insert_social_account
+        ↓
+begin_social_proof
+        ↓
+trusted adapter verifies provider evidence
+        ↓
+verify_social_proof
+        ↓
+connect_social_account
+```
+
+The database checks the verified provider, namespace and external ID. OAuth
+proofs also require nonce and flow binding when consumed. Proof expiry, single
+use and account generations prevent old callbacks from reconnecting an account.
+Connecting leaves `share-posts` and `public-points` false; changing them requires
+an explicit operation against the current connection identity version.
+Disconnecting clears credentials, capabilities and sharing consent and
+invalidates outstanding proofs. Provider-side token revocation is an adapter
+responsibility outside the database transaction.
+
+`MediaImport` remains private and can refer to a connection. Its composite owner
+constraint prevents attaching another member's connection, while the existing
+session-owner constraint protects dive assignment. Its provider namespace is
+part of media deduplication. `SocialPost` remains the public link model.
+Discovery publication requires a matching owner, beach, provider and URL on an
+approved, consented post. Public reads recheck the post's current consent and
+visibility, so a previously published discovery cannot bypass withdrawal.
+
+`SocialHandle` can link to a canonical account. `MessagingAccount` can also link
+to one, while keeping the existing shared `Messaging*` processing layer and its
+operator credentials separate from member connections.
+
+The new RPCs and credential-bearing tables are server-only. The generated
+`social-grants.sql` grants access to a dedicated `finfolk_social` role; it does
+not grant that role to browsers or `finfolk_api`. Capability and provider API
+permission checks remain mandatory in adapters before invoking the corresponding
+workflow. Verification RPCs accept evidence only from these trusted adapters.
+
+This is the native source model. Legacy backend adapters still target historical
+provider tables and require an explicit translation and cutover before using the
+new schema. Existing proofs must not be promoted to verified native proofs
+without checking their original provider scope, expiry, member and provenance.
+The consolidation does not install changes or replay migrations on a deployed
+database.
 
 ## Typed relationships and flexible JSON content
 
@@ -185,3 +262,8 @@ server, with disposable databases for individual suites.
 A useful next walkthrough is creating and publishing one Trip: it connects the
 entity model, operation context, revision history, imports, privacy, and
 publication rules in one concrete flow.
+
+The native location entity is named `Site` and native references use `:site` /
+`site_id`. Historical migration table names remain immutable. Site notes now
+inherit entry identity/tracking and attach the shared `Rev` stream; their API
+revision value is derived from `Rev.index`. See [site notes](SITE_NOTES.md).

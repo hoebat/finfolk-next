@@ -25,7 +25,7 @@
         o-session (pg/t:insert tlb/DiveSession
                     {:id v-id
                      :owner i-owner
-                     :beach i-beach
+                     :site i-beach
                      :detail o-data
                      :rev (:uuid (:->> o-base "rev"))
                      :audit (:uuid (:->> o-base "audit"))}
@@ -41,10 +41,10 @@
   [:uuid i-session-id :uuid i-owner]
   (let [o-session (pg/t:get tlb/DiveSession
                     {:where {:id i-session-id :owner i-owner}
-                     :returning #{:id :owner :beach :detail}})]
+                     :returning #{:id :owner :site :detail}})]
     (when (or [o-session :is-null] (not (ha/is-user-active i-owner)))
       (return nil))
     (return (|| (:-> o-session "detail")
                 (pg/jsonb-build-object "id" (:uuid (:->> o-session "id"))
                                        "ownerId" (:uuid (:->> o-session "owner_id"))
-                                       "beachId" (pg/coalesce (:->> o-session "beach_id") ""))))))
+                                       "beachId" (pg/coalesce (:->> o-session "site_id") ""))))))

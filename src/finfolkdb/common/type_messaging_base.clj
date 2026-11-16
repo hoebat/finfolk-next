@@ -4,13 +4,15 @@
             [postgres.entity :as et]
             [finfolkdb.common.type-domain-enum :as tde]
             [finfolkdb.common.type-system-base :as tsb]
-            [finfolkdb.common.type-user :as tu]))
+            [finfolkdb.common.type-user :as tu]
+            [finfolkdb.common.type-social-account :as social]))
 
 (l/script :postgres
   {:require [[postgres.core :as pg]
              [finfolkdb.common.type-domain-enum :as tde]
              [finfolkdb.common.type-system-base :as tsb]
-             [finfolkdb.common.type-user :as tu]]
+             [finfolkdb.common.type-user :as tu]
+             [finfolkdb.common.type-social-account :as social]]
    :static {:application ["finfolk-entity"]
             :all         {:schema ["finfolk"]}}})
 
@@ -18,7 +20,7 @@
 ;; Shared Messaging Scope
 ;;
 
-(defenum.pg EnumMessagingProvider [:instagram :tiktok :app])
+(defenum.pg EnumMessagingProvider [:instagram :tiktok :app :mock])
 
 (defenum.pg EnumMessagingDirection [:inbound :outbound])
 
@@ -46,7 +48,10 @@
                         :track   :track/none
                         :access  :none})}
   MessagingAccount
-  [:key                    {:type :text
+  [:social-account         {:type :ref
+                            :ref {:ns finfolkdb.common.type-social-account/SocialAccount}
+                            :sql {:index true}}
+   :key                    {:type :text
                             :sql {:unique ["key"]}}
    :application            {:type :ref :required true
                             :ref {:ns -/MessagingApplication}
@@ -78,6 +83,10 @@
    :time-updated           {:type :long :required true
                             :sql {:default (pg/time-us)}}
    :backoff-until          {:type :long}
+   :action-checkpoint      {:type :uuid}
+   :delivery-checkpoint    {:type :uuid}
+   :event-checkpoint       {:type :uuid}
+   :proof-checkpoint       {:type :uuid}
    :provider-scope         {:type :text}]
   {:constraints {:credential-lease-pair (or (and [#{"credential_lease"} :is-null]
                                                  [#{"credential_lease_until"} :is-null])
@@ -171,7 +180,8 @@
                         :columns {:id {:sql {:unique ["account_scope"]}}}})}
   MessagingIdentity
   "Provider identity within one connected account; linking to a User is explicit."
-  [:account     {:type :ref :required true
+  [:social-account {:type :ref :ref {:ns finfolkdb.common.type-social-account/SocialAccount}}
+   :account     {:type :ref :required true
                  :ref {:ns -/MessagingAccount}
                  :sql {:unique ["external_identity" "account_scope"] :index true}}
    :external-id {:type :text :required true
@@ -276,60 +286,8 @@
 ;; Provider-independent Delivery
 ;;
 
-(deftype.pg ^{:finfolk/legacy-tables ["messaging_outbox"]
-              :final true
-              :! (et/E {:class  :0d/entry
-                        :track  :track/none
-                        :access :none})}
-  MessagingOutbox
-  "One durable reply per receipt. A lost send acknowledgement becomes uncertain."
-  [:account             {:type :ref :required true
-                         :ref {:ns -/MessagingAccount}
-                         :foreign {:receipt-scope {:ns -/MessagingReceipt :column :account-id}
-                                   :message-scope {:ns -/MessagingMessage :column :account-id}}
-                         :sql {:index true}}
-   :receipt             {:type :ref :required true
-                         :ref {:ns -/MessagingReceipt}
-                         :foreign {:receipt-scope {:ns -/MessagingReceipt :column :id}}
-                         :sql {:unique ["receipt"]}}
-   :message             {:type :ref :required true
-                         :ref {:ns -/MessagingMessage}
-                         :foreign {:message-scope {:ns -/MessagingMessage :column :id}}
-                         :sql {:unique ["message"]}}
-   :body                {:type :text :required true}
-   :correlation-id      {:type :uuid :required true}
-   :generation          {:type :integer :required true}
-   :state               {:type :enum :required true
-                         :enum {:ns finfolkdb.common.type-domain-enum/EnumMessagingOutboxStatus}
-                         :sql {:default "pending"}}
-   :attempts            {:type :integer :required true
-                         :sql {:default 0}}
-   :lease               {:type :uuid}
-   :lease-until         {:type :long}
-   :next-attempt-at     {:type :long :required true
-                         :sql {:default (pg/time-us)}}
-   :deadline            {:type :long :required true}
-   :provider-message-id {:type :text}
-   :error-code          {:type :text}
-   :time-created        {:type :long :required true
-                         :sql {:default (pg/time-us)}}
-   :time-updated        {:type :long :required true
-                         :sql {:default (pg/time-us)}}
-   :body-ciphertext     {:type :text}
-   :reply-kind          {:type :enum :required true
-                         :enum {:ns finfolkdb.common.type-domain-enum/EnumMessagingOutboxReplyKind}
-                         :sql {:default "text"}}]
-  {:constraints {:body-limit (<= (pg/length #{"body"}) 2000)
-                 :sending-lease (or (and (== #{"state"} "sending") [#{"lease"} :is-not-null])
-                                    (and (not= #{"state"} "sending") [#{"lease"} :is-null]))
-                 :attempts (>= #{"attempts"} 0)
-                 :lease-pair (or (and [#{"lease"} :is-null] [#{"lease_until"} :is-null])
-                                 (and [#{"lease"} :is-not-null] [#{"lease_until"} :is-not-null]))}})
-
 (defrun.pg __work_indexes__
   [:create-index :if-not-exists #{"MessagingReceipt_ready"} :on -/MessagingReceipt
    (>-< [#{"account_id"} #{"status"} #{"next_attempt_at"}])]
-  [:create-index :if-not-exists #{"MessagingOutbox_ready"} :on -/MessagingOutbox
-   (>-< [#{"account_id"} #{"state"} #{"next_attempt_at"}])]
   [:create-index :if-not-exists #{"MessagingMessage_history"} :on -/MessagingMessage
    (>-< [#{"conversation_id"} #{"time_created"} #{"id"}])])

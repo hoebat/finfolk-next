@@ -1,6 +1,7 @@
 (ns finfolkbuild.testing.behavior
   "Fixture constructors for application-level SQL runtime tests."
   (:require [finfolkdb.fn.user.user-manage :as user]
+            [finfolkdb.fn.social.social-manage :as social]
             [finfolkdb.fn.user.user-manage-logbook :as logbook]
             [finfolkdb.common.type-system-base :as system]
             [finfolkdb.common.type-system-site :as site]
@@ -17,7 +18,7 @@
   (user/insert-user (finfolkbuild.testing.behavior/id id) {:displayName id} (op "create-user" id)))
 (defn beach
   [id]
-  (pg/t:insert site/Beach
+  (pg/t:insert site/Site
     {:id (finfolkbuild.testing.behavior/id id) :key id :name id :timezone "Australia/Sydney"}))
 
 ;; Declaration-only entities still need real linked data. These constructors
@@ -35,7 +36,7 @@
         alice (member (str "alice-" id))
         bob (member (str "bob-" id))
         site (beach (str "beach-" id))
-        rows (atom {"User" alice "Beach" site})
+        rows (atom {"User" alice "Site" site})
         tables (catalog/declarations)]
     {:id id :alice alice :bob bob :rows rows :tables tables}))
 (defn identity-insert!
@@ -79,7 +80,8 @@
       {"SiteCatalog" {:singleton true}
        "SiteImport" {:preview "{}"}
        "UserBlock" {:owner (:id alice) :target (:id bob)}
-       "UserConnection" {:user (:id alice) :target (:id bob) :requested-by (:id alice)}
+       "UserConnection" {:user (first (sort [(:id alice) (:id bob)]))
+                         :target (last (sort [(:id alice) (:id bob)])) :requested-by (:id alice)}
        "UserInvitationJoin" {:invitee (:id alice) :inviter (:id bob)}
        "UserReport" {:target (:id bob)}
        "EnvironmentSnapshot" {:valid-from 1793750400000000
@@ -93,9 +95,16 @@
        "MessagingReceipt" {:deadline 4070908800000000}
        "MessagingOutbox" {:deadline 4070908800000000}
        "MessagingOauthState" {:expires-at 4070908800000000}
-       "InstagramClaim" {:expires-at 4070908800000000}
+       "SocialConnectionProof" {:kind "manual"
+                                :expires-at 4070908800000000
+                                :generation 1
+                                :token-hash (apply str (repeat 2 (str/replace id "-" "")))}
        "AccessInviteEmail" {:expires-at 4070908800000000}}
-      provided (get overrides table {})
+      provided (cond-> (get overrides table {})
+                 (#{"SocialAccount" "SocialConnection" "SocialAction" "SocialDiscovery"} table)
+                 (assoc :id id
+                        :audit
+                        (social/create-social-audit table id (op "social-fixture" (:id alice)))))
       values
       (reduce
        (fn [out column]
@@ -110,7 +119,14 @@
              (let [parent (entity! graph (get-in column [:reference :table]))
                    primary (first (filter :primary
                                           (:columns (tables (get-in column [:reference :table])))))]
-               (swap! scope merge (select-keys parent [:class-table :class-context]))
+               (swap! scope merge
+                 (select-keys parent
+                              (filter (set (map (comp keyword :name)
+                                                (filter :primary
+                                                        (:columns (tables (get-in column
+                                                                                  [:reference
+                                                                                   :table]))))))
+                                      [:class-table :class-context])))
                (assoc out key (get parent (keyword (str/replace (:sql-name primary) "_" "-")))))
              :else
              (assoc
@@ -181,7 +197,7 @@
                             (expect! "Reward reversal persists" true (:reversed (saved))))
       "UserRequestLimit" (do (update! {:count 4})
                              (expect! "Request counter persists per user" 4 (:count (saved))))
-      "UserConnection" (do (reject! {:requested-by "outsider"} "23514")
+      "UserConnection" (do (reject! {:requested-by (id "outsider")} "23514")
                            (update! {:status "accepted"})
                            (expect! "Acceptance persists" "accepted" (:status (saved)))
                            (update! {:status "removed"})
@@ -200,7 +216,7 @@
       (do (update! {:payload "{\"name\":\"Reviewed beach\"}"})
           (expect! "Site content round-trips" "Reviewed beach" (:name (:payload (saved)))))
       "MediaImport"
-      (let [beach-id (:id (get @(:rows graph) "Beach"))
+      (let [beach-id (:id (get @(:rows graph) "Site"))
             owner (:owner-id row)
             session (logbook/insert-dive-session owner
                                                  beach-id
@@ -257,7 +273,11 @@
       (let [parent ((:tables graph) (get-in reference [:reference :table]))
             primary (first (filter :primary (:columns parent)))
             missing
-            (if (= "uuid" (:type primary)) (str (java.util.UUID/randomUUID)) "0000-missing-parent")
+            (cond
+              (and (= table "UserConnection") (= "user" (:name reference)))
+              "00000000-0000-0000-0000-000000000001"
+              (= "uuid" (:type primary)) (str (java.util.UUID/randomUUID))
+              :else "0000-missing-parent")
             values (if (and (= table "UserConnection") (= "user" (:name reference)))
                      {:user missing :requested-by missing}
                      {(keyword (:name reference)) missing})
@@ -277,10 +297,15 @@
                 (with-open [db (local/connection)]
                   (.setAutoCommit db false)
                   (try (.await barrier 15 java.util.concurrent.TimeUnit/SECONDS)
-                       (let [result (ffirst (sql/rows db
-                                                      "SELECT finfolk_rpc.claim_message(?,?)::text"
-                                                      application
-                                                      account))]
+                       (let [result (ffirst
+                                     (sql/rows
+                                      db
+                                      "SELECT finfolk_rpc.claim_message(?::uuid,?::uuid)::text"
+                                      application
+                                      account))]
+                         ;; Keep both claims open: an early rollback can make the
+                         ;; same receipt available before the other worker selects.
+                         (.await barrier 15 java.util.concurrent.TimeUnit/SECONDS)
                          (if commit? (.commit db) (.rollback db))
                          (json/read result json/+keyword-case-mapper+))
                        (catch Throwable e (.rollback db) (throw e)))))
@@ -288,10 +313,11 @@
         second (future (claim false))
         committed @first
         rolled-back @second
-        recovered (json/read (ffirst (sql/rows @local/lock-connection
-                                               "SELECT finfolk_rpc.claim_message(?,?)::text"
-                                               application
-                                               account))
+        recovered (json/read (ffirst (sql/rows
+                                      @local/lock-connection
+                                      "SELECT finfolk_rpc.claim_message(?::uuid,?::uuid)::text"
+                                      application
+                                      account))
                              json/+keyword-case-mapper+)]
     (expect! "Concurrent workers claim different receipts"
              false

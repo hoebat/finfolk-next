@@ -11,7 +11,9 @@
    :require [[finfolkdb.common.type-domain-enum :as t]
              [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.type-domain-enum/EnumSocialReferralPlatform :added "0.1"}
 (fact "EnumSocialReferralPlatform labels on local PostgreSQL"
@@ -248,5 +250,89 @@
 (fact "EnumTripImportStatus labels on local PostgreSQL"
   (binding [jdbc/*connection-fn* local/contract-connection]
     (common/check! 'finfolkdb.common.type-domain-enum/EnumTripImportStatus))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialProvider :added "0.1"}
+(fact "EnumSocialProvider labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialProvider))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialConnectionStatus :added "0.1"}
+(fact "EnumSocialConnectionStatus labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialConnectionStatus))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialProofKind :added "0.1"}
+(fact "EnumSocialProofKind labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialProofKind))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialProofStatus :added "0.1"}
+(fact "EnumSocialProofStatus labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialProofStatus))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialSourceKind :added "0.1"}
+(fact "EnumSocialSourceKind labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialSourceKind))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialSourceStatus :added "0.1"}
+(fact "EnumSocialSourceStatus labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialSourceStatus))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialActionKind :added "0.1"}
+(fact "EnumSocialActionKind labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialActionKind))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialDiscoveryStatus :added "0.1"}
+(fact "EnumSocialDiscoveryStatus labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialDiscoveryStatus))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialDiscoveryReportReason :added "0.1"}
+(fact "EnumSocialDiscoveryReportReason labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialDiscoveryReportReason))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialCommandContext :added "0.1"}
+(fact "EnumSocialCommandContext labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialCommandContext))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialCommandStatus :added "0.1"}
+(fact "EnumSocialCommandStatus labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialCommandStatus))
+  =>
+  true)
+
+^{:refer finfolkdb.common.type-domain-enum/EnumSocialCommandSendState :added "0.1"}
+(fact "EnumSocialCommandSendState labels on local PostgreSQL"
+  (binding [jdbc/*connection-fn* local/contract-connection]
+    (common/check! 'finfolkdb.common.type-domain-enum/EnumSocialCommandSendState))
   =>
   true)

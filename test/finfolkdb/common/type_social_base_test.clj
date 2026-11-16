@@ -9,22 +9,20 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.main.scaffold-001-entity :as main]
+   :require [[finfolkdb.fn.user.user-manage :as fixture-user]
+             [finfolkdb.fn.user.user-manage-logbook :as fixture-logbook]
+             [finfolkdb.fn.social.social-manage :as fixture-social]
              [finfolkdb.common.type-social-base :as t]
              [postgres.core :as pg]]})
 
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.type-social-base/Social :added "0.1"}
 (fact "Social persists a linked entity and returns its created values"
   (fixture/persisted! 'finfolkdb.common.type-social-base/Social) => true)
 
-^{:refer finfolkdb.common.type-social-base/EnumSocialHandleType :added "0.1"}
-(fact "EnumSocialHandleType labels on local PostgreSQL"
-  (binding [jdbc/*connection-fn* local/contract-connection]
-    (common/check! 'finfolkdb.common.type-social-base/EnumSocialHandleType))
-  =>
-  true)
 
 ^{:refer finfolkdb.common.type-social-base/SocialHandle :added "0.1"}
 (fact "SocialHandle persists a linked entity and returns its created values"

@@ -6,7 +6,7 @@ const db=await connect();
 const rows=[{day:'2026-11-04',sourceId:'one',maxDepthMetres:12,notes:'PRIVATE_DIVE_ONE'},{day:'2026-11-05',sourceId:'two',maxDepthMetres:15,notes:'PRIVATE_DIVE_TWO'}];
 try{
  await installEntities(db);for(const id of ['alice','bob','admin'])await user(db,id);
- await db.query(`INSERT INTO finfolk."Beach"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney')`);
+ await db.query(`INSERT INTO finfolk."Site"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney')`);
  const created=await trip(db),foreign=await trip(db,'bob');
  const owned=async(id=created.id,owner='alice')=>(await db.query('SELECT finfolk_rpc.ret_trip_owned($1,$2) AS value',[id,owner])).rows[0].value;
  assert.equal(await beginImport(db,created.id,2,'bob'),null);
@@ -69,7 +69,7 @@ try{
  assert.equal((await db.query('SELECT count(*)::int AS n FROM finfolk."TripImport" WHERE trip_id=$1 AND is_active',[created.id])).rows[0].n,1);
  assert.deepEqual(await publicTrip(),visible,'Public snapshot must be independent of replaced private raw data');
  await assert.rejects(db.query(`INSERT INTO finfolk."TripImport"(trip_id,expected_rows,status,is_active) VALUES($1,1,'uploading',true)`,[created.id]),error=>error.code==='23514');
- await assert.rejects(db.query(`INSERT INTO finfolk."TripPublication"(trip_id,beach_id,status,public_consent,published_at) VALUES($1,'bondi','published',false,now())`,[foreign.id]),error=>error.code==='23514');
+ await assert.rejects(db.query(`INSERT INTO finfolk."TripPublication"(trip_id,site_id,status,public_consent,published_at) VALUES($1,'bondi','published',false,now())`,[foreign.id]),error=>error.code==='23514');
  const publishedToken=await reviewToken('published');assert.equal(await withdrawTrip(db,created.id,'bob'),null);assert.deepEqual(await withdrawTrip(db,created.id),{ok:true});assert.equal(await publicTrip(),null);assert.equal(await reviewTrip(db,created.id,'remove',publishedToken),null);
  await publishTrip(db,created.id,snapshot,4);const withdrawnToken=await reviewToken();await withdrawTrip(db,created.id);assert.equal(await reviewTrip(db,created.id,'approve',withdrawnToken),null,'Withdrawal must fence an in-flight approval');
  await publishTrip(db,created.id,snapshot,4,{approved:true});assert.ok(await publicTrip());

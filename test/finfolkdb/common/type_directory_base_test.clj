@@ -6,14 +6,18 @@
 (l/script- :postgres
   {:runtime :jdbc.client
    :config (local/config)
-   :require [[finfolkdb.main.scaffold-001-entity :as main]
+   :require [[finfolkdb.fn.user.user-manage :as fixture-user]
+             [finfolkdb.fn.user.user-manage-logbook :as fixture-logbook]
+             [finfolkdb.fn.social.social-manage :as fixture-social]
              [postgres.core :as pg]
              [finfolkdb.common.type-directory-base :as t]
              [finfolkdb.fn.directory.directory-manage :as directory]
              [finfolkdb.common.type-user-access :as access]
              [finfolkdb.common.type-user :as users]
              [finfolkdb.common.type-user-activity :as activity]]})
-(fact:global {:setup [(local/setup!)] :teardown [(local/teardown!)]})
+(fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
+                      (l/rt:setup :postgres)]
+              :teardown [(l/rt:teardown :postgres) (l/rt:stop) (local/cleanup!)]})
 
 ^{:refer finfolkdb.common.type-directory-base/DirectoryListing :id publication-privacy}
 (fact "candidate listings stay private and publication never exposes internal notes"

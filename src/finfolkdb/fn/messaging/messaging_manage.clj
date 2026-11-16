@@ -3,9 +3,11 @@
   (:require [lang.core :as l]))
 
 (l/script :postgres
-  {:require [[postgres.core :as pg]
+  {:require [[finfolkdb.common.type-messaging-delivery :as delivery]
+             [postgres.core :as pg]
              [finfolkdb.common.type-messaging-base :as tmb]
-             [finfolkdb.common.type-system-seed :as tss]]
+             [finfolkdb.common.type-system-seed :as tss]
+             [finfolkdb.common.type-social-account :as social]]
    :static {:application ["finfolk-entity"]
             :all         {:schema ["finfolk_rpc"]}}})
 
@@ -29,7 +31,8 @@
           {:account i-account :actor i-application :event i-event :correlation-id i-correlation})]
     (return o-audit)))
 
-(defn.pg ^{:- [:boolean]} is-messaging-participant-allowed
+(defn.pg ^{:- [:boolean]}
+  is-messaging-participant-allowed
   [:jsonb o-account :uuid i-conversation]
   (let [o-conversation (pg/t:get tmb/MessagingConversation {:where {:id i-conversation}})
         o-identity (pg/t:get tmb/MessagingIdentity
@@ -168,17 +171,17 @@
                                :attempts [:gte 5]
                                :lease-until [:lte (pg/time-us)]}})
         o-uncertain
-        (pg/t:update tmb/MessagingOutbox
+        (pg/t:update delivery/MessagingOutbox
           {:set
            {:state "uncertain" :error-code "delivery_lease_expired" :lease nil :lease-until nil}
            :single true
            :where {:account i-account :state "sending" :lease-until [:lte (pg/time-us)]}})
-        o-cancelled (pg/t:update tmb/MessagingOutbox
+        o-cancelled (pg/t:update delivery/MessagingOutbox
                       {:set {:state "cancelled" :error-code "account_generation_changed"}
                        :single true
                        :where
                        {:account i-account :state "pending" :generation [:neq v-generation]}})
-        o-deadline (pg/t:update tmb/MessagingOutbox
+        o-deadline (pg/t:update delivery/MessagingOutbox
                      {:set {:state "expired"}
                       :single true
                       :where {:account i-account :state "pending" :deadline [:lte (pg/time-us)]}})]
@@ -220,18 +223,24 @@
                              :single true
                              :where {:id (:uuid (:->> o-receipt "id"))}})]
             (return nil)))
-        (let [o-claim (pg/t:update tmb/MessagingReceipt
+        (let [o-linked (pg/t:get social/SocialConnection
+                       {:where {:account (:uuid (:->> o-participant "social_account_id")) :status "active"}})
+              (:uuid v-user) nil
+              o-claim (pg/t:update tmb/MessagingReceipt
                         {:set {:status "processing"
                                :lease (pg/uuid-generate-v4)
                                :lease-until (+ (pg/time-us) 60000000)
                                :attempts (+ (:integer (:->> o-receipt "attempts")) 1)}
                          :single true
                          :where {:id (:uuid (:->> o-receipt "id"))}})]
+          (if (== (:->> o-account "provider") "app")
+            (:= v-user (:uuid (:->> o-participant "user_id")))
+            (:= v-user (:uuid (:->> o-linked "user_id"))))
           (return (pg/jsonb-build-object "receipt" o-claim
                                          "message" o-message
                                          "provider" (:->> o-account "provider")
                                          "senderId" (:->> o-participant "external_id")
-                                         "userId" (:uuid (:->> o-participant "user_id")))))))))
+                                         "userId" v-user)))))))
 
 (defn.pg complete-message
   "A handler's domain mutations and this call may share one transaction."
@@ -262,7 +271,7 @@
                            :conversation (:uuid (:->> o-incoming "conversation_id"))
                            :direction "outbound"
                            :body i-reply})
-              o-outbox (pg/t:insert tmb/MessagingOutbox
+              o-outbox (pg/t:insert delivery/MessagingOutbox
                          {:account i-account
                           :receipt i-receipt
                           :message (:uuid (:->> o-message "id"))
@@ -314,7 +323,7 @@
     (when (or (== (:->> o-account "mode") "disabled")
               (> (:bigint (:->> o-account "backoff_until")) (pg/time-us)))
       (return nil))
-    (let [o-outbox (pg/t:get tmb/MessagingOutbox
+    (let [o-outbox (pg/t:get delivery/MessagingOutbox
                      {:where {:account i-account
                               :state "pending"
                               :generation v-generation
@@ -334,12 +343,12 @@
                          {:where {:id (:uuid (:->> o-conversation "participant_id"))}})]
         (when (not (-/is-messaging-participant-allowed o-account
                                                        (:uuid (:->> o-conversation "id"))))
-          (let [o-cancelled (pg/t:update tmb/MessagingOutbox
+          (let [o-cancelled (pg/t:update delivery/MessagingOutbox
                               {:set {:state "cancelled" :error-code "participant_restricted"}
                                :single true
                                :where {:id (:uuid (:->> o-outbox "id"))}})]
             (return nil)))
-        (let [o-claim (pg/t:update tmb/MessagingOutbox
+        (let [o-claim (pg/t:update delivery/MessagingOutbox
                         {:set {:state "sending"
                                :lease (pg/uuid-generate-v4)
                                :lease-until (+ (pg/time-us) 60000000)
@@ -358,7 +367,7 @@
   [:uuid i-application :uuid i-account :uuid i-delivery :uuid i-lease :text i-outcome :text
    i-provider-message :integer i-delay]
   (let [o-account (-/ret-messaging-account i-application i-account)
-        o-outbox (pg/t:get tmb/MessagingOutbox
+        o-outbox (pg/t:get delivery/MessagingOutbox
                    {:where {:id i-delivery
                             :account i-account
                             :state "sending"
@@ -389,7 +398,7 @@
           (:= v-state "cancelled"))
         (when (<= (:bigint (:->> o-outbox "deadline")) (pg/time-us))
           (:= v-state "expired")))
-      (let [o-finished (pg/t:update tmb/MessagingOutbox
+      (let [o-finished (pg/t:update delivery/MessagingOutbox
                          {:set {:state v-state
                                 :provider-message-id i-provider-message
                                 :lease nil

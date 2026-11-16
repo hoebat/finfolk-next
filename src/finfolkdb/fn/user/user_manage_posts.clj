@@ -27,7 +27,7 @@
         o-post (pg/t:insert tsp/SocialPost
                  {:id v-id
                   :owner i-owner
-                  :beach i-beach
+                  :site i-beach
                   :url i-url
                   :platform i-platform
                   :creator-handle i-handle
@@ -46,14 +46,14 @@
   [:uuid i-post-id :uuid i-viewer]
   (let [o-post (pg/t:get tsp/SocialPost
                  {:where {:id i-post-id :status "approved" :public-consent true}
-                  :returning #{:id :owner :beach :url :platform :creator-handle :time-created}})
+                  :returning #{:id :owner :site :url :platform :creator-handle :time-created}})
         (:uuid v-owner) (:uuid (:->> o-post "owner_id"))]
     (when (or [o-post :is-null]
               (not (ha/is-user-active v-owner))
               (ha/is-user-blocked i-viewer v-owner))
       (return nil))
     (return (pg/jsonb-build-object "id" (:uuid (:->> o-post "id"))
-                                   "beach_id" (:uuid (:->> o-post "beach_id"))
+                                   "site_id" (:uuid (:->> o-post "site_id"))
                                    "url" (:->> o-post "url")
                                    "platform" (:->> o-post "platform")
                                    "creator_handle" (:->> o-post "creator_handle")

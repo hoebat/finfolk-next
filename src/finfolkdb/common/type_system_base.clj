@@ -80,7 +80,8 @@
   "Audit stream scoped by owning entity and context."
   [])
 
-(deftype.pg ^{:finfolk/legacy-tables ["directory_audit" "event_audit" "post_reviews" "trip_reviews"]
+(deftype.pg ^{:finfolk/legacy-tables ["directory_audit" "event_audit" "post_reviews" "trip_reviews"
+                                      "instagram_audit" "instagram_discovery_audit"]
               :final true
               :! (et/E {:class   :2d/log
                         :owner   -/Audit
@@ -102,7 +103,8 @@
 (pg/defsel.pg ^{:- [-/Rev] :args [:text i-class-table :text i-class-context]} sel-rev-all
               {:class-table i-class-table :class-context i-class-context})
 
-(defn.pg ^{:%% :sql} ret-rev-default
+(defn.pg ^{:%% :sql}
+  ret-rev-default
   [:text i-class-table :text i-class-context :uuid i-class-ref]
   (pg/t:get -/Rev
     {:where {:class-table i-class-table :class-context i-class-context :class-ref i-class-ref}}))
@@ -126,6 +128,7 @@
 ;; Operation Queries
 ;;
 
-(defn.pg ^{:%% :sql} op-fn
+(defn.pg ^{:%% :sql}
+  op-fn
   [:text i-tag :uuid i-user-id :jsonb i-data]
   (pg/t:insert -/Op {:tag i-tag :user-id i-user-id :data (tss/as-jsonb i-data)}))

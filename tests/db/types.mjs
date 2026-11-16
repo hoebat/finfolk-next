@@ -7,7 +7,7 @@ import {installEntities,user,diveSession} from './fixtures/entities.mjs';
 const db=await connect();
 const catalog=JSON.parse(await readFile('resources/finfolkdb/entity-catalog.json','utf8'));
 const modules=JSON.parse(await readFile('resources/finfolkdb/type-namespaces.json','utf8'));
-const domainModules=new Set(['import-base','environment-base','site-base','social-instagram','social-tiktok','messaging-base','user-reward','shop-base'].map(name=>'finfolkdb.common.type-'+name));
+const domainModules=new Set(['import-base','environment-base','site-base','social-account','social-workflow','messaging-base','user-reward','shop-base'].map(name=>'finfolkdb.common.type-'+name));
 const table=name=>'finfolk.'+quote(name);
 try{
  await installEntities(db);
@@ -15,9 +15,9 @@ try{
  assert.deepEqual(live,Object.keys(catalog).sort(),'Every active type must be reachable from the SQL entrypoint');
  assert.deepEqual([...new Set(Object.values(catalog).map(spec=>spec.module))].filter(module=>!modules[module]),[]);
  const alice=await user(db,'alice'),bob=await user(db,'bob');
- await db.query(`INSERT INTO finfolk."Beach"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney')`);
+ await db.query(`INSERT INTO finfolk."Site"(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney')`);
  const session=await diveSession(db);
- const rows=new Map([['User',alice],['Beach',{id:'bondi'}],['DiveSession',session]]);
+ const rows=new Map([['User',alice],['Site',{id:'bondi'}],['DiveSession',session]]);
  const enums=new Map();
  for(const row of (await db.query(`SELECT t.typname,e.enumlabel FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname='finfolk' ORDER BY e.enumsortorder`)).rows){
   if(!enums.has(row.typname))enums.set(row.typname,row.enumlabel);
