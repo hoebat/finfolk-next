@@ -30,11 +30,17 @@ function table_upsert_single(schema,table_name,m,opts){
   let ks = cols.filter(function (col){
     return null != m[col];
   });
-  return raw.raw_upsert(table_name,"id",ks,[m],opts);
+  return raw.raw_upsert(
+    table_name,
+    base_schema.primary_columns(schema,table_name),
+    ks,
+    [m],
+    opts
+  );
 }
 
 function table_filter_id(entry){
-  return !((0 == Object.keys(entry["ref_links"]).length) && (1 == Object.keys(entry["data"]).length));
+  return !((0 == Object.keys(entry["ref_links"]).length) && (null != entry["data"]["id"]) && (1 == Object.keys(entry["data"]).length));
 }
 
 function table_get_data(entry){
@@ -48,7 +54,7 @@ function table_get_data(entry){
 var table_emit_insert = raw.raw_insert;
 
 var table_emit_upsert = function (table_name,cols,out,opts){
-  return raw.raw_upsert(table_name,"id",cols,out,opts);
+  return raw.raw_upsert(table_name,opts["identity_columns"] || "id",cols,out,opts);
 };
 
 function table_emit_flat(emit_fn,schema,lookup,flat,opts){
@@ -78,6 +84,7 @@ function table_emit_flat(emit_fn,schema,lookup,flat,opts){
     else{
       sopts = Object.assign({},opts);
     }
+    sopts["identity_columns"] = base_schema.primary_columns(schema,table_name);
     if(0 < sout.length){
       return emit_fn(table_name,cols,sout,sopts);
     }

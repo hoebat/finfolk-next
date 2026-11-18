@@ -11,7 +11,7 @@ function table_create_column(schema,entry,opts){
   let irequired = entry["required"];
   let stype = (null != types[itype]) ? types[itype] : itype;
   let default_fn = function (ident){
-    return column_fn(ident) + " " + (("ref" == stype) ? "text" : stype) + ((true == iprimary) ? " PRIMARY KEY" : "") + (((true == irequired) && (true == strict)) ? " NOT NULL" : "");
+    return column_fn(ident) + " " + (("ref" == stype) ? "text" : stype) + (((true == iprimary) && !opts["composite_primary"]) ? " PRIMARY KEY" : "") + (((true == irequired) && (true == strict)) ? " NOT NULL" : "");
   };
   if((stype == "ref") && (null != schema[entry["ref"]["ns"]])){
     let rtable = entry["ref"]["ns"];
@@ -33,9 +33,15 @@ function table_create(schema,table_name,opts){
     return x;
   }) : opts["table_fn"];
   let columns = base_schema.table_entries(schema,table_name);
+  let identity = base_schema.primary_columns(schema,table_name);
+  let composite = identity.length > 1;
+  let column_fn = (null == opts["column_fn"]) ? (function (x){
+    return x;
+  }) : opts["column_fn"];
+  let column_opts = Object.assign(Object.assign({},opts),{"composite_primary":composite});
   return "CREATE TABLE IF NOT EXISTS " + table_fn(table_name) + " (\n  " + columns.map(function (e){
-    return table_create_column(schema,e,opts);
-  }).join(",\n  ") + "\n);";
+    return table_create_column(schema,e,column_opts);
+  }).join(",\n  ") + (composite ? (",\n  PRIMARY KEY (" + identity.map(column_fn).join(",") + ")") : "") + "\n);";
 }
 
 function table_create_all(schema,lookup,opts){

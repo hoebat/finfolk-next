@@ -1,14 +1,22 @@
 // Generated from finfolk-web.lib.operations; do not edit.
 export var operations = {
   "directoryReportResolve":{
-    "name":"directoryReportResolve",
-    "path":"/v1/admin/directory/report-resolve",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{"type":"object","additionalProperties":false},
+    "method":"POST",
     "auth":true,
     "admin":true,
-    "write":true,
-    "domain":"directoryAdmin"
+    "path":"/v1/admin/directory/report-resolve",
+    "name":"directoryReportResolve",
+    "domain":"directoryAdmin",
+    "native-rpc":"native_directory_report_resolve",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":true
   },
   "tripImportBatch":{
     "auth":true,
@@ -18,23 +26,50 @@ export var operations = {
     "write":true
   },
   "directoryClaim":{
-    "name":"directoryClaim",
-    "path":"/v1/me/directory/claim",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "challenge":{"type":"string"},
+        "expires_at":{"type":"number"}
+      },
+      "required":["id","challenge","expires_at"]
+    },
+    "method":"POST",
     "auth":true,
     "admin":false,
-    "write":true,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory/claim",
+    "name":"directoryClaim",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_claim",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":true
   },
   "discoverPopular":{
-    "name":"discoverPopular",
-    "path":"/v1/discover/popular",
-    "method":"GET",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "places":{"type":"array","items":{"type":"string","format":"uuid"}}
+      },
+      "required":["places"]
+    },
+    "method":"GET",
     "auth":false,
-    "write":false,
-    "domain":"discovery"
+    "path":"/v1/discover/popular",
+    "name":"discoverPopular",
+    "domain":"discovery",
+    "native-rpc":"native_public_popular",
+    "request-shape":{"type":"object","additionalProperties":false},
+    "write":false
   },
   "environmentImportPreview":{
     "name":"environmentImportPreview",
@@ -47,14 +82,194 @@ export var operations = {
     "domain":"siteAdmin"
   },
   "siteAdmin":{
-    "name":"siteAdmin",
-    "path":"/v1/admin/sites",
-    "method":"GET",
     "transport":"rest",
-    "write":false,
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "drafts":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "import_id":{"type":["string","null"]},
+              "owner_id":{"type":["string","null"]},
+              "payload":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "description":{"type":"string"},
+                  "archived":{"type":"boolean"},
+                  "features":{
+                    "type":"array",
+                    "items":{
+                      "type":"string",
+                      "enum":["beach","reef","wreck","wall","training"]
+                    }
+                  },
+                  "requirements":{"type":"string"},
+                  "restrictions":{
+                    "type":"array",
+                    "items":{
+                      "type":"object",
+                      "additionalProperties":false,
+                      "properties":{
+                        "activity":{"type":"string"},
+                        "status":{"type":"string","enum":["restricted","closed","unknown"]},
+                        "text":{"type":"string"},
+                        "source_url":{"type":"string"},
+                        "reviewed_at":{"type":"string"}
+                      },
+                      "required":["activity","status","text","source_url"]
+                    }
+                  },
+                  "timezone":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "timezone_provenance":{"type":"string"},
+                  "name":{"type":"string"},
+                  "reference_label":{"type":"string"},
+                  "booking_url":{"type":"string"},
+                  "state":{"type":"string"},
+                  "access_mode":{
+                    "type":"string",
+                    "enum":["shore","boat_only","shore_or_boat","unknown"]
+                  },
+                  "activity_status":{"type":"string","enum":["documented","unknown"]},
+                  "region":{"type":"string"},
+                  "coordinate_purpose":{"type":"string","enum":["reference","entry","dive"]},
+                  "licence":{"type":"string"},
+                  "area_id":{"type":"string"},
+                  "id":{"type":"string"},
+                  "attribution":{"type":"string"},
+                  "point":{"type":"array","items":{"type":"number"}},
+                  "depth_evidence":{
+                    "type":"array",
+                    "items":{
+                      "type":"object",
+                      "additionalProperties":false,
+                      "properties":{
+                        "kind":{"type":"string","enum":["surveyed","reported"]},
+                        "depth_m":{"type":"number"},
+                        "reference":{"type":"string"},
+                        "source_url":{"type":"string"},
+                        "reviewed_at":{"type":"string"},
+                        "vertical_datum":{"type":"string"},
+                        "datum_type":{"type":"string"},
+                        "uncertainty_m":{"type":["number","null"]}
+                      },
+                      "required":["kind","depth_m","reference","source_url"]
+                    }
+                  },
+                  "activities":{
+                    "type":"array",
+                    "items":{
+                      "type":"string",
+                      "enum":["freediving","ocean-swimming","spearfishing"]
+                    }
+                  },
+                  "aliases":{"type":"array","items":{"type":"string"}},
+                  "area_name":{"type":"string"},
+                  "coordinate_provenance":{"type":"string"},
+                  "facts":{
+                    "type":"array",
+                    "items":{
+                      "type":"object",
+                      "additionalProperties":false,
+                      "properties":{
+                        "label":{"type":"string"},
+                        "text":{"type":"string"},
+                        "source_url":{"type":"string"},
+                        "reviewed_at":{"type":"string"}
+                      },
+                      "required":["label","text","source_url"]
+                    }
+                  },
+                  "source_id":{"type":"string"},
+                  "access_points":{
+                    "type":"array",
+                    "items":{
+                      "type":"object",
+                      "additionalProperties":false,
+                      "properties":{
+                        "mode":{"type":"string","enum":["shore","departure"]},
+                        "name":{"type":"string"},
+                        "point":{"type":"array","items":{"type":"number"}},
+                        "source_url":{"type":"string"},
+                        "booking_url":{"type":"string"},
+                        "notes":{"type":"string"},
+                        "verified":{"type":"boolean"}
+                      },
+                      "required":["mode","name","point","source_url"]
+                    }
+                  },
+                  "reviewed_at":{"type":"string"},
+                  "waterbody":{
+                    "type":"string",
+                    "enum":["ocean","lake","river","quarry","sinkhole","pool","unknown"]
+                  },
+                  "state_id":{
+                    "type":"string",
+                    "enum":["VIC","NSW","JBT","QLD","SA","WA","NT","TAS","ACT","EXT"]
+                  }
+                },
+                "required":[
+                  "id",
+                  "name",
+                  "state_id",
+                  "area_name",
+                  "timezone",
+                  "point",
+                  "source_url"
+                ]
+              },
+              "base_revision":{"type":"integer"},
+              "site_key":{"type":"string"},
+              "updated_at":{"type":"string"},
+              "reason":{"type":"string"},
+              "status":{
+                "type":"string",
+                "enum":["draft","submitted","published","rejected","withdrawn"]
+              },
+              "id":{"type":"string","format":"uuid"},
+              "reviewed_by":{"type":["string","null"]},
+              "site_id":{"type":["string","null"]},
+              "version":{"type":"integer"},
+              "created_at":{"type":"string"}
+            },
+            "required":[
+              "id",
+              "site_id",
+              "site_key",
+              "owner_id",
+              "import_id",
+              "base_revision",
+              "version",
+              "status",
+              "payload",
+              "reason",
+              "reviewed_by",
+              "created_at",
+              "updated_at"
+            ]
+          }
+        },
+        "imports":{
+          "type":"array",
+          "items":{"type":"object","additionalProperties":true}
+        }
+      },
+      "required":["drafts","imports"]
+    },
+    "method":"GET",
     "auth":true,
+    "admin":true,
+    "path":"/v1/admin/sites",
+    "name":"siteAdmin",
     "domain":"siteAdmin",
-    "admin":true
+    "native-rpc":"native_site_review_admin",
+    "request-shape":{"type":"object","additionalProperties":false},
+    "write":false
   },
   "tripPublish":{
     "auth":true,
@@ -98,14 +313,54 @@ export var operations = {
     "write":false
   },
   "directoryAdminSave":{
-    "name":"directoryAdminSave",
-    "path":"/v1/admin/directory/save",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "method":"POST",
     "auth":true,
     "admin":true,
-    "write":true,
-    "domain":"directoryAdmin"
+    "path":"/v1/admin/directory/save",
+    "name":"directoryAdminSave",
+    "domain":"directoryAdmin",
+    "native-rpc":"native_directory_admin_save",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer"},
+        "document":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "description":{"type":"string"},
+            "category":{
+              "type":"string",
+              "enum":["School","Instructor","Business","Club","Group","Freediver"]
+            },
+            "locality":{"type":"string"},
+            "socials":{"type":"array","items":{"type":"string"}},
+            "sources":{"type":"array","items":{"type":"string"}},
+            "name":{"type":"string"},
+            "state":{"type":"string"},
+            "website":{"type":"string"},
+            "image":{"type":"string"},
+            "country":{"type":"string"}
+          },
+          "required":["name","category","state","sources","socials"]
+        },
+        "status":{"type":"string"},
+        "notes":{"type":"string"},
+        "outreach":{"type":"string"},
+        "revokeOwner":{"type":"boolean"}
+      },
+      "required":["document","status"]
+    },
+    "write":true
   },
   "instagramProfileLink":{
     "auth":true,
@@ -115,33 +370,123 @@ export var operations = {
     "write":true
   },
   "eventInvite":{
-    "name":"eventInvite",
-    "path":"/v1/me/events/invite",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "token":{"type":"string"},
+        "expires":{"type":"number"},
+        "delivery":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "state":{
+              "type":"string",
+              "enum":["queued","sending","sent","failed","cancelled"]
+            },
+            "attempts":{"type":"integer"},
+            "error":{"type":"string"}
+          },
+          "required":["state","attempts","error"]
+        }
+      },
+      "required":["id","token","expires"]
+    },
     "method":"POST",
     "auth":true,
-    "write":true,
+    "path":"/v1/me/events/invite",
+    "cache":false,
+    "name":"eventInvite",
     "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
+    "native-rpc":"native_events_invite",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "email":{"type":"string"},
+        "send":{"type":"boolean"},
+        "requestId":{"type":"string","format":"uuid"}
+      },
+      "required":["id","email"]
+    },
+    "write":true
   },
   "publicDirectoryDetail":{
-    "name":"publicDirectoryDetail",
-    "path":"/v1/directory/:id",
-    "method":"GET",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "description":{"type":"string"},
+        "category":{
+          "type":"string",
+          "enum":["School","Instructor","Business","Club","Group","Freediver"]
+        },
+        "locality":{"type":"string"},
+        "socials":{"type":"array","items":{"type":"string"}},
+        "sources":{"type":"array","items":{"type":"string"}},
+        "name":{"type":"string"},
+        "reviewedAt":{"type":["number","null"]},
+        "state":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "website":{"type":"string"},
+        "managed":{"type":"boolean"},
+        "image":{"type":"string"},
+        "country":{"type":"string"}
+      },
+      "required":[
+        "id",
+        "name",
+        "category",
+        "state",
+        "country",
+        "locality",
+        "description",
+        "website",
+        "image",
+        "sources",
+        "socials",
+        "managed",
+        "reviewedAt"
+      ]
+    },
+    "method":"GET",
     "auth":false,
-    "write":false,
-    "domain":"directoryPublic"
+    "path":"/v1/directory/:id",
+    "name":"publicDirectoryDetail",
+    "domain":"directoryPublic",
+    "native-rpc":"native_directory_public_detail",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":false
   },
   "directoryReport":{
-    "name":"directoryReport",
-    "path":"/v1/me/directory/report",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{"type":"object","additionalProperties":false},
+    "method":"POST",
     "auth":true,
     "admin":false,
-    "write":true,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory/report",
+    "name":"directoryReport",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_report",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "message":{"type":"string"}
+      },
+      "required":["id","message"]
+    },
+    "write":true
   },
   "finniesComplete":{
     "transport":"rest",
@@ -162,23 +507,56 @@ export var operations = {
     "write":true
   },
   "pageInviteRedeem":{
-    "name":"pageInviteRedeem",
-    "path":"/v1/me/directory/invite-redeem",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "method":"POST",
     "auth":true,
-    "write":true,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory/invite-redeem",
+    "name":"pageInviteRedeem",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_invite_redeem",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"token":{"type":"string"}},
+      "required":["token"]
+    },
+    "write":true
   },
   "siteNoteModerate":{
-    "name":"siteNoteModerate",
-    "path":"/v1/admin/sites/:site/notes/moderate",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "hidden":{"type":"boolean"}
+      },
+      "required":["id","hidden"]
+    },
+    "method":"POST",
     "auth":true,
     "admin":true,
-    "write":true,
-    "domain":"siteNotes"
+    "path":"/v1/admin/sites/:site/notes/moderate",
+    "name":"siteNoteModerate",
+    "domain":"siteNotes",
+    "native-rpc":"native_notes_moderate",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "site":{"type":"string","format":"uuid"},
+        "id":{"type":"string","format":"uuid"},
+        "hidden":{"type":"boolean"}
+      },
+      "required":["site","id","hidden"]
+    },
+    "write":true
   },
   "instagramClaimRead":{
     "auth":true,
@@ -206,13 +584,52 @@ export var operations = {
     "write":true
   },
   "pageAccess":{
-    "name":"pageAccess",
-    "path":"/v1/me/directory/access",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "role":{"type":"string"},
+        "admins":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "name":{"type":"string"}
+            },
+            "required":["id","name"]
+          }
+        },
+        "invites":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "expiresAt":{"type":"number"}
+            },
+            "required":["id","expiresAt"]
+          }
+        }
+      },
+      "required":["role","admins","invites"]
+    },
+    "method":"POST",
     "auth":true,
-    "write":false,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory/access",
+    "name":"pageAccess",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_page_access",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":false
   },
   "instagramHidePost":{
     "auth":true,
@@ -226,17 +643,92 @@ export var operations = {
     "domain":"member",
     "name":"myCheckins",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"ret_community_checkins",
+    "request-shape":{"type":"object","properties":{},"additionalProperties":false},
+    "result-shape":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "properties":{
+          "beach_id":{"type":"string","format":"uuid"},
+          "day":{"type":"string"},
+          "name":{"type":"string"}
+        },
+        "required":["beach_id","day","name"],
+        "additionalProperties":false
+      }
+    }
   },
   "siteNotes":{
-    "name":"siteNotes",
-    "path":"/v1/me/sites/:site/notes",
-    "method":"GET",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "enabled":{"type":"boolean"},
+        "notes":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "site":{"type":"string","format":"uuid"},
+              "revision":{"type":"integer"},
+              "own":{"type":"boolean"},
+              "createdAt":{"type":"string"},
+              "topic":{
+                "type":"string",
+                "enum":["access","facilities","wildlife","conditions"]
+              },
+              "author":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "score":{"type":"integer"},
+              "upvoted":{"type":"boolean"},
+              "observedOn":{"type":["string","null"]},
+              "text":{"type":"string"}
+            },
+            "required":[
+              "id",
+              "site",
+              "topic",
+              "text",
+              "author",
+              "createdAt",
+              "observedOn",
+              "revision",
+              "score",
+              "own",
+              "upvoted"
+            ]
+          }
+        },
+        "next":{"type":["integer","null"]}
+      },
+      "required":["enabled","notes","next"]
+    },
+    "method":"GET",
     "auth":true,
-    "write":false,
+    "path":"/v1/me/sites/:site/notes",
     "cache":false,
-    "domain":"siteNotes"
+    "name":"siteNotes",
+    "domain":"siteNotes",
+    "native-rpc":"native_notes_list",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "site":{"type":"string","format":"uuid"},
+        "sort":{"type":"string","enum":["helpful","newest"]},
+        "topic":{
+          "type":"string",
+          "enum":["all","access","facilities","wildlife","conditions"]
+        },
+        "offset":{"type":["integer","string"]}
+      },
+      "required":["site"]
+    },
+    "write":false
   },
   "instagramAccount":{
     "auth":true,
@@ -248,28 +740,158 @@ export var operations = {
     "write":false
   },
   "publicSiteNotes":{
-    "name":"publicSiteNotes",
-    "path":"/v1/sites/:site/notes",
-    "method":"GET",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "enabled":{"type":"boolean"},
+        "notes":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "site":{"type":"string","format":"uuid"},
+              "revision":{"type":"integer"},
+              "own":{"type":"boolean"},
+              "createdAt":{"type":"string"},
+              "topic":{
+                "type":"string",
+                "enum":["access","facilities","wildlife","conditions"]
+              },
+              "author":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "score":{"type":"integer"},
+              "upvoted":{"type":"boolean"},
+              "observedOn":{"type":["string","null"]},
+              "text":{"type":"string"}
+            },
+            "required":[
+              "id",
+              "site",
+              "topic",
+              "text",
+              "author",
+              "createdAt",
+              "observedOn",
+              "revision",
+              "score",
+              "own",
+              "upvoted"
+            ]
+          }
+        },
+        "next":{"type":["integer","null"]}
+      },
+      "required":["enabled","notes","next"]
+    },
+    "method":"GET",
     "auth":false,
-    "write":false,
+    "path":"/v1/sites/:site/notes",
     "cache":false,
-    "domain":"siteNotesPublic"
+    "name":"publicSiteNotes",
+    "domain":"siteNotesPublic",
+    "native-rpc":"native_notes_public_list",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "site":{"type":"string","format":"uuid"},
+        "sort":{"type":"string","enum":["helpful","newest"]},
+        "topic":{
+          "type":"string",
+          "enum":["all","access","facilities","wildlife","conditions"]
+        },
+        "offset":{"type":["integer","string"]}
+      },
+      "required":["site"]
+    },
+    "write":false
   },
   "sessions":{
     "auth":true,
     "domain":"logbook",
     "name":"sessions",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"ret_visible_sessions",
+    "request-shape":{
+      "type":"object",
+      "properties":{
+        "owner":{"type":"string","format":"uuid"},
+        "publicOnly":{"type":"boolean"},
+        "cursor":{"type":["string","null"]}
+      },
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "required":["sessions","cursor","more"],
+      "additionalProperties":false,
+      "properties":{
+        "sessions":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":[
+              "id",
+              "ownerId",
+              "beachId",
+              "date",
+              "locationName",
+              "notes",
+              "point",
+              "durationMinutes",
+              "maxDepthMetres",
+              "visibility",
+              "photos",
+              "linkedMedia"
+            ],
+            "properties":{
+              "durationMinutes":{"type":["number","null"]},
+              "date":{"type":"string","format":"date"},
+              "beachId":{"type":"string"},
+              "ownerId":{"type":"string","format":"uuid"},
+              "locationName":{"type":"string"},
+              "photos":{"type":"array","items":{"type":"string"}},
+              "id":{"type":"string","format":"uuid"},
+              "notes":{"type":"string"},
+              "linkedMedia":{
+                "type":"array",
+                "items":{"type":"object","additionalProperties":true}
+              },
+              "maxDepthMetres":{"type":["number","null"]},
+              "point":{"type":["array","null"],"items":{"type":"number"}},
+              "visibility":{"type":"string","enum":["private","public"]}
+            }
+          }
+        },
+        "cursor":{"type":["string","null"]},
+        "more":{"type":"boolean"}
+      }
+    }
   },
   "deleteSession":{
     "auth":true,
     "domain":"logbook",
     "name":"deleteSession",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"delete_private_session",
+    "request-shape":{
+      "type":"object",
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{"deleted":{"type":"boolean"}},
+      "required":["deleted"],
+      "additionalProperties":false
+    }
   },
   "instagramBindMediaOwner":{
     "admin":true,
@@ -280,24 +902,104 @@ export var operations = {
     "write":true
   },
   "directoryDiscover":{
-    "name":"directoryDiscover",
-    "path":"/v1/admin/directory/discover",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "count":{"type":"integer"},
+        "state":{"type":"string","enum":["running","complete","failed"]},
+        "error":{"type":"string"}
+      },
+      "required":["id","count","state","error"]
+    },
+    "method":"POST",
     "auth":true,
     "admin":true,
-    "write":true,
-    "domain":"directoryAdmin"
+    "path":"/v1/admin/directory/discover",
+    "name":"directoryDiscover",
+    "domain":"directoryAdmin",
+    "native-rpc":"native_directory_discovery_start",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "region":{"type":"string"},
+        "category":{
+          "type":"string",
+          "enum":["School","Instructor","Business","Club","Group","Freediver"]
+        },
+        "state":{"type":"string"},
+        "country":{"type":"string"},
+        "seed":{"type":"string"}
+      },
+      "required":["region","category","state"]
+    },
+    "write":true
   },
   "eventRoster":{
-    "name":"eventRoster",
-    "path":"/v1/me/events/roster",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "attendees":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "name":{"type":"string"}
+            },
+            "required":["id","name"]
+          }
+        },
+        "invitations":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "email":{"type":"string"},
+              "expires":{"type":"number"},
+              "revoked":{"type":"boolean"},
+              "delivery":{
+                "type":["object","null"],
+                "additionalProperties":false,
+                "properties":{
+                  "state":{
+                    "type":"string",
+                    "enum":["queued","sending","sent","failed","cancelled"]
+                  },
+                  "attempts":{"type":"integer"},
+                  "error":{"type":"string"}
+                },
+                "required":["state","attempts","error"]
+              }
+            },
+            "required":["id","email","expires","revoked","delivery"]
+          }
+        }
+      },
+      "required":["attendees","invitations"]
+    },
     "method":"POST",
     "auth":true,
-    "write":false,
+    "path":"/v1/me/events/roster",
+    "cache":false,
+    "name":"eventRoster",
     "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
+    "native-rpc":"native_events_roster",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":false
   },
   "instagramCommandResolve":{
     "admin":true,
@@ -308,14 +1010,75 @@ export var operations = {
     "write":true
   },
   "eventMine":{
-    "name":"eventMine",
-    "path":"/v1/me/events/mine",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "events":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "timezone":{"type":"string"},
+              "page_id":{"type":"string","format":"uuid"},
+              "capacity":{"type":["integer","null"]},
+              "revision":{"type":"integer"},
+              "state":{"type":"string","enum":["draft","published","cancelled"]},
+              "ends_at":{"type":"string"},
+              "document":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "title":{"type":"string"},
+                  "description":{"type":"string"},
+                  "location":{"type":"string"},
+                  "category":{"type":"string"},
+                  "capacity":{"type":["integer","null"]}
+                },
+                "required":["title","description","location","category"]
+              },
+              "starts_at":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "canManage":{"type":"boolean"},
+              "canModerate":{"type":"boolean"},
+              "myRsvp":{"type":["string","null"]},
+              "going":{"type":"integer"},
+              "visibility":{"type":"string","enum":["public","private"]},
+              "organiser":{"type":"string"}
+            },
+            "required":[
+              "id",
+              "page_id",
+              "document",
+              "state",
+              "visibility",
+              "starts_at",
+              "ends_at",
+              "timezone",
+              "capacity",
+              "going",
+              "myRsvp",
+              "canManage",
+              "canModerate",
+              "revision",
+              "organiser"
+            ]
+          }
+        }
+      },
+      "required":["events"]
+    },
     "method":"POST",
     "auth":true,
-    "write":false,
+    "path":"/v1/me/events/mine",
+    "cache":false,
+    "name":"eventMine",
     "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
+    "native-rpc":"native_events_mine",
+    "request-shape":{"type":"object","additionalProperties":false},
+    "write":false
   },
   "instagramProfile":{
     "auth":true,
@@ -373,7 +1136,23 @@ export var operations = {
     "domain":"community",
     "name":"removeCheckin",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"remove_community_checkin",
+    "request-shape":{
+      "type":"object",
+      "properties":{
+        "beachId":{"type":"string","format":"uuid"},
+        "day":{"type":"string","format":"date"}
+      },
+      "required":["beachId","day"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{"removed":{"type":"boolean"}},
+      "required":["removed"],
+      "additionalProperties":false
+    }
   },
   "instagramCodeConnect":{
     "auth":true,
@@ -385,13 +1164,175 @@ export var operations = {
     "write":true
   },
   "siteCatalog":{
-    "name":"siteCatalog",
-    "path":"/v1/sites/catalog",
-    "method":"GET",
     "transport":"rest",
-    "write":false,
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "revision":{"type":"integer"},
+        "beaches":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "description":{"type":"string"},
+              "archived":{"type":"boolean"},
+              "features":{"type":"array","items":{"type":"string"}},
+              "requirements":{"type":"string"},
+              "restrictions":{
+                "type":"array",
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "activity":{"type":"string"},
+                    "status":{"type":"string","enum":["restricted","closed","unknown"]},
+                    "text":{"type":"string"},
+                    "source_url":{"type":"string"},
+                    "reviewed_at":{"type":"string"}
+                  },
+                  "required":["activity","status","text","source_url"]
+                }
+              },
+              "timezone":{"type":"string"},
+              "source_url":{"type":"string"},
+              "timezone_provenance":{"type":"string"},
+              "revision":{"type":"integer"},
+              "name":{"type":"string"},
+              "reference_label":{"type":"string"},
+              "booking_url":{"type":"string"},
+              "state":{"type":"string"},
+              "access_mode":{"type":"string"},
+              "activity_status":{"type":"string","enum":["documented","unknown"]},
+              "region":{"type":"string"},
+              "coordinate_purpose":{"type":"string","enum":["reference","entry","dive"]},
+              "licence":{"type":"string"},
+              "area_id":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "attribution":{"type":"string"},
+              "point":{"type":"array","items":{"type":"number"}},
+              "depth_evidence":{
+                "type":"array",
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "kind":{"type":"string","enum":["surveyed","reported"]},
+                    "depth_m":{"type":"number"},
+                    "reference":{"type":"string"},
+                    "source_url":{"type":"string"},
+                    "reviewed_at":{"type":"string"},
+                    "vertical_datum":{"type":"string"},
+                    "datum_type":{"type":"string"},
+                    "uncertainty_m":{"type":["number","null"]}
+                  },
+                  "required":["kind","depth_m","reference","source_url"]
+                }
+              },
+              "activities":{"type":"array","items":{"type":"string"}},
+              "aliases":{"type":"array","items":{"type":"string"}},
+              "area_name":{"type":"string"},
+              "coordinate_provenance":{"type":"string"},
+              "facts":{
+                "type":"array",
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "label":{"type":"string"},
+                    "text":{"type":"string"},
+                    "source_url":{"type":"string"},
+                    "reviewed_at":{"type":"string"}
+                  },
+                  "required":["label","text","source_url"]
+                }
+              },
+              "source_id":{"type":"string"},
+              "access_points":{
+                "type":"array",
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "mode":{"type":"string","enum":["shore","departure"]},
+                    "name":{"type":"string"},
+                    "point":{"type":"array","items":{"type":"number"}},
+                    "source_url":{"type":"string"},
+                    "booking_url":{"type":"string"},
+                    "notes":{"type":"string"},
+                    "verified":{"type":"boolean"}
+                  },
+                  "required":["mode","name","point","source_url"]
+                }
+              },
+              "reviewed_at":{"type":"string"},
+              "catalog_managed":{"type":"boolean"},
+              "waterbody":{"type":"string"},
+              "state_id":{"type":"string"}
+            },
+            "required":[
+              "id",
+              "name",
+              "timezone",
+              "state",
+              "state_id",
+              "area_name",
+              "area_id",
+              "point",
+              "region",
+              "waterbody",
+              "access_mode",
+              "revision",
+              "catalog_managed",
+              "description",
+              "source_url",
+              "source_id",
+              "reference_label",
+              "attribution",
+              "licence",
+              "aliases",
+              "features",
+              "activities"
+            ]
+          }
+        },
+        "states":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{"id":{"type":"string"},"name":{"type":"string"}},
+            "required":["id","name"]
+          }
+        },
+        "areas":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "id":{"type":"string"},
+              "name":{"type":"string"},
+              "state_id":{"type":"string"},
+              "center":{"type":"array","items":{"type":"number"}}
+            },
+            "required":["id","name","state_id","center"]
+          }
+        },
+        "sources":{"type":"array","items":{"type":"string"}},
+        "location_note":{"type":"string"}
+      },
+      "required":["revision","beaches","states","areas","sources","location_note"]
+    },
+    "method":"GET",
     "auth":false,
-    "domain":"sites"
+    "path":"/v1/sites/catalog",
+    "name":"siteCatalog",
+    "domain":"sites",
+    "native-rpc":"native_public_site_catalog",
+    "request-shape":{"type":"object","additionalProperties":false},
+    "write":false
   },
   "instagramSuppressSource":{
     "admin":true,
@@ -402,13 +1343,76 @@ export var operations = {
     "write":true
   },
   "siteNoteWithdraw":{
-    "name":"siteNoteWithdraw",
-    "path":"/v1/me/sites/:site/notes/withdraw",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer"},
+        "withdrawn":{"type":"boolean"}
+      },
+      "required":["id","revision","withdrawn"]
+    },
+    "method":"POST",
     "auth":true,
-    "write":true,
-    "domain":"siteNotes"
+    "path":"/v1/me/sites/:site/notes/withdraw",
+    "name":"siteNoteWithdraw",
+    "domain":"siteNotes",
+    "native-rpc":"native_notes_withdraw",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "site":{"type":"string","format":"uuid"},
+        "id":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer"},
+        "withdrawn":{"type":"boolean"}
+      },
+      "required":["site","id","revision","withdrawn"]
+    },
+    "write":true
+  },
+  "eventInviteRetry":{
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "delivery":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "state":{
+              "type":"string",
+              "enum":["queued","sending","sent","failed","cancelled"]
+            },
+            "attempts":{"type":"integer"},
+            "error":{"type":"string"}
+          },
+          "required":["state","attempts","error"]
+        }
+      },
+      "required":["id","delivery"]
+    },
+    "method":"POST",
+    "auth":true,
+    "path":"/v1/me/events/:id/invite-retry",
+    "cache":false,
+    "name":"eventInviteRetry",
+    "domain":"eventsMember",
+    "native-rpc":"native_events_invite_retry",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "invite":{"type":"string","format":"uuid"}
+      },
+      "required":["id","invite"]
+    },
+    "write":true
   },
   "instagramMyPosts":{
     "auth":true,
@@ -418,14 +1422,70 @@ export var operations = {
     "write":false
   },
   "publicEvent":{
-    "name":"publicEvent",
-    "path":"/v1/events/:id",
+    "transport":"rest",
+    "result-shape":{
+      "type":["object","null"],
+      "additionalProperties":false,
+      "properties":{
+        "timezone":{"type":"string"},
+        "page_id":{"type":"string","format":"uuid"},
+        "capacity":{"type":["integer","null"]},
+        "revision":{"type":"integer"},
+        "state":{"type":"string","enum":["draft","published","cancelled"]},
+        "ends_at":{"type":"string"},
+        "document":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "title":{"type":"string"},
+            "description":{"type":"string"},
+            "location":{"type":"string"},
+            "category":{"type":"string"},
+            "capacity":{"type":["integer","null"]}
+          },
+          "required":["title","description","location","category"]
+        },
+        "starts_at":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "canManage":{"type":"boolean"},
+        "canModerate":{"type":"boolean"},
+        "myRsvp":{"type":["string","null"]},
+        "going":{"type":"integer"},
+        "visibility":{"type":"string","enum":["public","private"]},
+        "organiser":{"type":"string"}
+      },
+      "required":[
+        "id",
+        "page_id",
+        "document",
+        "state",
+        "visibility",
+        "starts_at",
+        "ends_at",
+        "timezone",
+        "capacity",
+        "going",
+        "myRsvp",
+        "canManage",
+        "canModerate",
+        "revision",
+        "organiser"
+      ]
+    },
     "method":"GET",
     "auth":false,
-    "write":false,
+    "path":"/v1/events/:id",
+    "cache":true,
+    "name":"publicEvent",
     "domain":"eventsPublic",
-    "transport":"rest",
-    "cache":true
+    "native-rpc":"native_events_public_detail",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":false
   },
   "siteConditions":{
     "name":"siteConditions",
@@ -448,7 +1508,66 @@ export var operations = {
     "domain":"member",
     "name":"profile",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"ret_visible_profile",
+    "request-shape":{
+      "type":"object",
+      "properties":{"target":{"type":"string","format":"uuid"}},
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":true,
+      "properties":{
+        "open":{"type":"boolean"},
+        "availability":{
+          "type":"array",
+          "items":{
+            "type":"string",
+            "enum":[
+              "weekday mornings",
+              "weekday afternoons",
+              "weekend mornings",
+              "weekend afternoons"
+            ]
+          }
+        },
+        "displayName":{"type":"string"},
+        "uid":{"type":"string","format":"uuid"},
+        "portrait":{"type":"string"},
+        "experience":{
+          "type":"string",
+          "enum":["","new","comfortable","experienced"]
+        },
+        "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "sharing":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "visits":{"type":"boolean"},
+            "months":{"type":"boolean"},
+            "dives":{"type":"boolean"},
+            "time":{"type":"boolean"},
+            "depth":{"type":"boolean"}
+          }
+        },
+        "tiktok":{"type":"string"},
+        "bio":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "instagram":{"type":"string"},
+        "activities":{
+          "type":"array",
+          "items":{
+            "type":"string",
+            "enum":["freediving","ocean-swimming","spearfishing"]
+          }
+        },
+        "depthGoal":{"type":["number","null"]},
+        "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+      },
+      "required":["id","uid"]
+    }
   },
   "invitationClaim":{
     "auth":true,
@@ -465,12 +1584,85 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "publicProfile":{
+    "auth":false,
+    "domain":"member",
+    "name":"publicProfile",
+    "transport":"action",
+    "write":false,
+    "native-rpc":"ret_public_profile",
+    "request-shape":{
+      "type":"object",
+      "properties":{"target":{"type":"string","format":"uuid"}},
+      "required":["target"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "required":["id","uid","displayName","open","restricted"],
+      "properties":{
+        "open":{"type":"boolean"},
+        "availability":{"type":"array","items":{"type":"string"}},
+        "displayName":{"type":"string"},
+        "uid":{"type":"string","format":"uuid"},
+        "portrait":{"type":"string"},
+        "experience":{"type":"string"},
+        "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "tiktok":{"type":"string"},
+        "restricted":{"type":"boolean"},
+        "bio":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "instagram":{"type":"string"},
+        "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "posts":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":[
+              "id",
+              "beach_id",
+              "beach_name",
+              "url",
+              "platform",
+              "status",
+              "public_consent"
+            ],
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "beach_id":{"type":"string","format":"uuid"},
+              "beach_name":{"type":"string"},
+              "url":{"type":"string"},
+              "platform":{"type":"string"},
+              "status":{"type":"string"},
+              "public_consent":{"type":"boolean"}
+            }
+          }
+        },
+        "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+      }
+    }
+  },
   "postStatus":{
     "auth":true,
     "domain":"posts",
     "name":"postStatus",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"ret_account_status",
+    "request-shape":{"type":"object","properties":{},"additionalProperties":false},
+    "result-shape":{
+      "type":"object",
+      "properties":{
+        "admin":{"type":"boolean"},
+        "enabled":{"type":"boolean"},
+        "tag":{"type":"string"},
+        "pilotBeaches":{"type":"array","items":{"type":"string","format":"uuid"}}
+      },
+      "required":["admin","enabled","tag","pilotBeaches"],
+      "additionalProperties":false
+    }
   },
   "post":{
     "auth":true,
@@ -480,23 +1672,83 @@ export var operations = {
     "write":true
   },
   "eventRsvp":{
-    "name":"eventRsvp",
-    "path":"/v1/me/events/rsvp",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"]
+    },
     "method":"POST",
     "auth":true,
-    "write":true,
+    "path":"/v1/me/events/rsvp",
+    "cache":false,
+    "name":"eventRsvp",
     "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
+    "native-rpc":"native_events_rsvp",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "state":{"type":"string","enum":["going","cancelled"]}
+      },
+      "required":["id","state"]
+    },
+    "write":true
   },
   "siteNoteVote":{
-    "name":"siteNoteVote",
-    "path":"/v1/me/sites/:site/notes/vote",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "site":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer"},
+        "own":{"type":"boolean"},
+        "createdAt":{"type":"string"},
+        "topic":{
+          "type":"string",
+          "enum":["access","facilities","wildlife","conditions"]
+        },
+        "author":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "score":{"type":"integer"},
+        "upvoted":{"type":"boolean"},
+        "observedOn":{"type":["string","null"]},
+        "text":{"type":"string"}
+      },
+      "required":[
+        "id",
+        "site",
+        "topic",
+        "text",
+        "author",
+        "createdAt",
+        "observedOn",
+        "revision",
+        "score",
+        "own",
+        "upvoted"
+      ]
+    },
+    "method":"POST",
     "auth":true,
-    "write":true,
-    "domain":"siteNotes"
+    "path":"/v1/me/sites/:site/notes/vote",
+    "name":"siteNoteVote",
+    "domain":"siteNotes",
+    "native-rpc":"native_notes_vote",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "site":{"type":"string","format":"uuid"},
+        "id":{"type":"string","format":"uuid"},
+        "upvoted":{"type":"boolean"}
+      },
+      "required":["site","id","upvoted"]
+    },
+    "write":true
   },
   "instagramReversePoints":{
     "admin":true,
@@ -511,7 +1763,20 @@ export var operations = {
     "domain":"community",
     "name":"block",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"set_account_block",
+    "request-shape":{
+      "type":"object",
+      "properties":{"target":{"type":"string","format":"uuid"}},
+      "required":["target"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"],
+      "additionalProperties":false
+    }
   },
   "instagramDiscoveryInbox":{
     "admin":true,
@@ -522,21 +1787,113 @@ export var operations = {
     "write":false
   },
   "directoryMine":{
-    "name":"directoryMine",
-    "path":"/v1/me/directory",
-    "method":"GET",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "admin":{"type":"boolean"},
+        "listings":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "document":{
+                "type":"object",
+                "additionalProperties":true,
+                "properties":{
+                  "description":{"type":"string"},
+                  "category":{
+                    "type":"string",
+                    "enum":["School","Instructor","Business","Club","Group","Freediver"]
+                  },
+                  "locality":{"type":"string"},
+                  "socials":{"type":"array","items":{"type":"string"}},
+                  "sources":{"type":"array","items":{"type":"string"}},
+                  "name":{"type":"string"},
+                  "state":{"type":"string"},
+                  "website":{"type":"string"},
+                  "image":{"type":"string"},
+                  "country":{"type":"string"}
+                },
+                "required":["name","category","state","sources","socials"]
+              },
+              "status":{"type":"string"},
+              "revision":{"type":"integer"},
+              "owner_id":{"type":["string","null"]},
+              "role":{"type":["string","null"]},
+              "notes":{"type":"string"},
+              "outreach":{"type":"string"}
+            },
+            "required":["id","document","status","revision","owner_id","role"]
+          }
+        },
+        "claims":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "listing_id":{"type":"string","format":"uuid"},
+              "user_id":{"type":"string","format":"uuid"},
+              "state":{"type":"string"},
+              "challenge":{"type":"string"},
+              "expires_at":{"type":"number"}
+            },
+            "required":["id","state","challenge","expires_at"]
+          }
+        }
+      },
+      "required":["admin","listings","claims"]
+    },
+    "method":"GET",
     "auth":true,
     "admin":false,
-    "write":false,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory",
+    "name":"directoryMine",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_mine",
+    "request-shape":{"type":"object","additionalProperties":false},
+    "write":false
   },
   "saveSession":{
     "auth":true,
     "domain":"logbook",
     "name":"saveSession",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"save_private_session",
+    "request-shape":{
+      "type":"object",
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "values":{
+          "type":"object",
+          "additionalProperties":false,
+          "required":["date","locationName"],
+          "properties":{
+            "date":{"type":"string","format":"date"},
+            "locationName":{"type":"string"},
+            "beachId":{"type":"string"},
+            "notes":{"type":"string"},
+            "point":{"type":["array","null"],"items":{"type":"number"}},
+            "durationMinutes":{"type":["number","null"]},
+            "maxDepthMetres":{"type":["number","null"]}
+          }
+        }
+      },
+      "required":["values"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"],
+      "additionalProperties":false
+    }
   },
   "instagramClaimStatus":{
     "auth":true,
@@ -555,44 +1912,550 @@ export var operations = {
     "write":true
   },
   "publicEvents":{
-    "name":"publicEvents",
-    "path":"/v1/events",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "events":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "timezone":{"type":"string"},
+              "page_id":{"type":"string","format":"uuid"},
+              "capacity":{"type":["integer","null"]},
+              "revision":{"type":"integer"},
+              "state":{"type":"string","enum":["draft","published","cancelled"]},
+              "ends_at":{"type":"string"},
+              "document":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "title":{"type":"string"},
+                  "description":{"type":"string"},
+                  "location":{"type":"string"},
+                  "category":{"type":"string"},
+                  "capacity":{"type":["integer","null"]}
+                },
+                "required":["title","description","location","category"]
+              },
+              "starts_at":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "canManage":{"type":"boolean"},
+              "canModerate":{"type":"boolean"},
+              "myRsvp":{"type":["string","null"]},
+              "going":{"type":"integer"},
+              "visibility":{"type":"string","enum":["public","private"]},
+              "organiser":{"type":"string"}
+            },
+            "required":[
+              "id",
+              "page_id",
+              "document",
+              "state",
+              "visibility",
+              "starts_at",
+              "ends_at",
+              "timezone",
+              "capacity",
+              "going",
+              "myRsvp",
+              "canManage",
+              "canModerate",
+              "revision",
+              "organiser"
+            ]
+          }
+        }
+      },
+      "required":["events"]
+    },
     "method":"GET",
     "auth":false,
-    "write":false,
+    "path":"/v1/events",
+    "cache":true,
+    "name":"publicEvents",
     "domain":"eventsPublic",
-    "transport":"rest",
-    "cache":true
+    "native-rpc":"native_events_list",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "q":{"type":"string"},
+        "location":{"type":"string"},
+        "category":{"type":"string"},
+        "from":{"type":"string"},
+        "offset":{"type":"string"},
+        "page":{"type":"string","format":"uuid"}
+      },
+      "required":[]
+    },
+    "write":false
   },
   "siteDraftSave":{
-    "name":"siteDraftSave",
-    "path":"/v1/admin/sites/drafts",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "import_id":{"type":["string","null"]},
+        "owner_id":{"type":["string","null"]},
+        "payload":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "description":{"type":"string"},
+            "archived":{"type":"boolean"},
+            "features":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["beach","reef","wreck","wall","training"]
+              }
+            },
+            "requirements":{"type":"string"},
+            "restrictions":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "activity":{"type":"string"},
+                  "status":{"type":"string","enum":["restricted","closed","unknown"]},
+                  "text":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"}
+                },
+                "required":["activity","status","text","source_url"]
+              }
+            },
+            "timezone":{"type":"string"},
+            "source_url":{"type":"string"},
+            "timezone_provenance":{"type":"string"},
+            "name":{"type":"string"},
+            "reference_label":{"type":"string"},
+            "booking_url":{"type":"string"},
+            "state":{"type":"string"},
+            "access_mode":{
+              "type":"string",
+              "enum":["shore","boat_only","shore_or_boat","unknown"]
+            },
+            "activity_status":{"type":"string","enum":["documented","unknown"]},
+            "region":{"type":"string"},
+            "coordinate_purpose":{"type":"string","enum":["reference","entry","dive"]},
+            "licence":{"type":"string"},
+            "area_id":{"type":"string"},
+            "id":{"type":"string"},
+            "attribution":{"type":"string"},
+            "point":{"type":"array","items":{"type":"number"}},
+            "depth_evidence":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "kind":{"type":"string","enum":["surveyed","reported"]},
+                  "depth_m":{"type":"number"},
+                  "reference":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"},
+                  "vertical_datum":{"type":"string"},
+                  "datum_type":{"type":"string"},
+                  "uncertainty_m":{"type":["number","null"]}
+                },
+                "required":["kind","depth_m","reference","source_url"]
+              }
+            },
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "aliases":{"type":"array","items":{"type":"string"}},
+            "area_name":{"type":"string"},
+            "coordinate_provenance":{"type":"string"},
+            "facts":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "label":{"type":"string"},
+                  "text":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"}
+                },
+                "required":["label","text","source_url"]
+              }
+            },
+            "source_id":{"type":"string"},
+            "access_points":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "mode":{"type":"string","enum":["shore","departure"]},
+                  "name":{"type":"string"},
+                  "point":{"type":"array","items":{"type":"number"}},
+                  "source_url":{"type":"string"},
+                  "booking_url":{"type":"string"},
+                  "notes":{"type":"string"},
+                  "verified":{"type":"boolean"}
+                },
+                "required":["mode","name","point","source_url"]
+              }
+            },
+            "reviewed_at":{"type":"string"},
+            "waterbody":{
+              "type":"string",
+              "enum":["ocean","lake","river","quarry","sinkhole","pool","unknown"]
+            },
+            "state_id":{
+              "type":"string",
+              "enum":["VIC","NSW","JBT","QLD","SA","WA","NT","TAS","ACT","EXT"]
+            }
+          },
+          "required":[
+            "id",
+            "name",
+            "state_id",
+            "area_name",
+            "timezone",
+            "point",
+            "source_url"
+          ]
+        },
+        "base_revision":{"type":"integer"},
+        "site_key":{"type":"string"},
+        "updated_at":{"type":"string"},
+        "reason":{"type":"string"},
+        "status":{
+          "type":"string",
+          "enum":["draft","submitted","published","rejected","withdrawn"]
+        },
+        "id":{"type":"string","format":"uuid"},
+        "reviewed_by":{"type":["string","null"]},
+        "site_id":{"type":["string","null"]},
+        "version":{"type":"integer"},
+        "created_at":{"type":"string"}
+      },
+      "required":[
+        "id",
+        "site_id",
+        "site_key",
+        "owner_id",
+        "import_id",
+        "base_revision",
+        "version",
+        "status",
+        "payload",
+        "reason",
+        "reviewed_by",
+        "created_at",
+        "updated_at"
+      ]
+    },
     "method":"POST",
-    "transport":"rest",
-    "write":true,
-    "auth":true,
-    "domain":"siteAdmin",
-    "admin":true
-  },
-  "eventDetail":{
-    "name":"eventDetail",
-    "path":"/v1/me/events/detail",
-    "method":"POST",
-    "auth":true,
-    "write":false,
-    "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
-  },
-  "directoryAdmin":{
-    "name":"directoryAdmin",
-    "path":"/v1/admin/directory",
-    "method":"GET",
-    "transport":"rest",
     "auth":true,
     "admin":true,
-    "write":false,
-    "domain":"directoryAdmin"
+    "path":"/v1/admin/sites/drafts",
+    "name":"siteDraftSave",
+    "domain":"siteAdmin",
+    "native-rpc":"native_site_review_save",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "requestId":{"type":"string","format":"uuid"},
+        "version":{"type":"integer"},
+        "site":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "description":{"type":"string"},
+            "archived":{"type":"boolean"},
+            "features":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["beach","reef","wreck","wall","training"]
+              }
+            },
+            "requirements":{"type":"string"},
+            "restrictions":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "activity":{"type":"string"},
+                  "status":{"type":"string","enum":["restricted","closed","unknown"]},
+                  "text":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"}
+                },
+                "required":["activity","status","text","source_url"]
+              }
+            },
+            "timezone":{"type":"string"},
+            "source_url":{"type":"string"},
+            "timezone_provenance":{"type":"string"},
+            "name":{"type":"string"},
+            "reference_label":{"type":"string"},
+            "booking_url":{"type":"string"},
+            "state":{"type":"string"},
+            "access_mode":{
+              "type":"string",
+              "enum":["shore","boat_only","shore_or_boat","unknown"]
+            },
+            "activity_status":{"type":"string","enum":["documented","unknown"]},
+            "region":{"type":"string"},
+            "coordinate_purpose":{"type":"string","enum":["reference","entry","dive"]},
+            "licence":{"type":"string"},
+            "area_id":{"type":"string"},
+            "id":{"type":"string"},
+            "attribution":{"type":"string"},
+            "point":{"type":"array","items":{"type":"number"}},
+            "depth_evidence":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "kind":{"type":"string","enum":["surveyed","reported"]},
+                  "depth_m":{"type":"number"},
+                  "reference":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"},
+                  "vertical_datum":{"type":"string"},
+                  "datum_type":{"type":"string"},
+                  "uncertainty_m":{"type":["number","null"]}
+                },
+                "required":["kind","depth_m","reference","source_url"]
+              }
+            },
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "aliases":{"type":"array","items":{"type":"string"}},
+            "area_name":{"type":"string"},
+            "coordinate_provenance":{"type":"string"},
+            "facts":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "label":{"type":"string"},
+                  "text":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"}
+                },
+                "required":["label","text","source_url"]
+              }
+            },
+            "source_id":{"type":"string"},
+            "access_points":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "mode":{"type":"string","enum":["shore","departure"]},
+                  "name":{"type":"string"},
+                  "point":{"type":"array","items":{"type":"number"}},
+                  "source_url":{"type":"string"},
+                  "booking_url":{"type":"string"},
+                  "notes":{"type":"string"},
+                  "verified":{"type":"boolean"}
+                },
+                "required":["mode","name","point","source_url"]
+              }
+            },
+            "reviewed_at":{"type":"string"},
+            "waterbody":{
+              "type":"string",
+              "enum":["ocean","lake","river","quarry","sinkhole","pool","unknown"]
+            },
+            "state_id":{
+              "type":"string",
+              "enum":["VIC","NSW","JBT","QLD","SA","WA","NT","TAS","ACT","EXT"]
+            }
+          },
+          "required":[
+            "id",
+            "name",
+            "state_id",
+            "area_name",
+            "timezone",
+            "point",
+            "source_url"
+          ]
+        }
+      },
+      "required":["site"]
+    },
+    "write":true
+  },
+  "eventDetail":{
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "timezone":{"type":"string"},
+        "page_id":{"type":"string","format":"uuid"},
+        "capacity":{"type":["integer","null"]},
+        "revision":{"type":"integer"},
+        "state":{"type":"string","enum":["draft","published","cancelled"]},
+        "ends_at":{"type":"string"},
+        "document":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "title":{"type":"string"},
+            "description":{"type":"string"},
+            "location":{"type":"string"},
+            "category":{"type":"string"},
+            "capacity":{"type":["integer","null"]}
+          },
+          "required":["title","description","location","category"]
+        },
+        "starts_at":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "canManage":{"type":"boolean"},
+        "canModerate":{"type":"boolean"},
+        "myRsvp":{"type":["string","null"]},
+        "going":{"type":"integer"},
+        "visibility":{"type":"string","enum":["public","private"]},
+        "organiser":{"type":"string"}
+      },
+      "required":[
+        "id",
+        "page_id",
+        "document",
+        "state",
+        "visibility",
+        "starts_at",
+        "ends_at",
+        "timezone",
+        "capacity",
+        "going",
+        "myRsvp",
+        "canManage",
+        "canModerate",
+        "revision",
+        "organiser"
+      ]
+    },
+    "method":"POST",
+    "auth":true,
+    "path":"/v1/me/events/detail",
+    "cache":false,
+    "name":"eventDetail",
+    "domain":"eventsMember",
+    "native-rpc":"native_events_detail",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":false
+  },
+  "directoryAdmin":{
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "listings":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "document":{
+                "type":"object",
+                "additionalProperties":true,
+                "properties":{
+                  "description":{"type":"string"},
+                  "category":{
+                    "type":"string",
+                    "enum":["School","Instructor","Business","Club","Group","Freediver"]
+                  },
+                  "locality":{"type":"string"},
+                  "socials":{"type":"array","items":{"type":"string"}},
+                  "sources":{"type":"array","items":{"type":"string"}},
+                  "name":{"type":"string"},
+                  "state":{"type":"string"},
+                  "website":{"type":"string"},
+                  "image":{"type":"string"},
+                  "country":{"type":"string"}
+                },
+                "required":["name","category","state","sources","socials"]
+              },
+              "status":{"type":"string"},
+              "revision":{"type":"integer"},
+              "owner_id":{"type":["string","null"]},
+              "role":{"type":["string","null"]},
+              "notes":{"type":"string"},
+              "outreach":{"type":"string"}
+            },
+            "required":["id","document","status","revision","owner_id","role"]
+          }
+        },
+        "claims":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "listing_id":{"type":"string","format":"uuid"},
+              "user_id":{"type":"string","format":"uuid"},
+              "state":{"type":"string"},
+              "challenge":{"type":"string"},
+              "expires_at":{"type":"number"}
+            },
+            "required":["id","state","challenge","expires_at"]
+          }
+        },
+        "reports":{
+          "type":"array",
+          "items":{"type":"object","additionalProperties":true}
+        },
+        "runs":{
+          "type":"array",
+          "items":{"type":"object","additionalProperties":true}
+        },
+        "audit":{
+          "type":"array",
+          "items":{"type":"object","additionalProperties":true}
+        }
+      },
+      "required":["listings","claims","reports","runs","audit"]
+    },
+    "method":"GET",
+    "auth":true,
+    "admin":true,
+    "path":"/v1/admin/directory",
+    "name":"directoryAdmin",
+    "domain":"directoryAdmin",
+    "native-rpc":"native_directory_admin",
+    "request-shape":{"type":"object","additionalProperties":false},
+    "write":false
   },
   "publicInstagram":{
     "auth":false,
@@ -615,7 +2478,23 @@ export var operations = {
     "domain":"logbook",
     "name":"visibility",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"set_session_visibility",
+    "request-shape":{
+      "type":"object",
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "visibility":{"type":"string","enum":["private","public"]}
+      },
+      "required":["id","visibility"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{"visibility":{"type":"string","enum":["private","public"]}},
+      "required":["visibility"],
+      "additionalProperties":false
+    }
   },
   "messagingSettings":{
     "admin":true,
@@ -632,7 +2511,21 @@ export var operations = {
     "domain":"community",
     "name":"blocks",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"ret_account_blocks",
+    "request-shape":{"type":"object","properties":{},"additionalProperties":false},
+    "result-shape":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "properties":{
+          "id":{"type":"string","format":"uuid"},
+          "name":{"type":"string"}
+        },
+        "required":["id","name"],
+        "additionalProperties":false
+      }
+    }
   },
   "instagramChoosePostBeach":{
     "auth":true,
@@ -646,14 +2539,50 @@ export var operations = {
     "domain":"community",
     "name":"connection",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"set_account_connection",
+    "request-shape":{
+      "type":"object",
+      "properties":{
+        "target":{"type":"string","format":"uuid"},
+        "mode":{
+          "type":"string",
+          "enum":["request","accept","decline","remove"]
+        }
+      },
+      "required":["target","mode"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"],
+      "additionalProperties":false
+    }
   },
   "checkin":{
     "auth":true,
     "domain":"community",
     "name":"checkin",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"record_community_checkin",
+    "request-shape":{
+      "type":"object",
+      "properties":{"beachId":{"type":"string","format":"uuid"}},
+      "required":["beachId"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{
+        "day":{"type":"string"},
+        "count":{"type":"integer"},
+        "selfReported":{"type":"boolean"}
+      },
+      "required":["day","count","selfReported"],
+      "additionalProperties":false
+    }
   },
   "finniesGrant":{
     "transport":"rest",
@@ -738,14 +2667,31 @@ export var operations = {
     "write":true
   },
   "siteDraftReject":{
-    "name":"siteDraftReject",
-    "path":"/v1/admin/sites/drafts/:id/reject",
-    "method":"POST",
     "transport":"rest",
-    "write":true,
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"]
+    },
+    "method":"POST",
     "auth":true,
+    "admin":true,
+    "path":"/v1/admin/sites/drafts/:id/reject",
+    "name":"siteDraftReject",
     "domain":"siteAdmin",
-    "admin":true
+    "native-rpc":"native_site_review_reject",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "version":{"type":"integer"},
+        "reason":{"type":"string"}
+      },
+      "required":["id","version","reason"]
+    },
+    "write":true
   },
   "tripReview":{
     "admin":true,
@@ -790,14 +2736,96 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "publicSessions":{
+    "auth":false,
+    "domain":"logbook",
+    "name":"publicSessions",
+    "transport":"action",
+    "write":false,
+    "native-rpc":"ret_public_sessions",
+    "request-shape":{
+      "type":"object",
+      "properties":{
+        "owner":{"type":"string","format":"uuid"},
+        "publicOnly":{"type":"boolean"},
+        "cursor":{"type":["string","null"]}
+      },
+      "required":["owner"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "required":["sessions","cursor","more"],
+      "additionalProperties":false,
+      "properties":{
+        "sessions":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":[
+              "id",
+              "ownerId",
+              "beachId",
+              "date",
+              "locationName",
+              "notes",
+              "point",
+              "durationMinutes",
+              "maxDepthMetres",
+              "visibility",
+              "photos",
+              "linkedMedia"
+            ],
+            "properties":{
+              "durationMinutes":{"type":["number","null"]},
+              "date":{"type":"string","format":"date"},
+              "beachId":{"type":"string"},
+              "ownerId":{"type":"string","format":"uuid"},
+              "locationName":{"type":"string"},
+              "photos":{"type":"array","items":{"type":"string"}},
+              "id":{"type":"string","format":"uuid"},
+              "notes":{"type":"string"},
+              "linkedMedia":{
+                "type":"array",
+                "items":{"type":"object","additionalProperties":true}
+              },
+              "maxDepthMetres":{"type":["number","null"]},
+              "point":{"type":["array","null"],"items":{"type":"number"}},
+              "visibility":{"type":"string","enum":["public"]}
+            }
+          }
+        },
+        "cursor":{"type":["string","null"]},
+        "more":{"type":"boolean"}
+      }
+    }
+  },
   "siteNoteReport":{
-    "name":"siteNoteReport",
-    "path":"/v1/me/sites/:site/notes/report",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"reported":{"type":"boolean"}},
+      "required":["reported"]
+    },
+    "method":"POST",
     "auth":true,
-    "write":true,
-    "domain":"siteNotes"
+    "path":"/v1/me/sites/:site/notes/report",
+    "name":"siteNoteReport",
+    "domain":"siteNotes",
+    "native-rpc":"native_notes_report",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "site":{"type":"string","format":"uuid"},
+        "id":{"type":"string","format":"uuid"},
+        "reason":{"type":"string"}
+      },
+      "required":["site","id","reason"]
+    },
+    "write":true
   },
   "tripDives":{
     "auth":true,
@@ -807,13 +2835,24 @@ export var operations = {
     "write":false
   },
   "pageInviteRevoke":{
-    "name":"pageInviteRevoke",
-    "path":"/v1/me/directory/invite-revoke",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{"type":"object","additionalProperties":false},
+    "method":"POST",
     "auth":true,
-    "write":true,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory/invite-revoke",
+    "name":"pageInviteRevoke",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_invite_revoke",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "invite":{"type":"string","format":"uuid"}
+      },
+      "required":["id","invite"]
+    },
+    "write":true
   },
   "messagingEvent":{
     "admin":true,
@@ -830,7 +2869,20 @@ export var operations = {
     "domain":"member",
     "name":"deleteAccount",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"erase_account",
+    "request-shape":{
+      "type":"object",
+      "properties":{"password":{"type":"string"}},
+      "required":["password"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"],
+      "additionalProperties":false
+    }
   },
   "reviewPost":{
     "admin":true,
@@ -848,39 +2900,317 @@ export var operations = {
     "write":true
   },
   "mySiteSubmissions":{
-    "name":"mySiteSubmissions",
-    "path":"/v1/me/site-submissions",
-    "method":"GET",
     "transport":"rest",
-    "write":false,
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "submissions":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "import_id":{"type":["string","null"]},
+              "owner_id":{"type":["string","null"]},
+              "payload":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "description":{"type":"string"},
+                  "archived":{"type":"boolean"},
+                  "features":{
+                    "type":"array",
+                    "items":{
+                      "type":"string",
+                      "enum":["beach","reef","wreck","wall","training"]
+                    }
+                  },
+                  "requirements":{"type":"string"},
+                  "restrictions":{
+                    "type":"array",
+                    "items":{
+                      "type":"object",
+                      "additionalProperties":false,
+                      "properties":{
+                        "activity":{"type":"string"},
+                        "status":{"type":"string","enum":["restricted","closed","unknown"]},
+                        "text":{"type":"string"},
+                        "source_url":{"type":"string"},
+                        "reviewed_at":{"type":"string"}
+                      },
+                      "required":["activity","status","text","source_url"]
+                    }
+                  },
+                  "timezone":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "timezone_provenance":{"type":"string"},
+                  "name":{"type":"string"},
+                  "reference_label":{"type":"string"},
+                  "booking_url":{"type":"string"},
+                  "state":{"type":"string"},
+                  "access_mode":{
+                    "type":"string",
+                    "enum":["shore","boat_only","shore_or_boat","unknown"]
+                  },
+                  "activity_status":{"type":"string","enum":["documented","unknown"]},
+                  "region":{"type":"string"},
+                  "coordinate_purpose":{"type":"string","enum":["reference","entry","dive"]},
+                  "licence":{"type":"string"},
+                  "area_id":{"type":"string"},
+                  "id":{"type":"string"},
+                  "attribution":{"type":"string"},
+                  "point":{"type":"array","items":{"type":"number"}},
+                  "depth_evidence":{
+                    "type":"array",
+                    "items":{
+                      "type":"object",
+                      "additionalProperties":false,
+                      "properties":{
+                        "kind":{"type":"string","enum":["surveyed","reported"]},
+                        "depth_m":{"type":"number"},
+                        "reference":{"type":"string"},
+                        "source_url":{"type":"string"},
+                        "reviewed_at":{"type":"string"},
+                        "vertical_datum":{"type":"string"},
+                        "datum_type":{"type":"string"},
+                        "uncertainty_m":{"type":["number","null"]}
+                      },
+                      "required":["kind","depth_m","reference","source_url"]
+                    }
+                  },
+                  "activities":{
+                    "type":"array",
+                    "items":{
+                      "type":"string",
+                      "enum":["freediving","ocean-swimming","spearfishing"]
+                    }
+                  },
+                  "aliases":{"type":"array","items":{"type":"string"}},
+                  "area_name":{"type":"string"},
+                  "coordinate_provenance":{"type":"string"},
+                  "facts":{
+                    "type":"array",
+                    "items":{
+                      "type":"object",
+                      "additionalProperties":false,
+                      "properties":{
+                        "label":{"type":"string"},
+                        "text":{"type":"string"},
+                        "source_url":{"type":"string"},
+                        "reviewed_at":{"type":"string"}
+                      },
+                      "required":["label","text","source_url"]
+                    }
+                  },
+                  "source_id":{"type":"string"},
+                  "access_points":{
+                    "type":"array",
+                    "items":{
+                      "type":"object",
+                      "additionalProperties":false,
+                      "properties":{
+                        "mode":{"type":"string","enum":["shore","departure"]},
+                        "name":{"type":"string"},
+                        "point":{"type":"array","items":{"type":"number"}},
+                        "source_url":{"type":"string"},
+                        "booking_url":{"type":"string"},
+                        "notes":{"type":"string"},
+                        "verified":{"type":"boolean"}
+                      },
+                      "required":["mode","name","point","source_url"]
+                    }
+                  },
+                  "reviewed_at":{"type":"string"},
+                  "waterbody":{
+                    "type":"string",
+                    "enum":["ocean","lake","river","quarry","sinkhole","pool","unknown"]
+                  },
+                  "state_id":{
+                    "type":"string",
+                    "enum":["VIC","NSW","JBT","QLD","SA","WA","NT","TAS","ACT","EXT"]
+                  }
+                },
+                "required":[
+                  "id",
+                  "name",
+                  "state_id",
+                  "area_name",
+                  "timezone",
+                  "point",
+                  "source_url"
+                ]
+              },
+              "base_revision":{"type":"integer"},
+              "site_key":{"type":"string"},
+              "updated_at":{"type":"string"},
+              "reason":{"type":"string"},
+              "status":{
+                "type":"string",
+                "enum":["draft","submitted","published","rejected","withdrawn"]
+              },
+              "id":{"type":"string","format":"uuid"},
+              "reviewed_by":{"type":["string","null"]},
+              "site_id":{"type":["string","null"]},
+              "version":{"type":"integer"},
+              "created_at":{"type":"string"}
+            },
+            "required":[
+              "id",
+              "site_id",
+              "site_key",
+              "owner_id",
+              "import_id",
+              "base_revision",
+              "version",
+              "status",
+              "payload",
+              "reason",
+              "reviewed_by",
+              "created_at",
+              "updated_at"
+            ]
+          }
+        },
+        "admin":{"type":"boolean"}
+      },
+      "required":["submissions","admin"]
+    },
+    "method":"GET",
     "auth":true,
-    "domain":"siteSubmissions"
+    "path":"/v1/me/site-submissions",
+    "name":"mySiteSubmissions",
+    "domain":"siteSubmissions",
+    "native-rpc":"native_site_review_mine",
+    "request-shape":{"type":"object","additionalProperties":false},
+    "write":false
   },
   "siteNoteSave":{
-    "name":"siteNoteSave",
-    "path":"/v1/me/sites/:site/notes/save",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer"}
+      },
+      "required":["id","revision"]
+    },
+    "method":"POST",
     "auth":true,
-    "write":true,
-    "domain":"siteNotes"
+    "path":"/v1/me/sites/:site/notes/save",
+    "name":"siteNoteSave",
+    "domain":"siteNotes",
+    "native-rpc":"native_notes_save",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "site":{"type":"string","format":"uuid"},
+        "id":{"type":"string","format":"uuid"},
+        "topic":{"type":"string"},
+        "text":{"type":"string"},
+        "observedOn":{"type":["string","null"]}
+      },
+      "required":["site","id","topic","text"]
+    },
+    "write":true
   },
   "siteDraftPublish":{
-    "name":"siteDraftPublish",
-    "path":"/v1/admin/sites/drafts/:id/publish",
-    "method":"POST",
     "transport":"rest",
-    "write":true,
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "ok":{"type":"boolean"},
+        "site":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer"}
+      },
+      "required":["ok","site","revision"]
+    },
+    "method":"POST",
     "auth":true,
+    "admin":true,
+    "path":"/v1/admin/sites/drafts/:id/publish",
+    "name":"siteDraftPublish",
     "domain":"siteAdmin",
-    "admin":true
+    "native-rpc":"native_site_review_publish",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "version":{"type":"integer"}
+      },
+      "required":["id","version"]
+    },
+    "write":true
   },
   "community":{
     "auth":true,
     "domain":"community",
     "name":"community",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"discover_community_people",
+    "request-shape":{
+      "type":"object",
+      "properties":{
+        "mode":{"type":"string","enum":["discover"]},
+        "seed":{"type":"string"},
+        "beachId":{"type":["string","null"]},
+        "availability":{"type":"string"},
+        "experience":{"type":"string"},
+        "cursor":{"type":["string","null"]}
+      },
+      "required":["mode","seed"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{
+        "people":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":[
+              "id",
+              "displayName",
+              "open",
+              "bio",
+              "instagram",
+              "tiktok",
+              "portrait",
+              "availability",
+              "experience",
+              "beaches",
+              "regular",
+              "recent",
+              "connection"
+            ],
+            "properties":{
+              "open":{"type":"boolean"},
+              "availability":{"type":"array","items":{"type":"string"}},
+              "regular":{"type":"boolean"},
+              "displayName":{"type":"string"},
+              "portrait":{"type":"string"},
+              "experience":{"type":"string"},
+              "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+              "tiktok":{"type":"string"},
+              "bio":{"type":"string"},
+              "recent":{"type":"boolean"},
+              "id":{"type":"string","format":"uuid"},
+              "instagram":{"type":"string"},
+              "connection":{"type":["string","null"]}
+            }
+          }
+        },
+        "cursor":{"type":["string","null"]}
+      },
+      "required":["people","cursor"],
+      "additionalProperties":false
+    }
   },
   "instagramCommandVerify":{
     "admin":true,
@@ -891,22 +3221,55 @@ export var operations = {
     "write":true
   },
   "pageInvite":{
-    "name":"pageInvite",
-    "path":"/v1/me/directory/invite",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "token":{"type":"string"},
+        "expiresAt":{"type":"number"}
+      },
+      "required":["id","token","expiresAt"]
+    },
+    "method":"POST",
     "auth":true,
-    "write":true,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory/invite",
+    "name":"pageInvite",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_invite_create",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":true
   },
   "siteSubmissionWithdraw":{
-    "name":"siteSubmissionWithdraw",
-    "path":"/v1/me/site-submissions/:id/withdraw",
-    "method":"POST",
     "transport":"rest",
-    "write":true,
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"]
+    },
+    "method":"POST",
     "auth":true,
-    "domain":"siteSubmissions"
+    "path":"/v1/me/site-submissions/:id/withdraw",
+    "name":"siteSubmissionWithdraw",
+    "domain":"siteSubmissions",
+    "native-rpc":"native_site_review_withdraw",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "version":{"type":"integer"}
+      },
+      "required":["id","version"]
+    },
+    "write":true
   },
   "assignImportedMedia":{
     "auth":true,
@@ -971,14 +3334,50 @@ export var operations = {
     "write":false
   },
   "eventSave":{
-    "name":"eventSave",
-    "path":"/v1/me/events/save",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
     "method":"POST",
     "auth":true,
-    "write":true,
+    "path":"/v1/me/events/save",
+    "cache":false,
+    "name":"eventSave",
     "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
+    "native-rpc":"native_events_save",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "description":{"type":"string"},
+        "category":{"type":"string"},
+        "timezone":{"type":"string"},
+        "capacity":{"type":["integer","null"]},
+        "revision":{"type":"integer"},
+        "state":{"type":"string","enum":["draft","published"]},
+        "page":{"type":"string","format":"uuid"},
+        "title":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "starts":{"type":"string"},
+        "location":{"type":"string"},
+        "ends":{"type":"string"},
+        "visibility":{"type":"string","enum":["public","private"]}
+      },
+      "required":[
+        "page",
+        "title",
+        "location",
+        "starts",
+        "ends",
+        "timezone",
+        "state",
+        "visibility"
+      ]
+    },
+    "write":true
   },
   "tripReport":{
     "auth":true,
@@ -998,14 +3397,27 @@ export var operations = {
     "write":true
   },
   "eventAccept":{
-    "name":"eventAccept",
-    "path":"/v1/me/events/accept",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
     "method":"POST",
     "auth":true,
-    "write":true,
+    "path":"/v1/me/events/accept",
+    "cache":false,
+    "name":"eventAccept",
     "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
+    "native-rpc":"native_events_accept",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"token":{"type":"string"}},
+      "required":["token"]
+    },
+    "write":true
   },
   "instagramClaimReviewInbox":{
     "admin":true,
@@ -1035,14 +3447,30 @@ export var operations = {
     "write":true
   },
   "directoryMerge":{
-    "name":"directoryMerge",
-    "path":"/v1/admin/directory/merge",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "method":"POST",
     "auth":true,
     "admin":true,
-    "write":true,
-    "domain":"directoryAdmin"
+    "path":"/v1/admin/directory/merge",
+    "name":"directoryMerge",
+    "domain":"directoryAdmin",
+    "native-rpc":"native_directory_merge",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "source":{"type":"string","format":"uuid"},
+        "target":{"type":"string","format":"uuid"}
+      },
+      "required":["source","target"]
+    },
+    "write":true
   },
   "tripList":{
     "auth":true,
@@ -1059,13 +3487,51 @@ export var operations = {
     "write":true
   },
   "directoryCreate":{
-    "name":"directoryCreate",
-    "path":"/v1/me/directory/create",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "status":{"type":"string"}
+      },
+      "required":["id","status"]
+    },
+    "method":"POST",
     "auth":true,
-    "write":true,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory/create",
+    "name":"directoryCreate",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_owner_create",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "requestId":{"type":"string","format":"uuid"},
+        "document":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "description":{"type":"string"},
+            "category":{
+              "type":"string",
+              "enum":["School","Instructor","Business","Club","Group","Freediver"]
+            },
+            "locality":{"type":"string"},
+            "socials":{"type":"array","items":{"type":"string"}},
+            "sources":{"type":"array","items":{"type":"string"}},
+            "name":{"type":"string"},
+            "state":{"type":"string"},
+            "website":{"type":"string"},
+            "image":{"type":"string"},
+            "country":{"type":"string"}
+          },
+          "required":["name","category","state","sources","socials"]
+        }
+      },
+      "required":["requestId","document"]
+    },
+    "write":true
   },
   "instagramDisconnect":{
     "auth":true,
@@ -1090,13 +3556,75 @@ export var operations = {
     "write":false
   },
   "publicDirectory":{
-    "name":"publicDirectory",
-    "path":"/v1/directory",
-    "method":"GET",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "listings":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "description":{"type":"string"},
+              "category":{
+                "type":"string",
+                "enum":["School","Instructor","Business","Club","Group","Freediver"]
+              },
+              "locality":{"type":"string"},
+              "socials":{"type":"array","items":{"type":"string"}},
+              "sources":{"type":"array","items":{"type":"string"}},
+              "name":{"type":"string"},
+              "reviewedAt":{"type":["number","null"]},
+              "state":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "website":{"type":"string"},
+              "managed":{"type":"boolean"},
+              "image":{"type":"string"},
+              "country":{"type":"string"}
+            },
+            "required":[
+              "id",
+              "name",
+              "category",
+              "state",
+              "country",
+              "locality",
+              "description",
+              "website",
+              "image",
+              "sources",
+              "socials",
+              "managed",
+              "reviewedAt"
+            ]
+          }
+        },
+        "next":{"type":["integer","null"]}
+      },
+      "required":["listings","next"]
+    },
+    "method":"GET",
     "auth":false,
-    "write":false,
-    "domain":"directoryPublic"
+    "path":"/v1/directory",
+    "name":"publicDirectory",
+    "domain":"directoryPublic",
+    "native-rpc":"native_directory_public_list",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "q":{"type":"string"},
+        "category":{"type":"string"},
+        "state":{"type":"string"},
+        "locality":{"type":"string"},
+        "offset":{"type":"string"},
+        "site":{"type":"string"}
+      },
+      "required":[]
+    },
+    "write":false
   },
   "instagramCommandReview":{
     "auth":true,
@@ -1106,14 +3634,75 @@ export var operations = {
     "write":true
   },
   "directoryClaimReview":{
-    "name":"directoryClaimReview",
-    "path":"/v1/admin/directory/claim-review",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{"type":"object","additionalProperties":false},
+    "method":"POST",
     "auth":true,
     "admin":true,
-    "write":true,
-    "domain":"directoryAdmin"
+    "path":"/v1/admin/directory/claim-review",
+    "name":"directoryClaimReview",
+    "domain":"directoryAdmin",
+    "native-rpc":"native_directory_claim_review",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "approve":{"type":"boolean"},
+        "evidence":{"type":"string"}
+      },
+      "required":["id","approve"]
+    },
+    "write":true
+  },
+  "publicSession":{
+    "auth":false,
+    "domain":"logbook",
+    "name":"publicSession",
+    "transport":"action",
+    "write":false,
+    "native-rpc":"ret_public_session",
+    "request-shape":{
+      "type":"object",
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":["object","null"],
+      "additionalProperties":false,
+      "required":[
+        "id",
+        "ownerId",
+        "beachId",
+        "date",
+        "locationName",
+        "notes",
+        "point",
+        "durationMinutes",
+        "maxDepthMetres",
+        "visibility",
+        "photos",
+        "linkedMedia"
+      ],
+      "properties":{
+        "durationMinutes":{"type":["number","null"]},
+        "date":{"type":"string","format":"date"},
+        "beachId":{"type":"string"},
+        "ownerId":{"type":"string","format":"uuid"},
+        "locationName":{"type":"string"},
+        "photos":{"type":"array","items":{"type":"string"}},
+        "id":{"type":"string","format":"uuid"},
+        "notes":{"type":"string"},
+        "linkedMedia":{
+          "type":"array",
+          "items":{"type":"object","additionalProperties":true}
+        },
+        "maxDepthMetres":{"type":["number","null"]},
+        "point":{"type":["array","null"],"items":{"type":"number"}},
+        "visibility":{"type":"string","enum":["public"]}
+      }
+    }
   },
   "tripImportBegin":{
     "auth":true,
@@ -1130,14 +3719,27 @@ export var operations = {
     "write":true
   },
   "eventModerate":{
-    "name":"eventModerate",
-    "path":"/v1/me/events/moderate",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"]
+    },
     "method":"POST",
     "auth":true,
-    "write":true,
+    "path":"/v1/me/events/moderate",
+    "cache":false,
+    "name":"eventModerate",
     "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
+    "native-rpc":"native_events_moderate",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":true
   },
   "hideImportedMedia":{
     "auth":true,
@@ -1151,7 +3753,49 @@ export var operations = {
     "domain":"logbook",
     "name":"session",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"ret_visible_session",
+    "request-shape":{
+      "type":"object",
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":["object","null"],
+      "additionalProperties":false,
+      "required":[
+        "id",
+        "ownerId",
+        "beachId",
+        "date",
+        "locationName",
+        "notes",
+        "point",
+        "durationMinutes",
+        "maxDepthMetres",
+        "visibility",
+        "photos",
+        "linkedMedia"
+      ],
+      "properties":{
+        "durationMinutes":{"type":["number","null"]},
+        "date":{"type":"string","format":"date"},
+        "beachId":{"type":"string"},
+        "ownerId":{"type":"string","format":"uuid"},
+        "locationName":{"type":"string"},
+        "photos":{"type":"array","items":{"type":"string"}},
+        "id":{"type":"string","format":"uuid"},
+        "notes":{"type":"string"},
+        "linkedMedia":{
+          "type":"array",
+          "items":{"type":"object","additionalProperties":true}
+        },
+        "maxDepthMetres":{"type":["number","null"]},
+        "point":{"type":["array","null"],"items":{"type":"number"}},
+        "visibility":{"type":"string","enum":["private","public"]}
+      }
+    }
   },
   "siteImportDetail":{
     "name":"siteImportDetail",
@@ -1164,30 +3808,201 @@ export var operations = {
     "domain":"siteAdmin"
   },
   "siteDetail":{
-    "name":"siteDetail",
-    "path":"/v1/sites/:id",
-    "method":"GET",
     "transport":"rest",
-    "write":false,
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "description":{"type":"string"},
+        "archived":{"type":"boolean"},
+        "features":{"type":"array","items":{"type":"string"}},
+        "requirements":{"type":"string"},
+        "restrictions":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "activity":{"type":"string"},
+              "status":{"type":"string","enum":["restricted","closed","unknown"]},
+              "text":{"type":"string"},
+              "source_url":{"type":"string"},
+              "reviewed_at":{"type":"string"}
+            },
+            "required":["activity","status","text","source_url"]
+          }
+        },
+        "timezone":{"type":"string"},
+        "source_url":{"type":"string"},
+        "timezone_provenance":{"type":"string"},
+        "revision":{"type":"integer"},
+        "name":{"type":"string"},
+        "reference_label":{"type":"string"},
+        "booking_url":{"type":"string"},
+        "state":{"type":"string"},
+        "access_mode":{"type":"string"},
+        "activity_status":{"type":"string","enum":["documented","unknown"]},
+        "region":{"type":"string"},
+        "coordinate_purpose":{"type":"string","enum":["reference","entry","dive"]},
+        "licence":{"type":"string"},
+        "area_id":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "attribution":{"type":"string"},
+        "point":{"type":"array","items":{"type":"number"}},
+        "depth_evidence":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "kind":{"type":"string","enum":["surveyed","reported"]},
+              "depth_m":{"type":"number"},
+              "reference":{"type":"string"},
+              "source_url":{"type":"string"},
+              "reviewed_at":{"type":"string"},
+              "vertical_datum":{"type":"string"},
+              "datum_type":{"type":"string"},
+              "uncertainty_m":{"type":["number","null"]}
+            },
+            "required":["kind","depth_m","reference","source_url"]
+          }
+        },
+        "activities":{"type":"array","items":{"type":"string"}},
+        "aliases":{"type":"array","items":{"type":"string"}},
+        "area_name":{"type":"string"},
+        "coordinate_provenance":{"type":"string"},
+        "facts":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "label":{"type":"string"},
+              "text":{"type":"string"},
+              "source_url":{"type":"string"},
+              "reviewed_at":{"type":"string"}
+            },
+            "required":["label","text","source_url"]
+          }
+        },
+        "source_id":{"type":"string"},
+        "access_points":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "mode":{"type":"string","enum":["shore","departure"]},
+              "name":{"type":"string"},
+              "point":{"type":"array","items":{"type":"number"}},
+              "source_url":{"type":"string"},
+              "booking_url":{"type":"string"},
+              "notes":{"type":"string"},
+              "verified":{"type":"boolean"}
+            },
+            "required":["mode","name","point","source_url"]
+          }
+        },
+        "reviewed_at":{"type":"string"},
+        "catalog_managed":{"type":"boolean"},
+        "waterbody":{"type":"string"},
+        "state_id":{"type":"string"}
+      },
+      "required":[
+        "id",
+        "name",
+        "timezone",
+        "state",
+        "state_id",
+        "area_name",
+        "area_id",
+        "point",
+        "region",
+        "waterbody",
+        "access_mode",
+        "revision",
+        "catalog_managed",
+        "description",
+        "source_url",
+        "source_id",
+        "reference_label",
+        "attribution",
+        "licence",
+        "aliases",
+        "features",
+        "activities"
+      ]
+    },
+    "method":"GET",
     "auth":false,
-    "domain":"sites"
+    "path":"/v1/sites/:id",
+    "name":"siteDetail",
+    "domain":"sites",
+    "native-rpc":"native_public_site_detail",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":false
   },
   "eventCancel":{
-    "name":"eventCancel",
-    "path":"/v1/me/events/cancel",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"]
+    },
     "method":"POST",
     "auth":true,
-    "write":true,
+    "path":"/v1/me/events/cancel",
+    "cache":false,
+    "name":"eventCancel",
     "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
+    "native-rpc":"native_events_cancel",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":true
   },
   "myPosts":{
     "auth":true,
     "domain":"posts",
     "name":"myPosts",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"ret_my_profile_posts",
+    "request-shape":{"type":"object","properties":{},"additionalProperties":false},
+    "result-shape":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "additionalProperties":false,
+        "required":[
+          "id",
+          "beach_id",
+          "beach_name",
+          "url",
+          "platform",
+          "status",
+          "public_consent"
+        ],
+        "properties":{
+          "id":{"type":"string","format":"uuid"},
+          "beach_id":{"type":"string","format":"uuid"},
+          "beach_name":{"type":"string"},
+          "url":{"type":"string"},
+          "platform":{"type":"string"},
+          "status":{"type":"string"},
+          "public_consent":{"type":"boolean"}
+        }
+      }
+    }
   },
   "instagramDiscoveryRetry":{
     "admin":true,
@@ -1221,13 +4036,24 @@ export var operations = {
     "write":false
   },
   "pageAdminRemove":{
-    "name":"pageAdminRemove",
-    "path":"/v1/me/directory/admin-remove",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{"type":"object","additionalProperties":false},
+    "method":"POST",
     "auth":true,
-    "write":true,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory/admin-remove",
+    "name":"pageAdminRemove",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_admin_remove",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "user":{"type":"string","format":"uuid"}
+      },
+      "required":["id","user"]
+    },
+    "write":true
   },
   "environmentImportPublish":{
     "name":"environmentImportPublish",
@@ -1250,13 +4076,316 @@ export var operations = {
     "write":false
   },
   "siteSubmissionSave":{
-    "name":"siteSubmissionSave",
-    "path":"/v1/me/site-submissions",
-    "method":"POST",
     "transport":"rest",
-    "write":true,
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "import_id":{"type":["string","null"]},
+        "owner_id":{"type":["string","null"]},
+        "payload":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "description":{"type":"string"},
+            "archived":{"type":"boolean"},
+            "features":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["beach","reef","wreck","wall","training"]
+              }
+            },
+            "requirements":{"type":"string"},
+            "restrictions":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "activity":{"type":"string"},
+                  "status":{"type":"string","enum":["restricted","closed","unknown"]},
+                  "text":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"}
+                },
+                "required":["activity","status","text","source_url"]
+              }
+            },
+            "timezone":{"type":"string"},
+            "source_url":{"type":"string"},
+            "timezone_provenance":{"type":"string"},
+            "name":{"type":"string"},
+            "reference_label":{"type":"string"},
+            "booking_url":{"type":"string"},
+            "state":{"type":"string"},
+            "access_mode":{
+              "type":"string",
+              "enum":["shore","boat_only","shore_or_boat","unknown"]
+            },
+            "activity_status":{"type":"string","enum":["documented","unknown"]},
+            "region":{"type":"string"},
+            "coordinate_purpose":{"type":"string","enum":["reference","entry","dive"]},
+            "licence":{"type":"string"},
+            "area_id":{"type":"string"},
+            "id":{"type":"string"},
+            "attribution":{"type":"string"},
+            "point":{"type":"array","items":{"type":"number"}},
+            "depth_evidence":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "kind":{"type":"string","enum":["surveyed","reported"]},
+                  "depth_m":{"type":"number"},
+                  "reference":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"},
+                  "vertical_datum":{"type":"string"},
+                  "datum_type":{"type":"string"},
+                  "uncertainty_m":{"type":["number","null"]}
+                },
+                "required":["kind","depth_m","reference","source_url"]
+              }
+            },
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "aliases":{"type":"array","items":{"type":"string"}},
+            "area_name":{"type":"string"},
+            "coordinate_provenance":{"type":"string"},
+            "facts":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "label":{"type":"string"},
+                  "text":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"}
+                },
+                "required":["label","text","source_url"]
+              }
+            },
+            "source_id":{"type":"string"},
+            "access_points":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "mode":{"type":"string","enum":["shore","departure"]},
+                  "name":{"type":"string"},
+                  "point":{"type":"array","items":{"type":"number"}},
+                  "source_url":{"type":"string"},
+                  "booking_url":{"type":"string"},
+                  "notes":{"type":"string"},
+                  "verified":{"type":"boolean"}
+                },
+                "required":["mode","name","point","source_url"]
+              }
+            },
+            "reviewed_at":{"type":"string"},
+            "waterbody":{
+              "type":"string",
+              "enum":["ocean","lake","river","quarry","sinkhole","pool","unknown"]
+            },
+            "state_id":{
+              "type":"string",
+              "enum":["VIC","NSW","JBT","QLD","SA","WA","NT","TAS","ACT","EXT"]
+            }
+          },
+          "required":[
+            "id",
+            "name",
+            "state_id",
+            "area_name",
+            "timezone",
+            "point",
+            "source_url"
+          ]
+        },
+        "base_revision":{"type":"integer"},
+        "site_key":{"type":"string"},
+        "updated_at":{"type":"string"},
+        "reason":{"type":"string"},
+        "status":{
+          "type":"string",
+          "enum":["draft","submitted","published","rejected","withdrawn"]
+        },
+        "id":{"type":"string","format":"uuid"},
+        "reviewed_by":{"type":["string","null"]},
+        "site_id":{"type":["string","null"]},
+        "version":{"type":"integer"},
+        "created_at":{"type":"string"}
+      },
+      "required":[
+        "id",
+        "site_id",
+        "site_key",
+        "owner_id",
+        "import_id",
+        "base_revision",
+        "version",
+        "status",
+        "payload",
+        "reason",
+        "reviewed_by",
+        "created_at",
+        "updated_at"
+      ]
+    },
+    "method":"POST",
     "auth":true,
-    "domain":"siteSubmissions"
+    "path":"/v1/me/site-submissions",
+    "name":"siteSubmissionSave",
+    "domain":"siteSubmissions",
+    "native-rpc":"native_site_review_submit",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "requestId":{"type":"string","format":"uuid"},
+        "version":{"type":"integer"},
+        "site":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "description":{"type":"string"},
+            "archived":{"type":"boolean"},
+            "features":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["beach","reef","wreck","wall","training"]
+              }
+            },
+            "requirements":{"type":"string"},
+            "restrictions":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "activity":{"type":"string"},
+                  "status":{"type":"string","enum":["restricted","closed","unknown"]},
+                  "text":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"}
+                },
+                "required":["activity","status","text","source_url"]
+              }
+            },
+            "timezone":{"type":"string"},
+            "source_url":{"type":"string"},
+            "timezone_provenance":{"type":"string"},
+            "name":{"type":"string"},
+            "reference_label":{"type":"string"},
+            "booking_url":{"type":"string"},
+            "state":{"type":"string"},
+            "access_mode":{
+              "type":"string",
+              "enum":["shore","boat_only","shore_or_boat","unknown"]
+            },
+            "activity_status":{"type":"string","enum":["documented","unknown"]},
+            "region":{"type":"string"},
+            "coordinate_purpose":{"type":"string","enum":["reference","entry","dive"]},
+            "licence":{"type":"string"},
+            "area_id":{"type":"string"},
+            "id":{"type":"string"},
+            "attribution":{"type":"string"},
+            "point":{"type":"array","items":{"type":"number"}},
+            "depth_evidence":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "kind":{"type":"string","enum":["surveyed","reported"]},
+                  "depth_m":{"type":"number"},
+                  "reference":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"},
+                  "vertical_datum":{"type":"string"},
+                  "datum_type":{"type":"string"},
+                  "uncertainty_m":{"type":["number","null"]}
+                },
+                "required":["kind","depth_m","reference","source_url"]
+              }
+            },
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "aliases":{"type":"array","items":{"type":"string"}},
+            "area_name":{"type":"string"},
+            "coordinate_provenance":{"type":"string"},
+            "facts":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "label":{"type":"string"},
+                  "text":{"type":"string"},
+                  "source_url":{"type":"string"},
+                  "reviewed_at":{"type":"string"}
+                },
+                "required":["label","text","source_url"]
+              }
+            },
+            "source_id":{"type":"string"},
+            "access_points":{
+              "type":"array",
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "mode":{"type":"string","enum":["shore","departure"]},
+                  "name":{"type":"string"},
+                  "point":{"type":"array","items":{"type":"number"}},
+                  "source_url":{"type":"string"},
+                  "booking_url":{"type":"string"},
+                  "notes":{"type":"string"},
+                  "verified":{"type":"boolean"}
+                },
+                "required":["mode","name","point","source_url"]
+              }
+            },
+            "reviewed_at":{"type":"string"},
+            "waterbody":{
+              "type":"string",
+              "enum":["ocean","lake","river","quarry","sinkhole","pool","unknown"]
+            },
+            "state_id":{
+              "type":"string",
+              "enum":["VIC","NSW","JBT","QLD","SA","WA","NT","TAS","ACT","EXT"]
+            }
+          },
+          "required":[
+            "id",
+            "name",
+            "state_id",
+            "area_name",
+            "timezone",
+            "point",
+            "source_url"
+          ]
+        }
+      },
+      "required":["site"]
+    },
+    "write":true
   },
   "tripReviewInbox":{
     "admin":true,
@@ -1277,24 +4406,80 @@ export var operations = {
     "write":false
   },
   "eventRevoke":{
-    "name":"eventRevoke",
-    "path":"/v1/me/events/revoke",
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"]
+    },
     "method":"POST",
     "auth":true,
-    "write":true,
+    "path":"/v1/me/events/revoke",
+    "cache":false,
+    "name":"eventRevoke",
     "domain":"eventsMember",
-    "transport":"rest",
-    "cache":false
+    "native-rpc":"native_events_revoke",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "invite":{"type":"string","format":"uuid"}
+      },
+      "required":["id","invite"]
+    },
+    "write":true
   },
   "directoryOwnerSave":{
-    "name":"directoryOwnerSave",
-    "path":"/v1/me/directory/save",
-    "method":"POST",
     "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "method":"POST",
     "auth":true,
     "admin":false,
-    "write":true,
-    "domain":"directoryOwner"
+    "path":"/v1/me/directory/save",
+    "name":"directoryOwnerSave",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_owner_save",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer"},
+        "document":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "description":{"type":"string"},
+            "category":{
+              "type":"string",
+              "enum":["School","Instructor","Business","Club","Group","Freediver"]
+            },
+            "locality":{"type":"string"},
+            "socials":{"type":"array","items":{"type":"string"}},
+            "sources":{"type":"array","items":{"type":"string"}},
+            "name":{"type":"string"},
+            "state":{"type":"string"},
+            "website":{"type":"string"},
+            "image":{"type":"string"},
+            "country":{"type":"string"}
+          },
+          "required":["name","category","state","sources","socials"]
+        },
+        "status":{"type":"string"},
+        "notes":{"type":"string"},
+        "outreach":{"type":"string"},
+        "revokeOwner":{"type":"boolean"}
+      },
+      "required":["id","revision","document"]
+    },
+    "write":true
   },
   "instagramStatus":{
     "auth":true,
@@ -1304,6 +4489,67 @@ export var operations = {
     "write":false
   },
   "me":{
+    "native-rpc":"ensure_account",
+    "request-shape":{"type":"object","properties":{},"additionalProperties":false},
+    "result-shape":{
+      "type":"object",
+      "required":["id","profile","verified"],
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "profile":{
+          "type":"object",
+          "additionalProperties":true,
+          "properties":{
+            "open":{"type":"boolean"},
+            "availability":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":[
+                  "weekday mornings",
+                  "weekday afternoons",
+                  "weekend mornings",
+                  "weekend afternoons"
+                ]
+              }
+            },
+            "displayName":{"type":"string"},
+            "portrait":{"type":"string"},
+            "experience":{
+              "type":"string",
+              "enum":["","new","comfortable","experienced"]
+            },
+            "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "sharing":{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "visits":{"type":"boolean"},
+                "months":{"type":"boolean"},
+                "dives":{"type":"boolean"},
+                "time":{"type":"boolean"},
+                "depth":{"type":"boolean"}
+              }
+            },
+            "tiktok":{"type":"string"},
+            "bio":{"type":"string"},
+            "instagram":{"type":"string"},
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "depthGoal":{"type":["number","null"]},
+            "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+          }
+        },
+        "verified":{"type":"boolean"}
+      }
+    },
     "auth":true,
     "domain":"member",
     "name":"me",
@@ -1322,7 +4568,96 @@ export var operations = {
     "domain":"community",
     "name":"stats",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"ret_profile_statistics",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "required":["target","beachId"],
+      "properties":{
+        "target":{"type":"string","format":"uuid"},
+        "beachId":{"type":"string","format":"uuid"}
+      }
+    },
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "required":[
+        "profile",
+        "level",
+        "stats",
+        "progress",
+        "sharingClosed",
+        "expiresWithActivity"
+      ],
+      "properties":{
+        "profile":{
+          "type":"object",
+          "additionalProperties":true,
+          "properties":{
+            "open":{"type":"boolean"},
+            "availability":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":[
+                  "weekday mornings",
+                  "weekday afternoons",
+                  "weekend mornings",
+                  "weekend afternoons"
+                ]
+              }
+            },
+            "displayName":{"type":"string"},
+            "portrait":{"type":"string"},
+            "experience":{
+              "type":"string",
+              "enum":["","new","comfortable","experienced"]
+            },
+            "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "sharing":{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "visits":{"type":"boolean"},
+                "months":{"type":"boolean"},
+                "dives":{"type":"boolean"},
+                "time":{"type":"boolean"},
+                "depth":{"type":"boolean"}
+              }
+            },
+            "tiktok":{"type":"string"},
+            "bio":{"type":"string"},
+            "instagram":{"type":"string"},
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "depthGoal":{"type":["number","null"]},
+            "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+          }
+        },
+        "level":{"type":"integer"},
+        "progress":{"type":"integer"},
+        "sharingClosed":{"type":"boolean"},
+        "expiresWithActivity":{"type":"boolean"},
+        "stats":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "visits":{"type":"integer"},
+            "months":{"type":"integer"},
+            "dives":{"type":"integer"},
+            "minutes":{"type":["number","null"]},
+            "typicalDepth":{"type":["number","null"]}
+          }
+        }
+      }
+    }
   },
   "instagramRemoveAllPosts":{
     "auth":true,
@@ -1343,7 +4678,20 @@ export var operations = {
     "domain":"community",
     "name":"unblock",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"set_account_block",
+    "request-shape":{
+      "type":"object",
+      "properties":{"target":{"type":"string","format":"uuid"}},
+      "required":["target"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"],
+      "additionalProperties":false
+    }
   },
   "reportPost":{
     "auth":true,
@@ -1368,7 +4716,25 @@ export var operations = {
     "domain":"community",
     "name":"connections",
     "transport":"action",
-    "write":false
+    "write":false,
+    "native-rpc":"ret_account_connections",
+    "request-shape":{"type":"object","properties":{},"additionalProperties":false},
+    "result-shape":{
+      "type":"array",
+      "items":{
+        "type":"object",
+        "required":["id","name","status","requested_by","instagram","tiktok"],
+        "properties":{
+          "id":{"type":"string","format":"uuid"},
+          "name":{"type":"string"},
+          "status":{"type":"string"},
+          "requested_by":{"type":"string","format":"uuid"},
+          "instagram":{"type":["string","null"]},
+          "tiktok":{"type":["string","null"]}
+        },
+        "additionalProperties":false
+      }
+    }
   },
   "finniesWallet":{
     "transport":"rest",
@@ -1386,7 +4752,115 @@ export var operations = {
     "domain":"member",
     "name":"preferences",
     "transport":"action",
-    "write":true
+    "write":true,
+    "native-rpc":"save_account_preferences",
+    "request-shape":{
+      "type":"object",
+      "properties":{
+        "profile":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "open":{"type":"boolean"},
+            "availability":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":[
+                  "weekday mornings",
+                  "weekday afternoons",
+                  "weekend mornings",
+                  "weekend afternoons"
+                ]
+              }
+            },
+            "displayName":{"type":"string"},
+            "portrait":{"type":"string"},
+            "experience":{
+              "type":"string",
+              "enum":["","new","comfortable","experienced"]
+            },
+            "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "sharing":{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "visits":{"type":"boolean"},
+                "months":{"type":"boolean"},
+                "dives":{"type":"boolean"},
+                "time":{"type":"boolean"},
+                "depth":{"type":"boolean"}
+              }
+            },
+            "tiktok":{"type":"string"},
+            "bio":{"type":"string"},
+            "instagram":{"type":"string"},
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "depthGoal":{"type":["number","null"]},
+            "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+          }
+        }
+      },
+      "required":["profile"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":true,
+      "properties":{
+        "open":{"type":"boolean"},
+        "availability":{
+          "type":"array",
+          "items":{
+            "type":"string",
+            "enum":[
+              "weekday mornings",
+              "weekday afternoons",
+              "weekend mornings",
+              "weekend afternoons"
+            ]
+          }
+        },
+        "displayName":{"type":"string"},
+        "portrait":{"type":"string"},
+        "experience":{
+          "type":"string",
+          "enum":["","new","comfortable","experienced"]
+        },
+        "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "sharing":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "visits":{"type":"boolean"},
+            "months":{"type":"boolean"},
+            "dives":{"type":"boolean"},
+            "time":{"type":"boolean"},
+            "depth":{"type":"boolean"}
+          }
+        },
+        "tiktok":{"type":"string"},
+        "bio":{"type":"string"},
+        "instagram":{"type":"string"},
+        "activities":{
+          "type":"array",
+          "items":{
+            "type":"string",
+            "enum":["freediving","ocean-swimming","spearfishing"]
+          }
+        },
+        "depthGoal":{"type":["number","null"]},
+        "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+      }
+    }
   }
 };
 
@@ -1412,7 +4886,7 @@ export function restOperation(path,method){
 }
 
 export var RELATED = {
-  "siteAdmin":["sites","siteSubmissions","conditions"],
+  "siteAdmin":["sites","siteSubmissions","conditions","discovery"],
   "member":["community","logbook","posts","trips"],
   "siteNotes":["siteNotesPublic"],
   "admin":["instagram","posts","member"],

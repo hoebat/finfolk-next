@@ -1,11 +1,11 @@
 // Generated from finfolk-web.lib.sqlite; do not edit.
 import initSqlite from '@sqlite.org/sqlite-wasm'
 
-import * as proto from '@xtalk/lang/common-protocol.js'
+import proto from '@xtalk/lang/common-protocol.js'
 
-import * as sqlite from '@xtalk/db/system/impl-sqlite.js'
+import sqlite from '@xtalk/db/system/impl-sqlite.js'
 
-import * as sql from '@xtalk/net/conn-sql.js'
+import sql from '@xtalk/net/conn-sql.js'
 
 export function CacheClient(raw){
   globalThis["xt_lang_common_protocol$$IMPLEMENTATIONS"]["finfolk_web.lib.sqlite/CacheClient"] = true;

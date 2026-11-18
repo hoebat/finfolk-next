@@ -1,15 +1,15 @@
 // Generated from finfolk-web.lib.backbone; do not edit.
 import * as registry from '@finfolk/edge/operations.js'
 
-import * as memory from '@xtalk/db/system/impl-memory.js'
+import memory from '@xtalk/db/system/impl-memory.js'
 
-import * as cache_util from '@xtalk/db/system/memory-util.js'
+import cache_util from '@xtalk/db/system/memory-util.js'
 
-import * as page from '@xtalk/substrate/page-core.js'
+import page from '@xtalk/substrate/page-core.js'
 
-import * as events from '@xtalk/event/base-model.js'
+import events from '@xtalk/event/base-model.js'
 
-import * as substrate from '@xtalk/substrate/substrate.js'
+import substrate from '@xtalk/substrate/substrate.js'
 
 export function stableKey(value){
   if(Array.isArray(value)){
@@ -246,7 +246,7 @@ export async function run(ctx,name,values,options){
     return result;
   }
   catch(error){
-    if(spec["write"] && !error["status"] && !ctx["closed"]){
+    if(spec["write"] && (!error["status"] || error["mutationOutcomeUnknown"]) && !ctx["closed"]){
       ctx["blocked"].add(spec["domain"]);
       ctx["onBlocked"](spec["domain"]);
       if(!error["mutationCommitted"]){

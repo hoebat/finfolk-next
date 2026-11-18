@@ -49,13 +49,18 @@ function raw_upsert(table_name,id_column,columns,values,opts){
     return x;
   }) : opts["column_fn"];
   let {upsert_clause} = opts;
+  let id_columns = Array.isArray(id_column) ? id_column : [id_column];
+  let id_lu = {};
+  for(let column of id_columns){
+    id_lu[column] = true;
+  };
   let out_arr = raw_insert_array(table_name,columns,values,opts);
   let col_arr = columns.filter(function (col){
-    return col != id_column;
+    return !id_lu[col];
   }).map(function (col){
     return column_fn(col) + "=coalesce(\"excluded\"." + column_fn(col) + "," + column_fn(col) + ")";
   });
-  return out_arr.join("\n") + "\n" + ("ON CONFLICT (" + column_fn(id_column) + ") DO UPDATE SET\n") + col_arr.join(",\n") + (("string" == (typeof upsert_clause)) ? ("\nWHERE " + upsert_clause) : "") + ";";
+  return out_arr.join("\n") + "\n" + ("ON CONFLICT (" + id_columns.map(column_fn).join(",") + ") ") + ((col_arr.length > 0) ? ("DO UPDATE SET\n" + col_arr.join(",\n")) : "DO NOTHING") + (((col_arr.length > 0) && ("string" == (typeof upsert_clause))) ? ("\nWHERE " + upsert_clause) : "") + ";";
 }
 
 function raw_update(table_name,where_params,data,opts){

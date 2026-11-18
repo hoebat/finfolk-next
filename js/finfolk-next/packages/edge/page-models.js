@@ -88,7 +88,27 @@ export var pages = {
     "routes":["/pages"],
     "area":"member",
     "models":{"mine":{"operation":"directoryMine","bindings":{}}},
-    "actions":{"create":{"operation":"directoryCreate","bindings":{}}}
+    "actions":{
+      "create":{
+        "operation":"directoryCreate",
+        "bindings":{},
+        "payload-fields":["document","requestId"],
+        "payload-pick":{
+          "document":[
+            "category",
+            "country",
+            "description",
+            "image",
+            "locality",
+            "name",
+            "socials",
+            "sources",
+            "state",
+            "website"
+          ]
+        }
+      }
+    }
   },
   "site-notes":{
     "routes":[],
@@ -139,7 +159,33 @@ export var pages = {
     "area":"member",
     "models":{"access":{"operation":"pageAccess","bindings":{"id":"id"}}},
     "actions":{
-      "save":{"operation":"directoryOwnerSave","bindings":{"id":"id"}},
+      "save":{
+        "operation":"directoryOwnerSave",
+        "bindings":{"id":"id"},
+        "payload-fields":[
+          "document",
+          "id",
+          "notes",
+          "outreach",
+          "revision",
+          "revokeOwner",
+          "status"
+        ],
+        "payload-pick":{
+          "document":[
+            "category",
+            "country",
+            "description",
+            "image",
+            "locality",
+            "name",
+            "socials",
+            "sources",
+            "state",
+            "website"
+          ]
+        }
+      },
       "invite":{"operation":"pageInvite","bindings":{"id":"id"}},
       "revoke":{"operation":"pageInviteRevoke","bindings":{"id":"id"}},
       "remove-admin":{"operation":"pageAdminRemove","bindings":{"id":"id"}}
@@ -188,11 +234,53 @@ export var pages = {
       }
     },
     "actions":{
-      "save":{"operation":"directoryAdminSave","bindings":{}},
-      "discover":{"operation":"directoryDiscover","bindings":{}},
-      "merge":{"operation":"directoryMerge","bindings":{}},
-      "claim-review":{"operation":"directoryClaimReview","bindings":{}},
-      "report-resolve":{"operation":"directoryReportResolve","bindings":{}}
+      "save":{
+        "operation":"directoryAdminSave",
+        "bindings":{},
+        "payload-fields":[
+          "document",
+          "id",
+          "notes",
+          "outreach",
+          "revision",
+          "revokeOwner",
+          "status"
+        ],
+        "payload-pick":{
+          "document":[
+            "category",
+            "country",
+            "description",
+            "image",
+            "locality",
+            "name",
+            "socials",
+            "sources",
+            "state",
+            "website"
+          ]
+        }
+      },
+      "discover":{
+        "operation":"directoryDiscover",
+        "bindings":{},
+        "payload-fields":["category","country","region","seed","state"]
+      },
+      "merge":{
+        "operation":"directoryMerge",
+        "bindings":{},
+        "payload-fields":["source","target"]
+      },
+      "claim-review":{
+        "operation":"directoryClaimReview",
+        "bindings":{},
+        "payload-fields":["approve","evidence","id"]
+      },
+      "report-resolve":{
+        "operation":"directoryReportResolve",
+        "bindings":{},
+        "payload-fields":["id"]
+      }
     }
   },
   "trip-manager":{
@@ -322,6 +410,7 @@ export var pages = {
     "actions":{
       "cancel":{"operation":"eventCancel","bindings":{"id":"id"}},
       "invite":{"operation":"eventInvite","bindings":{"id":"id"}},
+      "retry-invite":{"operation":"eventInviteRetry","bindings":{"id":"id"}},
       "revoke":{"operation":"eventRevoke","bindings":{"id":"id"}},
       "rsvp":{"operation":"eventRsvp","bindings":{"id":"id"}},
       "moderate":{"operation":"eventModerate","bindings":{"id":"id"}}
@@ -370,12 +459,20 @@ export var pages = {
       "session":{
         "operation":"session",
         "bindings":{},
-        "sdk":{"method":["get"],"args":["id"]}
+        "sdk":{
+          "method":["get"],
+          "args":["id"],
+          "public-operation":"publicSession"
+        }
       },
       "profile":{
         "operation":"profile",
         "bindings":{},
-        "sdk":{"method":["profile"],"args":["target"]}
+        "sdk":{
+          "method":["profile"],
+          "args":["target"],
+          "public-operation":"publicProfile"
+        }
       },
       "ensure":{
         "operation":"me",
@@ -478,6 +575,7 @@ export var pages = {
     "actions":{}
   },
   "profile-editor":{
+    "policy":{"regularDays":8},
     "routes":["/profile/edit"],
     "area":"member",
     "loader":"profile-editor",
@@ -487,7 +585,30 @@ export var pages = {
       "session":{"operation":"session","bindings":{}},
       "posts":{"operation":"myPosts","bindings":{}}
     },
-    "actions":{"save":{"operation":"preferences","bindings":{}}}
+    "actions":{
+      "save":{
+        "operation":"preferences",
+        "bindings":{},
+        "payload-pick":{
+          "profile":[
+            "displayName",
+            "bio",
+            "instagram",
+            "tiktok",
+            "open",
+            "sharing",
+            "beaches",
+            "activities",
+            "availability",
+            "experience",
+            "depthGoal",
+            "portrait",
+            "featuredLogs",
+            "featuredPosts"
+          ]
+        }
+      }
+    }
   },
   "logbook-extras":{
     "routes":[],
@@ -515,7 +636,47 @@ export var pages = {
       "submissions":{"operation":"mySiteSubmissions","bindings":{}}
     },
     "actions":{
-      "save":{"operation":"siteSubmissionSave","bindings":{}},
+      "save":{
+        "operation":"siteSubmissionSave",
+        "bindings":{},
+        "payload-fields":["id","requestId","version","site"],
+        "payload-pick":{
+          "site":[
+            "description",
+            "archived",
+            "features",
+            "requirements",
+            "restrictions",
+            "timezone",
+            "source_url",
+            "timezone_provenance",
+            "name",
+            "reference_label",
+            "booking_url",
+            "state",
+            "access_mode",
+            "activity_status",
+            "region",
+            "coordinate_purpose",
+            "licence",
+            "area_id",
+            "id",
+            "attribution",
+            "point",
+            "depth_evidence",
+            "activities",
+            "aliases",
+            "area_name",
+            "coordinate_provenance",
+            "facts",
+            "source_id",
+            "access_points",
+            "reviewed_at",
+            "waterbody",
+            "state_id"
+          ]
+        }
+      },
       "withdraw":{"operation":"siteSubmissionWithdraw","bindings":{}}
     }
   },
@@ -577,7 +738,11 @@ export var pages = {
       "sessions":{
         "operation":"sessions",
         "bindings":{"owner":"owner","publicOnly":"publicOnly"},
-        "sdk":{"method":["list"],"args":["$values"]},
+        "sdk":{
+          "method":["list"],
+          "args":["$values"],
+          "public-operation":"publicSessions"
+        },
         "defaults":{"cursor":null}
       }
     },
@@ -630,7 +795,7 @@ export var pages = {
     "models":{
       "listing":{"operation":"publicDirectoryDetail","bindings":{"id":"id"}},
       "events":{"operation":"publicEvents","bindings":{"page":"id"}},
-      "mine":{"operation":"directoryMine","bindings":{}}
+      "mine":{"operation":"directoryMine","bindings":{},"when":[["actor"]]}
     },
     "actions":{
       "claim":{"operation":"directoryClaim","bindings":{"id":"id"}},
@@ -712,7 +877,47 @@ export var pages = {
       "batch":{"operation":"siteImportDetail","bindings":{}}
     },
     "actions":{
-      "save":{"operation":"siteDraftSave","bindings":{}},
+      "save":{
+        "operation":"siteDraftSave",
+        "bindings":{},
+        "payload-fields":["id","requestId","version","site"],
+        "payload-pick":{
+          "site":[
+            "description",
+            "archived",
+            "features",
+            "requirements",
+            "restrictions",
+            "timezone",
+            "source_url",
+            "timezone_provenance",
+            "name",
+            "reference_label",
+            "booking_url",
+            "state",
+            "access_mode",
+            "activity_status",
+            "region",
+            "coordinate_purpose",
+            "licence",
+            "area_id",
+            "id",
+            "attribution",
+            "point",
+            "depth_evidence",
+            "activities",
+            "aliases",
+            "area_name",
+            "coordinate_provenance",
+            "facts",
+            "source_id",
+            "access_points",
+            "reviewed_at",
+            "waterbody",
+            "state_id"
+          ]
+        }
+      },
       "publish":{"operation":"siteDraftPublish","bindings":{}},
       "reject":{"operation":"siteDraftReject","bindings":{}},
       "stage":{"operation":"siteImportStage","bindings":{}},
@@ -738,6 +943,14 @@ export var pages = {
       "public":{"operation":"publicPosts","bindings":{}}
     },
     "actions":{}
+  },
+  "account-config-resource":{
+    "routes":["/api/account-config"],
+    "kind":"resource",
+    "area":"public",
+    "models":{},
+    "actions":{},
+    "reason":"Public allowlisted authentication configuration; never an offline document."
   },
   "logbook-inbox":{
     "routes":[],
@@ -898,10 +1111,16 @@ export function resolveModel(key,name,inputs,payload = null){
       throw new Error(rule["message"]);
     }
   });
+  let nativeValues = values;
   if(spec["auth"] && (spec["transport"] == "rest")){
     values = requestValues(spec,values);
   }
-  return {"name":entry["operation"],"values":values,"spec":spec};
+  return {
+    "name":entry["operation"],
+    "values":values,
+    "nativeValues":nativeValues,
+    "spec":spec
+  };
 }
 
 export async function runAction(client,key,name,inputs,payload,options = null){
@@ -916,8 +1135,34 @@ export async function runAction(client,key,name,inputs,payload,options = null){
   }
   let spec = operations.operation(entry["operation"]);
   let input = bind(entry,inputs,payload);
+  if(entry["payload-fields"]){
+    let selectedFields = [];
+    for(let pair of Object.entries(input)){
+      if(entry["payload-fields"].includes(pair[0])){
+        selectedFields.push(pair);
+      }
+    };
+    input = Object.fromEntries(selectedFields);
+  }
+  for(let pair of Object.entries(entry["payload-pick"] || {})){
+    let key = pair[0];
+    let fields = pair[1];
+    let value = input[key];
+    if(value && ((typeof value) == "object") && !Array.isArray(value)){
+      let picked = {};
+      for(let field of fields){
+        if(Object.hasOwn(value,field)){
+          picked[field] = value[field];
+        }
+      };
+      input[key] = picked;
+    }
+  };
   if(entry["sdk"]){
     return await invokeSdk(client,entry["sdk"],sdkArgs(entry["sdk"],input));
+  }
+  if((client.authProvider == "supabase") && spec["native-rpc"]){
+    return await client.call(entry["operation"],input);
   }
   if(spec["transport"] == "rest"){
     let request = requestValues(spec,input);
@@ -935,6 +1180,9 @@ export async function runModel(client,key,name,inputs,payload = null){
   let entry = definition(key)["models"][name];
   if(entry["sdk"]){
     return await invokeSdk(client,entry["sdk"],sdkArgs(entry["sdk"],model["values"]));
+  }
+  if((client.authProvider == "supabase") && model["spec"]["native-rpc"]){
+    return await client.call(model.name,model.nativeValues);
   }
   if(model["spec"]["auth"] && (model["spec"]["transport"] == "rest")){
     return await client.request(model["values"]["path"],{
@@ -1020,7 +1268,7 @@ export async function runPage(client,key,inputs,services = null){
     return result;
   }
   let output = {};
-  let context = {"inputs":inputs,"models":output};
+  let context = {"inputs":inputs,"models":output,"actor":actor};
   for(let name of page["order"] || Object.keys(page["models"])){
     let entry = page["models"][name];
     assertPageActor(client,tracked,actor);

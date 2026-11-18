@@ -90,9 +90,11 @@ export async function applicationBackbone(config){
   }
   let runtime = await import("./next-backbone.js");
   let app = runtime.createApplicationBackbone(config);
-  app.setPublicTransport(function (name,input,options){
-    return httpOperation(config,name,input,options);
-  });
+  if(app.authProvider != "supabase"){
+    app.setPublicTransport(function (name,input,options){
+      return httpOperation(config,name,input,options);
+    });
+  }
   return app;
 }
 

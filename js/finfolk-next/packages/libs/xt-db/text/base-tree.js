@@ -148,15 +148,26 @@ function plan_return_bulk(schema,entry,ids,args,opts){
   return qtree;
 }
 
+function return_input(entry){
+  let input = entry["input"].slice();
+  let identity = entry["view"]["identity"];
+  let count = Array.isArray(identity) ? identity.length : 1;
+  while((count > 0) && (input.length > 0)){
+    input.shift();
+    count = (count - 1);
+  }
+  return input;
+}
+
 function plan_combined(schema,sel_entry,sel_args,ret_entry,ret_args,ret_omit,opts,as_tree){
   let sel_input = sel_entry["input"];
-  let ret_input = ret_entry["input"];
+  let ret_input = return_input(ret_entry);
   let itree = tree_combined(schema,sel_entry,ret_entry,ret_omit,[],opts);
   let qtree = tree_fill_input(
     itree,
     xtd.arr_assign(ret_args.slice(),sel_args),
     xtd.arr_assign(ret_input.slice(),sel_input),
-    (ret_input.length > 0) ? true : false
+    false
   );
   return qtree;
 }
@@ -164,8 +175,7 @@ function plan_combined(schema,sel_entry,sel_args,ret_entry,ret_args,ret_omit,opt
 function plan_view_check(entry,args,drop_first){
   let targs = entry["input"];
   if(drop_first){
-    targs = [...targs];
-    targs.shift();
+    targs = return_input(entry);
   }
   let l_ok_value = check.check_args_length(args,targs);
   let [l_ok,l_err] = l_ok_value;
@@ -258,6 +268,7 @@ module.exports = {
   ["plan_count"]:plan_count,
   ["plan_return"]:plan_return,
   ["plan_return_bulk"]:plan_return_bulk,
+  ["return_input"]:return_input,
   ["plan_combined"]:plan_combined,
   ["plan_view_check"]:plan_view_check,
   ["plan_view"]:plan_view

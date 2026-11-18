@@ -1,6 +1,8 @@
 // Generated from xt.db.text.base-schema; do not edit.
 const xtd = require("@xtalk/lang/common-data.js")
 
+const str = require("@xtalk/lang/common-string.js")
+
 var CACHED_SCHEMA = new Map();
 
 var CACHED_LOOKUP = new Map();
@@ -15,6 +17,31 @@ var get_ident = function (e){
 
 function get_ident_id(e){
   return ("ref" == e["type"]) ? (e["ident"] + "_id") : e["ident"];
+}
+
+function primary_columns(schema,table_name){
+  let table = schema[table_name];
+  let entries = xtd.arr_sort(Object.values(table).filter(function (entry){
+    return entry["primary"];
+  }),get_order,function (x,y){
+    return x < y;
+  });
+  return (entries.length > 0) ? entries.map(get_ident_id) : ["id"];
+}
+
+function record_key(schema,table_name,data){
+  let values = primary_columns(schema,table_name).map(function (column){
+    let value = data[column];
+    if((null == value) && str.ends_withp(column,"_id")){
+      let field = column.substring(0,column.length - 3);
+      value = data[field];
+      if((null != value) && ("object" == (typeof value)) && !Array.isArray(value)){
+        value = value["id"];
+      }
+    }
+    return value;
+  });
+  return (values.length == 1) ? values[0] : JSON.stringify(values);
 }
 
 function list_tables(schema){
@@ -185,6 +212,8 @@ module.exports = {
   ["get_order"]:get_order,
   ["get_ident"]:get_ident,
   ["get_ident_id"]:get_ident_id,
+  ["primary_columns"]:primary_columns,
+  ["record_key"]:record_key,
   ["list_tables"]:list_tables,
   ["get_cached_schema"]:get_cached_schema,
   ["create_data_keys"]:create_data_keys,

@@ -1,11 +1,11 @@
 // Generated from finfolk-web.lib.application; do not edit.
 import * as worker from '@finfolk/edge/worker-bridge.js'
 
-import * as page from '@xtalk/substrate/page-core.js'
+import page from '@xtalk/substrate/page-core.js'
 
-import * as events from '@xtalk/event/base-model.js'
+import events from '@xtalk/event/base-model.js'
 
-import * as substrate from '@xtalk/substrate/substrate.js'
+import substrate from '@xtalk/substrate/substrate.js'
 
 import * as backbone from '@finfolk/edge/backbone.js'
 

@@ -22,8 +22,8 @@ function flatten_get_links(obj){
   });
 }
 
-function flatten_merge(table_map,data_obj,ref_links,rev_links){
-  let {id} = data_obj;
+function flatten_merge_key(table_map,data_obj,ref_links,rev_links,record_id){
+  let id = (null == record_id) ? data_obj["id"] : record_id;
   let rec = table_map[id];
   if(!((null != rec) && ("object" == (typeof rec)) && !Array.isArray(rec))){
     rec = {"id":id,"data":{},"ref_links":{},"rev_links":{}};
@@ -43,6 +43,10 @@ function flatten_merge(table_map,data_obj,ref_links,rev_links){
     }
   ]);
   return table_map;
+}
+
+function flatten_merge(table_map,data_obj,ref_links,rev_links){
+  return flatten_merge_key(table_map,data_obj,ref_links,rev_links,data_obj["id"]);
 }
 
 function flatten_node(schema,table_name,data,parent,acc){
@@ -67,9 +71,9 @@ function flatten_node(schema,table_name,data,parent,acc){
       ref_id_links[k] = {[data[id_k]]:true};
     }
   };
-  flatten_merge(table_map,data_obj,xtd.obj_assign_with(ref_links,ref_id_links,function (obj,other){
+  flatten_merge_key(table_map,data_obj,xtd.obj_assign_with(ref_links,ref_id_links,function (obj,other){
     return Object.assign(obj,other);
-  }),rev_links);
+  }),rev_links,sch.record_key(schema,table_name,data));
   return {
     "table_map":table_map,
     "data_obj":data_obj,
@@ -165,6 +169,7 @@ function flatten_bulk_ids(schema,lookup,m){
 
 module.exports = {
   ["flatten_get_links"]:flatten_get_links,
+  ["flatten_merge_key"]:flatten_merge_key,
   ["flatten_merge"]:flatten_merge,
   ["flatten_node"]:flatten_node,
   ["flatten_linked"]:flatten_linked,
