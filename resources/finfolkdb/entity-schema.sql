@@ -1,6 +1,6 @@
 -- Generated standalone FinFolk entity schema.
 BEGIN;
-DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='finfolk_api') OR to_regclass('neon_auth."user"') IS NULL THEN RAISE EXCEPTION 'Provision finfolk_api and managed authentication first'; END IF; IF EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('finfolk','finfolk_rpc')) OR EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('finfolk','finfolk_rpc')) OR EXISTS(SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname IN ('finfolk','finfolk_rpc')) THEN RAISE EXCEPTION 'Fresh entity schema requires empty application schemas'; END IF; END $$;
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='finfolk_api') THEN CREATE ROLE finfolk_api NOLOGIN; END IF; IF EXISTS(SELECT 1 FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname IN ('finfolk','finfolk_rpc')) OR EXISTS(SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname IN ('finfolk','finfolk_rpc')) OR EXISTS(SELECT 1 FROM pg_type t JOIN pg_namespace n ON n.oid=t.typnamespace WHERE n.nspname IN ('finfolk','finfolk_rpc')) THEN RAISE EXCEPTION 'Fresh entity schema requires empty application schemas'; END IF; END $$;
 CREATE SCHEMA IF NOT EXISTS finfolk;
 CREATE SCHEMA IF NOT EXISTS finfolk_rpc;
 CREATE EXTENSION IF NOT EXISTS "citext";
@@ -630,6 +630,8 @@ CREATE TABLE IF NOT EXISTS "finfolk"."User" (
   "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
   "profile" JSONB NOT NULL DEFAULT '{}',
   "deleted" BOOLEAN NOT NULL DEFAULT false,
+  "email_verified" BOOLEAN NOT NULL DEFAULT false,
+  "deletion_state" TEXT NOT NULL DEFAULT 'active',
   "invite_eligible" BOOLEAN NOT NULL DEFAULT false,
   "joined_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
   "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
@@ -677,6 +679,23 @@ CREATE TABLE IF NOT EXISTS "finfolk"."UserConnection" (
   UNIQUE ("user_id","target_id"),
   CONSTRAINT ordered_users CHECK ("user_id" < "target_id"),
   CONSTRAINT valid_requester CHECK (("requested_by_id" = "user_id") OR ("requested_by_id" = "target_id"))
+);
+
+-- finfolkdb.common.type-user/UserRole 
+CREATE TABLE IF NOT EXISTS "finfolk"."UserRole" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "user_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "role" TEXT NOT NULL,
+  UNIQUE ("user_id","role"),
+  CONSTRAINT known_role CHECK (("role" = 'admin') OR ("role" = 'moderator'))
+);
+
+-- finfolkdb.common.type-user/ApplicationFeature 
+CREATE TABLE IF NOT EXISTS "finfolk"."ApplicationFeature" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT NOT NULL,
+  "enabled" BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE ("key")
 );
 
 -- finfolkdb.common.type-social-account/SocialAccount 
@@ -923,6 +942,415 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SocialReferral" (
   UNIQUE ("day","platform")
 );
 
+-- finfolkdb.common.type-user-access/EnumAccessSetting 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumAccessSetting" AS ENUM ('public','open','closed');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-user-access/Access 
+CREATE TABLE IF NOT EXISTS "finfolk"."Access" (
+  "id" UUID DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType",
+  "class_context" "finfolk"."EnumClassType",
+  "class_ref" UUID NOT NULL,
+  "setting" "finfolk"."EnumAccessSetting" NOT NULL DEFAULT 'closed',
+  "op_created" UUID,
+  "time_created" BIGINT,
+  PRIMARY KEY (id,class_table,class_context),
+  UNIQUE ("class_table","class_context","class_ref")
+);
+
+-- finfolkdb.common.type-user-access/EnumAccessRoleLevel 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumAccessRoleLevel" AS ENUM ('owner','admin','deleted','member');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-user-access/AccessRole 
+CREATE TABLE IF NOT EXISTS "finfolk"."AccessRole" (
+  "id" UUID DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType",
+  "class_context" "finfolk"."EnumClassType",
+  "is_active" BOOLEAN NOT NULL DEFAULT true,
+  "is_public" BOOLEAN NOT NULL DEFAULT true,
+  "access_id" UUID NOT NULL,
+  "member_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "from_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "level" "finfolk"."EnumAccessRoleLevel" NOT NULL DEFAULT 'member',
+  "scope" JSONB NOT NULL DEFAULT '{}',
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  PRIMARY KEY (id,class_table,class_context,access_id),
+  UNIQUE ("class_table","class_context","access_id","member_id"),
+  CONSTRAINT fk_access_role_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id) ON DELETE CASCADE
+);
+CREATE INDEX ON "finfolk"."AccessRole" ("member_id");
+
+-- finfolkdb.common.type-user-access/EnumAccessRequestStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumAccessRequestStatus" AS ENUM ('pending','cancelled','rejected','accepted');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-user-access/AccessRequest 
+CREATE TABLE IF NOT EXISTS "finfolk"."AccessRequest" (
+  "id" UUID DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType",
+  "class_context" "finfolk"."EnumClassType",
+  "access_id" UUID NOT NULL,
+  "from_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "reply_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "status" "finfolk"."EnumAccessRequestStatus" NOT NULL DEFAULT 'pending',
+  "expires_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT + 604800000000,
+  "detail" JSONB NOT NULL DEFAULT '{}',
+  "log" JSONB NOT NULL DEFAULT '[]',
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  PRIMARY KEY (id,class_table,class_context,access_id),
+  CONSTRAINT fk_access_request_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id) ON DELETE CASCADE
+);
+CREATE INDEX ON "finfolk"."AccessRequest" ("from_id");
+
+-- finfolkdb.common.type-user-access/EnumAccessInviteExternalStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumAccessInviteExternalStatus" AS ENUM ('pending','expired','rejected','accepted');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-user-access/AccessInviteExternal 
+CREATE TABLE IF NOT EXISTS "finfolk"."AccessInviteExternal" (
+  "id" UUID DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType",
+  "class_context" "finfolk"."EnumClassType",
+  "access_id" UUID NOT NULL,
+  "secret" TEXT NOT NULL UNIQUE,
+  "from_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "reply_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "status" "finfolk"."EnumAccessInviteExternalStatus" NOT NULL DEFAULT 'pending',
+  "expires_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT + 604800000000,
+  "accepted_at" BIGINT,
+  "detail" JSONB NOT NULL DEFAULT '{}',
+  "log" JSONB NOT NULL DEFAULT '[]',
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  PRIMARY KEY (id,class_table,class_context,access_id),
+  CONSTRAINT fk_access_invite_external_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id) ON DELETE CASCADE
+);
+
+-- finfolkdb.common.type-user-access/EnumAccessInviteEmailStatus 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumAccessInviteEmailStatus" AS ENUM ('pending','expired','rejected','accepted');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-user-access/AccessInviteEmail 
+CREATE TABLE IF NOT EXISTS "finfolk"."AccessInviteEmail" (
+  "id" UUID DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType",
+  "class_context" "finfolk"."EnumClassType",
+  "access_id" UUID NOT NULL,
+  "email" TEXT NOT NULL,
+  "secret" TEXT NOT NULL UNIQUE,
+  "from_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "reply_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "status" "finfolk"."EnumAccessInviteEmailStatus" NOT NULL DEFAULT 'pending',
+  "expires_at" BIGINT NOT NULL,
+  "accepted_at" BIGINT,
+  "detail" JSONB NOT NULL DEFAULT '{}',
+  "log" JSONB NOT NULL DEFAULT '[]',
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  PRIMARY KEY (id,class_table,class_context,access_id),
+  CONSTRAINT fk_access_invite_email_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id) ON DELETE CASCADE
+);
+
+-- finfolkdb.common.type-user-access/__access_indexes__ 
+CREATE UNIQUE INDEX IF NOT EXISTS "AccessRoleOwner" ON "finfolk"."AccessRole" ("class_table","class_context","access_id") WHERE ("level" = 'owner') AND ("is_active" = true);
+CREATE UNIQUE INDEX IF NOT EXISTS "AccessRequestPending" ON "finfolk"."AccessRequest" ("class_table","class_context","access_id","from_id") WHERE "status" = 'pending';
+
+-- finfolkdb.common.type-directory-base/DirectoryListing 
+CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryListing" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('DirectoryListing')::"finfolk"."EnumClassType") STORED,
+  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
+  "status" "finfolk"."EnumDirectoryListingStatus" NOT NULL DEFAULT 'candidate',
+  "reviewed_at" BIGINT,
+  "outreach" TEXT NOT NULL DEFAULT 'Not contacted',
+  "notes" TEXT NOT NULL DEFAULT '',
+  "detail" JSONB NOT NULL DEFAULT '{}',
+  "social_id" UUID NOT NULL,
+  "access_id" UUID NOT NULL,
+  "audit_id" UUID NOT NULL,
+  "rev_id" UUID NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("social_id"),
+  UNIQUE ("access_id"),
+  UNIQUE ("audit_id"),
+  UNIQUE ("rev_id"),
+  CONSTRAINT fk_directory_listing_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id),
+  CONSTRAINT fk_directory_listing_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id),
+  CONSTRAINT fk_directory_listing_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id),
+  CONSTRAINT fk_directory_listing_social FOREIGN KEY (class_table,social_id) REFERENCES "finfolk"."Social"(class_table,id)
+);
+CREATE INDEX ON "finfolk"."DirectoryListing" ("status");
+
+-- finfolkdb.common.type-directory-base/DirectoryReport 
+CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryReport" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "listing_id" UUID NOT NULL REFERENCES "finfolk"."DirectoryListing"("id"),
+  "author_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "message" TEXT NOT NULL,
+  "resolved" BOOLEAN NOT NULL DEFAULT false,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT
+);
+CREATE INDEX ON "finfolk"."DirectoryReport" ("listing_id");
+
+-- finfolkdb.common.type-directory-base/DirectoryRun 
+CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryRun" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "query" TEXT NOT NULL,
+  "status" TEXT NOT NULL DEFAULT 'running',
+  "error" TEXT NOT NULL DEFAULT '',
+  "log" JSONB NOT NULL DEFAULT '[]',
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT
+);
+
+-- finfolkdb.fn.helper.helper-access/is-user-blocked 
+CREATE OR REPLACE FUNCTION "finfolk".is_user_blocked(
+  i_viewer UUID,
+  i_owner UUID
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    v_forward BOOLEAN;
+    v_reverse BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."UserBlock"
+    WHERE "owner_id" = i_viewer AND "target_id" = i_owner) INTO v_forward;
+    SELECT exists(SELECT 1 FROM "finfolk"."UserBlock"
+    WHERE "owner_id" = i_owner AND "target_id" = i_viewer) INTO v_reverse;
+    RETURN v_forward OR v_reverse;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.helper.helper-access/is-user-active 
+CREATE OR REPLACE FUNCTION "finfolk".is_user_active(
+  i_user UUID
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    v_active BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."User"
+    WHERE "id" = i_user AND "deleted" = false) INTO v_active;
+    RETURN v_active;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-user-activity/EnumActionType 
+DO $$
+BEGIN
+  CREATE TYPE "finfolk"."EnumActionType" AS ENUM ('create',
+    'read',
+    'update',
+    'delete',
+    'login',
+    'logout',
+    'invite',
+    'join',
+    'leave',
+    'share',
+    'export',
+    'import');
+EXCEPTION WHEN OTHERS THEN
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.type-user-activity/ActivityLog 
+CREATE TABLE IF NOT EXISTS "finfolk"."ActivityLog" (
+  "id" UUID DEFAULT uuid_generate_v1(),
+  "class_table" "finfolk"."EnumClassType",
+  "activity_id" UUID NOT NULL,
+  "action" "finfolk"."EnumActionType" NOT NULL,
+  "actor_id" UUID REFERENCES "finfolk"."User"("id"),
+  "detail" JSONB NOT NULL DEFAULT '{}',
+  "op_created" UUID,
+  "time_created" BIGINT,
+  PRIMARY KEY (id,class_table),
+  CONSTRAINT fk_activity_log_activity FOREIGN KEY (class_table,activity_id) REFERENCES "finfolk"."Activity"(class_table,id) ON DELETE CASCADE
+);
+
+-- finfolkdb.fn.user.user-manage/insert-user 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_user(
+  i_user_id UUID,
+  i_profile JSONB,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_activity JSONB;
+    o_activity_log JSONB;
+    o_audit JSONB;
+    o_audit_log JSONB;
+    o_rev JSONB;
+    o_user JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."Rev" (
+        "class_table",
+        "class_context",
+        "class_ref",
+        "current",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('User')::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (i_user_id)::UUID,
+        ("finfolk".as_jsonb(i_profile))::JSONB,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","class_ref","index","current","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."Audit" (
+        "class_table",
+        "class_context",
+        "class_ref",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('User')::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (i_user_id)::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","class_ref","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."Activity" ("class_table","class_ref","op_created","time_created") VALUES (
+        ('User')::"finfolk"."EnumClassType",
+        (i_user_id)::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","class_ref","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_activity;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."User" ("id","profile","activity_id","audit_id","rev_id") VALUES (
+        (i_user_id)::UUID,
+        ("finfolk".as_jsonb(i_profile))::JSONB,
+        ((o_activity ->> 'id')::UUID)::UUID,
+        ((o_audit ->> 'id')::UUID)::UUID,
+        ((o_rev ->> 'id')::UUID)::UUID
+      ) RETURNING
+        "id",
+        "profile",
+        "deleted",
+        "email_verified",
+        "deletion_state",
+        "invite_eligible",
+        "joined_at",
+        "time_updated",
+        "activity_id",
+        "audit_id",
+        "rev_id")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."AuditLog" (
+        "class_table",
+        "class_context",
+        "audit_id",
+        "entry",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('User')::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        ((o_audit ->> 'id')::UUID)::UUID,
+        "finfolk".as_jsonb((jsonb_build_object('status','created'))::JSONB),
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","audit_id","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit_log;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."ActivityLog" (
+        "class_table",
+        "activity_id",
+        "action",
+        "actor_id",
+        "detail",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('User')::"finfolk"."EnumClassType",
+        ((o_activity ->> 'id')::UUID)::UUID,
+        ('create')::"finfolk"."EnumActionType",
+        (i_user_id)::UUID,
+        "finfolk".as_jsonb((jsonb_build_object('status','created'))::JSONB),
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING
+        "id",
+        "activity_id",
+        "action",
+        "actor_id",
+        "op_created",
+        "time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_activity_log;
+    RETURN o_user;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.common.fn-system-util/auth-uid 
+CREATE OR REPLACE FUNCTION "finfolk".auth_uid() RETURNS UUID AS $$
+
+  SELECT (nullif(current_setting('finfolk.actor_id',true),''))::UUID;
+
+$$ LANGUAGE 'sql';
+
+-- finfolkdb.common.fn-system-util/as-iso-time 
+CREATE OR REPLACE FUNCTION "finfolk".as_iso_time(
+  i_time BIGINT
+) RETURNS TEXT AS $$
+
+  SELECT to_char(
+    "timezone"('UTC',to_timestamp((i_time)::NUMERIC / 1000000)),
+    'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
+  );
+
+$$ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE;
+
 -- finfolkdb.common.type-logbook-base/DiveSession 
 CREATE TABLE IF NOT EXISTS "finfolk"."DiveSession" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -945,6 +1373,2379 @@ CREATE TABLE IF NOT EXISTS "finfolk"."DiveSession" (
 );
 CREATE INDEX ON "finfolk"."DiveSession" ("owner_id");
 CREATE INDEX ON "finfolk"."DiveSession" ("site_id");
+
+-- finfolkdb.common.type-environment-base/DataSource 
+CREATE TABLE IF NOT EXISTS "finfolk"."DataSource" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "metadata" JSONB NOT NULL,
+  "enabled" BOOLEAN NOT NULL DEFAULT false,
+  UNIQUE ("key")
+);
+
+-- finfolkdb.common.type-environment-base/DepthDataset 
+CREATE TABLE IF NOT EXISTS "finfolk"."DepthDataset" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
+  "upstream_id" TEXT NOT NULL,
+  "version" TEXT NOT NULL,
+  "checksum" TEXT NOT NULL,
+  "status" "finfolk"."EnumDepthDatasetStatus" NOT NULL DEFAULT 'staged',
+  "metadata" JSONB NOT NULL,
+  UNIQUE ("key"),
+  UNIQUE ("source_id","upstream_id","version")
+);
+
+-- finfolkdb.common.type-environment-base/TideStation 
+CREATE TABLE IF NOT EXISTS "finfolk"."TideStation" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
+  "upstream_id" TEXT NOT NULL,
+  "metadata" JSONB NOT NULL,
+  "active" BOOLEAN NOT NULL DEFAULT true,
+  UNIQUE ("key"),
+  UNIQUE ("source_id","upstream_id")
+);
+
+-- finfolkdb.common.type-environment-base/EnvironmentTarget 
+CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentTarget" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "key" TEXT,
+  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
+  "product" "finfolk"."EnumEnvironmentTargetProduct" NOT NULL,
+  "configuration" JSONB NOT NULL,
+  "last_requested_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("key")
+);
+
+-- finfolkdb.common.type-environment-base/EnvironmentSnapshot 
+CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentSnapshot" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "target_id" UUID NOT NULL REFERENCES "finfolk"."EnvironmentTarget"("id") ON DELETE CASCADE,
+  "issued_at" BIGINT,
+  "retrieved_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "valid_from" BIGINT NOT NULL,
+  "valid_to" BIGINT NOT NULL,
+  "fresh_until" BIGINT NOT NULL,
+  "delete_after" BIGINT NOT NULL,
+  "checksum" TEXT NOT NULL,
+  "schema_version" INTEGER NOT NULL DEFAULT 1,
+  "payload" JSONB NOT NULL,
+  CONSTRAINT check_0 CHECK ("valid_to" > "valid_from"),
+  CONSTRAINT check_1 CHECK ("delete_after" >= "retrieved_at"),
+  CONSTRAINT check_2 CHECK ("schema_version" > 0)
+);
+
+-- finfolkdb.common.type-environment-base/EnvironmentJob 
+CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentJob" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "target_id" UUID NOT NULL REFERENCES "finfolk"."EnvironmentTarget"("id") ON DELETE CASCADE,
+  "next_attempt_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "lease_token" UUID,
+  "lease_until" BIGINT,
+  "attempts" INTEGER NOT NULL DEFAULT 0,
+  "last_success" BIGINT,
+  "error_code" TEXT,
+  UNIQUE ("target_id"),
+  CONSTRAINT check_0 CHECK ("attempts" >= 0),
+  CONSTRAINT check_1 CHECK (("lease_token" IS NULL AND "lease_until" IS NULL) OR ("lease_token" IS NOT NULL AND "lease_until" IS NOT NULL))
+);
+
+-- finfolkdb.common.type-site-base/SiteCatalog 
+CREATE TABLE IF NOT EXISTS "finfolk"."SiteCatalog" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "singleton" BOOLEAN NOT NULL DEFAULT true,
+  "revision" BIGINT NOT NULL DEFAULT 0,
+  "metadata" JSONB NOT NULL DEFAULT '{}',
+  UNIQUE ("singleton"),
+  CONSTRAINT singleton CHECK ("singleton"),
+  CONSTRAINT check_1 CHECK ("revision" >= 0)
+);
+
+-- finfolkdb.common.type-site-base/SiteProfile 
+CREATE TABLE IF NOT EXISTS "finfolk"."SiteProfile" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
+  "revision" BIGINT NOT NULL,
+  "waterbody" "finfolk"."EnumSiteProfileWaterbody" NOT NULL,
+  "access_mode" "finfolk"."EnumSiteProfileAccessMode" NOT NULL,
+  "status" "finfolk"."EnumSiteProfileStatus" NOT NULL,
+  "payload" JSONB NOT NULL,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("site_id")
+);
+
+-- finfolkdb.common.type-site-base/SiteImport 
+CREATE TABLE IF NOT EXISTS "finfolk"."SiteImport" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "preview" JSONB NOT NULL DEFAULT '{}',
+  "status" "finfolk"."EnumSiteImportStatus" NOT NULL DEFAULT 'draft',
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
+);
+
+-- finfolkdb.common.type-site-base/SiteRevision 
+CREATE TABLE IF NOT EXISTS "finfolk"."SiteRevision" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "site_id" UUID REFERENCES "finfolk"."Site"("id"),
+  "site_key" TEXT NOT NULL DEFAULT '',
+  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "import_id" UUID REFERENCES "finfolk"."SiteImport"("id") ON DELETE CASCADE,
+  "base_revision" BIGINT NOT NULL DEFAULT 0,
+  "version" BIGINT NOT NULL DEFAULT 1,
+  "status" "finfolk"."EnumSiteRevisionStatus" NOT NULL,
+  "payload" JSONB NOT NULL,
+  "reason" TEXT NOT NULL DEFAULT '',
+  "reviewed_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
+);
+
+-- finfolkdb.common.type-site-base/SiteAccessPoint 
+CREATE TABLE IF NOT EXISTS "finfolk"."SiteAccessPoint" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
+  "mode" "finfolk"."EnumSiteAccessPointMode" NOT NULL,
+  "payload" JSONB NOT NULL
+);
+
+-- finfolkdb.common.type-site-base/SiteDepthEvidence 
+CREATE TABLE IF NOT EXISTS "finfolk"."SiteDepthEvidence" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
+  "kind" "finfolk"."EnumSiteDepthEvidenceType" NOT NULL,
+  "payload" JSONB NOT NULL
+);
+
+-- finfolkdb.common.type-site-base/SiteDepthDataset 
+CREATE TABLE IF NOT EXISTS "finfolk"."SiteDepthDataset" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
+  "dataset_id" UUID NOT NULL REFERENCES "finfolk"."DepthDataset"("id"),
+  "relationship" "finfolk"."EnumSiteDepthDatasetRelationship" NOT NULL,
+  "evidence" JSONB NOT NULL,
+  UNIQUE ("revision_id","dataset_id")
+);
+
+-- finfolkdb.common.type-site-base/SiteTideStation 
+CREATE TABLE IF NOT EXISTS "finfolk"."SiteTideStation" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
+  "station_id" UUID NOT NULL REFERENCES "finfolk"."TideStation"("id"),
+  "evidence" JSONB NOT NULL,
+  UNIQUE ("revision_id")
+);
+
+-- finfolkdb.common.type-event/Event 
+CREATE TABLE IF NOT EXISTS "finfolk"."Event" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Event')::"finfolk"."EnumClassType") STORED,
+  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
+  "listing_id" UUID NOT NULL REFERENCES "finfolk"."DirectoryListing"("id"),
+  "status" "finfolk"."EnumEventStatus" NOT NULL DEFAULT 'draft',
+  "visibility" "finfolk"."EnumEventVisibility" NOT NULL DEFAULT 'public',
+  "starts_at" BIGINT NOT NULL,
+  "ends_at" BIGINT NOT NULL,
+  "timezone" TEXT NOT NULL,
+  "capacity" INTEGER,
+  "hidden" BOOLEAN NOT NULL DEFAULT false,
+  "detail" JSONB NOT NULL DEFAULT '{}',
+  "access_id" UUID NOT NULL,
+  "audit_id" UUID NOT NULL,
+  "rev_id" UUID NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("access_id"),
+  UNIQUE ("audit_id"),
+  UNIQUE ("rev_id"),
+  CONSTRAINT positive_capacity CHECK ("capacity" > 0),
+  CONSTRAINT ordered_times CHECK ("ends_at" > "starts_at"),
+  CONSTRAINT fk_event_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id),
+  CONSTRAINT fk_event_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id),
+  CONSTRAINT fk_event_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id)
+);
+CREATE INDEX ON "finfolk"."Event" ("listing_id");
+CREATE INDEX ON "finfolk"."Event" ("status");
+
+-- finfolkdb.common.type-event/EventRsvp 
+CREATE TABLE IF NOT EXISTS "finfolk"."EventRsvp" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "event_id" UUID NOT NULL REFERENCES "finfolk"."Event"("id"),
+  "member_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "status" "finfolk"."EnumEventRsvpStatus" NOT NULL,
+  "op_created" UUID,
+  "op_updated" UUID,
+  "time_created" BIGINT,
+  "time_updated" BIGINT,
+  UNIQUE ("event_id","member_id")
+);
+CREATE INDEX ON "finfolk"."EventRsvp" ("member_id");
+
+-- finfolkdb.common.type-event/EventInviteDelivery 
+CREATE TABLE IF NOT EXISTS "finfolk"."EventInviteDelivery" (
+  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  "event_id" UUID NOT NULL REFERENCES "finfolk"."Event"("id") ON DELETE CASCADE,
+  "invite_id" UUID NOT NULL,
+  "requester_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "state" TEXT NOT NULL DEFAULT 'queued',
+  "sealed_token" TEXT NOT NULL DEFAULT '',
+  "attempts" INTEGER NOT NULL DEFAULT 0,
+  "lease" UUID,
+  "lease_until" BIGINT NOT NULL DEFAULT 0,
+  "receipt" TEXT NOT NULL DEFAULT '',
+  "error" TEXT NOT NULL DEFAULT '',
+  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
+  UNIQUE ("invite_id"),
+  CONSTRAINT state_valid CHECK (("state" = 'queued') OR ("state" = 'sending') OR ("state" = 'sent') OR ("state" = 'failed') OR ("state" = 'cancelled')),
+  CONSTRAINT attempts_valid CHECK (("attempts" >= 0) AND ("attempts" <= 5))
+);
+
+-- finfolkdb.fn.user.user-account/ret-account 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_account(
+  i_user UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_user JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","profile" FROM "finfolk"."User"
+      WHERE "id" = i_user AND "deleted" = false
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
+    IF o_user is null  THEN
+      RAISE EXCEPTION 'Account unavailable';
+    END IF;
+    RETURN jsonb_build_object('id',i_user,'profile',o_user -> 'profile');
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/ensure-account 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ensure_account(
+  i_user UUID
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_user is null  THEN
+    RAISE EXCEPTION 'Authenticated identity required';
+  END IF;
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  DECLARE
+    v_exists BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."User"
+    WHERE "id" = i_user) INTO v_exists;
+    IF NOT v_exists THEN
+      PERFORM "finfolk_rpc".insert_user(
+        i_user,
+        jsonb_build_object('displayName','Diver'),
+        "finfolk".op_fn('account-create',i_user,('{}')::JSONB)
+      );
+    END IF;
+  END;
+  RETURN "finfolk_rpc".ret_account(i_user);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/sync-account-identity 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".sync_account_identity(
+  i_user UUID,
+  i_verified BOOLEAN
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ensure_account(i_user);
+  DECLARE
+    o_updated JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      UPDATE "finfolk"."User" SET "email_verified" = (coalesce(i_verified,false))::BOOLEAN WHERE "id" = i_user AND "deleted" = false
+      RETURNING
+        "id",
+        "profile",
+        "deleted",
+        "email_verified",
+        "deletion_state",
+        "invite_eligible",
+        "joined_at",
+        "time_updated",
+        "activity_id",
+        "audit_id",
+        "rev_id")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_updated;
+  END;
+  RETURN jsonb_build_object('ok',true);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/account-list 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".account_list(
+  i_value JSONB,
+  i_allowed JSONB,
+  i_limit INTEGER
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_item JSONB;
+    o_result JSONB;
+    o_value JSONB;
+    v_text TEXT;
+  BEGIN
+    o_value := coalesce(i_value,('[]')::JSONB);
+    o_result := ('[]')::JSONB;
+    o_item := null;
+    v_text := null;
+    IF (jsonb_typeof(o_value) != 'array') OR (jsonb_array_length(o_value) > i_limit) THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Invalid profile list';
+    END IF;
+    FOR o_item IN SELECT jsonb_array_elements(o_value) LOOP
+      IF jsonb_typeof(o_item) != 'string' THEN
+        RAISE EXCEPTION USING errcode = '22023',message = 'Invalid profile list value';
+      END IF;
+      v_text := (jsonb_build_array(o_item) ->> 0);
+      IF i_allowed IS NOT NULL AND NOT jsonb_exists(i_allowed,v_text) THEN
+        RAISE EXCEPTION USING errcode = '22023',message = 'Choose a listed profile value';
+      END IF;
+      IF NOT jsonb_exists(o_result,v_text) THEN
+        o_result := (o_result || jsonb_build_array(v_text));
+      END IF;
+    END LOOP;
+    RETURN o_result;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/account-link 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".account_link(
+  i_value TEXT,
+  i_platform TEXT
+) RETURNS TEXT AS $$
+
+  DECLARE
+    v_value TEXT;
+  BEGIN
+    v_value := coalesce(i_value,'');
+    IF v_value = '' THEN
+      RETURN '';
+    END IF;
+    IF (length(v_value) > 200) OR ((i_platform = 'instagram') AND NOT "regexp_like"(
+      v_value,
+      '^https://(www[.])?instagram[.]com/[A-Za-z0-9._]{1,30}/?$'
+    )) OR ((i_platform = 'tiktok') AND NOT "regexp_like"(
+      v_value,
+      '^https://(www[.])?tiktok[.]com/@[A-Za-z0-9._]{1,30}/?$'
+    )) THEN
+      RAISE EXCEPTION USING
+        errcode = '22023',
+        message = 'Enter a full provider profile URL'
+      ;
+    END IF;
+    RETURN "regexp_replace"(
+      "regexp_replace"(v_value,'^https://(www[.])?','https://www.'),
+      '/$',
+      ''
+    ) || '/';
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/account-portrait 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".account_portrait(
+  i_value TEXT
+) RETURNS TEXT AS $$
+BEGIN
+  IF i_value = '' THEN
+    RETURN '';
+  END IF;
+  IF i_value IS NULL OR (length(i_value) > 65558) OR NOT "regexp_like"(
+    i_value,
+    '^data:image/(webp|jpeg);base64,[A-Za-z0-9+/]+={0,2}$'
+  ) THEN
+    RAISE EXCEPTION USING
+      errcode = '22023',
+      message = 'Choose a valid JPEG or WebP portrait'
+    ;
+  END IF;
+  DECLARE
+    v_bytes BYTEA;
+    v_size INT;
+    v_valid BOOLEAN;
+  BEGIN
+    v_bytes := "decode"("split_part"(i_value,',',2),'base64');
+    v_size := "octet_length"(v_bytes);
+    v_valid := false;
+    IF (v_size >= 20) AND (v_size <= 49152) THEN
+      IF "regexp_like"(i_value,'^data:image/webp;') THEN
+        v_valid := (("encode"("substr"(v_bytes,1,4),'hex') = '52494646') AND ("encode"("substr"(v_bytes,9,4),'hex') = '57454250') AND jsonb_exists(
+          ('["56503820","5650384c","56503858"]')::JSONB,
+          "encode"("substr"(v_bytes,13,4),'hex')
+        ) AND (("get_byte"(v_bytes,4) + (256 * "get_byte"(v_bytes,5)) + (65536 * "get_byte"(v_bytes,6)) + (16777216 * "get_byte"(v_bytes,7))) = (v_size - 8)));
+      ELSE
+        v_valid := (("get_byte"(v_bytes,0) = 255) AND ("get_byte"(v_bytes,1) = 216) AND ("get_byte"(v_bytes,2) = 255) AND ("get_byte"(v_bytes,v_size - 2) = 255) AND ("get_byte"(v_bytes,v_size - 1) = 217));
+      END IF;
+    END IF;
+    IF NOT v_valid THEN
+      RAISE EXCEPTION USING
+        errcode = '22023',
+        message = 'Choose a valid JPEG or WebP portrait'
+      ;
+    END IF;
+    RETURN i_value;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/account-featured 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".account_featured(
+  i_user UUID,
+  i_kind TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_item JSONB;
+    o_values JSONB;
+    v_id UUID;
+    v_owned BOOLEAN;
+  BEGIN
+    o_values := "finfolk_rpc".account_list(i_values,null,12);
+    o_item := null;
+    v_id := null;
+    v_owned := false;
+    FOR o_item IN SELECT jsonb_array_elements(o_values) LOOP
+      v_id := (jsonb_build_array(o_item) ->> 0)::UUID;
+      IF i_kind = 'featuredLogs' THEN
+        DECLARE
+        o_session JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            SELECT "detail" FROM "finfolk"."DiveSession"
+            WHERE "id" = v_id AND "owner_id" = i_user
+            LIMIT 1)
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_session;
+          v_owned := coalesce(((o_session -> 'detail') ->> 'visibility') = 'public',false);
+      END;
+      ELSE
+        DECLARE
+        v_post BOOLEAN;
+      BEGIN
+        SELECT exists(SELECT 1 FROM "finfolk"."SocialPost"
+          WHERE "id" = v_id
+          AND "owner_id" = i_user
+          AND "status" = ('approved')::"finfolk"."EnumSocialPostStatus"
+          AND "public_consent" = true) INTO v_post;
+          v_owned := v_post;
+      END;
+      END IF;
+      IF NOT v_owned THEN
+        RAISE EXCEPTION USING
+          errcode = '22023',
+          message = 'Feature only your currently published items'
+        ;
+      END IF;
+    END LOOP;
+    RETURN o_values;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/save-account-preferences 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".save_account_preferences(
+  i_user UUID,
+  i_profile JSONB,
+  i_verified BOOLEAN
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  DECLARE
+    o_account JSONB;
+    o_beaches JSONB;
+    o_depth JSONB;
+    o_input JSONB;
+    o_old JSONB;
+    o_result JSONB;
+    o_sharing JSONB;
+    o_user JSONB;
+    v_bio TEXT;
+    v_key TEXT;
+    v_name TEXT;
+  BEGIN
+    o_account := "finfolk_rpc".ret_account(i_user);
+    o_old := (o_account -> 'profile');
+    o_input := null;
+    o_sharing := null;
+    o_result := null;
+    v_key := null;
+    v_name := null;
+    v_bio := null;
+    o_depth := null;
+    o_beaches := null;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "profile",
+        "deleted",
+        "email_verified",
+        "deletion_state",
+        "invite_eligible",
+        "joined_at",
+        "time_updated",
+        "activity_id",
+        "audit_id",
+        "rev_id"
+      FROM "finfolk"."User"
+      WHERE "id" = i_user
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
+    IF i_profile IS NULL OR (jsonb_typeof(i_profile) != 'object') THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Invalid profile';
+    END IF;
+    FOR v_key IN SELECT jsonb_object_keys(i_profile) LOOP
+      IF NOT jsonb_exists(
+        ('["displayName","bio","instagram","tiktok","open","sharing","beaches","activities","availability","experience","depthGoal","portrait","featuredLogs","featuredPosts"]')::JSONB,
+        v_key
+      ) THEN
+        RAISE EXCEPTION USING errcode = '22023',message = 'Unknown profile field';
+      END IF;
+    END LOOP;
+    o_input := (o_old || i_profile);
+    v_name := btrim(coalesce(o_input ->> 'displayName','Diver'));
+    IF v_name = '' THEN
+      v_name := 'Diver';
+    END IF;
+    v_bio := btrim(coalesce(o_input ->> 'bio',''));
+    IF (length(v_name) > 80) OR (length(v_bio) > 500) OR (jsonb_exists(o_input,'open') AND (jsonb_typeof(o_input -> 'open') != 'boolean')) THEN
+      RAISE EXCEPTION USING
+        errcode = '22023',
+        message = 'Invalid profile text or visibility'
+      ;
+    END IF;
+    IF ((o_input -> 'open') = ('true')::JSONB) AND NOT coalesce(i_verified,false) THEN
+      RAISE EXCEPTION USING
+        errcode = '42501',
+        message = 'Verify your email before appearing in discovery'
+      ;
+    END IF;
+    o_sharing := coalesce(o_input -> 'sharing',('{}')::JSONB);
+    IF jsonb_typeof(o_sharing) != 'object' THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Invalid sharing preferences';
+    END IF;
+    o_depth := coalesce(o_input -> 'depthGoal',('null')::JSONB);
+    IF (o_depth != ('null')::JSONB) AND ((jsonb_typeof(o_depth) != 'number') OR (((o_depth)::TEXT)::NUMERIC <= 0) OR (((o_depth)::TEXT)::NUMERIC > 100)) THEN
+      RAISE EXCEPTION USING
+        errcode = '22023',
+        message = 'Choose a depth between 0 and 100 metres'
+      ;
+    END IF;
+    o_beaches := "finfolk_rpc".account_list(o_input -> 'beaches',null,20);
+    DECLARE
+      o_site JSONB;
+      v_site UUID;
+    BEGIN
+      o_site := null;
+      v_site := null;
+      FOR o_site IN SELECT jsonb_array_elements(o_beaches) LOOP
+        v_site := (jsonb_build_array(o_site) ->> 0)::UUID;
+        DECLARE
+          v_exists BOOLEAN;
+        BEGIN
+          SELECT exists(SELECT 1 FROM "finfolk"."Site"
+          WHERE "id" = v_site) INTO v_exists;
+          IF NOT v_exists THEN
+            RAISE EXCEPTION USING errcode = '22023',message = 'Choose an existing dive site';
+          END IF;
+        END;
+      END LOOP;
+    END;
+    IF jsonb_exists(o_input,'experience') AND NOT jsonb_exists(
+      ('["","new","comfortable","experienced"]')::JSONB,
+      o_input ->> 'experience'
+    ) THEN
+      RAISE EXCEPTION USING
+        errcode = '22023',
+        message = 'Choose a listed experience level'
+      ;
+    END IF;
+    o_result := jsonb_build_object('displayName',v_name,'bio',v_bio,'instagram',"finfolk_rpc".account_link(o_input ->> 'instagram','instagram'),'tiktok',"finfolk_rpc".account_link(o_input ->> 'tiktok','tiktok'),'open',coalesce((o_input -> 'open') = ('true')::JSONB,false),'sharing',jsonb_build_object(
+      'visits',
+      coalesce((o_sharing -> 'visits') = ('true')::JSONB,false),
+      'months',
+      coalesce((o_sharing -> 'months') = ('true')::JSONB,false),
+      'dives',
+      coalesce((o_sharing -> 'dives') = ('true')::JSONB,false),
+      'time',
+      coalesce((o_sharing -> 'time') = ('true')::JSONB,false),
+      'depth',
+      coalesce((o_sharing -> 'depth') = ('true')::JSONB,false)
+    ),'beaches',o_beaches,'activities',"finfolk_rpc".account_list(
+      o_input -> 'activities',
+      ('["freediving","ocean-swimming","spearfishing"]')::JSONB,
+      3
+    ),'availability',"finfolk_rpc".account_list(
+      o_input -> 'availability',
+      ('["weekday mornings","weekday afternoons","weekend mornings","weekend afternoons"]')::JSONB,
+      4
+    ),'experience',coalesce(o_input ->> 'experience',''),'depthGoal',o_depth);
+    o_result := ((o_old - 'displayName' - 'bio' - 'instagram' - 'tiktok' - 'open' - 'sharing' - 'beaches' - 'activities' - 'availability' - 'experience' - 'depthGoal') || o_result);
+    IF jsonb_exists(i_profile,'portrait') THEN
+      o_result := (o_result || jsonb_build_object(
+        'portrait',
+        "finfolk_rpc".account_portrait(i_profile ->> 'portrait')
+      ));
+    END IF;
+    IF jsonb_exists(i_profile,'featuredLogs') THEN
+      o_result := (o_result || jsonb_build_object(
+        'featuredLogs',
+        "finfolk_rpc".account_featured(i_user,'featuredLogs',i_profile -> 'featuredLogs')
+      ));
+    END IF;
+    IF jsonb_exists(i_profile,'featuredPosts') THEN
+      o_result := (o_result || jsonb_build_object(
+        'featuredPosts',
+        "finfolk_rpc".account_featured(i_user,'featuredPosts',i_profile -> 'featuredPosts')
+      ));
+    END IF;
+    DECLARE
+      o_history JSONB;
+      o_log JSONB;
+      o_op JSONB;
+      o_rev JSONB;
+      o_updated JSONB;
+    BEGIN
+      o_op := "finfolk".op_fn('account-preferences',i_user,('{}')::JSONB);
+      WITH j_ret AS (  
+        UPDATE "finfolk"."User" SET
+          "profile" = (o_result)::JSONB,
+          "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+        WHERE "id" = i_user AND "deleted" = false
+        RETURNING
+          "id",
+          "profile",
+          "deleted",
+          "email_verified",
+          "deletion_state",
+          "invite_eligible",
+          "joined_at",
+          "time_updated",
+          "activity_id",
+          "audit_id",
+          "rev_id")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_updated;
+      WITH j_ret AS (  
+        UPDATE "finfolk"."Rev" SET
+          "index" = (1 + "index")::INTEGER,
+          "current" = (o_result)::JSONB
+        WHERE "id" = (o_user ->> 'rev_id')::UUID
+        RETURNING "id","class_ref","index","current","op_created","time_created")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_rev;
+      WITH j_ret AS (  
+        INSERT INTO "finfolk"."RevLog" (
+          "class_table",
+          "class_context",
+          "rev_id",
+          "version",
+          "deltas",
+          "op_created",
+          "time_created"
+        ) VALUES (
+          ('User')::"finfolk"."EnumClassType",
+          ('Global')::"finfolk"."EnumClassType",
+          (o_user ->> 'rev_id')::UUID,
+          (((o_rev -> 0) ->> 'index')::INT)::INTEGER,
+          (o_result)::JSONB,
+          (o_op ->> 'id')::UUID,
+          (o_op ->> 'time')::BIGINT
+        ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_history;
+      WITH j_ret AS (  
+        INSERT INTO "finfolk"."AuditLog" (
+          "class_table",
+          "class_context",
+          "audit_id",
+          "entry",
+          "op_created",
+          "time_created"
+        ) VALUES (
+          ('User')::"finfolk"."EnumClassType",
+          ('Global')::"finfolk"."EnumClassType",
+          (o_user ->> 'audit_id')::UUID,
+          "finfolk".as_jsonb((jsonb_build_object('event','preferences'))::JSONB),
+          (o_op ->> 'id')::UUID,
+          (o_op ->> 'time')::BIGINT
+        ) RETURNING "id","audit_id","op_created","time_created")
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
+      RETURN o_result;
+    END;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/lock-account-pair 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".lock_account_pair(
+  i_user UUID,
+  i_target UUID
+) RETURNS BOOLEAN AS $$
+BEGIN
+  IF i_target IS NULL OR (i_user = i_target) THEN
+    RAISE EXCEPTION USING errcode = '22023',message = 'Choose another diver';
+  END IF;
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"(
+    'account-pair:' || (least(i_user,i_target))::TEXT || ':' || (greatest(i_user,i_target))::TEXT,
+    0
+  ));
+  EXECUTE 'SELECT id FROM finfolk."User" WHERE id=$1 FOR SHARE' USING least(i_user,i_target);
+  EXECUTE 'SELECT id FROM finfolk."User" WHERE id=$1 FOR SHARE' USING greatest(i_user,i_target);
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  IF NOT "finfolk".is_user_active(i_target) THEN
+    RAISE EXCEPTION USING errcode = 'P0002',message = 'Profile unavailable';
+  END IF;
+  RETURN true;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/set-account-connection 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".set_account_connection(
+  i_user UUID,
+  i_target UUID,
+  i_mode TEXT,
+  i_verified BOOLEAN
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".lock_account_pair(i_user,i_target);
+  IF NOT coalesce(i_verified,false) THEN
+    RAISE EXCEPTION USING
+      errcode = '42501',
+      message = 'Verify your email before connecting'
+    ;
+  END IF;
+  IF "finfolk".is_user_blocked(i_user,i_target) THEN
+    RAISE EXCEPTION USING errcode = 'P0002',message = 'Profile unavailable';
+  END IF;
+  DECLARE
+    o_existing JSONB;
+    v_first UUID;
+    v_second UUID;
+  BEGIN
+    v_first := least(i_user,i_target);
+    v_second := greatest(i_user,i_target);
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "user_id",
+        "target_id",
+        "requested_by_id",
+        "status",
+        "time_updated"
+      FROM "finfolk"."UserConnection"
+      WHERE "user_id" = v_first AND "target_id" = v_second
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_existing;
+    IF i_mode = 'request' THEN
+      IF (o_existing ->> 'status') = 'declined' THEN
+        RAISE EXCEPTION USING errcode = '42501',message = 'This connection is unavailable';
+      END IF;
+      IF o_existing is null  THEN
+        DECLARE
+      o_created JSONB;
+    BEGIN
+      WITH j_ret AS (  
+            INSERT INTO "finfolk"."UserConnection" ("user_id","target_id","requested_by_id","status") VALUES (
+              (v_first)::UUID,
+              (v_second)::UUID,
+              (i_user)::UUID,
+              ('pending')::"finfolk"."EnumUserConnectionStatus"
+            ) RETURNING
+              "id",
+              "user_id",
+              "target_id",
+              "requested_by_id",
+              "status",
+              "time_updated")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_created;
+    END;
+      ELSE
+        IF (o_existing ->> 'status') = 'removed' THEN
+          DECLARE
+      o_updated JSONB;
+    BEGIN
+      WITH j_ret AS (  
+              UPDATE "finfolk"."UserConnection" SET
+                "requested_by_id" = (i_user)::UUID,
+                "status" = ('pending')::"finfolk"."EnumUserConnectionStatus",
+                "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+              WHERE "id" = (o_existing ->> 'id')::UUID
+              RETURNING
+                "id",
+                "user_id",
+                "target_id",
+                "requested_by_id",
+                "status",
+                "time_updated")
+            SELECT jsonb_agg(j_ret) FROM j_ret INTO o_updated;
+    END;
+        END IF;
+      END IF;
+    ELSIF (i_mode = 'accept') OR (i_mode = 'decline') THEN
+      IF o_existing IS NULL OR ((o_existing ->> 'status') != 'pending') OR ((o_existing ->> 'requested_by_id')::UUID = i_user) THEN
+        RAISE EXCEPTION USING errcode = '42501',message = 'Only the recipient can respond';
+      END IF;
+      DECLARE
+      o_updated JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          UPDATE "finfolk"."UserConnection" SET
+            "status" = (CASE WHEN i_mode = 'accept' THEN 'accepted'
+          WHEN true THEN 'declined'
+          END)::"finfolk"."EnumUserConnectionStatus",
+            "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+          WHERE "id" = (o_existing ->> 'id')::UUID
+          RETURNING
+            "id",
+            "user_id",
+            "target_id",
+            "requested_by_id",
+            "status",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_updated;
+    END;
+    ELSIF i_mode = 'remove' THEN
+      DECLARE
+      o_removed JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          UPDATE "finfolk"."UserConnection" SET
+            "status" = ('removed')::"finfolk"."EnumUserConnectionStatus",
+            "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+          WHERE "user_id" = v_first AND "target_id" = v_second
+          RETURNING
+            "id",
+            "user_id",
+            "target_id",
+            "requested_by_id",
+            "status",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_removed;
+    END;
+    ELSE
+      RAISE EXCEPTION USING errcode = '22023',message = 'Unknown connection action';
+    END IF;
+    RETURN jsonb_build_object('ok',true);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/set-account-block 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".set_account_block(
+  i_user UUID,
+  i_target UUID,
+  i_block BOOLEAN
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".lock_account_pair(i_user,i_target);
+  DECLARE
+    v_existing BOOLEAN;
+    v_first UUID;
+    v_second UUID;
+  BEGIN
+    v_first := least(i_user,i_target);
+    v_second := greatest(i_user,i_target);
+    SELECT exists(SELECT 1 FROM "finfolk"."UserBlock"
+    WHERE "owner_id" = i_user AND "target_id" = i_target) INTO v_existing;
+    IF i_block THEN
+      IF NOT v_existing THEN
+        DECLARE
+      o_created JSONB;
+    BEGIN
+      WITH j_ret AS (INSERT INTO "finfolk"."UserBlock" ("owner_id","target_id") VALUES ((i_user)::UUID,(i_target)::UUID) RETURNING "id","owner_id","target_id")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_created;
+    END;
+      END IF;
+      DECLARE
+      o_removed JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          UPDATE "finfolk"."UserConnection" SET
+            "status" = ('removed')::"finfolk"."EnumUserConnectionStatus",
+            "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+          WHERE "user_id" = v_first AND "target_id" = v_second
+          RETURNING
+            "id",
+            "user_id",
+            "target_id",
+            "requested_by_id",
+            "status",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_removed;
+    END;
+    ELSE
+      DECLARE
+      o_removed JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          DELETE FROM "finfolk"."UserBlock" WHERE "owner_id" = i_user AND "target_id" = i_target
+          RETURNING "id","owner_id","target_id")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_removed;
+    END;
+    END IF;
+    RETURN jsonb_build_object('ok',true);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/ret-account-connections 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_account_connections(
+  i_user UUID
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_rel JSONB;
+    o_relations JSONB;
+    o_result JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "user_id",
+        "target_id",
+        "requested_by_id",
+        "status",
+        "time_updated"
+      FROM "finfolk"."UserConnection"
+      WHERE ("user_id" = i_user AND "status" IN ('pending','accepted'))
+      OR ("target_id" = i_user AND "status" IN ('pending','accepted'))
+      ORDER BY "time_updated","id" DESC
+      LIMIT 50)
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_relations;
+    o_result := ('[]')::JSONB;
+    o_rel := null;
+    FOR o_rel IN SELECT jsonb_array_elements(coalesce(o_relations,('[]')::JSONB)) LOOP
+      DECLARE
+        o_target JSONB;
+        v_target UUID;
+      BEGIN
+        v_target := CASE WHEN (o_rel ->> 'user_id')::UUID = i_user THEN (o_rel ->> 'target_id')::UUID
+        WHEN true THEN (o_rel ->> 'user_id')::UUID
+        END;
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "profile",
+            "deleted",
+            "email_verified",
+            "deletion_state",
+            "invite_eligible",
+            "joined_at",
+            "time_updated",
+            "activity_id",
+            "audit_id",
+            "rev_id"
+          FROM "finfolk"."User"
+          WHERE "id" = v_target AND "deleted" = false
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_target;
+        IF o_target IS NOT NULL AND NOT "finfolk".is_user_blocked(i_user,v_target) THEN
+          o_result := (o_result || jsonb_build_array(jsonb_build_object('id',v_target,'name',coalesce((o_target -> 'profile') ->> 'displayName','Diver'),'status',o_rel ->> 'status','requested_by',o_rel ->> 'requested_by_id','instagram',CASE WHEN (o_rel ->> 'status') = 'accepted' THEN (o_target -> 'profile') ->> 'instagram'
+        WHEN true THEN ''
+        END,'tiktok',CASE WHEN (o_rel ->> 'status') = 'accepted' THEN (o_target -> 'profile') ->> 'tiktok'
+        WHEN true THEN ''
+        END)));
+        END IF;
+      END;
+    END LOOP;
+    RETURN o_result;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/ret-account-blocks 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_account_blocks(
+  i_user UUID
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_block JSONB;
+    o_blocks JSONB;
+    o_result JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","owner_id","target_id" FROM "finfolk"."UserBlock"
+      WHERE "owner_id" = i_user
+      ORDER BY "id")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_blocks;
+    o_result := ('[]')::JSONB;
+    o_block := null;
+    FOR o_block IN SELECT jsonb_array_elements(coalesce(o_blocks,('[]')::JSONB)) LOOP
+      DECLARE
+        o_target JSONB;
+        v_target UUID;
+      BEGIN
+        v_target := (o_block ->> 'target_id')::UUID;
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "profile",
+            "deleted",
+            "email_verified",
+            "deletion_state",
+            "invite_eligible",
+            "joined_at",
+            "time_updated",
+            "activity_id",
+            "audit_id",
+            "rev_id"
+          FROM "finfolk"."User"
+          WHERE "id" = v_target AND "deleted" = false
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_target;
+        IF o_target is not null  THEN
+          o_result := (o_result || jsonb_build_array(jsonb_build_object(
+            'id',
+            v_target,
+            'name',
+            coalesce((o_target -> 'profile') ->> 'displayName','Diver')
+          )));
+        END IF;
+      END;
+    END LOOP;
+    RETURN o_result;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/ret-account-status 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_account_status(
+  i_user UUID
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_posts JSONB;
+    v_admin BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."UserRole"
+    WHERE "user_id" = i_user AND "role" = 'admin') INTO v_admin;
+    WITH j_ret AS (  
+      SELECT "id","key","enabled" FROM "finfolk"."ApplicationFeature"
+      WHERE "key" = 'community-posts'
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_posts;
+    RETURN jsonb_build_object(
+      'admin',
+      v_admin,
+      'enabled',
+      coalesce((o_posts ->> 'enabled')::BOOLEAN,false),
+      'tag',
+      'finfolk.com.au',
+      'pilotBeaches',
+      ('[]')::JSONB
+    );
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/ret-account-sites 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_account_sites() RETURNS JSONB AS $$
+
+  DECLARE
+    o_sites JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","name","timezone","area_name","state" FROM "finfolk"."Site"
+      ORDER BY "name","id")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_sites;
+    RETURN jsonb_build_object('beaches',coalesce(o_sites,('[]')::JSONB));
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/erase-account 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".erase_account(
+  i_user UUID
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  DECLARE
+    o_found JSONB;
+    o_op JSONB;
+    o_ref JSONB;
+    o_refs JSONB;
+    o_stream JSONB;
+    o_streams JSONB;
+    o_user JSONB;
+    v_present BOOLEAN;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "profile",
+        "deleted",
+        "email_verified",
+        "deletion_state",
+        "invite_eligible",
+        "joined_at",
+        "time_updated",
+        "activity_id",
+        "audit_id",
+        "rev_id"
+      FROM "finfolk"."User"
+      WHERE "id" = i_user
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
+    o_op := null;
+    o_refs := null;
+    o_ref := null;
+    o_streams := ('[]')::JSONB;
+    o_found := null;
+    o_stream := null;
+    v_present := false;
+    IF o_user is null  THEN
+      PERFORM "finfolk_rpc".ensure_account(i_user);
+      DECLARE
+      o_provisioned JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          SELECT
+            "id",
+            "profile",
+            "deleted",
+            "email_verified",
+            "deletion_state",
+            "invite_eligible",
+            "joined_at",
+            "time_updated",
+            "activity_id",
+            "audit_id",
+            "rev_id"
+          FROM "finfolk"."User"
+          WHERE "id" = i_user
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_provisioned;
+        o_user := o_provisioned;
+    END;
+    END IF;
+    IF jsonb_exists(
+      ('["pending_auth","complete"]')::JSONB,
+      o_user ->> 'deletion_state'
+    ) THEN
+      RETURN jsonb_build_object('ok',true);
+    END IF;
+    EXECUTE 'SELECT id FROM finfolk."User" WHERE id=$1 FOR UPDATE' USING i_user;
+    o_op := "finfolk".op_fn('account-delete',i_user,('{}')::JSONB);
+    EXECUTE 'SELECT coalesce(jsonb_agg(jsonb_build_object(''table'',c.relname,''column'',a.attname,''cascade'',k.confdeltype=''c'',''nullable'',NOT a.attnotnull) ORDER BY c.relname,a.attname),''[]''::jsonb) FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=k.conkey[1] WHERE k.contype=''f'' AND k.confrelid=''finfolk."User"''::regclass AND n.nspname=''finfolk'' AND cardinality(k.conkey)=1' INTO o_refs;
+    FOR o_ref IN SELECT jsonb_array_elements(o_refs) LOOP
+      IF (o_ref -> 'cascade') = ('true')::JSONB THEN
+        EXECUTE "format"(
+          'SELECT coalesce(jsonb_agg(jsonb_build_object(''rev'',to_jsonb(t)->>''rev_id'',''audit'',to_jsonb(t)->>''audit_id'',''activity'',to_jsonb(t)->>''activity_id'')),''[]''::jsonb) FROM finfolk.%I t WHERE %I=$1',
+          o_ref ->> 'table',
+          o_ref ->> 'column'
+        ) INTO o_found USING i_user;
+        o_streams := (o_streams || o_found);
+      END IF;
+    END LOOP;
+    DECLARE
+      o_marked JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        UPDATE "finfolk"."User" SET
+          "profile" = ('{}')::JSONB,
+          "deleted" = (true)::BOOLEAN,
+          "email_verified" = (false)::BOOLEAN,
+          "deletion_state" = ('pending_auth')::TEXT,
+          "invite_eligible" = (false)::BOOLEAN,
+          "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+        WHERE "id" = i_user
+        RETURNING
+          "id",
+          "profile",
+          "deleted",
+          "email_verified",
+          "deletion_state",
+          "invite_eligible",
+          "joined_at",
+          "time_updated",
+          "activity_id",
+          "audit_id",
+          "rev_id")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_marked;
+    END;
+    EXECUTE 'SELECT e.id FROM finfolk."Event" e WHERE e.id IN(SELECT d.event_id FROM finfolk."EventInviteDelivery" d WHERE d.requester_id=$1) OR e.listing_id IN(SELECT p.id FROM finfolk."DirectoryListing" p JOIN finfolk."AccessRole" a ON a.class_table=''DirectoryListing'' AND a.class_context=''Global'' AND a.access_id=p.access_id WHERE a.member_id=$1 AND a.level=''owner'' AND a.is_active) ORDER BY e.id FOR UPDATE' USING i_user;
+    EXECUTE 'SELECT i.id FROM finfolk."AccessInviteEmail" i WHERE i.class_table=''Event'' AND i.class_context=''Global'' AND i.access_id IN(SELECT e.access_id FROM finfolk."Event" e WHERE e.id IN(SELECT d.event_id FROM finfolk."EventInviteDelivery" d WHERE d.requester_id=$1) OR e.listing_id IN(SELECT p.id FROM finfolk."DirectoryListing" p JOIN finfolk."AccessRole" a ON a.class_table=''DirectoryListing'' AND a.class_context=''Global'' AND a.access_id=p.access_id WHERE a.member_id=$1 AND a.level=''owner'' AND a.is_active)) ORDER BY i.access_id,i.id FOR UPDATE' USING i_user;
+    EXECUTE 'UPDATE finfolk."EventInviteDelivery" SET state=''cancelled'',sealed_token='''',lease=NULL,lease_until=0,error='''' WHERE state<>''sent'' AND event_id IN(SELECT e.id FROM finfolk."Event" e JOIN finfolk."DirectoryListing" p ON p.id=e.listing_id JOIN finfolk."AccessRole" a ON a.class_table=''DirectoryListing'' AND a.class_context=''Global'' AND a.access_id=p.access_id WHERE a.member_id=$1 AND a.level=''owner'' AND a.is_active)' USING i_user;
+    EXECUTE 'DELETE FROM finfolk."SiteRevision" WHERE owner_id=$1 AND status<>''published''' USING i_user;
+    EXECUTE 'DELETE FROM finfolk."SiteImport" WHERE owner_id=$1 AND status<>''published''' USING i_user;
+    FOR o_ref IN SELECT jsonb_array_elements(o_refs) LOOP
+      IF (o_ref -> 'cascade') = ('true')::JSONB THEN
+        EXECUTE "format"(
+          'DELETE FROM finfolk.%I WHERE %I=$1',
+          o_ref ->> 'table',
+          o_ref ->> 'column'
+        ) USING i_user;
+      ELSIF (o_ref -> 'nullable') = ('true')::JSONB THEN
+        EXECUTE "format"(
+          'UPDATE finfolk.%I SET %I=NULL WHERE %I=$1',
+          o_ref ->> 'table',
+          o_ref ->> 'column',
+          o_ref ->> 'column'
+        ) USING i_user;
+      ELSE
+        EXECUTE "format"(
+          'SELECT EXISTS(SELECT 1 FROM finfolk.%I WHERE %I=$1)',
+          o_ref ->> 'table',
+          o_ref ->> 'column'
+        ) INTO v_present USING i_user;
+        IF v_present THEN
+          RAISE EXCEPTION 'Account deletion has an unsupported required reference';
+        END IF;
+      END IF;
+    END LOOP;
+    FOR o_stream IN SELECT jsonb_array_elements(o_streams) LOOP
+      IF o_stream ->> 'rev' is not null  THEN
+        DECLARE
+        o_deleted JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            DELETE FROM "finfolk"."Rev" WHERE "id" = (o_stream ->> 'rev')::UUID
+            RETURNING "id","class_ref","index","current","op_created","time_created")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_deleted;
+      END;
+      END IF;
+      IF o_stream ->> 'audit' is not null  THEN
+        DECLARE
+        o_deleted JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            DELETE FROM "finfolk"."Audit" WHERE "id" = (o_stream ->> 'audit')::UUID
+            RETURNING "id","class_ref","op_created","time_created")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_deleted;
+      END;
+      END IF;
+      IF o_stream ->> 'activity' is not null  THEN
+        DECLARE
+        o_deleted JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            DELETE FROM "finfolk"."Activity" WHERE "id" = (o_stream ->> 'activity')::UUID
+            RETURNING "id","class_ref","op_created","time_created")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_deleted;
+      END;
+      END IF;
+    END LOOP;
+    DECLARE
+      o_activity JSONB;
+      o_audit JSONB;
+      o_ops JSONB;
+      o_rev JSONB;
+      o_revisions JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        UPDATE "finfolk"."Rev" SET "current" = ('{}')::JSONB WHERE "id" = (o_user ->> 'rev_id')::UUID
+        RETURNING "id","class_ref","index","current","op_created","time_created")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_rev;
+      WITH j_ret AS (  
+        UPDATE "finfolk"."RevLog" SET "deltas" = ('{}')::JSONB WHERE "rev_id" = (o_user ->> 'rev_id')::UUID
+        RETURNING "id","rev_id","version","deltas","op_created","time_created")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_revisions;
+      WITH j_ret AS (  
+        UPDATE "finfolk"."AuditLog" SET
+          "entry" = "finfolk".as_jsonb((jsonb_build_object('event','account-deleted'))::JSONB)
+        WHERE "audit_id" = (o_user ->> 'audit_id')::UUID
+        RETURNING "id","audit_id","op_created","time_created")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_audit;
+      WITH j_ret AS (  
+        UPDATE "finfolk"."ActivityLog" SET "detail" = "finfolk".as_jsonb(('{}')::JSONB) WHERE "activity_id" = (o_user ->> 'activity_id')::UUID
+        RETURNING
+          "id",
+          "activity_id",
+          "action",
+          "actor_id",
+          "op_created",
+          "time_created")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_activity;
+      WITH j_ret AS (  
+        UPDATE "finfolk"."Op" SET "data" = ('{}')::JSONB,"user_id" = (null)::UUID WHERE "user_id" = i_user
+        RETURNING "id","time","tag","data","user_id")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_ops;
+    END;
+    RETURN jsonb_build_object('ok',true);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/complete-account-deletion 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_account_deletion(
+  i_user UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_user JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "profile",
+        "deleted",
+        "email_verified",
+        "deletion_state",
+        "invite_eligible",
+        "joined_at",
+        "time_updated",
+        "activity_id",
+        "audit_id",
+        "rev_id"
+      FROM "finfolk"."User"
+      WHERE "id" = i_user AND "deleted" = true
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
+    IF o_user is null  THEN
+      RAISE EXCEPTION 'Account deletion was not requested';
+    END IF;
+    DECLARE
+      o_complete JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        UPDATE "finfolk"."User" SET "deletion_state" = ('complete')::TEXT WHERE "id" = i_user AND "deleted" = true
+        RETURNING
+          "id",
+          "profile",
+          "deleted",
+          "email_verified",
+          "deletion_state",
+          "invite_eligible",
+          "joined_at",
+          "time_updated",
+          "activity_id",
+          "audit_id",
+          "rev_id")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_complete;
+    END;
+    RETURN jsonb_build_object('ok',true);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/pending-account-deletions 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".pending_account_deletions() RETURNS JSONB AS $$
+
+  DECLARE
+    o_users JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id" FROM "finfolk"."User"
+      WHERE "deleted" = true AND "deletion_state" = 'pending_auth'
+      ORDER BY "time_updated","id" ASC
+      LIMIT 100)
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_users;
+    RETURN coalesce(o_users,('[]')::JSONB);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-account/record-account-deletion-failure 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".record_account_deletion_failure(
+  i_user UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_retry JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      UPDATE "finfolk"."User" SET
+        "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
+      WHERE "id" = i_user
+      AND "deleted" = true
+      AND "deletion_state" = 'pending_auth'
+      RETURNING
+        "id",
+        "profile",
+        "deleted",
+        "email_verified",
+        "deletion_state",
+        "invite_eligible",
+        "joined_at",
+        "time_updated",
+        "activity_id",
+        "audit_id",
+        "rev_id")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_retry;
+    RETURN jsonb_build_object('ok',true);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-revision/site-note-version 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".site_note_version(
+  i_rev UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_rev JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","class_ref","index","current","op_created","time_created" FROM "finfolk"."Rev"
+      WHERE "class_table" = ('SiteNote')::"finfolk"."EnumClassType"
+      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
+      AND "id" = i_rev
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+    IF o_rev is null  THEN
+      RETURN null;
+    END IF;
+    RETURN jsonb_build_object('revision',o_rev -> 'index');
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-revision/insert-site-note 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_site_note(
+  i_id UUID,
+  i_site UUID,
+  i_author UUID,
+  i_topic TEXT,
+  i_body TEXT,
+  i_observed DATE,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_current JSONB;
+    o_log JSONB;
+    o_note JSONB;
+    o_rev JSONB;
+  BEGIN
+    o_current := jsonb_build_object(
+      'site_id',
+      i_site,
+      'author_id',
+      i_author,
+      'topic',
+      i_topic,
+      'body',
+      i_body,
+      'observed_on',
+      i_observed,
+      'withdrawn',
+      false,
+      'hidden',
+      false
+    );
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."Rev" (
+        "class_table",
+        "class_context",
+        "class_ref",
+        "index",
+        "current",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('SiteNote')::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (i_id)::UUID,
+        (1)::INTEGER,
+        (o_current)::JSONB,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","class_ref","index","current","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."RevLog" (
+        "class_table",
+        "class_context",
+        "rev_id",
+        "version",
+        "deltas",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('SiteNote')::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        ((o_rev ->> 'id')::UUID)::UUID,
+        (1)::INTEGER,
+        (o_current)::JSONB,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."SiteNote" (
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      ) VALUES (
+        (i_id)::UUID,
+        (i_site)::UUID,
+        (i_author)::UUID,
+        (i_topic)::"finfolk"."EnumSiteNoteTopic",
+        "finfolk".as_bounded_text((i_body)::TEXT,10,1000),
+        "finfolk".as_finite_date((i_observed)::DATE),
+        ((o_rev ->> 'id')::UUID)::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+    RETURN o_note || "finfolk_rpc".site_note_version((o_rev ->> 'id')::UUID);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-revision/record-site-note-revision 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".record_site_note_revision(
+  i_note UUID,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_current JSONB;
+    o_log JSONB;
+    o_note JSONB;
+    o_rev JSONB;
+    o_saved JSONB;
+    v_rev UUID;
+    v_version INTEGER;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SiteNote"
+      WHERE "id" = i_note
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+    v_rev := (o_note ->> 'rev_id')::UUID;
+    WITH j_ret AS (  
+      SELECT "id","class_ref","index","current","op_created","time_created" FROM "finfolk"."Rev"
+      WHERE "class_table" = ('SiteNote')::"finfolk"."EnumClassType"
+      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
+      AND "id" = v_rev
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+    WITH j_ret AS (  
+      SELECT
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden"
+      FROM "finfolk"."SiteNote"
+      WHERE "id" = i_note
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_current;
+    v_version := ((o_rev ->> 'index')::INTEGER + 1);
+    WITH j_ret AS (  
+      UPDATE "finfolk"."Rev" SET
+        "index" = (v_version)::INTEGER,
+        "current" = (o_current)::JSONB
+      WHERE "class_table" = ('SiteNote')::"finfolk"."EnumClassType"
+      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
+      AND "id" = v_rev
+      RETURNING "id","class_ref","index","current","op_created","time_created")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."RevLog" (
+        "class_table",
+        "class_context",
+        "rev_id",
+        "version",
+        "deltas",
+        "op_created",
+        "time_created"
+      ) VALUES (
+        ('SiteNote')::"finfolk"."EnumClassType",
+        ('Global')::"finfolk"."EnumClassType",
+        (v_rev)::UUID,
+        (v_version)::INTEGER,
+        (o_current)::JSONB,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
+    RETURN jsonb_build_object('revision',v_version);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/is-site-note-member 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".is_site_note_member(
+  i_user UUID
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    v_verified BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."User"
+    WHERE "id" = i_user AND "email_verified" = true AND "deleted" = false) INTO v_verified;
+    RETURN "finfolk".is_user_active(i_user) AND v_verified;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/require-site-note-member 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".require_site_note_member() RETURNS UUID AS $$
+
+  DECLARE
+    v_user UUID;
+  BEGIN
+    v_user := "finfolk".auth_uid();
+    IF NOT "finfolk_rpc".is_site_note_member(v_user) THEN
+      RAISE EXCEPTION 'Verified member access required';
+    END IF;
+    RETURN v_user;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/is-site-note-site 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".is_site_note_site(
+  i_site UUID
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    v_private BOOLEAN;
+    v_site BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."Site"
+    WHERE "id" = i_site) INTO v_site;
+    SELECT exists(SELECT 1 FROM "finfolk"."SiteProfile"
+    WHERE "site_id" = i_site
+    AND "status" != ('published')::"finfolk"."EnumSiteProfileStatus") INTO v_private;
+    RETURN v_site AND NOT v_private;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/site-note-score 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".site_note_score(
+  i_note UUID
+) RETURNS BIGINT AS $$
+
+  SELECT count(*) FROM "finfolk"."SiteNoteVote" AS "v" INNER JOIN "finfolk"."User" AS "u" ON "v"."voter_id" = "u"."id" WHERE ("v"."note_id" = i_note) AND NOT "u"."deleted" AND "u"."email_verified";
+
+$$ LANGUAGE 'sql';
+
+-- finfolkdb.fn.site.site-notes/ret-site-note 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
+  i_note UUID,
+  i_viewer UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_note JSONB;
+    o_raw JSONB;
+    o_user JSONB;
+    v_author UUID;
+    v_upvoted BOOLEAN;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SiteNote"
+      WHERE "id" = i_note AND "hidden" = false AND "withdrawn" = false
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_raw;
+    o_note := (o_raw || "finfolk_rpc".site_note_version((o_raw ->> 'rev_id')::UUID));
+    v_author := (o_note ->> 'author_id')::UUID;
+    WITH j_ret AS (  
+      SELECT "profile" FROM "finfolk"."User"
+      WHERE "id" = v_author AND "deleted" = false
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
+    SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteVote"
+    WHERE "note_id" = i_note AND "voter_id" = i_viewer) INTO v_upvoted;
+    IF o_note IS NULL OR NOT "finfolk_rpc".is_site_note_site((o_note ->> 'site_id')::UUID) OR NOT "finfolk_rpc".is_site_note_member(v_author) OR "finfolk".is_user_blocked(i_viewer,v_author) THEN
+      RETURN null;
+    END IF;
+    RETURN jsonb_build_object(
+      'id',
+      i_note,
+      'site',
+      (o_note ->> 'site_id')::UUID,
+      'topic',
+      o_note ->> 'topic',
+      'text',
+      o_note ->> 'body',
+      'author',
+      coalesce((o_user -> 'profile') ->> 'displayName','Diver'),
+      'createdAt',
+      "finfolk".as_iso_time((o_note ->> 'time_created')::BIGINT),
+      'observedOn',
+      o_note ->> 'observed_on',
+      'revision',
+      (o_note ->> 'revision')::INTEGER,
+      'score',
+      "finfolk_rpc".site_note_score(i_note),
+      'own',
+      coalesce(v_author = i_viewer,false),
+      'upvoted',
+      v_upvoted
+    );
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/ret-site-notes 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_notes(
+  i_site UUID,
+  i_sort TEXT,
+  i_topic TEXT,
+  i_offset INTEGER,
+  i_member BOOLEAN
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_rows JSONB;
+    v_viewer UUID;
+  BEGIN
+    v_viewer := CASE WHEN i_member THEN "finfolk_rpc".require_site_note_member()
+    WHEN true THEN null
+    END;
+    o_rows := null;
+    IF i_offset IS NULL OR (i_offset < 0) OR (i_offset > 10000) OR i_sort IS NULL OR NOT ((i_sort = 'helpful') OR (i_sort = 'newest')) OR i_topic IS NULL OR NOT ((i_topic = 'all') OR (i_topic = 'access') OR (i_topic = 'facilities') OR (i_topic = 'wildlife') OR (i_topic = 'conditions')) THEN
+      RAISE EXCEPTION 'Invalid notes filter';
+    END IF;
+    SELECT coalesce(jsonb_agg("value"),('[]')::JSONB) FROM (  
+      SELECT "finfolk_rpc".ret_site_note("id",v_viewer) AS "value" FROM "finfolk"."SiteNote" WHERE ("site_id" = i_site) AND NOT "withdrawn" AND NOT "hidden" AND ((i_topic = 'all') OR (("topic")::TEXT = i_topic)) AND "finfolk_rpc".ret_site_note("id",v_viewer) IS NOT NULL ORDER BY
+        0 - CASE WHEN i_sort = 'helpful' THEN "finfolk_rpc".site_note_score("id")
+      WHEN true THEN 0
+      END,
+        0 - "time_created",
+        "id"
+      LIMIT 21 OFFSET i_offset) AS "selected_notes" INTO o_rows;
+    RETURN jsonb_build_object('notes',CASE WHEN jsonb_array_length(o_rows) > 20 THEN o_rows - 20
+    WHEN true THEN o_rows
+    END,'next',CASE WHEN jsonb_array_length(o_rows) > 20 THEN i_offset + 20
+    WHEN true THEN null
+    END);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/save-site-note 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
+  i_site UUID,
+  i_id UUID,
+  i_topic TEXT,
+  i_body TEXT,
+  i_observed DATE
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_op JSONB;
+    v_user UUID;
+  BEGIN
+    v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('save-site-note',v_user,('{}')::JSONB);
+    PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_id)::TEXT,0));
+    DECLARE
+      o_existing JSONB;
+      o_site JSONB;
+      v_body TEXT;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+        WHERE "id" = i_site
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+      v_body := btrim(coalesce(i_body,''));
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "site_id",
+          "author_id",
+          "topic",
+          "body",
+          "observed_on",
+          "withdrawn",
+          "hidden",
+          "rev_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SiteNote"
+        WHERE "id" = i_id
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_existing;
+      IF i_id IS NULL OR NOT "finfolk_rpc".is_site_note_site(i_site) OR (length(v_body) < 10) OR (length(v_body) > 1000) OR i_topic IS NULL OR NOT ((i_topic = 'access') OR (i_topic = 'facilities') OR (i_topic = 'wildlife') OR (i_topic = 'conditions')) OR ((i_topic = 'conditions') AND i_observed IS NULL) OR (i_observed IS NOT NULL AND (NOT "isfinite"(i_observed) OR (i_observed > ("timezone"(
+        o_site ->> 'timezone',
+        to_timestamp((1000000 * extract(epoch FROM now()))::BIGINT / 1000000.0)
+      ))::DATE))) THEN
+        RAISE EXCEPTION 'Check the site, topic, note length and observation date';
+      END IF;
+      IF o_existing is not null  THEN
+        IF ((o_existing ->> 'author_id')::UUID != v_user) OR ((o_existing ->> 'site_id')::UUID != i_site) OR ((o_existing ->> 'topic') != i_topic) OR ((o_existing ->> 'body') != v_body) OR (coalesce(o_existing ->> 'observed_on','') != coalesce((i_observed)::TEXT,'')) THEN
+          RAISE EXCEPTION 'This note identifier was already used';
+        END IF;
+        RETURN jsonb_build_object(
+          'id',
+          i_id,
+          'revision',
+          ("finfolk_rpc".site_note_version((o_existing ->> 'rev_id')::UUID) ->> 'revision')::INTEGER
+        );
+      END IF;
+      DECLARE
+        o_note JSONB;
+      BEGIN
+        o_note := "finfolk_rpc".insert_site_note(i_id,i_site,v_user,i_topic,v_body,i_observed,o_op);
+        RETURN jsonb_build_object('id',i_id,'revision',1);
+      END;
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/set-site-note-vote 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
+  i_site UUID,
+  i_note UUID,
+  i_upvoted BOOLEAN
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_note JSONB;
+    o_op JSONB;
+    v_user UUID;
+    v_voted BOOLEAN;
+  BEGIN
+    v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('set-site-note-vote',v_user,('{}')::JSONB);
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SiteNote"
+      WHERE "id" = i_note AND "site_id" = i_site
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+    SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteVote"
+    WHERE "note_id" = i_note AND "voter_id" = v_user) INTO v_voted;
+    IF i_upvoted IS NULL OR o_note IS NULL OR "finfolk_rpc".ret_site_note(i_note,v_user) IS NULL THEN
+      RAISE EXCEPTION 'That note is unavailable';
+    END IF;
+    IF i_upvoted THEN
+      IF NOT v_voted THEN
+        DECLARE
+      o_write JSONB;
+    BEGIN
+      WITH j_ret AS (  
+            INSERT INTO "finfolk"."SiteNoteVote" (
+              "note_id",
+              "voter_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated"
+            ) VALUES (
+              (i_note)::UUID,
+              (v_user)::UUID,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'time')::BIGINT,
+              (o_op ->> 'time')::BIGINT
+            ) RETURNING
+              "id",
+              "note_id",
+              "voter_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
+          null;
+    END;
+      END IF;
+    ELSE
+      DECLARE
+      o_write JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          DELETE FROM "finfolk"."SiteNoteVote" WHERE "note_id" = i_note AND "voter_id" = v_user
+          RETURNING
+            "id",
+            "note_id",
+            "voter_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
+        null;
+    END;
+    END IF;
+    RETURN "finfolk_rpc".ret_site_note(i_note,v_user);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/set-site-note-withdrawn 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_withdrawn(
+  i_site UUID,
+  i_note UUID,
+  i_revision INTEGER,
+  i_withdrawn BOOLEAN
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_note JSONB;
+    o_op JSONB;
+    o_raw JSONB;
+    v_user UUID;
+  BEGIN
+    v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('set-site-note-withdrawn',v_user,('{}')::JSONB);
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SiteNote"
+      WHERE "id" = i_note AND "site_id" = i_site AND "author_id" = v_user
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_raw;
+    o_note := (o_raw || "finfolk_rpc".site_note_version((o_raw ->> 'rev_id')::UUID));
+    IF o_note IS NULL OR i_withdrawn IS NULL THEN
+      RAISE EXCEPTION 'That note is unavailable';
+    END IF;
+    IF (o_note ->> 'withdrawn')::BOOLEAN != i_withdrawn THEN
+      IF i_revision IS NULL OR ((o_note ->> 'revision')::INTEGER != i_revision) THEN
+        RAISE EXCEPTION 'This note changed; reload it before trying again';
+      END IF;
+      DECLARE
+      o_saved JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          UPDATE "finfolk"."SiteNote" SET
+            "withdrawn" = (i_withdrawn)::BOOLEAN,
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "id" = i_note
+          RETURNING
+            "id",
+            "site_id",
+            "author_id",
+            "topic",
+            "body",
+            "observed_on",
+            "withdrawn",
+            "hidden",
+            "rev_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_saved;
+        o_note := (o_saved || "finfolk_rpc".record_site_note_revision(i_note,o_op));
+    END;
+    END IF;
+    RETURN jsonb_build_object(
+      'id',
+      i_note,
+      'revision',
+      (o_note ->> 'revision')::INTEGER,
+      'withdrawn',
+      i_withdrawn
+    );
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/report-site-note 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".report_site_note(
+  i_site UUID,
+  i_note UUID,
+  i_reason TEXT
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_note JSONB;
+    o_op JSONB;
+    v_reason TEXT;
+    v_reported BOOLEAN;
+    v_user UUID;
+  BEGIN
+    v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('report-site-note',v_user,('{}')::JSONB);
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SiteNote"
+      WHERE "id" = i_note AND "site_id" = i_site
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+    v_reason := btrim(coalesce(i_reason,''));
+    SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteReport"
+    WHERE "note_id" = i_note AND "reporter_id" = v_user) INTO v_reported;
+    IF o_note IS NULL OR "finfolk_rpc".ret_site_note(i_note,v_user) IS NULL OR (length(v_reason) < 1) OR (length(v_reason) > 1000) THEN
+      RAISE EXCEPTION 'Choose a note and provide a report reason';
+    END IF;
+    IF NOT v_reported THEN
+      DECLARE
+      o_write JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          INSERT INTO "finfolk"."SiteNoteReport" (
+            "note_id",
+            "reporter_id",
+            "reason",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          ) VALUES (
+            (i_note)::UUID,
+            (v_user)::UUID,
+            "finfolk".as_bounded_text((v_reason)::TEXT,1,1000),
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'time')::BIGINT,
+            (o_op ->> 'time')::BIGINT
+          ) RETURNING
+            "id",
+            "note_id",
+            "reporter_id",
+            "reason",
+            "resolved_at",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
+        null;
+    END;
+    END IF;
+    RETURN jsonb_build_object('reported',true);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/moderate-site-note 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
+  i_site UUID,
+  i_note UUID,
+  i_hidden BOOLEAN
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_op JSONB;
+    v_user UUID;
+  BEGIN
+    v_user := "finfolk_rpc".require_site_note_member();
+    o_op := "finfolk".op_fn('moderate-site-note',v_user,('{}')::JSONB);
+    IF coalesce(current_setting('finfolk.directory_admin',true),'false') != 'true' THEN
+      RAISE EXCEPTION 'Administrator access required';
+    END IF;
+    DECLARE
+      o_note JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "site_id",
+          "author_id",
+          "topic",
+          "body",
+          "observed_on",
+          "withdrawn",
+          "hidden",
+          "rev_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SiteNote"
+        WHERE "id" = i_note AND "site_id" = i_site
+        LIMIT 1
+        FOR UPDATE)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+      IF o_note IS NULL OR i_hidden IS NULL THEN
+        RAISE EXCEPTION 'That note is unavailable';
+      END IF;
+      IF (o_note ->> 'hidden')::BOOLEAN != i_hidden THEN
+        DECLARE
+        o_version JSONB;
+          o_write JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            UPDATE "finfolk"."SiteNote" SET
+              "hidden" = (i_hidden)::BOOLEAN,
+              "op_updated" = (o_op ->> 'id')::UUID,
+              "time_updated" = (o_op ->> 'time')::BIGINT
+            WHERE "id" = i_note
+            RETURNING
+              "id",
+              "site_id",
+              "author_id",
+              "topic",
+              "body",
+              "observed_on",
+              "withdrawn",
+              "hidden",
+              "rev_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
+          o_version := "finfolk_rpc".record_site_note_revision(i_note,o_op);
+          null;
+      END;
+      END IF;
+      DECLARE
+        o_write JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          UPDATE "finfolk"."SiteNoteReport" SET
+            "resolved_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT,
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "note_id" = i_note AND "resolved_at" IS NULL
+          RETURNING
+            "id",
+            "note_id",
+            "reporter_id",
+            "reason",
+            "resolved_at",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
+        null;
+      END;
+      RETURN jsonb_build_object('id',i_note,'hidden',i_hidden);
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-app/native-notes-public-list 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_notes_public_list(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_notes(i_user,i_verified,'public-list',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-app/native-notes-moderate 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_notes_moderate(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_notes(i_user,i_verified,'moderate',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-app/native-notes-report 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_notes_report(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_notes(i_user,i_verified,'report',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-app/native-notes-save 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_notes_save(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_notes(i_user,i_verified,'save',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-app/native-notes-vote 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_notes_vote(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_notes(i_user,i_verified,'vote',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-app/native-notes-withdraw 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_notes_withdraw(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_notes(i_user,i_verified,'withdraw',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-app/native-notes-list 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_notes_list(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_notes(i_user,i_verified,'list',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-note-app/call-native-notes 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".call_native_notes(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_operation TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_operation != 'public-list' THEN
+    IF NOT coalesce(i_verified,false) THEN
+      RAISE EXCEPTION 'Verified member required';
+    END IF;
+    PERFORM "finfolk_rpc".ret_account(i_user);
+  END IF;
+  DECLARE
+    v_admin BOOLEAN;
+    v_id UUID;
+    v_site UUID;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."UserRole"
+    WHERE "user_id" = i_user AND "role" = 'admin') INTO v_admin;
+    v_site := (i_values ->> 'site')::UUID;
+    v_id := (i_values ->> 'id')::UUID;
+    PERFORM "set_config"('finfolk.actor_id',coalesce((i_user)::TEXT,''),true);
+    PERFORM "set_config"('finfolk.directory_admin',(v_admin)::TEXT,true);
+    IF (i_operation = 'public-list') OR (i_operation = 'list') THEN
+      RETURN "finfolk_rpc".ret_site_notes(
+        v_site,
+        coalesce(i_values ->> 'sort','helpful'),
+        coalesce(i_values ->> 'topic','all'),
+        coalesce((i_values ->> 'offset')::INTEGER,0),
+        i_operation = 'list'
+      ) || jsonb_build_object('enabled',true);
+    ELSIF i_operation = 'save' THEN
+      RETURN "finfolk_rpc".save_site_note(
+        v_site,
+        v_id,
+        i_values ->> 'topic',
+        i_values ->> 'text',
+        (nullif(i_values ->> 'observedOn',''))::DATE
+      );
+    ELSIF i_operation = 'vote' THEN
+      RETURN "finfolk_rpc".set_site_note_vote(v_site,v_id,(i_values ->> 'upvoted')::BOOLEAN);
+    ELSIF i_operation = 'withdraw' THEN
+      RETURN "finfolk_rpc".set_site_note_withdrawn(
+        v_site,
+        v_id,
+        (i_values ->> 'revision')::INTEGER,
+        (i_values ->> 'withdrawn')::BOOLEAN
+      );
+    ELSIF i_operation = 'report' THEN
+      RETURN "finfolk_rpc".report_site_note(v_site,v_id,i_values ->> 'reason');
+    ELSIF i_operation = 'moderate' THEN
+      RETURN "finfolk_rpc".moderate_site_note(v_site,v_id,(i_values ->> 'hidden')::BOOLEAN);
+    ELSE
+      RAISE EXCEPTION 'Unknown note operation';
+    END IF;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.common.type-messaging-base/EnumMessagingProvider 
 DO $$
@@ -2998,59 +5799,6 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".consume_messaging_oauth(
   END;
 
 $$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.helper.helper-access/is-user-blocked 
-CREATE OR REPLACE FUNCTION "finfolk".is_user_blocked(
-  i_viewer UUID,
-  i_owner UUID
-) RETURNS BOOLEAN AS $$
-
-  DECLARE
-    v_forward BOOLEAN;
-    v_reverse BOOLEAN;
-  BEGIN
-    SELECT exists(SELECT 1 FROM "finfolk"."UserBlock"
-    WHERE "owner_id" = i_viewer AND "target_id" = i_owner) INTO v_forward;
-    SELECT exists(SELECT 1 FROM "finfolk"."UserBlock"
-    WHERE "owner_id" = i_owner AND "target_id" = i_viewer) INTO v_reverse;
-    RETURN v_forward OR v_reverse;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.helper.helper-access/is-user-active 
-CREATE OR REPLACE FUNCTION "finfolk".is_user_active(
-  i_user UUID
-) RETURNS BOOLEAN AS $$
-
-  DECLARE
-    v_active BOOLEAN;
-  BEGIN
-    SELECT exists(SELECT 1 FROM "finfolk"."User"
-    WHERE "id" = i_user AND "deleted" = false) INTO v_active;
-    RETURN v_active;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.common.fn-system-util/auth-uid 
-CREATE OR REPLACE FUNCTION "finfolk".auth_uid() RETURNS UUID AS $$
-
-  SELECT (nullif(current_setting('finfolk.actor_id',true),''))::UUID;
-
-$$ LANGUAGE 'sql';
-
--- finfolkdb.common.fn-system-util/as-iso-time 
-CREATE OR REPLACE FUNCTION "finfolk".as_iso_time(
-  i_time BIGINT
-) RETURNS TEXT AS $$
-
-  SELECT to_char(
-    "timezone"('UTC',to_timestamp((i_time)::NUMERIC / 1000000)),
-    'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"'
-  );
-
-$$ LANGUAGE 'sql' IMMUTABLE PARALLEL SAFE;
 
 -- finfolkdb.fn.helper.helper-entity/insert-base-addons 
 CREATE OR REPLACE FUNCTION "finfolk".insert_base_addons(
@@ -6075,206 +8823,111 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_action(
 
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-user-access/EnumAccessSetting 
-DO $$
+-- finfolkdb.fn.site.site-review/native-site-review-mine 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_site_review_mine(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
 BEGIN
-  CREATE TYPE "finfolk"."EnumAccessSetting" AS ENUM ('public','open','closed');
-EXCEPTION WHEN OTHERS THEN
+  RETURN "finfolk_rpc".call_native_site_review(i_user,i_verified,'mine',i_values);
 END;
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-user-access/Access 
-CREATE TABLE IF NOT EXISTS "finfolk"."Access" (
-  "id" UUID DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType",
-  "class_context" "finfolk"."EnumClassType",
-  "class_ref" UUID NOT NULL,
-  "setting" "finfolk"."EnumAccessSetting" NOT NULL DEFAULT 'closed',
-  "op_created" UUID,
-  "time_created" BIGINT,
-  PRIMARY KEY (id,class_table,class_context),
-  UNIQUE ("class_table","class_context","class_ref")
-);
-
--- finfolkdb.common.type-user-access/EnumAccessRoleLevel 
-DO $$
+-- finfolkdb.fn.site.site-review/native-site-review-admin 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_site_review_admin(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
 BEGIN
-  CREATE TYPE "finfolk"."EnumAccessRoleLevel" AS ENUM ('owner','admin','deleted','member');
-EXCEPTION WHEN OTHERS THEN
+  RETURN "finfolk_rpc".call_native_site_review(i_user,i_verified,'admin',i_values);
 END;
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-user-access/AccessRole 
-CREATE TABLE IF NOT EXISTS "finfolk"."AccessRole" (
-  "id" UUID DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType",
-  "class_context" "finfolk"."EnumClassType",
-  "is_active" BOOLEAN NOT NULL DEFAULT true,
-  "is_public" BOOLEAN NOT NULL DEFAULT true,
-  "access_id" UUID NOT NULL,
-  "member_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "from_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "level" "finfolk"."EnumAccessRoleLevel" NOT NULL DEFAULT 'member',
-  "scope" JSONB NOT NULL DEFAULT '{}',
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  PRIMARY KEY (id,class_table,class_context,access_id),
-  UNIQUE ("class_table","class_context","access_id","member_id"),
-  CONSTRAINT fk_access_role_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id) ON DELETE CASCADE
-);
-CREATE INDEX ON "finfolk"."AccessRole" ("member_id");
-
--- finfolkdb.common.type-user-access/EnumAccessRequestStatus 
-DO $$
+-- finfolkdb.fn.site.site-review/native-site-review-publish 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_site_review_publish(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
 BEGIN
-  CREATE TYPE "finfolk"."EnumAccessRequestStatus" AS ENUM ('pending','cancelled','rejected','accepted');
-EXCEPTION WHEN OTHERS THEN
+  RETURN "finfolk_rpc".call_native_site_review(i_user,i_verified,'publish',i_values);
 END;
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-user-access/AccessRequest 
-CREATE TABLE IF NOT EXISTS "finfolk"."AccessRequest" (
-  "id" UUID DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType",
-  "class_context" "finfolk"."EnumClassType",
-  "access_id" UUID NOT NULL,
-  "from_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "reply_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "status" "finfolk"."EnumAccessRequestStatus" NOT NULL DEFAULT 'pending',
-  "expires_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT + 604800000000,
-  "detail" JSONB NOT NULL DEFAULT '{}',
-  "log" JSONB NOT NULL DEFAULT '[]',
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  PRIMARY KEY (id,class_table,class_context,access_id),
-  CONSTRAINT fk_access_request_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id) ON DELETE CASCADE
-);
-CREATE INDEX ON "finfolk"."AccessRequest" ("from_id");
-
--- finfolkdb.common.type-user-access/EnumAccessInviteExternalStatus 
-DO $$
+-- finfolkdb.fn.site.site-review/native-site-review-reject 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_site_review_reject(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
 BEGIN
-  CREATE TYPE "finfolk"."EnumAccessInviteExternalStatus" AS ENUM ('pending','expired','rejected','accepted');
-EXCEPTION WHEN OTHERS THEN
+  RETURN "finfolk_rpc".call_native_site_review(i_user,i_verified,'reject',i_values);
 END;
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-user-access/AccessInviteExternal 
-CREATE TABLE IF NOT EXISTS "finfolk"."AccessInviteExternal" (
-  "id" UUID DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType",
-  "class_context" "finfolk"."EnumClassType",
-  "access_id" UUID NOT NULL,
-  "secret" TEXT NOT NULL UNIQUE,
-  "from_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "reply_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "status" "finfolk"."EnumAccessInviteExternalStatus" NOT NULL DEFAULT 'pending',
-  "expires_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT + 604800000000,
-  "accepted_at" BIGINT,
-  "detail" JSONB NOT NULL DEFAULT '{}',
-  "log" JSONB NOT NULL DEFAULT '[]',
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  PRIMARY KEY (id,class_table,class_context,access_id),
-  CONSTRAINT fk_access_invite_external_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id) ON DELETE CASCADE
-);
-
--- finfolkdb.common.type-user-access/EnumAccessInviteEmailStatus 
-DO $$
+-- finfolkdb.fn.site.site-review/native-site-review-save 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_site_review_save(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
 BEGIN
-  CREATE TYPE "finfolk"."EnumAccessInviteEmailStatus" AS ENUM ('pending','expired','rejected','accepted');
-EXCEPTION WHEN OTHERS THEN
+  RETURN "finfolk_rpc".call_native_site_review(i_user,i_verified,'save',i_values);
 END;
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-user-access/AccessInviteEmail 
-CREATE TABLE IF NOT EXISTS "finfolk"."AccessInviteEmail" (
-  "id" UUID DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType",
-  "class_context" "finfolk"."EnumClassType",
-  "access_id" UUID NOT NULL,
-  "email" TEXT NOT NULL,
-  "secret" TEXT NOT NULL UNIQUE,
-  "from_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "reply_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "status" "finfolk"."EnumAccessInviteEmailStatus" NOT NULL DEFAULT 'pending',
-  "expires_at" BIGINT NOT NULL,
-  "accepted_at" BIGINT,
-  "detail" JSONB NOT NULL DEFAULT '{}',
-  "log" JSONB NOT NULL DEFAULT '[]',
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  PRIMARY KEY (id,class_table,class_context,access_id),
-  CONSTRAINT fk_access_invite_email_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id) ON DELETE CASCADE
-);
+-- finfolkdb.fn.site.site-review/native-site-review-submit 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_site_review_submit(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_site_review(i_user,i_verified,'submit',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-user-access/__access_indexes__ 
-CREATE UNIQUE INDEX IF NOT EXISTS "AccessRoleOwner" ON "finfolk"."AccessRole" ("class_table","class_context","access_id") WHERE ("level" = 'owner') AND ("is_active" = true);
-CREATE UNIQUE INDEX IF NOT EXISTS "AccessRequestPending" ON "finfolk"."AccessRequest" ("class_table","class_context","access_id","from_id") WHERE "status" = 'pending';
+-- finfolkdb.fn.site.site-review/native-site-review-withdraw 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_site_review_withdraw(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_site_review(i_user,i_verified,'withdraw',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-directory-base/DirectoryListing 
-CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryListing" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('DirectoryListing')::"finfolk"."EnumClassType") STORED,
-  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
-  "status" "finfolk"."EnumDirectoryListingStatus" NOT NULL DEFAULT 'candidate',
-  "reviewed_at" BIGINT,
-  "outreach" TEXT NOT NULL DEFAULT 'Not contacted',
-  "notes" TEXT NOT NULL DEFAULT '',
-  "detail" JSONB NOT NULL DEFAULT '{}',
-  "social_id" UUID NOT NULL,
-  "access_id" UUID NOT NULL,
-  "audit_id" UUID NOT NULL,
-  "rev_id" UUID NOT NULL,
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  UNIQUE ("social_id"),
-  UNIQUE ("access_id"),
-  UNIQUE ("audit_id"),
-  UNIQUE ("rev_id"),
-  CONSTRAINT fk_directory_listing_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id),
-  CONSTRAINT fk_directory_listing_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id),
-  CONSTRAINT fk_directory_listing_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id),
-  CONSTRAINT fk_directory_listing_social FOREIGN KEY (class_table,social_id) REFERENCES "finfolk"."Social"(class_table,id)
-);
-CREATE INDEX ON "finfolk"."DirectoryListing" ("status");
-
--- finfolkdb.common.type-directory-base/DirectoryReport 
-CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryReport" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "listing_id" UUID NOT NULL REFERENCES "finfolk"."DirectoryListing"("id"),
-  "author_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "message" TEXT NOT NULL,
-  "resolved" BOOLEAN NOT NULL DEFAULT false,
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT
-);
-CREATE INDEX ON "finfolk"."DirectoryReport" ("listing_id");
-
--- finfolkdb.common.type-directory-base/DirectoryRun 
-CREATE TABLE IF NOT EXISTS "finfolk"."DirectoryRun" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "query" TEXT NOT NULL,
-  "status" TEXT NOT NULL DEFAULT 'running',
-  "error" TEXT NOT NULL DEFAULT '',
-  "log" JSONB NOT NULL DEFAULT '[]',
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT
-);
+-- finfolkdb.fn.site.site-review/call-native-site-review 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".call_native_site_review(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_operation TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_result JSONB;
+    v_admin BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."UserRole"
+    WHERE "user_id" = i_user AND "role" = 'admin') INTO v_admin;
+    o_result := null;
+    PERFORM "set_config"('finfolk.actor_id',(i_user)::TEXT,true);
+    PERFORM "set_config"(
+      'finfolk.site_verified',
+      (coalesce(i_verified,false))::TEXT,
+      true
+    );
+    PERFORM "set_config"('finfolk.site_admin',(v_admin)::TEXT,true);
+    EXECUTE 'SELECT finfolk_rpc.native_site_review_operation($1->>''operation'',$1->''values'')' INTO o_result USING jsonb_build_object('operation',i_operation,'values',i_values);
+    RETURN o_result;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.directory.directory-manage/insert-directory-listing 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_directory_listing(
@@ -6414,7 +9067,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_directory_public(
       'managed',
       v_managed,
       'reviewedAt',
-      o_listing -> 'reviewed_at'
+      (o_listing ->> 'reviewed_at')::NUMERIC / 1000
     );
   END;
 
@@ -7863,53 +10516,6 @@ CREATE TABLE IF NOT EXISTS "finfolk"."UserRequestLimit" (
   UNIQUE ("user_id")
 );
 
--- finfolkdb.common.type-event/Event 
-CREATE TABLE IF NOT EXISTS "finfolk"."Event" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "class_table" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Event')::"finfolk"."EnumClassType") STORED,
-  "class_context" "finfolk"."EnumClassType" GENERATED ALWAYS AS (('Global')::"finfolk"."EnumClassType") STORED,
-  "listing_id" UUID NOT NULL REFERENCES "finfolk"."DirectoryListing"("id"),
-  "status" "finfolk"."EnumEventStatus" NOT NULL DEFAULT 'draft',
-  "visibility" "finfolk"."EnumEventVisibility" NOT NULL DEFAULT 'public',
-  "starts_at" BIGINT NOT NULL,
-  "ends_at" BIGINT NOT NULL,
-  "timezone" TEXT NOT NULL,
-  "capacity" INTEGER,
-  "hidden" BOOLEAN NOT NULL DEFAULT false,
-  "detail" JSONB NOT NULL DEFAULT '{}',
-  "access_id" UUID NOT NULL,
-  "audit_id" UUID NOT NULL,
-  "rev_id" UUID NOT NULL,
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  UNIQUE ("access_id"),
-  UNIQUE ("audit_id"),
-  UNIQUE ("rev_id"),
-  CONSTRAINT positive_capacity CHECK ("capacity" > 0),
-  CONSTRAINT ordered_times CHECK ("ends_at" > "starts_at"),
-  CONSTRAINT fk_event_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id),
-  CONSTRAINT fk_event_audit FOREIGN KEY (class_table,class_context,audit_id) REFERENCES "finfolk"."Audit"(class_table,class_context,id),
-  CONSTRAINT fk_event_access FOREIGN KEY (class_table,class_context,access_id) REFERENCES "finfolk"."Access"(class_table,class_context,id)
-);
-CREATE INDEX ON "finfolk"."Event" ("listing_id");
-CREATE INDEX ON "finfolk"."Event" ("status");
-
--- finfolkdb.common.type-event/EventRsvp 
-CREATE TABLE IF NOT EXISTS "finfolk"."EventRsvp" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "event_id" UUID NOT NULL REFERENCES "finfolk"."Event"("id"),
-  "member_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
-  "status" "finfolk"."EnumEventRsvpStatus" NOT NULL,
-  "op_created" UUID,
-  "op_updated" UUID,
-  "time_created" BIGINT,
-  "time_updated" BIGINT,
-  UNIQUE ("event_id","member_id")
-);
-CREATE INDEX ON "finfolk"."EventRsvp" ("member_id");
-
 -- finfolkdb.fn.event.event-manage/insert-event 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_event(
   i_listing_id UUID,
@@ -8001,6 +10607,1233 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_event(
         "time_updated")
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
     RETURN o_event;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-accept 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_accept(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'accept',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-cancel 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_cancel(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'cancel',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-detail 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_detail(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'detail',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-invite 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_invite(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'invite',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-invite-retry 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_invite_retry(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'invite-retry',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-mine 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_mine(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'mine',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-moderate 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_moderate(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'moderate',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-revoke 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_revoke(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'revoke',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-roster 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_roster(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'roster',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-rsvp 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_rsvp(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'rsvp',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-save 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_save(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'save',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-public-detail 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_public_detail(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'public-detail',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/native-events-list 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_events_list(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_events(i_user,i_verified,i_email,'list',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-app/call-native-events 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".call_native_events(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_email TEXT,
+  i_operation TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_user is not null  THEN
+    PERFORM "finfolk_rpc".ret_account(i_user);
+  END IF;
+  DECLARE
+    o_result JSONB;
+    v_admin BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."UserRole"
+    WHERE "user_id" = i_user AND "role" = 'admin') INTO v_admin;
+    o_result := null;
+    PERFORM "set_config"('finfolk.actor_id',coalesce((i_user)::TEXT,''),true);
+    PERFORM "set_config"(
+      'finfolk.event_verified',
+      (coalesce(i_verified,false))::TEXT,
+      true
+    );
+    PERFORM "set_config"('finfolk.event_email',coalesce(i_email,''),true);
+    PERFORM "set_config"('finfolk.directory_admin',(v_admin)::TEXT,true);
+    EXECUTE 'SELECT finfolk_rpc.native_event_operation($1->>''operation'',$1->''values'')' INTO o_result USING jsonb_build_object('operation',i_operation,'values',i_values);
+    RETURN o_result;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-manage-logbook/insert-dive-session 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_dive_session(
+  i_owner UUID,
+  i_beach UUID,
+  i_data JSONB,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_base JSONB;
+    o_data JSONB;
+    o_session JSONB;
+    v_id UUID;
+  BEGIN
+    v_id := uuid_generate_v4();
+    o_data := (("finfolk".as_jsonb(i_data) - 'beachId') || jsonb_build_object('visibility','private','photos',('[]')::JSONB));
+    o_base := "finfolk".insert_base_addons('DiveSession',v_id,o_data,o_op);
+    WITH j_ret AS (  
+      INSERT INTO "finfolk"."DiveSession" (
+        "id",
+        "owner_id",
+        "site_id",
+        "detail",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      ) VALUES (
+        (v_id)::UUID,
+        (i_owner)::UUID,
+        (i_beach)::UUID,
+        "finfolk".as_jsonb((o_data)::JSONB),
+        (o_base ->> 'audit')::UUID,
+        (o_base ->> 'rev')::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'id')::UUID,
+        (o_op ->> 'time')::BIGINT,
+        (o_op ->> 'time')::BIGINT
+      ) RETURNING
+        "id",
+        "owner_id",
+        "site_id",
+        "detail",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated")
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_session;
+    RETURN o_session;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-manage-logbook/ret-dive-session-owned 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_dive_session_owned(
+  i_session_id UUID,
+  i_owner UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_session JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","owner_id","site_id","detail" FROM "finfolk"."DiveSession"
+      WHERE "id" = i_session_id AND "owner_id" = i_owner
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_session;
+    IF o_session IS NULL OR NOT "finfolk".is_user_active(i_owner) THEN
+      RETURN null;
+    END IF;
+    RETURN (o_session -> 'detail') || jsonb_build_object(
+      'id',
+      (o_session ->> 'id')::UUID,
+      'ownerId',
+      (o_session ->> 'owner_id')::UUID,
+      'beachId',
+      coalesce(o_session ->> 'site_id','')
+    );
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/private-session-values 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".private_session_values(
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  IF coalesce(jsonb_typeof(i_values),'null') != 'object' THEN
+    RAISE EXCEPTION USING errcode = '22023',message = 'Invalid session';
+  END IF;
+  DECLARE
+    v_key TEXT;
+  BEGIN
+    v_key := null;
+    FOR v_key IN SELECT jsonb_object_keys(i_values) LOOP
+      IF NOT jsonb_exists(
+        ('["date","locationName","beachId","point","durationMinutes","maxDepthMetres","notes"]')::JSONB,
+        v_key
+      ) THEN
+        RAISE EXCEPTION USING errcode = '22023',message = 'Unknown session field';
+      END IF;
+    END LOOP;
+  END;
+  DECLARE
+    o_depth JSONB;
+    o_duration JSONB;
+    o_point JSONB;
+    v_date TEXT;
+    v_notes TEXT;
+    v_place TEXT;
+  BEGIN
+    v_date := coalesce(i_values ->> 'date','');
+    v_place := "btrim"(coalesce(i_values ->> 'locationName',''));
+    v_notes := coalesce(i_values ->> 'notes','');
+    o_duration := coalesce(i_values -> 'durationMinutes',('null')::JSONB);
+    o_depth := coalesce(i_values -> 'maxDepthMetres',('null')::JSONB);
+    o_point := coalesce(i_values -> 'point',('null')::JSONB);
+    IF (coalesce(jsonb_typeof(i_values -> 'date'),'null') != 'string') OR NOT "regexp_like"(v_date,'^[0-9]{4}-[0-9]{2}-[0-9]{2}$') OR (coalesce(jsonb_typeof(i_values -> 'locationName'),'null') != 'string') OR (v_place = '') OR ("char_length"(v_place) > 160) OR ("char_length"(v_notes) > 10000) OR (jsonb_exists(i_values,'notes') AND (jsonb_typeof(i_values -> 'notes') != 'string')) OR (jsonb_exists(i_values,'beachId') AND (jsonb_typeof(i_values -> 'beachId') != 'string')) THEN
+      RAISE EXCEPTION USING
+        errcode = '22023',
+        message = 'Choose a valid session date, location and notes'
+      ;
+    END IF;
+    DECLARE
+      v_valid_date DATE;
+    BEGIN
+      v_valid_date := (v_date)::DATE;
+    END;
+    IF NOT jsonb_exists(('["number","null"]')::JSONB,jsonb_typeof(o_duration)) OR NOT jsonb_exists(('["number","null"]')::JSONB,jsonb_typeof(o_depth)) THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Enter numeric dive statistics';
+    END IF;
+    IF ((o_duration != ('null')::JSONB) AND ((((o_duration)::TEXT)::NUMERIC < 0) OR (((o_duration)::TEXT)::NUMERIC > 1440))) OR ((o_depth != ('null')::JSONB) AND ((((o_depth)::TEXT)::NUMERIC < 0) OR (((o_depth)::TEXT)::NUMERIC > 300))) THEN
+      RAISE EXCEPTION USING
+        errcode = '22023',
+        message = 'Dive statistics are outside the allowed range'
+      ;
+    END IF;
+    IF o_point != ('null')::JSONB THEN
+      IF (jsonb_typeof(o_point) != 'array') OR (jsonb_array_length(o_point) != 2) OR (jsonb_typeof(o_point -> 0) != 'number') OR (jsonb_typeof(o_point -> 1) != 'number') OR ("abs"((o_point ->> 0)::NUMERIC) > 180) OR ("abs"((o_point ->> 1)::NUMERIC) > 85) THEN
+        RAISE EXCEPTION USING errcode = '22023',message = 'Choose a valid map location';
+      END IF;
+    END IF;
+    RETURN jsonb_build_object(
+      'date',
+      v_date,
+      'locationName',
+      v_place,
+      'notes',
+      v_notes,
+      'beachId',
+      coalesce(i_values ->> 'beachId',''),
+      'point',
+      o_point,
+      'durationMinutes',
+      o_duration,
+      'maxDepthMetres',
+      o_depth,
+      'visibility',
+      'private',
+      'photos',
+      ('[]')::JSONB,
+      'linkedMedia',
+      ('[]')::JSONB
+    );
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/private-session-row 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".private_session_row(
+  i_row JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_data JSONB;
+    o_site JSONB;
+  BEGIN
+    o_data := (i_row -> 'detail');
+    WITH j_ret AS (  
+      SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+      WHERE "id" = (i_row ->> 'site_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+    RETURN jsonb_build_object('id',i_row -> 'id','ownerId',i_row -> 'owner_id','beachId',coalesce(i_row ->> 'site_id',''),'date',coalesce(o_data ->> 'date',"to_char"(
+      "to_timestamp"((i_row ->> 'time_created')::NUMERIC / 1000000),
+      'YYYY-MM-DD'
+    )),'locationName',coalesce(
+      o_data ->> 'locationName',
+      o_site ->> 'name',
+      'Somewhere in the water'
+    ),'point',coalesce(o_data -> 'point',('null')::JSONB),'durationMinutes',coalesce(o_data -> 'durationMinutes',('null')::JSONB),'maxDepthMetres',coalesce(o_data -> 'maxDepthMetres',('null')::JSONB),'notes',coalesce(o_data ->> 'notes',''),'visibility',coalesce(o_data ->> 'visibility','private'),'photos',coalesce(o_data -> 'photos',('[]')::JSONB),'linkedMedia',coalesce(o_data -> 'linkedMedia',('[]')::JSONB));
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-private-session 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_private_session(
+  i_user UUID,
+  i_session UUID
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_session JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "owner_id",
+        "site_id",
+        "detail",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."DiveSession"
+      WHERE "id" = i_session AND "owner_id" = i_user
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_session;
+    IF o_session is null  THEN
+      RETURN null;
+    END IF;
+    RETURN "finfolk_rpc".private_session_row(o_session);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/save-private-session 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".save_private_session(
+  i_user UUID,
+  i_session UUID,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_data JSONB;
+    o_op JSONB;
+    v_id UUID;
+    v_site UUID;
+  BEGIN
+    o_data := "finfolk_rpc".private_session_values(i_values);
+    v_site := null;
+    v_id := i_session;
+    o_op := "finfolk".op_fn('private-session-save',i_user,('{}')::JSONB);
+    IF (o_data ->> 'beachId') != '' THEN
+      v_site := (o_data ->> 'beachId')::UUID;
+    END IF;
+    IF v_site is not null  THEN
+      DECLARE
+      v_exists BOOLEAN;
+    BEGIN
+      SELECT exists(SELECT 1 FROM "finfolk"."Site"
+        WHERE "id" = v_site) INTO v_exists;
+        IF NOT v_exists THEN
+          RAISE EXCEPTION USING errcode = 'P0002',message = 'Choose an existing dive site';
+        END IF;
+    END;
+    END IF;
+    IF i_session is null  THEN
+      DECLARE
+      o_created JSONB;
+    BEGIN
+      o_created := "finfolk_rpc".insert_dive_session(i_user,v_site,o_data,o_op);
+        v_id := (o_created ->> 'id')::UUID;
+    END;
+    ELSE
+      DECLARE
+      o_old JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          SELECT
+            "id",
+            "owner_id",
+            "site_id",
+            "detail",
+            "audit_id",
+            "rev_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."DiveSession"
+          WHERE "id" = i_session AND "owner_id" = i_user
+          LIMIT 1
+          FOR UPDATE)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_old;
+        IF o_old is null  THEN
+          RAISE EXCEPTION USING errcode = 'P0002',message = 'Session unavailable';
+        END IF;
+        IF coalesce((o_old -> 'detail') ->> 'visibility','private') != 'private' THEN
+          RAISE EXCEPTION USING
+            errcode = '42501',
+            message = 'Make the session private before editing'
+          ;
+        END IF;
+        DECLARE
+          o_audit JSONB;
+          o_history JSONB;
+          o_next JSONB;
+          o_rev JSONB;
+          o_revised JSONB;
+          o_saved JSONB;
+          v_version INT;
+        BEGIN
+          o_next := ((o_old -> 'detail') || (o_data - 'beachId' - 'photos' - 'linkedMedia'));
+          WITH j_ret AS (  
+            UPDATE "finfolk"."DiveSession" SET
+              "site_id" = (v_site)::UUID,
+              "detail" = "finfolk".as_jsonb((o_next)::JSONB),
+              "op_updated" = (o_op ->> 'id')::UUID,
+              "time_updated" = (o_op ->> 'time')::BIGINT
+            WHERE "id" = i_session AND "owner_id" = i_user
+            RETURNING
+              "id",
+              "owner_id",
+              "site_id",
+              "audit_id",
+              "rev_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+          WITH j_ret AS (  
+            SELECT "id","class_ref","index","current","op_created","time_created" FROM "finfolk"."Rev"
+            WHERE "id" = (o_old ->> 'rev_id')::UUID
+            LIMIT 1)
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+          v_version := ((o_rev ->> 'index')::INT + 1);
+          WITH j_ret AS (  
+            UPDATE "finfolk"."Rev" SET "index" = (v_version)::INTEGER,"current" = (o_next)::JSONB WHERE "id" = (o_old ->> 'rev_id')::UUID
+            RETURNING "id","class_ref","index","current","op_created","time_created")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_revised;
+          WITH j_ret AS (  
+            INSERT INTO "finfolk"."RevLog" (
+              "class_table",
+              "class_context",
+              "rev_id",
+              "version",
+              "deltas",
+              "op_created",
+              "time_created"
+            ) VALUES (
+              ('DiveSession')::"finfolk"."EnumClassType",
+              ('Global')::"finfolk"."EnumClassType",
+              (o_old ->> 'rev_id')::UUID,
+              (v_version)::INTEGER,
+              (o_next)::JSONB,
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'time')::BIGINT
+            ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_history;
+          WITH j_ret AS (  
+            INSERT INTO "finfolk"."AuditLog" (
+              "class_table",
+              "class_context",
+              "audit_id",
+              "entry",
+              "op_created",
+              "time_created"
+            ) VALUES (
+              ('DiveSession')::"finfolk"."EnumClassType",
+              ('Global')::"finfolk"."EnumClassType",
+              (o_old ->> 'audit_id')::UUID,
+              "finfolk".as_jsonb((jsonb_build_object('event','save'))::JSONB),
+              (o_op ->> 'id')::UUID,
+              (o_op ->> 'time')::BIGINT
+            ) RETURNING "id","audit_id","op_created","time_created")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
+        END;
+    END;
+    END IF;
+    RETURN jsonb_build_object('id',v_id);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/delete-private-session 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".delete_private_session(
+  i_user UUID,
+  i_session UUID
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_old JSONB;
+    o_op JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "owner_id",
+        "site_id",
+        "detail",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."DiveSession"
+      WHERE "id" = i_session AND "owner_id" = i_user
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_old;
+    o_op := "finfolk".op_fn('private-session-delete',i_user,('{}')::JSONB);
+    IF o_old is null  THEN
+      RAISE EXCEPTION USING errcode = 'P0002',message = 'Session unavailable';
+    END IF;
+    IF (jsonb_array_length(coalesce((o_old -> 'detail') -> 'photos',('[]')::JSONB)) > 0) OR (jsonb_array_length(
+      coalesce((o_old -> 'detail') -> 'linkedMedia',('[]')::JSONB)
+    ) > 0) THEN
+      RAISE EXCEPTION USING
+        errcode = '42501',
+        message = 'Media cleanup is required before deleting this session'
+      ;
+    END IF;
+    DECLARE
+      o_audit JSONB;
+      o_deleted JSONB;
+      o_rev JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        DELETE FROM "finfolk"."DiveSession" WHERE "id" = i_session AND "owner_id" = i_user
+        RETURNING
+          "id",
+          "owner_id",
+          "site_id",
+          "detail",
+          "audit_id",
+          "rev_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_deleted;
+      WITH j_ret AS (  
+        DELETE FROM "finfolk"."Rev" WHERE "id" = (o_old ->> 'rev_id')::UUID
+        RETURNING "id","class_ref","index","current","op_created","time_created")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_rev;
+      WITH j_ret AS (  
+        DELETE FROM "finfolk"."Audit" WHERE "id" = (o_old ->> 'audit_id')::UUID
+        RETURNING "id","class_ref","op_created","time_created")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_audit;
+      RETURN jsonb_build_object('deleted',true);
+    END;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-private-sessions 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_private_sessions(
+  i_user UUID,
+  i_query JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  IF i_query ->> 'owner' IS NOT NULL AND ((i_query ->> 'owner')::UUID != i_user) THEN
+    RAISE EXCEPTION USING
+      errcode = '42501',
+      message = 'Public session browsing has a separate access path'
+    ;
+  END IF;
+  DECLARE
+    o_result JSONB;
+    o_row JSONB;
+    o_rows JSONB;
+    v_after TEXT;
+    v_cursor TEXT;
+    v_index INT;
+    v_next TEXT;
+    v_time BIGINT;
+  BEGIN
+    v_cursor := coalesce(i_query ->> 'cursor','');
+    v_time := 9223372036854775807;
+    v_after := 'ffffffff-ffff-ffff-ffff-ffffffffffff';
+    v_next := null;
+    v_index := 0;
+    o_rows := null;
+    o_row := null;
+    o_result := ('[]')::JSONB;
+    IF v_cursor != '' THEN
+      IF NOT "regexp_like"(v_cursor,'^[0-9]{1,19}:[0-9a-fA-F-]{36}$') THEN
+        RAISE EXCEPTION USING errcode = '22023',message = 'Choose a valid session cursor';
+      END IF;
+      v_time := ("split_part"(v_cursor,':',1))::BIGINT;
+      v_after := "split_part"(v_cursor,':',2);
+    END IF;
+    EXECUTE 'SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY time_created DESC,id DESC),''[]''::jsonb) FROM (SELECT * FROM finfolk."DiveSession" WHERE owner_id=($1->>''actor'')::uuid AND (time_created,id)<(($1->>''time'')::bigint,($1->>''after'')::uuid) AND (NOT ($1->>''public'')::boolean OR detail->>''visibility''=''public'') ORDER BY time_created DESC,id DESC LIMIT 51) r' INTO o_rows USING jsonb_build_object(
+      'actor',
+      i_user,
+      'time',
+      v_time,
+      'after',
+      v_after,
+      'public',
+      coalesce((i_query ->> 'publicOnly')::BOOLEAN,false)
+    );
+    FOR o_row IN SELECT jsonb_array_elements(o_rows) LOOP
+      IF v_index < 50 THEN
+        o_result := (o_result || jsonb_build_array("finfolk_rpc".private_session_row(o_row)));
+        IF v_index = 49 THEN
+          v_next := ((o_row ->> 'time_created') || ':' || (o_row ->> 'id'));
+        END IF;
+      END IF;
+      v_index := (v_index + 1);
+    END LOOP;
+    IF jsonb_array_length(o_rows) <= 50 THEN
+      v_next := null;
+    END IF;
+    RETURN jsonb_build_object(
+      'sessions',
+      o_result,
+      'cursor',
+      v_next,
+      'more',
+      jsonb_array_length(o_rows) > 50
+    );
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-private-profile 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_private_profile(
+  i_user UUID,
+  i_target UUID
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_target IS NOT NULL AND (i_user != i_target) THEN
+    RAISE EXCEPTION USING
+      errcode = '42501',
+      message = 'Other member profiles require the public profile access path'
+    ;
+  END IF;
+  DECLARE
+    o_user JSONB;
+  BEGIN
+    o_user := "finfolk_rpc".ret_account(i_user);
+    RETURN (o_user -> 'profile') || jsonb_build_object('id',i_user,'uid',i_user);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/set-session-visibility 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".set_session_visibility(
+  i_user UUID,
+  i_session UUID,
+  i_visibility TEXT,
+  i_verified BOOLEAN
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  IF NOT jsonb_exists(('["private","public"]')::JSONB,i_visibility) THEN
+    RAISE EXCEPTION USING
+      errcode = '22023',
+      message = 'Choose private or public visibility'
+    ;
+  END IF;
+  DECLARE
+    o_old JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "owner_id",
+        "site_id",
+        "detail",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."DiveSession"
+      WHERE "id" = i_session AND "owner_id" = i_user
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_old;
+    IF o_old is null  THEN
+      RAISE EXCEPTION USING errcode = 'P0002',message = 'Session unavailable';
+    END IF;
+    IF i_visibility = 'public' THEN
+      IF NOT coalesce(i_verified,false) THEN
+        RAISE EXCEPTION USING
+          errcode = '42501',
+          message = 'Verify your email before publishing'
+        ;
+      END IF;
+      IF (jsonb_array_length(coalesce((o_old -> 'detail') -> 'photos',('[]')::JSONB)) > 0) OR (jsonb_array_length(
+        coalesce((o_old -> 'detail') -> 'linkedMedia',('[]')::JSONB)
+      ) > 0) THEN
+        RAISE EXCEPTION USING
+          errcode = '42501',
+          message = 'Media publishing requires ownership verification'
+        ;
+      END IF;
+    END IF;
+    IF coalesce((o_old -> 'detail') ->> 'visibility','private') != i_visibility THEN
+      DECLARE
+      o_audit JSONB;
+        o_history JSONB;
+        o_next JSONB;
+        o_op JSONB;
+        o_rev JSONB;
+        o_revised JSONB;
+        o_saved JSONB;
+        v_version INT;
+    BEGIN
+      o_op := "finfolk".op_fn(
+          'session-visibility',
+          i_user,
+          jsonb_build_object('visibility',i_visibility)
+        );
+        o_next := ((o_old -> 'detail') || jsonb_build_object('visibility',i_visibility));
+        WITH j_ret AS (  
+          UPDATE "finfolk"."DiveSession" SET
+            "detail" = "finfolk".as_jsonb((o_next)::JSONB),
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "id" = i_session AND "owner_id" = i_user
+          RETURNING
+            "id",
+            "owner_id",
+            "site_id",
+            "audit_id",
+            "rev_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+        WITH j_ret AS (  
+          SELECT "id","class_ref","index","current","op_created","time_created" FROM "finfolk"."Rev"
+          WHERE "id" = (o_old ->> 'rev_id')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
+        v_version := ((o_rev ->> 'index')::INT + 1);
+        WITH j_ret AS (  
+          UPDATE "finfolk"."Rev" SET "index" = (v_version)::INTEGER,"current" = (o_next)::JSONB WHERE "id" = (o_old ->> 'rev_id')::UUID
+          RETURNING "id","class_ref","index","current","op_created","time_created")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_revised;
+        WITH j_ret AS (  
+          INSERT INTO "finfolk"."RevLog" (
+            "class_table",
+            "class_context",
+            "rev_id",
+            "version",
+            "deltas",
+            "op_created",
+            "time_created"
+          ) VALUES (
+            ('DiveSession')::"finfolk"."EnumClassType",
+            ('Global')::"finfolk"."EnumClassType",
+            (o_old ->> 'rev_id')::UUID,
+            (v_version)::INTEGER,
+            (o_next)::JSONB,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'time')::BIGINT
+          ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_history;
+        WITH j_ret AS (  
+          INSERT INTO "finfolk"."AuditLog" (
+            "class_table",
+            "class_context",
+            "audit_id",
+            "entry",
+            "op_created",
+            "time_created"
+          ) VALUES (
+            ('DiveSession')::"finfolk"."EnumClassType",
+            ('Global')::"finfolk"."EnumClassType",
+            (o_old ->> 'audit_id')::UUID,
+            "finfolk".as_jsonb(
+            (jsonb_build_object('event','visibility','visibility',i_visibility))::JSONB
+          ),
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'time')::BIGINT
+          ) RETURNING "id","audit_id","op_created","time_created")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
+    END;
+    END IF;
+    RETURN jsonb_build_object('visibility',i_visibility);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/public-session-row 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".public_session_row(
+  i_row JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_row IS NULL OR (coalesce((i_row -> 'detail') ->> 'visibility','private') != 'public') OR NOT "finfolk".is_user_active((i_row ->> 'owner_id')::UUID) THEN
+    RETURN null;
+  END IF;
+  IF (jsonb_array_length(coalesce((i_row -> 'detail') -> 'photos',('[]')::JSONB)) > 0) OR (jsonb_array_length(
+    coalesce((i_row -> 'detail') -> 'linkedMedia',('[]')::JSONB)
+  ) > 0) THEN
+    RETURN null;
+  END IF;
+  RETURN "finfolk_rpc".private_session_row(i_row);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-visible-session 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_visible_session(
+  i_viewer UUID,
+  i_session UUID
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_viewer is not null  THEN
+    PERFORM "finfolk_rpc".ret_account(i_viewer);
+  END IF;
+  DECLARE
+    o_row JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "owner_id",
+        "site_id",
+        "detail",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."DiveSession"
+      WHERE "id" = i_session
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_row;
+    IF o_row is null  THEN
+      RETURN null;
+    END IF;
+    IF (o_row ->> 'owner_id')::UUID = i_viewer THEN
+      RETURN "finfolk_rpc".private_session_row(o_row);
+    END IF;
+    IF i_viewer IS NOT NULL AND "finfolk".is_user_blocked(i_viewer,(o_row ->> 'owner_id')::UUID) THEN
+      RETURN null;
+    END IF;
+    RETURN "finfolk_rpc".public_session_row(o_row);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-visible-sessions 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_visible_sessions(
+  i_viewer UUID,
+  i_query JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_viewer is not null  THEN
+    PERFORM "finfolk_rpc".ret_account(i_viewer);
+  END IF;
+  DECLARE
+    o_result JSONB;
+    o_row JSONB;
+    v_owner UUID;
+  BEGIN
+    v_owner := coalesce((i_query ->> 'owner')::UUID,i_viewer);
+    o_result := ('[]')::JSONB;
+    o_row := null;
+    IF v_owner is null  THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Choose a session owner';
+    END IF;
+    IF NOT "finfolk".is_user_active(v_owner) OR (i_viewer IS NOT NULL AND "finfolk".is_user_blocked(i_viewer,v_owner)) THEN
+      RETURN jsonb_build_object('sessions',o_result,'cursor',null,'more',false);
+    END IF;
+    IF v_owner = i_viewer THEN
+      RETURN "finfolk_rpc".ret_private_sessions(i_viewer,i_query);
+    END IF;
+    DECLARE
+      o_page JSONB;
+    BEGIN
+      o_page := "finfolk_rpc".ret_private_sessions(
+        v_owner,
+        i_query || jsonb_build_object('owner',v_owner,'publicOnly',true)
+      );
+      FOR o_row IN SELECT jsonb_array_elements(o_page -> 'sessions') LOOP
+        IF (jsonb_array_length(o_row -> 'photos') = 0) AND (jsonb_array_length(o_row -> 'linkedMedia') = 0) THEN
+          o_result := (o_result || jsonb_build_array(o_row));
+        END IF;
+      END LOOP;
+      RETURN o_page || jsonb_build_object('sessions',o_result);
+    END;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/profile-post-links 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".profile_post_links(
+  i_owner UUID,
+  i_private BOOLEAN
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_posts JSONB;
+  BEGIN
+    o_posts := null;
+    EXECUTE 'SELECT coalesce(jsonb_agg(row ORDER BY created DESC,id),''[]''::jsonb) FROM (SELECT p.id,p.time_created created,jsonb_build_object(''id'',p.id,''beach_id'',p.site_id,''beach_name'',s.name,''url'',p.url,''platform'',p.platform,''status'',p.status,''public_consent'',p.public_consent) row FROM finfolk."SocialPost" p JOIN finfolk."Site" s ON s.id=p.site_id JOIN finfolk."User" u ON u.id=p.owner_id WHERE p.owner_id=($1->>''owner'')::uuid AND NOT u.deleted AND (($1->>''private'')::boolean OR (p.status=''approved'' AND p.public_consent AND coalesce(u.profile->''featuredPosts'',''[]''::jsonb)?p.id::text)) ORDER BY p.time_created DESC,p.id LIMIT 100) p' INTO o_posts USING jsonb_build_object('owner',i_owner,'private',i_private);
+    RETURN o_posts;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-my-profile-posts 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_my_profile_posts(
+  i_user UUID
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  RETURN "finfolk_rpc".profile_post_links(i_user,true);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-visible-profile 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_visible_profile(
+  i_viewer UUID,
+  i_target UUID
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_viewer is not null  THEN
+    PERFORM "finfolk_rpc".ret_account(i_viewer);
+  END IF;
+  DECLARE
+    o_user JSONB;
+    v_target UUID;
+  BEGIN
+    v_target := coalesce(i_target,i_viewer);
+    WITH j_ret AS (  
+      SELECT "id","profile" FROM "finfolk"."User"
+      WHERE "id" = v_target AND "deleted" = false
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
+    IF v_target is null  THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Choose a profile';
+    END IF;
+    IF o_user IS NULL OR (i_viewer IS NOT NULL AND "finfolk".is_user_blocked(i_viewer,v_target)) THEN
+      RAISE EXCEPTION USING errcode = 'P0002',message = 'Profile unavailable';
+    END IF;
+    IF v_target = i_viewer THEN
+      RETURN (o_user -> 'profile') || jsonb_build_object('id',v_target,'uid',v_target);
+    END IF;
+    DECLARE
+      o_profile JSONB;
+      v_details BOOLEAN;
+      v_open BOOLEAN;
+    BEGIN
+      o_profile := (o_user -> 'profile');
+      v_open := coalesce((o_profile -> 'open') = ('true')::JSONB,false);
+      v_details := v_open;
+      IF i_viewer is not null  THEN
+        DECLARE
+        v_connected BOOLEAN;
+      BEGIN
+        SELECT exists(SELECT 1 FROM "finfolk"."UserConnection"
+          WHERE "user_id" = least(i_viewer,v_target)
+          AND "target_id" = greatest(i_viewer,v_target)
+          AND "status" = ('accepted')::"finfolk"."EnumUserConnectionStatus") INTO v_connected;
+          IF v_connected THEN
+            v_details := true;
+          END IF;
+      END;
+      END IF;
+      DECLARE
+        o_basic JSONB;
+      BEGIN
+        o_basic := jsonb_build_object(
+          'id',
+          v_target,
+          'uid',
+          v_target,
+          'displayName',
+          coalesce(o_profile ->> 'displayName','Diver'),
+          'open',
+          v_open,
+          'restricted',
+          NOT v_details
+        );
+        IF NOT v_details THEN
+          RETURN o_basic;
+        END IF;
+        IF jsonb_exists(o_profile,'featuredLogs') THEN
+          o_basic := (o_basic || jsonb_build_object('featuredLogs',o_profile -> 'featuredLogs'));
+        END IF;
+        IF jsonb_exists(o_profile,'featuredPosts') THEN
+          o_basic := (o_basic || jsonb_build_object('featuredPosts',o_profile -> 'featuredPosts'));
+        END IF;
+        RETURN o_basic || jsonb_build_object(
+          'bio',
+          coalesce(o_profile ->> 'bio',''),
+          'instagram',
+          coalesce(o_profile ->> 'instagram',''),
+          'tiktok',
+          coalesce(o_profile ->> 'tiktok',''),
+          'portrait',
+          coalesce(o_profile ->> 'portrait',''),
+          'availability',
+          coalesce(o_profile -> 'availability',('[]')::JSONB),
+          'experience',
+          coalesce(o_profile ->> 'experience',''),
+          'beaches',
+          coalesce(o_profile -> 'beaches',('[]')::JSONB),
+          'posts',
+          "finfolk_rpc".profile_post_links(v_target,false)
+        );
+      END;
+    END;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-public-session 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_public_session(
+  i_session UUID
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".ret_visible_session(null,i_session);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-public-sessions 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_public_sessions(
+  i_query JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".ret_visible_sessions(null,i_query);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-logbook/ret-public-profile 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_public_profile(
+  i_target UUID
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".ret_visible_profile(null,i_target);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-profile/ret-profile-statistics 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_profile_statistics(
+  i_user UUID,
+  i_target UUID,
+  i_site UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_counts JSONB;
+    o_own JSONB;
+    o_owner JSONB;
+    o_public JSONB;
+    o_site JSONB;
+    o_stats JSONB;
+    o_target JSONB;
+    o_viewer JSONB;
+    v_buddy BOOLEAN;
+    v_connected BOOLEAN;
+    v_level INT;
+    v_open BOOLEAN;
+  BEGIN
+    o_viewer := "finfolk_rpc".ret_account(i_user);
+    o_public := "finfolk_rpc".ret_visible_profile(i_user,i_target);
+    o_target := "finfolk_rpc".ret_account(i_target);
+    o_owner := (o_target -> 'profile');
+    o_own := (o_viewer -> 'profile');
+    WITH j_ret AS (  
+      SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+      WHERE "id" = i_site
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+    SELECT exists(SELECT 1 FROM "finfolk"."UserConnection"
+    WHERE "user_id" = least(i_user,i_target)
+    AND "target_id" = greatest(i_user,i_target)
+    AND "status" = ('accepted')::"finfolk"."EnumUserConnectionStatus") INTO v_buddy;
+    v_connected := ((i_user = i_target) OR v_buddy);
+    v_open := (((o_own -> 'open') = ('true')::JSONB) AND ((o_owner -> 'open') = ('true')::JSONB));
+    o_counts := null;
+    o_stats := ('{}')::JSONB;
+    v_level := 0;
+    IF o_site is null  THEN
+      RAISE EXCEPTION USING errcode = 'P0002',message = 'Choose an existing dive site';
+    END IF;
+    DECLARE
+      v_day DATE;
+    BEGIN
+      v_day := ("timezone"(o_site ->> 'timezone',now()))::DATE;
+      EXECUTE 'WITH p AS (SELECT ($1->>''actor'')::uuid actor,($1->>''target'')::uuid target,($1->>''site'')::uuid site,($1->>''day'')::date AS local_day), visits AS (  SELECT count(*) FILTER(WHERE user_id=p.actor AND visit_day BETWEEN p.local_day-29 AND p.local_day)::int viewer_count,  count(*) FILTER(WHERE user_id=p.target AND visit_day BETWEEN p.local_day-29 AND p.local_day)::int owner_count,  count(DISTINCT to_char(visit_day,''YYYY-MM'')) FILTER(WHERE user_id=p.target AND visit_day<=p.local_day)::int months  FROM finfolk."UserCheckin" CROSS JOIN p WHERE site_id=p.site AND user_id IN(p.actor,p.target)  ), sessions AS (SELECT count(*)::int dives,  sum(CASE WHEN jsonb_typeof(detail->''durationMinutes'')=''number'' THEN (detail->>''durationMinutes'')::numeric END) minutes,  array_agg((detail->>''maxDepthMetres'')::numeric ORDER BY (detail->>''maxDepthMetres'')::numeric) FILTER(WHERE jsonb_typeof(detail->''maxDepthMetres'')=''number'') depths  FROM finfolk."DiveSession" CROSS JOIN p WHERE owner_id=p.target AND site_id=p.site)  SELECT jsonb_build_object(''viewerCount'',viewer_count,''visits'',owner_count,''months'',months,''dives'',dives,''minutes'',minutes,''typicalDepth'',depths[cardinality(depths)/2+1]) FROM visits CROSS JOIN sessions' INTO o_counts USING jsonb_build_object('actor',i_user,'target',i_target,'site',i_site,'day',v_day);
+    END;
+    IF v_connected OR (v_open AND ((o_counts ->> 'viewerCount')::INT >= 8) AND ((o_counts ->> 'visits')::INT >= 8)) THEN
+      v_level := 2;
+    END IF;
+    IF v_level >= 1 THEN
+      IF ((o_owner -> 'sharing') -> 'visits') = ('true')::JSONB THEN
+        o_stats := (o_stats || jsonb_build_object('visits',o_counts -> 'visits'));
+      END IF;
+      IF ((o_owner -> 'sharing') -> 'months') = ('true')::JSONB THEN
+        o_stats := (o_stats || jsonb_build_object('months',o_counts -> 'months'));
+      END IF;
+    END IF;
+    IF v_level >= 2 THEN
+      IF ((o_owner -> 'sharing') -> 'dives') = ('true')::JSONB THEN
+        o_stats := (o_stats || jsonb_build_object('dives',o_counts -> 'dives'));
+      END IF;
+      IF ((o_owner -> 'sharing') -> 'time') = ('true')::JSONB THEN
+        o_stats := (o_stats || jsonb_build_object('minutes',o_counts -> 'minutes'));
+      END IF;
+      IF ((o_owner -> 'sharing') -> 'depth') = ('true')::JSONB THEN
+        o_stats := (o_stats || jsonb_build_object('typicalDepth',o_counts -> 'typicalDepth'));
+      END IF;
+    END IF;
+    RETURN jsonb_build_object(
+      'profile',
+      o_public,
+      'level',
+      v_level,
+      'stats',
+      o_stats,
+      'progress',
+      least(8,(o_counts ->> 'viewerCount')::INT),
+      'sharingClosed',
+      NOT coalesce(v_open,false),
+      'expiresWithActivity',
+      NOT v_connected
+    );
   END;
 
 $$ LANGUAGE 'plpgsql';
@@ -8299,238 +12132,6 @@ CREATE TABLE IF NOT EXISTS "finfolk"."UserReport" (
   CONSTRAINT one_target CHECK (("target_id" IS NOT NULL AND "trip_id" IS NULL) OR ("target_id" IS NULL AND "trip_id" IS NOT NULL))
 );
 CREATE INDEX ON "finfolk"."UserReport" ("author_id");
-
--- finfolkdb.common.type-user-activity/EnumActionType 
-DO $$
-BEGIN
-  CREATE TYPE "finfolk"."EnumActionType" AS ENUM ('create',
-    'read',
-    'update',
-    'delete',
-    'login',
-    'logout',
-    'invite',
-    'join',
-    'leave',
-    'share',
-    'export',
-    'import');
-EXCEPTION WHEN OTHERS THEN
-END;
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.common.type-user-activity/ActivityLog 
-CREATE TABLE IF NOT EXISTS "finfolk"."ActivityLog" (
-  "id" UUID DEFAULT uuid_generate_v1(),
-  "class_table" "finfolk"."EnumClassType",
-  "activity_id" UUID NOT NULL,
-  "action" "finfolk"."EnumActionType" NOT NULL,
-  "actor_id" UUID REFERENCES "finfolk"."User"("id"),
-  "detail" JSONB NOT NULL DEFAULT '{}',
-  "op_created" UUID,
-  "time_created" BIGINT,
-  PRIMARY KEY (id,class_table),
-  CONSTRAINT fk_activity_log_activity FOREIGN KEY (class_table,activity_id) REFERENCES "finfolk"."Activity"(class_table,id) ON DELETE CASCADE
-);
-
--- finfolkdb.fn.user.user-manage/insert-user 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_user(
-  i_user_id UUID,
-  i_profile JSONB,
-  o_op JSONB
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_activity JSONB;
-    o_activity_log JSONB;
-    o_audit JSONB;
-    o_audit_log JSONB;
-    o_rev JSONB;
-    o_user JSONB;
-  BEGIN
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."Rev" (
-        "class_table",
-        "class_context",
-        "class_ref",
-        "current",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        ('User')::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        (i_user_id)::UUID,
-        ("finfolk".as_jsonb(i_profile))::JSONB,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","class_ref","index","current","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."Audit" (
-        "class_table",
-        "class_context",
-        "class_ref",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        ('User')::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        (i_user_id)::UUID,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","class_ref","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."Activity" ("class_table","class_ref","op_created","time_created") VALUES (
-        ('User')::"finfolk"."EnumClassType",
-        (i_user_id)::UUID,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","class_ref","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_activity;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."User" ("id","profile","activity_id","audit_id","rev_id") VALUES (
-        (i_user_id)::UUID,
-        ("finfolk".as_jsonb(i_profile))::JSONB,
-        ((o_activity ->> 'id')::UUID)::UUID,
-        ((o_audit ->> 'id')::UUID)::UUID,
-        ((o_rev ->> 'id')::UUID)::UUID
-      ) RETURNING
-        "id",
-        "profile",
-        "deleted",
-        "invite_eligible",
-        "joined_at",
-        "time_updated",
-        "activity_id",
-        "audit_id",
-        "rev_id")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."AuditLog" (
-        "class_table",
-        "class_context",
-        "audit_id",
-        "entry",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        ('User')::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        ((o_audit ->> 'id')::UUID)::UUID,
-        "finfolk".as_jsonb((jsonb_build_object('status','created'))::JSONB),
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","audit_id","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit_log;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."ActivityLog" (
-        "class_table",
-        "activity_id",
-        "action",
-        "actor_id",
-        "detail",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        ('User')::"finfolk"."EnumClassType",
-        ((o_activity ->> 'id')::UUID)::UUID,
-        ('create')::"finfolk"."EnumActionType",
-        (i_user_id)::UUID,
-        "finfolk".as_jsonb((jsonb_build_object('status','created'))::JSONB),
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING
-        "id",
-        "activity_id",
-        "action",
-        "actor_id",
-        "op_created",
-        "time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_activity_log;
-    RETURN o_user;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.common.type-environment-base/DataSource 
-CREATE TABLE IF NOT EXISTS "finfolk"."DataSource" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "key" TEXT,
-  "metadata" JSONB NOT NULL,
-  "enabled" BOOLEAN NOT NULL DEFAULT false,
-  UNIQUE ("key")
-);
-
--- finfolkdb.common.type-environment-base/DepthDataset 
-CREATE TABLE IF NOT EXISTS "finfolk"."DepthDataset" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "key" TEXT,
-  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
-  "upstream_id" TEXT NOT NULL,
-  "version" TEXT NOT NULL,
-  "checksum" TEXT NOT NULL,
-  "status" "finfolk"."EnumDepthDatasetStatus" NOT NULL DEFAULT 'staged',
-  "metadata" JSONB NOT NULL,
-  UNIQUE ("key"),
-  UNIQUE ("source_id","upstream_id","version")
-);
-
--- finfolkdb.common.type-environment-base/TideStation 
-CREATE TABLE IF NOT EXISTS "finfolk"."TideStation" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "key" TEXT,
-  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
-  "upstream_id" TEXT NOT NULL,
-  "metadata" JSONB NOT NULL,
-  "active" BOOLEAN NOT NULL DEFAULT true,
-  UNIQUE ("key"),
-  UNIQUE ("source_id","upstream_id")
-);
-
--- finfolkdb.common.type-environment-base/EnvironmentTarget 
-CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentTarget" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "key" TEXT,
-  "source_id" UUID NOT NULL REFERENCES "finfolk"."DataSource"("id"),
-  "product" "finfolk"."EnumEnvironmentTargetProduct" NOT NULL,
-  "configuration" JSONB NOT NULL,
-  "last_requested_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  UNIQUE ("key")
-);
-
--- finfolkdb.common.type-environment-base/EnvironmentSnapshot 
-CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentSnapshot" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "target_id" UUID NOT NULL REFERENCES "finfolk"."EnvironmentTarget"("id") ON DELETE CASCADE,
-  "issued_at" BIGINT,
-  "retrieved_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "valid_from" BIGINT NOT NULL,
-  "valid_to" BIGINT NOT NULL,
-  "fresh_until" BIGINT NOT NULL,
-  "delete_after" BIGINT NOT NULL,
-  "checksum" TEXT NOT NULL,
-  "schema_version" INTEGER NOT NULL DEFAULT 1,
-  "payload" JSONB NOT NULL,
-  CONSTRAINT check_0 CHECK ("valid_to" > "valid_from"),
-  CONSTRAINT check_1 CHECK ("delete_after" >= "retrieved_at"),
-  CONSTRAINT check_2 CHECK ("schema_version" > 0)
-);
-
--- finfolkdb.common.type-environment-base/EnvironmentJob 
-CREATE TABLE IF NOT EXISTS "finfolk"."EnvironmentJob" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "target_id" UUID NOT NULL REFERENCES "finfolk"."EnvironmentTarget"("id") ON DELETE CASCADE,
-  "next_attempt_at" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "lease_token" UUID,
-  "lease_until" BIGINT,
-  "attempts" INTEGER NOT NULL DEFAULT 0,
-  "last_success" BIGINT,
-  "error_code" TEXT,
-  UNIQUE ("target_id"),
-  CONSTRAINT check_0 CHECK ("attempts" >= 0),
-  CONSTRAINT check_1 CHECK (("lease_token" IS NULL AND "lease_until" IS NULL) OR ("lease_token" IS NOT NULL AND "lease_until" IS NOT NULL))
-);
 
 -- finfolkdb.fn.social.social-policy/social-member-allowed 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".social_member_allowed(
@@ -8918,6 +12519,47 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_chat_history(
       END IF;
       RETURN "finfolk_rpc".ret_messaging_history(i_application,i_account,(o_conversation ->> 'id')::UUID);
     END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-catalog/native-public-site-catalog 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_public_site_catalog() RETURNS JSONB AS $$
+
+  DECLARE
+    o_result JSONB;
+  BEGIN
+    o_result := null;
+    EXECUTE 'SELECT finfolk_rpc.native_site_catalog()' INTO o_result;
+    RETURN o_result;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-catalog/native-public-site-detail 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_public_site_detail(
+  i_site UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_result JSONB;
+  BEGIN
+    o_result := null;
+    EXECUTE 'SELECT finfolk_rpc.native_site_detail($1)' INTO o_result USING i_site;
+    RETURN o_result;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-catalog/native-public-popular 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_public_popular() RETURNS JSONB AS $$
+
+  DECLARE
+    o_result JSONB;
+  BEGIN
+    o_result := null;
+    EXECUTE 'SELECT finfolk_rpc.native_discover_popular()' INTO o_result;
+    RETURN o_result;
   END;
 
 $$ LANGUAGE 'plpgsql';
@@ -11284,6 +14926,99 @@ CREATE TABLE IF NOT EXISTS "finfolk"."GeoBoundary" (
   UNIQUE ("key")
 );
 
+-- finfolkdb.fn.event.event-delivery/event-delivery-enqueue 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".event_delivery_enqueue(
+  i_actor UUID,
+  i_event UUID,
+  i_invite UUID,
+  i_token TEXT,
+  i_key TEXT
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_result JSONB;
+  BEGIN
+    o_result := null;
+    EXECUTE 'SELECT finfolk_rpc.native_event_delivery_operation(''enqueue'',($1->>''actor'')::uuid,($1->>''event'')::uuid,($1->>''invite'')::uuid,$1->>''token'',$1->>''key'',NULL,NULL,NULL)' INTO o_result USING jsonb_build_object(
+      'actor',
+      i_actor,
+      'event',
+      i_event,
+      'invite',
+      i_invite,
+      'token',
+      i_token,
+      'key',
+      i_key
+    );
+    RETURN o_result;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-delivery/event-delivery-claim 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".event_delivery_claim(
+  i_actor UUID,
+  i_event UUID,
+  i_invite UUID,
+  i_key TEXT,
+  i_lease UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_result JSONB;
+  BEGIN
+    o_result := null;
+    EXECUTE 'SELECT finfolk_rpc.native_event_delivery_operation(''claim'',($1->>''actor'')::uuid,($1->>''event'')::uuid,($1->>''invite'')::uuid,NULL,$1->>''key'',($1->>''lease'')::uuid,NULL,NULL)' INTO o_result USING jsonb_build_object(
+      'actor',
+      i_actor,
+      'event',
+      i_event,
+      'invite',
+      i_invite,
+      'key',
+      i_key,
+      'lease',
+      i_lease
+    );
+    RETURN o_result;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.event.event-delivery/event-delivery-complete 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".event_delivery_complete(
+  i_actor UUID,
+  i_event UUID,
+  i_invite UUID,
+  i_lease UUID,
+  i_state TEXT,
+  i_receipt TEXT
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_result JSONB;
+  BEGIN
+    o_result := null;
+    EXECUTE 'SELECT finfolk_rpc.native_event_delivery_operation(''complete'',($1->>''actor'')::uuid,($1->>''event'')::uuid,($1->>''invite'')::uuid,NULL,NULL,($1->>''lease'')::uuid,$1->>''state'',$1->>''receipt'')' INTO o_result USING jsonb_build_object(
+      'actor',
+      i_actor,
+      'event',
+      i_event,
+      'invite',
+      i_invite,
+      'lease',
+      i_lease,
+      'state',
+      i_state,
+      'receipt',
+      i_receipt
+    );
+    RETURN o_result;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
 -- finfolkdb.fn.social.social-interop/new-social-operation 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".new_social_operation(
   i_actor UUID
@@ -11353,90 +15088,6 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_social_adapter_scope(
 
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.common.type-site-base/SiteCatalog 
-CREATE TABLE IF NOT EXISTS "finfolk"."SiteCatalog" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "singleton" BOOLEAN NOT NULL DEFAULT true,
-  "revision" BIGINT NOT NULL DEFAULT 0,
-  "metadata" JSONB NOT NULL DEFAULT '{}',
-  UNIQUE ("singleton"),
-  CONSTRAINT singleton CHECK ("singleton"),
-  CONSTRAINT check_1 CHECK ("revision" >= 0)
-);
-
--- finfolkdb.common.type-site-base/SiteProfile 
-CREATE TABLE IF NOT EXISTS "finfolk"."SiteProfile" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
-  "revision" BIGINT NOT NULL,
-  "waterbody" "finfolk"."EnumSiteProfileWaterbody" NOT NULL,
-  "access_mode" "finfolk"."EnumSiteProfileAccessMode" NOT NULL,
-  "status" "finfolk"."EnumSiteProfileStatus" NOT NULL,
-  "payload" JSONB NOT NULL,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  UNIQUE ("site_id")
-);
-
--- finfolkdb.common.type-site-base/SiteImport 
-CREATE TABLE IF NOT EXISTS "finfolk"."SiteImport" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "preview" JSONB NOT NULL DEFAULT '{}',
-  "status" "finfolk"."EnumSiteImportStatus" NOT NULL DEFAULT 'draft',
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
-);
-
--- finfolkdb.common.type-site-base/SiteRevision 
-CREATE TABLE IF NOT EXISTS "finfolk"."SiteRevision" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "site_id" UUID NOT NULL REFERENCES "finfolk"."Site"("id"),
-  "owner_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "import_id" UUID REFERENCES "finfolk"."SiteImport"("id") ON DELETE CASCADE,
-  "base_revision" BIGINT NOT NULL DEFAULT 0,
-  "version" BIGINT NOT NULL DEFAULT 1,
-  "status" "finfolk"."EnumSiteRevisionStatus" NOT NULL,
-  "payload" JSONB NOT NULL,
-  "reason" TEXT NOT NULL DEFAULT '',
-  "reviewed_by_id" UUID REFERENCES "finfolk"."User"("id") ON DELETE SET NULL,
-  "time_created" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT,
-  "time_updated" BIGINT NOT NULL DEFAULT (1000000 * extract(epoch FROM now()))::BIGINT
-);
-
--- finfolkdb.common.type-site-base/SiteAccessPoint 
-CREATE TABLE IF NOT EXISTS "finfolk"."SiteAccessPoint" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
-  "mode" "finfolk"."EnumSiteAccessPointMode" NOT NULL,
-  "payload" JSONB NOT NULL
-);
-
--- finfolkdb.common.type-site-base/SiteDepthEvidence 
-CREATE TABLE IF NOT EXISTS "finfolk"."SiteDepthEvidence" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
-  "kind" "finfolk"."EnumSiteDepthEvidenceType" NOT NULL,
-  "payload" JSONB NOT NULL
-);
-
--- finfolkdb.common.type-site-base/SiteDepthDataset 
-CREATE TABLE IF NOT EXISTS "finfolk"."SiteDepthDataset" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
-  "dataset_id" UUID NOT NULL REFERENCES "finfolk"."DepthDataset"("id"),
-  "relationship" "finfolk"."EnumSiteDepthDatasetRelationship" NOT NULL,
-  "evidence" JSONB NOT NULL,
-  UNIQUE ("revision_id","dataset_id")
-);
-
--- finfolkdb.common.type-site-base/SiteTideStation 
-CREATE TABLE IF NOT EXISTS "finfolk"."SiteTideStation" (
-  "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  "revision_id" UUID NOT NULL REFERENCES "finfolk"."SiteRevision"("id") ON DELETE CASCADE,
-  "station_id" UUID NOT NULL REFERENCES "finfolk"."TideStation"("id"),
-  "evidence" JSONB NOT NULL,
-  UNIQUE ("revision_id")
-);
-
 -- finfolkdb.common.type-media-import/MediaImport 
 CREATE TABLE IF NOT EXISTS "finfolk"."MediaImport" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -11468,917 +15119,278 @@ CREATE TABLE IF NOT EXISTS "finfolk"."MediaImport" (
 );
 CREATE INDEX ON "finfolk"."MediaImport" ("owner_id");
 
--- finfolkdb.fn.site.site-note-revision/site-note-version 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".site_note_version(
-  i_rev UUID
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_rev JSONB;
-  BEGIN
-    WITH j_ret AS (  
-      SELECT "id","class_ref","index","current","op_created","time_created" FROM "finfolk"."Rev"
-      WHERE "class_table" = ('SiteNote')::"finfolk"."EnumClassType"
-      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
-      AND "id" = i_rev
-      LIMIT 1)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
-    IF o_rev is null  THEN
-      RETURN null;
-    END IF;
-    RETURN jsonb_build_object('revision',o_rev -> 'index');
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-note-revision/insert-site-note 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_site_note(
-  i_id UUID,
+-- finfolkdb.fn.user.user-community/record-community-checkin 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".record_community_checkin(
+  i_user UUID,
   i_site UUID,
-  i_author UUID,
-  i_topic TEXT,
-  i_body TEXT,
-  i_observed DATE,
-  o_op JSONB
+  i_verified BOOLEAN
 ) RETURNS JSONB AS $$
-
-  DECLARE
-    o_current JSONB;
-    o_log JSONB;
-    o_note JSONB;
-    o_rev JSONB;
-  BEGIN
-    o_current := jsonb_build_object(
-      'site_id',
-      i_site,
-      'author_id',
-      i_author,
-      'topic',
-      i_topic,
-      'body',
-      i_body,
-      'observed_on',
-      i_observed,
-      'withdrawn',
-      false,
-      'hidden',
-      false
-    );
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."Rev" (
-        "class_table",
-        "class_context",
-        "class_ref",
-        "index",
-        "current",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        ('SiteNote')::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        (i_id)::UUID,
-        (1)::INTEGER,
-        (o_current)::JSONB,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","class_ref","index","current","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."RevLog" (
-        "class_table",
-        "class_context",
-        "rev_id",
-        "version",
-        "deltas",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        ('SiteNote')::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        ((o_rev ->> 'id')::UUID)::UUID,
-        (1)::INTEGER,
-        (o_current)::JSONB,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."SiteNote" (
-        "id",
-        "site_id",
-        "author_id",
-        "topic",
-        "body",
-        "observed_on",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated"
-      ) VALUES (
-        (i_id)::UUID,
-        (i_site)::UUID,
-        (i_author)::UUID,
-        (i_topic)::"finfolk"."EnumSiteNoteTopic",
-        "finfolk".as_bounded_text((i_body)::TEXT,10,1000),
-        "finfolk".as_finite_date((i_observed)::DATE),
-        ((o_rev ->> 'id')::UUID)::UUID,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING
-        "id",
-        "site_id",
-        "author_id",
-        "topic",
-        "body",
-        "observed_on",
-        "withdrawn",
-        "hidden",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
-    RETURN o_note || "finfolk_rpc".site_note_version((o_rev ->> 'id')::UUID);
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-note-revision/record-site-note-revision 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".record_site_note_revision(
-  i_note UUID,
-  o_op JSONB
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_current JSONB;
-    o_log JSONB;
-    o_note JSONB;
-    o_rev JSONB;
-    o_saved JSONB;
-    v_rev UUID;
-    v_version INTEGER;
-  BEGIN
-    WITH j_ret AS (  
-      SELECT
-        "id",
-        "site_id",
-        "author_id",
-        "topic",
-        "body",
-        "observed_on",
-        "withdrawn",
-        "hidden",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated"
-      FROM "finfolk"."SiteNote"
-      WHERE "id" = i_note
-      LIMIT 1
-      FOR UPDATE)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
-    v_rev := (o_note ->> 'rev_id')::UUID;
-    WITH j_ret AS (  
-      SELECT "id","class_ref","index","current","op_created","time_created" FROM "finfolk"."Rev"
-      WHERE "class_table" = ('SiteNote')::"finfolk"."EnumClassType"
-      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
-      AND "id" = v_rev
-      LIMIT 1
-      FOR UPDATE)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_rev;
-    WITH j_ret AS (  
-      SELECT
-        "site_id",
-        "author_id",
-        "topic",
-        "body",
-        "observed_on",
-        "withdrawn",
-        "hidden"
-      FROM "finfolk"."SiteNote"
-      WHERE "id" = i_note
-      LIMIT 1)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_current;
-    v_version := ((o_rev ->> 'index')::INTEGER + 1);
-    WITH j_ret AS (  
-      UPDATE "finfolk"."Rev" SET
-        "index" = (v_version)::INTEGER,
-        "current" = (o_current)::JSONB
-      WHERE "class_table" = ('SiteNote')::"finfolk"."EnumClassType"
-      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
-      AND "id" = v_rev
-      RETURNING "id","class_ref","index","current","op_created","time_created")
-    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."RevLog" (
-        "class_table",
-        "class_context",
-        "rev_id",
-        "version",
-        "deltas",
-        "op_created",
-        "time_created"
-      ) VALUES (
-        ('SiteNote')::"finfolk"."EnumClassType",
-        ('Global')::"finfolk"."EnumClassType",
-        (v_rev)::UUID,
-        (v_version)::INTEGER,
-        (o_current)::JSONB,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING "id","rev_id","version","deltas","op_created","time_created")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_log;
-    RETURN jsonb_build_object('revision',v_version);
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-notes/is-site-note-member 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".is_site_note_member(
-  i_user UUID
-) RETURNS BOOLEAN AS $$
 BEGIN
-  RETURN "finfolk".is_user_active(i_user) AND exists(
-    SELECT 1 FROM neon_auth."user" WHERE (("id")::TEXT = (i_user)::TEXT) AND coalesce("emailVerified",false) AND NOT coalesce("banned",false)
-  );
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  IF NOT coalesce(i_verified,false) THEN
+    RAISE EXCEPTION USING
+      errcode = '42501',
+      message = 'Verify your email before checking in'
+    ;
+  END IF;
+  DECLARE
+    o_site JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+      WHERE "id" = i_site
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+    IF o_site is null  THEN
+      RAISE EXCEPTION USING errcode = 'P0002',message = 'Choose an existing dive site';
+    END IF;
+    DECLARE
+      o_row JSONB;
+      v_count INT;
+      v_day DATE;
+      v_exists BOOLEAN;
+    BEGIN
+      v_day := ("timezone"(o_site ->> 'timezone',now()))::DATE;
+      SELECT exists(SELECT 1 FROM "finfolk"."UserCheckin"
+      WHERE "user_id" = i_user AND "site_id" = i_site AND "visit_day" = v_day) INTO v_exists;
+      v_count := 0;
+      o_row := null;
+      IF NOT v_exists THEN
+        DECLARE
+        o_created JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            INSERT INTO "finfolk"."UserCheckin" ("user_id","site_id","visit_day") VALUES ((i_user)::UUID,(i_site)::UUID,(v_day)::DATE) RETURNING
+              "id",
+              "user_id",
+              "site_id",
+              "visit_day",
+              "time_created",
+              "checked_in_at",
+              "checked_out_at")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_created;
+      END;
+      END IF;
+      DECLARE
+        o_visits JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          SELECT "visit_day" FROM "finfolk"."UserCheckin"
+          WHERE "user_id" = i_user
+          AND "site_id" = i_site
+          AND "visit_day" >= v_day - 29
+          ORDER BY "visit_day" ASC
+          LIMIT 31)
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_visits;
+        FOR o_row IN SELECT jsonb_array_elements(coalesce(o_visits,('[]')::JSONB)) LOOP
+          IF (o_row ->> 'visit_day')::DATE <= v_day THEN
+            v_count := (v_count + 1);
+          END IF;
+        END LOOP;
+      END;
+      RETURN jsonb_build_object('day',(v_day)::TEXT,'count',v_count,'selfReported',true);
+    END;
+  END;
 END;
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.fn.site.site-notes/require-site-note-member 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".require_site_note_member() RETURNS UUID AS $$
-
-  DECLARE
-    v_user UUID;
-  BEGIN
-    v_user := "finfolk".auth_uid();
-    IF NOT "finfolk_rpc".is_site_note_member(v_user) THEN
-      RAISE EXCEPTION 'Verified member access required';
-    END IF;
-    RETURN v_user;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-notes/is-site-note-site 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".is_site_note_site(
-  i_site UUID
-) RETURNS BOOLEAN AS $$
-
-  DECLARE
-    v_private BOOLEAN;
-    v_site BOOLEAN;
-  BEGIN
-    SELECT exists(SELECT 1 FROM "finfolk"."Site"
-    WHERE "id" = i_site) INTO v_site;
-    SELECT exists(SELECT 1 FROM "finfolk"."SiteProfile"
-    WHERE "site_id" = i_site
-    AND "status" != ('published')::"finfolk"."EnumSiteProfileStatus") INTO v_private;
-    RETURN v_site AND NOT v_private;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-notes/site-note-score 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".site_note_score(
-  i_note UUID
-) RETURNS BIGINT AS $$
-
-  SELECT count(*) FROM "finfolk"."SiteNoteVote" AS "v" INNER JOIN "finfolk"."User" AS "u" ON "v"."voter_id" = "u"."id" INNER JOIN neon_auth."user" AS "a" ON ("a"."id")::TEXT = ("u"."id")::TEXT WHERE ("v"."note_id" = i_note) AND NOT "u"."deleted" AND coalesce("a"."emailVerified",false) AND NOT coalesce("a"."banned",false);
-
-$$ LANGUAGE 'sql';
-
--- finfolkdb.fn.site.site-notes/ret-site-note 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
-  i_note UUID,
-  i_viewer UUID
+-- finfolkdb.fn.user.user-community/remove-community-checkin 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".remove_community_checkin(
+  i_user UUID,
+  i_site UUID,
+  i_day DATE
 ) RETURNS JSONB AS $$
-
+BEGIN
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  IF i_day is null  THEN
+    RAISE EXCEPTION USING errcode = '22023',message = 'Choose a visit day';
+  END IF;
   DECLARE
-    o_note JSONB;
-    o_raw JSONB;
-    o_user JSONB;
-    v_author UUID;
-    v_upvoted BOOLEAN;
+    o_removed JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      DELETE FROM "finfolk"."UserCheckin" WHERE "user_id" = i_user AND "site_id" = i_site AND "visit_day" = i_day
+      RETURNING
+        "id",
+        "user_id",
+        "site_id",
+        "visit_day",
+        "time_created",
+        "checked_in_at",
+        "checked_out_at")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_removed;
+    RETURN jsonb_build_object('removed',true);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-community/ret-community-checkins 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_community_checkins(
+  i_user UUID
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_result JSONB;
+    o_row JSONB;
+    o_visits JSONB;
   BEGIN
     WITH j_ret AS (  
       SELECT
         "id",
+        "user_id",
         "site_id",
-        "author_id",
-        "topic",
-        "body",
-        "observed_on",
-        "withdrawn",
-        "hidden",
-        "rev_id",
-        "op_created",
-        "op_updated",
+        "visit_day",
         "time_created",
-        "time_updated"
-      FROM "finfolk"."SiteNote"
-      WHERE "id" = i_note AND "hidden" = false AND "withdrawn" = false
-      LIMIT 1)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_raw;
-    o_note := (o_raw || "finfolk_rpc".site_note_version((o_raw ->> 'rev_id')::UUID));
-    v_author := (o_note ->> 'author_id')::UUID;
-    WITH j_ret AS (  
-      SELECT "profile" FROM "finfolk"."User"
-      WHERE "id" = v_author AND "deleted" = false
-      LIMIT 1)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
-    SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteVote"
-    WHERE "note_id" = i_note AND "voter_id" = i_viewer) INTO v_upvoted;
-    IF o_note IS NULL OR NOT "finfolk_rpc".is_site_note_site((o_note ->> 'site_id')::UUID) OR NOT "finfolk_rpc".is_site_note_member(v_author) OR "finfolk".is_user_blocked(i_viewer,v_author) THEN
-      RETURN null;
-    END IF;
-    RETURN jsonb_build_object(
-      'id',
-      i_note,
-      'site',
-      (o_note ->> 'site_id')::UUID,
-      'topic',
-      o_note ->> 'topic',
-      'text',
-      o_note ->> 'body',
-      'author',
-      coalesce((o_user -> 'profile') ->> 'displayName','Diver'),
-      'createdAt',
-      "finfolk".as_iso_time((o_note ->> 'time_created')::BIGINT),
-      'observedOn',
-      o_note ->> 'observed_on',
-      'revision',
-      (o_note ->> 'revision')::INTEGER,
-      'score',
-      "finfolk_rpc".site_note_score(i_note),
-      'own',
-      v_author = i_viewer,
-      'upvoted',
-      v_upvoted
-    );
+        "checked_in_at",
+        "checked_out_at"
+      FROM "finfolk"."UserCheckin"
+      WHERE "user_id" = i_user
+      ORDER BY "visit_day","site_id" DESC
+      LIMIT 100)
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_visits;
+    o_row := null;
+    o_result := ('[]')::JSONB;
+    FOR o_row IN SELECT jsonb_array_elements(coalesce(o_visits,('[]')::JSONB)) LOOP
+      DECLARE
+        o_site JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+          WHERE "id" = (o_row ->> 'site_id')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+        o_result := (o_result || jsonb_build_array(jsonb_build_object(
+          'beach_id',
+          o_row -> 'site_id',
+          'day',
+          o_row -> 'visit_day',
+          'name',
+          o_site -> 'name'
+        )));
+      END;
+    END LOOP;
+    RETURN o_result;
   END;
-
+END;
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.fn.site.site-notes/ret-site-notes 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_notes(
-  i_site UUID,
-  i_sort TEXT,
-  i_topic TEXT,
-  i_offset INTEGER,
-  i_member BOOLEAN
+-- finfolkdb.fn.user.user-community/discover-community-people 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".discover_community_people(
+  i_user UUID,
+  i_query JSONB
 ) RETURNS JSONB AS $$
-
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
   DECLARE
+    o_result JSONB;
+    o_row JSONB;
     o_rows JSONB;
-    v_viewer UUID;
+    v_after TEXT;
+    v_availability TEXT;
+    v_cursor TEXT;
+    v_experience TEXT;
+    v_index INT;
+    v_next TEXT;
+    v_rank TEXT;
+    v_seed TEXT;
+    v_site TEXT;
+    v_zone TEXT;
   BEGIN
-    v_viewer := CASE WHEN i_member THEN "finfolk_rpc".require_site_note_member()
-    WHEN true THEN null
-    END;
+    v_seed := (i_query ->> 'seed');
+    v_availability := coalesce(i_query ->> 'availability','');
+    v_experience := coalesce(i_query ->> 'experience','');
+    v_site := coalesce(i_query ->> 'beachId','');
+    v_cursor := coalesce(i_query ->> 'cursor','');
+    v_rank := '';
+    v_after := '00000000-0000-0000-0000-000000000000';
+    v_zone := 'UTC';
     o_rows := null;
-    IF i_offset IS NULL OR (i_offset < 0) OR (i_offset > 10000) OR i_sort IS NULL OR NOT ((i_sort = 'helpful') OR (i_sort = 'newest')) OR i_topic IS NULL OR NOT ((i_topic = 'all') OR (i_topic = 'access') OR (i_topic = 'facilities') OR (i_topic = 'wildlife') OR (i_topic = 'conditions')) THEN
-      RAISE EXCEPTION 'Invalid notes filter';
+    o_row := null;
+    o_result := ('[]')::JSONB;
+    v_next := null;
+    v_index := 0;
+    IF v_seed IS NULL OR NOT "regexp_like"(v_seed,'^[A-Za-z0-9_-]{8,64}$') THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Choose a new people mix';
     END IF;
-    SELECT coalesce(jsonb_agg("value"),('[]')::JSONB) FROM (  
-      SELECT "finfolk_rpc".ret_site_note("id",v_viewer) AS "value" FROM "finfolk"."SiteNote" WHERE ("site_id" = i_site) AND NOT "withdrawn" AND NOT "hidden" AND ((i_topic = 'all') OR (("topic")::TEXT = i_topic)) AND "finfolk_rpc".ret_site_note("id",v_viewer) IS NOT NULL ORDER BY
-        0 - CASE WHEN i_sort = 'helpful' THEN "finfolk_rpc".site_note_score("id")
-      WHEN true THEN 0
-      END,
-        0 - "time_created",
-        "id"
-      LIMIT 21 OFFSET i_offset) AS "selected_notes" INTO o_rows;
-    RETURN jsonb_build_object('notes',CASE WHEN jsonb_array_length(o_rows) > 20 THEN o_rows - 20
-    WHEN true THEN o_rows
-    END,'next',CASE WHEN jsonb_array_length(o_rows) > 20 THEN i_offset + 20
-    WHEN true THEN null
-    END);
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-notes/save-site-note 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
-  i_site UUID,
-  i_id UUID,
-  i_topic TEXT,
-  i_body TEXT,
-  i_observed DATE
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_op JSONB;
-    v_user UUID;
-  BEGIN
-    v_user := "finfolk_rpc".require_site_note_member();
-    o_op := "finfolk".op_fn('save-site-note',v_user,('{}')::JSONB);
-    PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_id)::TEXT,0));
-    DECLARE
-      o_existing JSONB;
+    IF NOT jsonb_exists(
+      ('["","weekday mornings","weekday afternoons","weekend mornings","weekend afternoons"]')::JSONB,
+      v_availability
+    ) OR NOT jsonb_exists(
+      ('["","new","comfortable","experienced"]')::JSONB,
+      v_experience
+    ) THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Choose listed people filters';
+    END IF;
+    IF v_site != '' THEN
+      DECLARE
       o_site JSONB;
-      v_body TEXT;
     BEGIN
       WITH j_ret AS (  
-        SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
-        WHERE "id" = i_site
-        LIMIT 1)
-      SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
-      v_body := btrim(coalesce(i_body,''));
-      WITH j_ret AS (  
-        SELECT
-          "id",
-          "site_id",
-          "author_id",
-          "topic",
-          "body",
-          "observed_on",
-          "withdrawn",
-          "hidden",
-          "rev_id",
-          "op_created",
-          "op_updated",
-          "time_created",
-          "time_updated"
-        FROM "finfolk"."SiteNote"
-        WHERE "id" = i_id
-        LIMIT 1)
-      SELECT to_jsonb(j_ret) FROM j_ret INTO o_existing;
-      IF i_id IS NULL OR NOT "finfolk_rpc".is_site_note_site(i_site) OR (length(v_body) < 10) OR (length(v_body) > 1000) OR i_topic IS NULL OR NOT ((i_topic = 'access') OR (i_topic = 'facilities') OR (i_topic = 'wildlife') OR (i_topic = 'conditions')) OR ((i_topic = 'conditions') AND i_observed IS NULL) OR (i_observed IS NOT NULL AND (NOT "isfinite"(i_observed) OR (i_observed > ("timezone"(
-        o_site ->> 'timezone',
-        to_timestamp((1000000 * extract(epoch FROM now()))::BIGINT / 1000000.0)
-      ))::DATE))) THEN
-        RAISE EXCEPTION 'Check the site, topic, note length and observation date';
-      END IF;
-      IF o_existing is not null  THEN
-        IF ((o_existing ->> 'author_id')::UUID != v_user) OR ((o_existing ->> 'site_id')::UUID != i_site) OR ((o_existing ->> 'topic') != i_topic) OR ((o_existing ->> 'body') != v_body) OR (coalesce(o_existing ->> 'observed_on','') != coalesce((i_observed)::TEXT,'')) THEN
-          RAISE EXCEPTION 'This note identifier was already used';
+          SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+          WHERE "id" = (v_site)::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+        IF o_site is null  THEN
+          RAISE EXCEPTION USING errcode = 'P0002',message = 'Choose an existing dive site';
         END IF;
-        RETURN jsonb_build_object(
-          'id',
-          i_id,
-          'revision',
-          ("finfolk_rpc".site_note_version((o_existing ->> 'rev_id')::UUID) ->> 'revision')::INTEGER
-        );
-      END IF;
-      DECLARE
-        o_note JSONB;
-      BEGIN
-        o_note := "finfolk_rpc".insert_site_note(i_id,i_site,v_user,i_topic,v_body,i_observed,o_op);
-        RETURN jsonb_build_object('id',i_id,'revision',1);
-      END;
+        v_zone := (o_site ->> 'timezone');
     END;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-notes/set-site-note-vote 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
-  i_site UUID,
-  i_note UUID,
-  i_upvoted BOOLEAN
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_note JSONB;
-    o_op JSONB;
-    v_user UUID;
-    v_voted BOOLEAN;
-  BEGIN
-    v_user := "finfolk_rpc".require_site_note_member();
-    o_op := "finfolk".op_fn('set-site-note-vote',v_user,('{}')::JSONB);
-    WITH j_ret AS (  
-      SELECT
-        "id",
-        "site_id",
-        "author_id",
-        "topic",
-        "body",
-        "observed_on",
-        "withdrawn",
-        "hidden",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated"
-      FROM "finfolk"."SiteNote"
-      WHERE "id" = i_note AND "site_id" = i_site
-      LIMIT 1
-      FOR UPDATE)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
-    SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteVote"
-    WHERE "note_id" = i_note AND "voter_id" = v_user) INTO v_voted;
-    IF i_upvoted IS NULL OR o_note IS NULL OR "finfolk_rpc".ret_site_note(i_note,v_user) IS NULL THEN
-      RAISE EXCEPTION 'That note is unavailable';
-    END IF;
-    IF i_upvoted THEN
-      IF NOT v_voted THEN
-        DECLARE
-      o_write JSONB;
-    BEGIN
-      WITH j_ret AS (  
-            INSERT INTO "finfolk"."SiteNoteVote" (
-              "note_id",
-              "voter_id",
-              "op_created",
-              "op_updated",
-              "time_created",
-              "time_updated"
-            ) VALUES (
-              (i_note)::UUID,
-              (v_user)::UUID,
-              (o_op ->> 'id')::UUID,
-              (o_op ->> 'id')::UUID,
-              (o_op ->> 'time')::BIGINT,
-              (o_op ->> 'time')::BIGINT
-            ) RETURNING
-              "id",
-              "note_id",
-              "voter_id",
-              "op_created",
-              "op_updated",
-              "time_created",
-              "time_updated")
-          SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
-          null;
-    END;
-      END IF;
-    ELSE
-      DECLARE
-      o_write JSONB;
-    BEGIN
-      WITH j_ret AS (  
-          DELETE FROM "finfolk"."SiteNoteVote" WHERE "note_id" = i_note AND "voter_id" = v_user
-          RETURNING
-            "id",
-            "note_id",
-            "voter_id",
-            "op_created",
-            "op_updated",
-            "time_created",
-            "time_updated")
-        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
-        null;
-    END;
-    END IF;
-    RETURN "finfolk_rpc".ret_site_note(i_note,v_user);
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-notes/set-site-note-withdrawn 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_withdrawn(
-  i_site UUID,
-  i_note UUID,
-  i_revision INTEGER,
-  i_withdrawn BOOLEAN
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_note JSONB;
-    o_op JSONB;
-    o_raw JSONB;
-    v_user UUID;
-  BEGIN
-    v_user := "finfolk_rpc".require_site_note_member();
-    o_op := "finfolk".op_fn('set-site-note-withdrawn',v_user,('{}')::JSONB);
-    WITH j_ret AS (  
-      SELECT
-        "id",
-        "site_id",
-        "author_id",
-        "topic",
-        "body",
-        "observed_on",
-        "withdrawn",
-        "hidden",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated"
-      FROM "finfolk"."SiteNote"
-      WHERE "id" = i_note AND "site_id" = i_site AND "author_id" = v_user
-      LIMIT 1
-      FOR UPDATE)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_raw;
-    o_note := (o_raw || "finfolk_rpc".site_note_version((o_raw ->> 'rev_id')::UUID));
-    IF o_note IS NULL OR i_withdrawn IS NULL THEN
-      RAISE EXCEPTION 'That note is unavailable';
-    END IF;
-    IF (o_note ->> 'withdrawn')::BOOLEAN != i_withdrawn THEN
-      IF i_revision IS NULL OR ((o_note ->> 'revision')::INTEGER != i_revision) THEN
-        RAISE EXCEPTION 'This note changed; reload it before trying again';
-      END IF;
-      DECLARE
-      o_saved JSONB;
-    BEGIN
-      WITH j_ret AS (  
-          UPDATE "finfolk"."SiteNote" SET
-            "withdrawn" = (i_withdrawn)::BOOLEAN,
-            "op_updated" = (o_op ->> 'id')::UUID,
-            "time_updated" = (o_op ->> 'time')::BIGINT
-          WHERE "id" = i_note
-          RETURNING
-            "id",
-            "site_id",
-            "author_id",
-            "topic",
-            "body",
-            "observed_on",
-            "withdrawn",
-            "hidden",
-            "rev_id",
-            "op_created",
-            "op_updated",
-            "time_created",
-            "time_updated")
-        SELECT to_jsonb(j_ret) FROM j_ret INTO o_saved;
-        o_note := (o_saved || "finfolk_rpc".record_site_note_revision(i_note,o_op));
-    END;
-    END IF;
-    RETURN jsonb_build_object(
-      'id',
-      i_note,
-      'revision',
-      (o_note ->> 'revision')::INTEGER,
-      'withdrawn',
-      i_withdrawn
-    );
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-notes/report-site-note 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".report_site_note(
-  i_site UUID,
-  i_note UUID,
-  i_reason TEXT
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_note JSONB;
-    o_op JSONB;
-    v_reason TEXT;
-    v_reported BOOLEAN;
-    v_user UUID;
-  BEGIN
-    v_user := "finfolk_rpc".require_site_note_member();
-    o_op := "finfolk".op_fn('report-site-note',v_user,('{}')::JSONB);
-    WITH j_ret AS (  
-      SELECT
-        "id",
-        "site_id",
-        "author_id",
-        "topic",
-        "body",
-        "observed_on",
-        "withdrawn",
-        "hidden",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated"
-      FROM "finfolk"."SiteNote"
-      WHERE "id" = i_note AND "site_id" = i_site
-      LIMIT 1
-      FOR UPDATE)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
-    v_reason := btrim(coalesce(i_reason,''));
-    SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteReport"
-    WHERE "note_id" = i_note AND "reporter_id" = v_user) INTO v_reported;
-    IF o_note IS NULL OR "finfolk_rpc".ret_site_note(i_note,v_user) IS NULL OR (length(v_reason) < 1) OR (length(v_reason) > 1000) THEN
-      RAISE EXCEPTION 'Choose a note and provide a report reason';
-    END IF;
-    IF NOT v_reported THEN
-      DECLARE
-      o_write JSONB;
-    BEGIN
-      WITH j_ret AS (  
-          INSERT INTO "finfolk"."SiteNoteReport" (
-            "note_id",
-            "reporter_id",
-            "reason",
-            "op_created",
-            "op_updated",
-            "time_created",
-            "time_updated"
-          ) VALUES (
-            (i_note)::UUID,
-            (v_user)::UUID,
-            "finfolk".as_bounded_text((v_reason)::TEXT,1,1000),
-            (o_op ->> 'id')::UUID,
-            (o_op ->> 'id')::UUID,
-            (o_op ->> 'time')::BIGINT,
-            (o_op ->> 'time')::BIGINT
-          ) RETURNING
-            "id",
-            "note_id",
-            "reporter_id",
-            "reason",
-            "resolved_at",
-            "op_created",
-            "op_updated",
-            "time_created",
-            "time_updated")
-        SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
-        null;
-    END;
-    END IF;
-    RETURN jsonb_build_object('reported',true);
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.site.site-notes/moderate-site-note 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".moderate_site_note(
-  i_site UUID,
-  i_note UUID,
-  i_hidden BOOLEAN
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_op JSONB;
-    v_user UUID;
-  BEGIN
-    v_user := "finfolk_rpc".require_site_note_member();
-    o_op := "finfolk".op_fn('moderate-site-note',v_user,('{}')::JSONB);
-    IF coalesce(current_setting('finfolk.directory_admin',true),'false') != 'true' THEN
-      RAISE EXCEPTION 'Administrator access required';
     END IF;
     DECLARE
-      o_note JSONB;
+      v_context TEXT;
+      v_day DATE;
     BEGIN
-      WITH j_ret AS (  
-        SELECT
-          "id",
-          "site_id",
-          "author_id",
-          "topic",
-          "body",
-          "observed_on",
-          "withdrawn",
-          "hidden",
-          "rev_id",
-          "op_created",
-          "op_updated",
-          "time_created",
-          "time_updated"
-        FROM "finfolk"."SiteNote"
-        WHERE "id" = i_note AND "site_id" = i_site
-        LIMIT 1
-        FOR UPDATE)
-      SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
-      IF o_note IS NULL OR i_hidden IS NULL THEN
-        RAISE EXCEPTION 'That note is unavailable';
+      v_context := "md5"(
+        (i_user)::TEXT || ':' || v_seed || ':' || (jsonb_build_array(v_site,v_availability,v_experience))::TEXT
+      );
+      v_day := ("timezone"(v_zone,now()))::DATE;
+      IF v_cursor != '' THEN
+        IF NOT "regexp_like"(v_cursor,'^[0-9a-f]{32}[.][0-9a-f]{32}[.][0-9a-f-]{36}$') OR ("split_part"(v_cursor,'.',1) != v_context) THEN
+          RAISE EXCEPTION USING
+            errcode = '22023',
+            message = 'This people mix changed; start a new mix'
+          ;
+        END IF;
+        v_rank := "split_part"(v_cursor,'.',2);
+        v_after := "split_part"(v_cursor,'.',3);
       END IF;
-      IF (o_note ->> 'hidden')::BOOLEAN != i_hidden THEN
-        DECLARE
-        o_version JSONB;
-          o_write JSONB;
-      BEGIN
-        WITH j_ret AS (  
-            UPDATE "finfolk"."SiteNote" SET
-              "hidden" = (i_hidden)::BOOLEAN,
-              "op_updated" = (o_op ->> 'id')::UUID,
-              "time_updated" = (o_op ->> 'time')::BIGINT
-            WHERE "id" = i_note
-            RETURNING
-              "id",
-              "site_id",
-              "author_id",
-              "topic",
-              "body",
-              "observed_on",
-              "withdrawn",
-              "hidden",
-              "rev_id",
-              "op_created",
-              "op_updated",
-              "time_created",
-              "time_updated")
-          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
-          o_version := "finfolk_rpc".record_site_note_revision(i_note,o_op);
-          null;
-      END;
+      EXECUTE 'WITH p AS (SELECT ($1->>''actor'')::uuid AS actor,$1->>''seed'' AS seed,nullif($1->>''site'','''')::uuid AS site,($1->>''day'')::date AS day,$1->>''availability'' AS availability,$1->>''experience'' AS experience,$1->>''rank'' AS rank,($1->>''after'')::uuid AS after), eligible AS (  SELECT m.id,m.profile,md5(p.actor::text||'':''||p.seed||'':''||m.id::text) AS mix_rank,  (SELECT CASE WHEN c.status IN (''pending'',''accepted'') THEN c.status::text ELSE NULL END FROM finfolk."UserConnection" c WHERE c.user_id=least(p.actor,m.id) AND c.target_id=greatest(p.actor,m.id)) AS connection,  CASE WHEN p.site IS NULL THEN 0 ELSE (SELECT count(*) FROM finfolk."UserCheckin" v WHERE v.user_id=m.id AND v.site_id=p.site AND v.visit_day BETWEEN p.day-29 AND p.day) END AS visits  FROM finfolk."User" m CROSS JOIN p WHERE m.id<>p.actor AND NOT m.deleted AND m.profile->''open''=''true''::jsonb  AND (p.availability='''' OR coalesce(m.profile->''availability'',''[]''::jsonb)?p.availability)  AND (p.experience='''' OR m.profile->>''experience''=p.experience)  AND NOT EXISTS(SELECT 1 FROM finfolk."UserBlock" b WHERE (b.owner_id=p.actor AND b.target_id=m.id) OR (b.owner_id=m.id AND b.target_id=p.actor))  AND NOT EXISTS(SELECT 1 FROM finfolk."UserConnection" c WHERE c.user_id=least(p.actor,m.id) AND c.target_id=greatest(p.actor,m.id) AND c.status=''declined'')  ), page AS (SELECT e.* FROM eligible e CROSS JOIN p WHERE (p.site IS NULL OR e.visits>0 OR coalesce(e.profile->''beaches'',''[]''::jsonb)?p.site::text) AND (e.mix_rank,e.id)>(p.rank,p.after) ORDER BY e.mix_rank,e.id LIMIT 7)  SELECT coalesce(jsonb_agg(jsonb_build_object(''id'',id,''displayName'',coalesce(profile->>''displayName'',''Diver''),''open'',true,''bio'',coalesce(profile->>''bio'',''''),''instagram'',coalesce(profile->>''instagram'',''''),''tiktok'',coalesce(profile->>''tiktok'',''''),''portrait'',coalesce(profile->>''portrait'',''''),''availability'',coalesce(profile->''availability'',''[]''::jsonb),''experience'',coalesce(profile->>''experience'',''''),''beaches'',coalesce(profile->''beaches'',''[]''::jsonb),''regular'',visits>=8,''recent'',visits>0,''connection'',connection,''mix_rank'',mix_rank) ORDER BY mix_rank,id),''[]''::jsonb) FROM page' INTO o_rows USING jsonb_build_object(
+        'actor',
+        i_user,
+        'seed',
+        v_seed,
+        'site',
+        v_site,
+        'day',
+        v_day,
+        'availability',
+        v_availability,
+        'experience',
+        v_experience,
+        'rank',
+        v_rank,
+        'after',
+        v_after
+      );
+      FOR o_row IN SELECT jsonb_array_elements(o_rows) LOOP
+        IF v_index < 6 THEN
+          o_result := (o_result || jsonb_build_array(o_row - 'mix_rank'));
+          IF v_index = 5 THEN
+            v_next := (v_context || '.' || (o_row ->> 'mix_rank') || '.' || (o_row ->> 'id'));
+          END IF;
+        END IF;
+        v_index := (v_index + 1);
+      END LOOP;
+      IF jsonb_array_length(o_rows) <= 6 THEN
+        v_next := null;
       END IF;
-      DECLARE
-        o_write JSONB;
-      BEGIN
-        WITH j_ret AS (  
-          UPDATE "finfolk"."SiteNoteReport" SET
-            "resolved_at" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT,
-            "op_updated" = (o_op ->> 'id')::UUID,
-            "time_updated" = (o_op ->> 'time')::BIGINT
-          WHERE "note_id" = i_note AND "resolved_at" IS NULL
-          RETURNING
-            "id",
-            "note_id",
-            "reporter_id",
-            "reason",
-            "resolved_at",
-            "op_created",
-            "op_updated",
-            "time_created",
-            "time_updated")
-        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
-        null;
-      END;
-      RETURN jsonb_build_object('id',i_note,'hidden',i_hidden);
+      RETURN jsonb_build_object('people',o_result,'cursor',v_next);
     END;
   END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.user.user-manage-logbook/insert-dive-session 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_dive_session(
-  i_owner UUID,
-  i_beach UUID,
-  i_data JSONB,
-  o_op JSONB
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_base JSONB;
-    o_data JSONB;
-    o_session JSONB;
-    v_id UUID;
-  BEGIN
-    v_id := uuid_generate_v4();
-    o_data := (("finfolk".as_jsonb(i_data) - 'beachId') || jsonb_build_object('visibility','private','photos',('[]')::JSONB));
-    o_base := "finfolk".insert_base_addons('DiveSession',v_id,o_data,o_op);
-    WITH j_ret AS (  
-      INSERT INTO "finfolk"."DiveSession" (
-        "id",
-        "owner_id",
-        "site_id",
-        "detail",
-        "audit_id",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated"
-      ) VALUES (
-        (v_id)::UUID,
-        (i_owner)::UUID,
-        (i_beach)::UUID,
-        "finfolk".as_jsonb((o_data)::JSONB),
-        (o_base ->> 'audit')::UUID,
-        (o_base ->> 'rev')::UUID,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'id')::UUID,
-        (o_op ->> 'time')::BIGINT,
-        (o_op ->> 'time')::BIGINT
-      ) RETURNING
-        "id",
-        "owner_id",
-        "site_id",
-        "detail",
-        "audit_id",
-        "rev_id",
-        "op_created",
-        "op_updated",
-        "time_created",
-        "time_updated")
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_session;
-    RETURN o_session;
-  END;
-
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.user.user-manage-logbook/ret-dive-session-owned 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_dive_session_owned(
-  i_session_id UUID,
-  i_owner UUID
-) RETURNS JSONB AS $$
-
-  DECLARE
-    o_session JSONB;
-  BEGIN
-    WITH j_ret AS (  
-      SELECT "id","owner_id","site_id","detail" FROM "finfolk"."DiveSession"
-      WHERE "id" = i_session_id AND "owner_id" = i_owner
-      LIMIT 1)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_session;
-    IF o_session IS NULL OR NOT "finfolk".is_user_active(i_owner) THEN
-      RETURN null;
-    END IF;
-    RETURN (o_session -> 'detail') || jsonb_build_object(
-      'id',
-      (o_session ->> 'id')::UUID,
-      'ownerId',
-      (o_session ->> 'owner_id')::UUID,
-      'beachId',
-      coalesce(o_session ->> 'site_id','')
-    );
-  END;
-
+END;
 $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.social.social-messaging/receive-social-message 
@@ -12706,6 +15718,246 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".begin_social_message_proof(
     END;
   END;
 
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-admin 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_admin(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'admin',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-admin-save 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_admin_save(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'admin-save',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-claim 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_claim(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'claim',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-claim-review 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_claim_review(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'claim-review',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-owner-create 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_owner_create(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'owner-create',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-discovery-start 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_discovery_start(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'discovery-start',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-merge 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_merge(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'merge',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-mine 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_mine(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'mine',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-owner-save 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_owner_save(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'owner-save',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-report 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_report(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'report',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-report-resolve 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_report_resolve(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'report-resolve',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-page-access 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_page_access(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'page-access',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-admin-remove 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_admin_remove(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'admin-remove',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-invite-create 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_invite_create(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'invite-create',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-invite-redeem 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_invite_redeem(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'invite-redeem',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-invite-revoke 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_invite_revoke(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'invite-revoke',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-public-list 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_public_list(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'public-list',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-public-detail 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_public_detail(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'public-detail',i_values);
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/call-native-directory 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".call_native_directory(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_operation TEXT,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_user is not null  THEN
+    PERFORM "finfolk_rpc".ret_account(i_user);
+  END IF;
+  DECLARE
+    o_result JSONB;
+    v_admin BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."UserRole"
+    WHERE "user_id" = i_user AND "role" = 'admin') INTO v_admin;
+    o_result := null;
+    PERFORM "set_config"('finfolk.actor_id',coalesce((i_user)::TEXT,''),true);
+    PERFORM "set_config"(
+      'finfolk.directory_verified',
+      (coalesce(i_verified,false))::TEXT,
+      true
+    );
+    PERFORM "set_config"('finfolk.directory_admin',(v_admin)::TEXT,true);
+    EXECUTE 'SELECT finfolk_rpc.directory_operation($1->>''operation'',$1->''values'')' INTO o_result USING jsonb_build_object('operation',i_operation,'values',i_values);
+    RETURN o_result;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.directory.directory-app/native-directory-discovery-finish 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".native_directory_discovery_finish(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".call_native_directory(i_user,i_verified,'discovery-finish',i_values);
+END;
 $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.social.social-delivery/social-delivery-result 
@@ -14210,12 +17462,23 @@ BEGIN
  RAISE EXCEPTION 'Use HTTPS website and source links' USING ERRCODE='22023'; END IF; END LOOP;
  IF coalesce(d->>'image','')<>'' AND (length(d->>'image')>65558 OR d->>'image' !~ '^data:image/(webp|jpeg);base64,[A-Za-z0-9+/]+=*$') THEN
  RAISE EXCEPTION 'Invalid page image' USING ERRCODE='22023'; END IF;
+ PERFORM finfolk_rpc.account_portrait(coalesce(d->>'image',''));
  RETURN jsonb_build_object('name',trim(d->>'name'),'category',d->>'category','state',coalesce(d->>'state',''),
  'country',left(coalesce(nullif(trim(d->>'country'),''),'Australia'),100),'locality',left(coalesce(d->>'locality',''),160),
  'description',left(coalesce(d->>'description',''),2000),'website',coalesce(d->>'website',''),
  'image',coalesce(d->>'image',''),'socials','[]'::jsonb,'sources',d->'sources');
 END $$ LANGUAGE plpgsql;
 
+CREATE OR REPLACE FUNCTION finfolk_rpc.directory_socials(d jsonb) RETURNS jsonb AS $$
+DECLARE s text; item text; out jsonb:='[]'; BEGIN
+ IF jsonb_typeof(d) IS DISTINCT FROM 'array' OR jsonb_array_length(d)>10 THEN RAISE EXCEPTION 'Provide up to ten social links' USING ERRCODE='22023'; END IF;
+ FOR s IN SELECT jsonb_array_elements_text(d) LOOP
+ IF s ~ '^instagram:[A-Za-z0-9._]{1,30}$' THEN s:='https://www.instagram.com/'||split_part(s,':',2)||'/'; END IF;
+ IF s ~ '^tiktok:[A-Za-z0-9._]{1,30}$' THEN s:='https://www.tiktok.com/@'||split_part(s,':',2)||'/'; END IF;
+ IF s ~ '^https://(www[.])?instagram[.]com/' THEN item:='instagram:'||lower(split_part(finfolk_rpc.account_link(s,'instagram'),'/',4));
+ ELSIF s ~ '^https://(www[.])?tiktok[.]com/' THEN item:='tiktok:'||lower(substr(split_part(finfolk_rpc.account_link(s,'tiktok'),'/',4),2));
+ ELSE RAISE EXCEPTION 'Provide a provider profile link' USING ERRCODE='22023'; END IF;
+ IF NOT out ? item THEN out:=out||jsonb_build_array(item); END IF; END LOOP; RETURN out; END $$ LANGUAGE plpgsql;
 CREATE OR REPLACE FUNCTION finfolk_rpc.directory_owner_row(l finfolk."DirectoryListing") RETURNS jsonb AS $$
  SELECT jsonb_build_object('id',l.id,'document',l.detail,'status',l.status,'revision',r.index,
  'owner_id',(SELECT member_id FROM finfolk."AccessRole" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND level='owner' AND is_active),
@@ -14226,7 +17489,7 @@ $$ LANGUAGE sql;
 CREATE OR REPLACE FUNCTION finfolk_rpc.directory_operation(op text,v jsonb) RETURNS jsonb AS $$
 DECLARE
  actor uuid:=finfolk.auth_uid(); adm boolean:=coalesce(current_setting('finfolk.directory_admin',true),'')='true';
- l finfolk."DirectoryListing"; req finfolk."AccessRequest"; ident uuid; doc jsonb; ctx jsonb; result jsonb; off integer; rev integer;
+ discovery_run finfolk."DirectoryRun"; candidate jsonb; inserted_count integer; target_page finfolk."DirectoryListing"; l finfolk."DirectoryListing"; req finfolk."AccessRequest"; ident uuid; inv finfolk."AccessInviteExternal"; tok text; doc jsonb; ctx jsonb; result jsonb; off integer; rev integer;
 BEGIN
  IF jsonb_typeof(v) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Invalid request' USING ERRCODE='22023'; END IF;
  IF op='public-list' THEN
@@ -14246,7 +17509,7 @@ BEGIN
  IF result IS NULL THEN RAISE EXCEPTION 'Page unavailable' USING ERRCODE='P0002'; END IF; RETURN result;
  END IF;
  -- Serialize first-use provisioning and repeated requests for this authenticated actor.
- IF NOT EXISTS(SELECT 1 FROM neon_auth."user" WHERE id::text=actor::text AND "emailVerified" AND NOT coalesce(banned,false)) THEN
+ IF actor IS NULL OR coalesce(current_setting('finfolk.directory_verified',true),'')<>'true' THEN
  RAISE EXCEPTION 'Verified member required' USING ERRCODE='42501'; END IF;
  PERFORM pg_advisory_xact_lock(hashtextextended('directory-member:'||actor,0));
  IF EXISTS(SELECT 1 FROM finfolk."User" WHERE id=actor AND deleted) THEN RAISE EXCEPTION 'Member unavailable' USING ERRCODE='42501'; END IF;
@@ -14257,7 +17520,7 @@ BEGIN
  FROM finfolk."DirectoryListing" p JOIN finfolk."AccessRole" a ON a.access_id=p.access_id AND a.class_table=p.class_table AND a.class_context=p.class_context
  WHERE a.member_id=actor AND a.is_active AND a.level IN ('owner','admin')),'[]'::jsonb),
  'claims',coalesce((SELECT jsonb_agg(jsonb_build_object('id',r.id,'listing_id',p.id,'state',CASE r.status WHEN 'accepted' THEN 'approved' ELSE r.status::text END,
- 'challenge',r.detail->>'challenge','expires_at',r.expires_at)) FROM finfolk."AccessRequest" r
+ 'challenge',r.detail->>'challenge','expires_at',r.expires_at/1000)) FROM finfolk."AccessRequest" r
  JOIN finfolk."DirectoryListing" p ON p.access_id=r.access_id AND p.class_table=r.class_table AND p.class_context=r.class_context WHERE r.from_id=actor),'[]'::jsonb)) INTO result; RETURN result;
  ELSIF op='page-access' THEN
  SELECT * INTO l FROM finfolk."DirectoryListing" WHERE id=(v->>'id')::uuid;
@@ -14266,7 +17529,7 @@ BEGIN
  RETURN jsonb_build_object('role',(SELECT level FROM finfolk."AccessRole" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND member_id=actor AND is_active),
  'admins',coalesce((SELECT jsonb_agg(jsonb_build_object('id',a.member_id,'name',coalesce(u.profile->>'displayName','Diver')))
  FROM finfolk."AccessRole" a JOIN finfolk."User" u ON u.id=a.member_id WHERE a.class_table='DirectoryListing' AND a.class_context='Global' AND a.access_id=l.access_id AND a.is_active AND a.level='admin'),'[]'::jsonb),
- 'invites','[]'::jsonb);
+ 'invites',coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'expiresAt',expires_at/1000)) FROM finfolk."AccessInviteExternal" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND status='pending' AND expires_at>(extract(epoch from clock_timestamp())*1000000)::bigint),'[]'::jsonb));
  ELSIF op='owner-create' THEN
  doc:=finfolk_rpc.directory_document(v->'document');
  -- Stable request identity is carried by the new page's own revision detail.
@@ -14313,47 +17576,127 @@ BEGIN
  INSERT INTO finfolk."AccessRequest"(class_table,class_context,access_id,from_id,detail)
  VALUES('DirectoryListing','Global',l.access_id,actor,jsonb_build_object('challenge','FINFOLK-'||replace(gen_random_uuid()::text,'-','')))
  ON CONFLICT(class_table,class_context,access_id,from_id) WHERE status='pending'
- DO UPDATE SET detail=excluded.detail,expires_at=now()+interval '7 days' RETURNING * INTO req;
- RETURN jsonb_build_object('id',req.id,'challenge',req.detail->>'challenge','expires_at',req.expires_at);
+ DO UPDATE SET detail=excluded.detail,expires_at=(extract(epoch from clock_timestamp())*1000000)::bigint+604800000000 RETURNING * INTO req;
+ RETURN jsonb_build_object('id',req.id,'challenge',req.detail->>'challenge','expires_at',req.expires_at/1000);
  ELSIF op='report' THEN
  IF length(trim(coalesce(v->>'message','')))=0 OR length(v->>'message')>2000 THEN RAISE EXCEPTION 'Provide a correction reason' USING ERRCODE='22023'; END IF;
  IF finfolk_rpc.ret_directory_public((v->>'id')::uuid) IS NULL THEN RAISE EXCEPTION 'Page unavailable' USING ERRCODE='P0002'; END IF;
  INSERT INTO finfolk."DirectoryReport"(listing_id,author_id,message) VALUES((v->>'id')::uuid,actor,trim(v->>'message')); RETURN '{}'::jsonb;
+ ELSIF op IN ('invite-create','invite-revoke','admin-remove') THEN
+ SELECT * INTO l FROM finfolk."DirectoryListing" WHERE id=(v->>'id')::uuid FOR UPDATE;
+ IF l.id IS NULL OR NOT EXISTS(SELECT 1 FROM finfolk."AccessRole" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND member_id=actor AND level='owner' AND is_active) THEN
+ RAISE EXCEPTION 'Page owner required' USING ERRCODE='42501'; END IF;
+ IF op='invite-create' THEN
+ IF (SELECT count(*) FROM finfolk."AccessInviteExternal" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND status='pending' AND expires_at>(extract(epoch from clock_timestamp())*1000000)::bigint)>=5 THEN
+ RAISE EXCEPTION 'Revoke outstanding invitations first' USING ERRCODE='22023'; END IF;
+ tok:=encode(gen_random_bytes(32),'hex');
+ INSERT INTO finfolk."AccessInviteExternal"(class_table,class_context,access_id,secret,from_id) VALUES('DirectoryListing','Global',l.access_id,encode(digest(tok,'sha256'),'hex'),actor) RETURNING * INTO inv;
+ RETURN jsonb_build_object('id',inv.id,'token',tok,'expiresAt',inv.expires_at/1000);
+ ELSIF op='invite-revoke' THEN
+ UPDATE finfolk."AccessInviteExternal" SET status='expired' WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND id=(v->>'invite')::uuid AND status='pending';
+ ELSE
+ UPDATE finfolk."AccessRole" SET is_active=false WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND member_id=(v->>'user')::uuid AND level='admin';
+ END IF; RETURN '{}'::jsonb;
+ ELSIF op='invite-redeem' THEN
+ IF coalesce(v->>'token','') !~ '^[0-9a-f]{64}$' THEN RAISE EXCEPTION 'Invitation unavailable' USING ERRCODE='P0002'; END IF;
+ SELECT * INTO inv FROM finfolk."AccessInviteExternal" WHERE class_table='DirectoryListing' AND class_context='Global' AND secret=encode(digest(v->>'token','sha256'),'hex');
+ IF inv.id IS NULL THEN RAISE EXCEPTION 'Invitation unavailable' USING ERRCODE='P0002'; END IF;
+ SELECT * INTO l FROM finfolk."DirectoryListing" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=inv.access_id FOR UPDATE;
+ SELECT * INTO inv FROM finfolk."AccessInviteExternal" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND id=inv.id FOR UPDATE;
+ IF inv.status='accepted' AND inv.reply_id=actor THEN RETURN jsonb_build_object('id',l.id); END IF;
+ IF inv.status<>'pending' OR inv.expires_at<=(extract(epoch from clock_timestamp())*1000000)::bigint OR inv.from_id=actor OR NOT EXISTS(SELECT 1 FROM finfolk."AccessRole" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=inv.access_id AND member_id=inv.from_id AND level='owner' AND is_active) THEN
+ RAISE EXCEPTION 'Invitation unavailable' USING ERRCODE='40001'; END IF;
+ INSERT INTO finfolk."AccessRole"(class_table,class_context,access_id,member_id,from_id,level) VALUES('DirectoryListing','Global',inv.access_id,actor,inv.from_id,'admin')
+ ON CONFLICT(class_table,class_context,access_id,member_id) DO UPDATE SET level='admin',is_active=true,from_id=inv.from_id WHERE finfolk."AccessRole".level<>'owner';
+ UPDATE finfolk."AccessInviteExternal" SET status='accepted',reply_id=actor,accepted_at=(extract(epoch from clock_timestamp())*1000000)::bigint WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=inv.access_id AND id=inv.id;
+ RETURN jsonb_build_object('id',l.id);
  END IF;
  -- Review operations are deliberately explicit, never inferred from ownership.
  IF NOT adm THEN RAISE EXCEPTION 'Administrator required' USING ERRCODE='42501'; END IF;
  IF op='admin' THEN
  SELECT jsonb_build_object('listings',coalesce((SELECT jsonb_agg(finfolk_rpc.directory_owner_row(p)||jsonb_build_object('notes',p.notes,'outreach',p.outreach)) FROM finfolk."DirectoryListing" p),'[]'),
- 'claims',coalesce((SELECT jsonb_agg(jsonb_build_object('id',r.id,'listing_id',p.id,'user_id',r.from_id,'state',CASE r.status WHEN 'accepted' THEN 'approved' ELSE r.status::text END,'challenge',r.detail->>'challenge','expires_at',r.expires_at))
+ 'claims',coalesce((SELECT jsonb_agg(jsonb_build_object('id',r.id,'listing_id',p.id,'user_id',r.from_id,'state',CASE r.status WHEN 'accepted' THEN 'approved' ELSE r.status::text END,'challenge',r.detail->>'challenge','expires_at',r.expires_at/1000))
  FROM finfolk."AccessRequest" r JOIN finfolk."DirectoryListing" p ON p.access_id=r.access_id AND p.class_table=r.class_table AND p.class_context=r.class_context),'[]'),
- 'reports',coalesce((SELECT jsonb_agg(r) FROM finfolk."DirectoryReport" r WHERE NOT r.resolved),'[]'),'runs','[]'::jsonb,'audit','[]'::jsonb) INTO result; RETURN result;
+ 'reports',coalesce((SELECT jsonb_agg(r) FROM finfolk."DirectoryReport" r WHERE NOT r.resolved),'[]'),'runs',coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'query',query,'state',status,'error',error,'count',coalesce((log->1->>'count')::integer,0)) ORDER BY time_created DESC) FROM (SELECT * FROM finfolk."DirectoryRun" ORDER BY time_created DESC LIMIT 50) runs),'[]'::jsonb),'audit','[]'::jsonb) INTO result; RETURN result;
+ ELSIF op='discovery-start' THEN
+ IF length(trim(coalesce(v->>'region','')))=0 OR length(v->>'region')>100 OR length(coalesce(v->>'seed',''))>100 OR length(coalesce(v->>'country',''))>100 OR NOT coalesce(v->>'category'=ANY(ARRAY['School','Instructor','Business','Club','Group','Freediver']),false) OR (v->>'category'<>'Freediver' AND NOT coalesce(v->>'state'=ANY(ARRAY['VIC','NSW','QLD','SA','WA','TAS','NT','ACT']),false)) THEN RAISE EXCEPTION 'Choose a region, category and state' USING ERRCODE='22023'; END IF;
+ UPDATE finfolk."DirectoryRun" SET status='failed',error='Discovery timed out; retry the search.' WHERE status='running' AND time_created<(extract(epoch from clock_timestamp())*1000000)::bigint-300000000;
+ IF EXISTS(SELECT 1 FROM finfolk."DirectoryRun" WHERE status='running' AND log->0->>'actor'=actor::text) THEN RAISE EXCEPTION 'A discovery run is already active' USING ERRCODE='40001'; END IF;
+ ctx:=finfolk.op_fn(op,actor,'{}');
+ INSERT INTO finfolk."DirectoryRun"(query,status,log,op_created,time_created) VALUES(concat_ws(' ',v->>'category',v->>'region',v->>'country',v->>'seed'),'running',jsonb_build_array(jsonb_build_object('actor',actor,'request',v)),(ctx->>'id')::uuid,(ctx->>'time')::bigint) RETURNING id INTO ident;
+ RETURN jsonb_build_object('id',ident,'count',0,'state','running','error','');
+ ELSIF op='discovery-finish' THEN
+ SELECT * INTO discovery_run FROM finfolk."DirectoryRun" WHERE id=(v->>'id')::uuid FOR UPDATE;
+ IF discovery_run.id IS NULL OR discovery_run.log->0->>'actor'<>actor::text THEN RAISE EXCEPTION 'Discovery run unavailable' USING ERRCODE='P0002'; END IF;
+ IF discovery_run.status<>'running' THEN RETURN jsonb_build_object('id',discovery_run.id,'count',coalesce((discovery_run.log->1->>'count')::integer,0),'state',discovery_run.status,'error',discovery_run.error); END IF;
+ IF NOT coalesce(v->>'state'=ANY(ARRAY['complete','failed']),false) OR jsonb_typeof(v->'candidates') IS DISTINCT FROM 'array' OR jsonb_array_length(v->'candidates')>60 THEN RAISE EXCEPTION 'Invalid discovery completion' USING ERRCODE='22023'; END IF;
+ IF v->>'state'='failed' AND v->'candidates'<>'[]'::jsonb THEN RAISE EXCEPTION 'Failed discovery cannot publish candidates' USING ERRCODE='22023'; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('directory-discovery-candidates',0));
+ inserted_count:=0; ctx:=finfolk.op_fn(op,actor,'{}');
+ FOR candidate IN SELECT value FROM jsonb_array_elements(v->'candidates') LOOP
+ IF length(coalesce(candidate->>'identity',''))=0 OR length(candidate->>'identity')>2100 THEN RAISE EXCEPTION 'Invalid discovery identity' USING ERRCODE='22023'; END IF;
+ doc:=finfolk_rpc.directory_document((candidate->'document')||'{"socials":[]}'::jsonb)||jsonb_build_object('socials',finfolk_rpc.directory_socials(candidate->'document'->'socials'),'discoveryIdentity',candidate->>'identity');
+ IF jsonb_array_length(doc->'sources')=0 THEN RAISE EXCEPTION 'Discovery sources required' USING ERRCODE='22023'; END IF;
+ IF NOT EXISTS(SELECT 1 FROM finfolk."DirectoryListing" WHERE detail->>'discoveryIdentity'=candidate->>'identity' OR (coalesce(doc->>'website','')<>'' AND detail->>'website'=doc->>'website') OR (jsonb_array_length(doc->'socials')>0 AND detail->'socials' ?| ARRAY(SELECT jsonb_array_elements_text(doc->'socials')))) THEN
+ result:=finfolk_rpc.insert_directory_listing(doc,ctx);
+ UPDATE finfolk."DirectoryListing" SET notes=left(coalesce(candidate->>'notes',''),2000) WHERE id=(result->>'id')::uuid;
+ inserted_count:=inserted_count+1;
+ END IF; END LOOP;
+ UPDATE finfolk."DirectoryRun" SET status=v->>'state',error=CASE WHEN v->>'state'='failed' THEN 'Search failed; retry discovery.' ELSE '' END,log=log||jsonb_build_array(jsonb_build_object('count',inserted_count)),op_updated=(ctx->>'id')::uuid,time_updated=(ctx->>'time')::bigint WHERE id=discovery_run.id RETURNING * INTO discovery_run;
+ RETURN jsonb_build_object('id',discovery_run.id,'count',inserted_count,'state',discovery_run.status,'error',discovery_run.error);
+ ELSIF op='merge' THEN
+ IF (v->>'source')::uuid=(v->>'target')::uuid THEN RAISE EXCEPTION 'Choose different pages' USING ERRCODE='22023'; END IF;
+ PERFORM id FROM finfolk."DirectoryListing" WHERE id IN((v->>'source')::uuid,(v->>'target')::uuid) ORDER BY id FOR UPDATE;
+ SELECT * INTO l FROM finfolk."DirectoryListing" WHERE id=(v->>'source')::uuid;
+ SELECT * INTO target_page FROM finfolk."DirectoryListing" WHERE id=(v->>'target')::uuid;
+ IF l.id IS NULL OR target_page.id IS NULL THEN RAISE EXCEPTION 'Page unavailable' USING ERRCODE='P0002'; END IF;
+ IF l.status='archived' AND l.detail->>'mergedInto'=target_page.id::text THEN RETURN jsonb_build_object('id',target_page.id); END IF;
+ IF l.status IN('archived','suppressed') OR target_page.status IN('archived','suppressed','rejected') OR EXISTS(SELECT 1 FROM finfolk."AccessRole" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND is_active AND level IN('owner','admin')) OR EXISTS(SELECT 1 FROM finfolk."Event" WHERE listing_id=l.id) THEN RAISE EXCEPTION 'Only unmanaged pages without events may be merged into an available target' USING ERRCODE='40001'; END IF;
+ doc:=target_page.detail||jsonb_build_object('sources',(SELECT coalesce(jsonb_agg(value ORDER BY value),'[]') FROM (SELECT DISTINCT value FROM jsonb_array_elements(coalesce(l.detail->'sources','[]')||coalesce(target_page.detail->'sources','[]'))) q),'socials',(SELECT coalesce(jsonb_agg(value ORDER BY value),'[]') FROM (SELECT DISTINCT value FROM jsonb_array_elements(coalesce(l.detail->'socials','[]')||coalesce(target_page.detail->'socials','[]'))) q));
+ ctx:=finfolk.op_fn('directory-merge',actor,'{}');
+ UPDATE finfolk."DirectoryListing" SET detail=doc,op_updated=(ctx->>'id')::uuid,time_updated=(ctx->>'time')::bigint WHERE id=target_page.id;
+ UPDATE finfolk."DirectoryListing" SET status='archived',detail=detail||jsonb_build_object('mergedInto',target_page.id),op_updated=(ctx->>'id')::uuid,time_updated=(ctx->>'time')::bigint WHERE id=l.id;
+ UPDATE finfolk."AccessRequest" SET status='rejected' WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND status='pending';
+ UPDATE finfolk."AccessInviteExternal" SET status='expired' WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND status='pending';
+ FOR l IN SELECT * FROM finfolk."DirectoryListing" WHERE id IN((v->>'source')::uuid,(v->>'target')::uuid) LOOP
+ UPDATE finfolk."Rev" SET current=l.detail,index=index+1 WHERE class_table='DirectoryListing' AND class_context='Global' AND id=l.rev_id RETURNING index INTO rev;
+ INSERT INTO finfolk."RevLog"(class_table,class_context,rev_id,version,deltas,op_created,time_created) VALUES('DirectoryListing','Global',l.rev_id,rev,l.detail,(ctx->>'id')::uuid,(ctx->>'time')::bigint);
+ INSERT INTO finfolk."AuditLog"(class_table,class_context,audit_id,entry,op_created,time_created) VALUES('DirectoryListing','Global',l.audit_id,jsonb_build_object('event','merge','source',v->>'source','target',v->>'target'),(ctx->>'id')::uuid,(ctx->>'time')::bigint);
+ END LOOP;
+ RETURN jsonb_build_object('id',target_page.id);
  ELSIF op='admin-save' THEN
  IF NOT coalesce(v->>'status'=ANY(ARRAY['candidate','published','rejected','archived','suppressed']),false) THEN RAISE EXCEPTION 'Choose a publication status' USING ERRCODE='22023'; END IF;
- IF coalesce((v->>'revokeOwner')::boolean,false) THEN RAISE EXCEPTION 'Ownership revocation is not available in this native pilot' USING ERRCODE='22023'; END IF;
+ IF NOT (v ? 'id') THEN
+ doc:=finfolk_rpc.directory_document((v->'document')||'{"socials":[]}'::jsonb)||jsonb_build_object('socials',finfolk_rpc.directory_socials(v->'document'->'socials'));
+ IF v->>'status'='published' AND jsonb_array_length(doc->'sources')=0 AND jsonb_array_length(doc->'socials')=0 THEN RAISE EXCEPTION 'Publication sources required' USING ERRCODE='22023'; END IF;
+ ctx:=finfolk.op_fn('admin-create',actor,'{}'); result:=finfolk_rpc.insert_directory_listing(doc,ctx);
+ UPDATE finfolk."DirectoryListing" SET status=(v->>'status')::finfolk."EnumDirectoryListingStatus",reviewed_at=(ctx->>'time')::bigint,notes=left(coalesce(v->>'notes',''),2000),outreach=left(coalesce(v->>'outreach','Not contacted'),100) WHERE id=(result->>'id')::uuid;
+ RETURN jsonb_build_object('id',result->>'id'); END IF;
+ IF NOT (v ? 'revision') THEN RAISE EXCEPTION 'Revision required' USING ERRCODE='22023'; END IF;
  SELECT * INTO l FROM finfolk."DirectoryListing" WHERE id=(v->>'id')::uuid FOR UPDATE;
  IF l.id IS NULL THEN RAISE EXCEPTION 'Page unavailable' USING ERRCODE='P0002'; END IF;
  SELECT index INTO rev FROM finfolk."Rev" WHERE class_table='DirectoryListing' AND class_context='Global' AND id=l.rev_id;
  IF rev IS DISTINCT FROM (v->>'revision')::integer THEN RAISE EXCEPTION 'Page changed. Reload before saving' USING ERRCODE='40001'; END IF;
- -- Publication uses the existing reviewed document. Editing uses the owner path.
- IF ((v->'document')-'socials'-'creationRequest') IS DISTINCT FROM (l.detail-'socials'-'creationRequest') THEN
- RAISE EXCEPTION 'Save page edits before publication review' USING ERRCODE='22023'; END IF;
- IF v->>'status'='published' AND jsonb_array_length(l.detail->'sources')=0 AND jsonb_array_length(l.detail->'socials')=0 THEN
- RAISE EXCEPTION 'Publication sources required' USING ERRCODE='22023'; END IF;
+ doc:=finfolk_rpc.directory_document((v->'document')||'{"socials":[]}'::jsonb)||jsonb_build_object('socials',finfolk_rpc.directory_socials(v->'document'->'socials'));
+ IF l.detail ? 'creationRequest' THEN doc:=doc||jsonb_build_object('creationRequest',l.detail->'creationRequest'); END IF;
+ IF v->>'status'='published' AND jsonb_array_length(doc->'sources')=0 AND jsonb_array_length(doc->'socials')=0 THEN RAISE EXCEPTION 'Publication sources required' USING ERRCODE='22023'; END IF;
  ctx:=finfolk.op_fn(op,actor,'{}');
- UPDATE finfolk."DirectoryListing" SET status=(v->>'status')::finfolk."EnumDirectoryListingStatus",reviewed_at=now(),notes=left(coalesce(v->>'notes',''),2000),
- outreach=left(coalesce(v->>'outreach','Not contacted'),100),op_updated=(ctx->>'id')::uuid,time_updated=(ctx->>'time')::bigint WHERE id=l.id;
- UPDATE finfolk."Rev" SET index=index+1 WHERE class_table='DirectoryListing' AND class_context='Global' AND id=l.rev_id;
- INSERT INTO finfolk."RevLog"(class_table,class_context,rev_id,version,deltas,op_created,time_created)
- VALUES('DirectoryListing','Global',l.rev_id,rev+1,jsonb_build_object('status',v->>'status'),(ctx->>'id')::uuid,(ctx->>'time')::bigint);
- INSERT INTO finfolk."AuditLog"(class_table,class_context,audit_id,entry,op_created,time_created)
- VALUES('DirectoryListing','Global',l.audit_id,jsonb_build_object('event',op,'status',v->>'status'),(ctx->>'id')::uuid,(ctx->>'time')::bigint);
+ IF coalesce((v->>'revokeOwner')::boolean,false) THEN
+ UPDATE finfolk."EventInviteDelivery" SET state='cancelled',sealed_token='',lease=NULL,lease_until=0,error='' WHERE state<>'sent' AND event_id IN(SELECT id FROM finfolk."Event" WHERE listing_id=l.id);
+ UPDATE finfolk."AccessRole" SET is_active=false WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND level IN('owner','admin');
+ UPDATE finfolk."AccessInviteExternal" SET status='expired' WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND status='pending';
+ END IF;
+ UPDATE finfolk."DirectoryListing" SET detail=doc,status=(v->>'status')::finfolk."EnumDirectoryListingStatus",reviewed_at=(extract(epoch from clock_timestamp())*1000000)::bigint,notes=left(coalesce(v->>'notes',''),2000),outreach=left(coalesce(v->>'outreach','Not contacted'),100),op_updated=(ctx->>'id')::uuid,time_updated=(ctx->>'time')::bigint WHERE id=l.id;
+ UPDATE finfolk."Rev" SET index=index+1,current=doc WHERE class_table='DirectoryListing' AND class_context='Global' AND id=l.rev_id;
+ INSERT INTO finfolk."RevLog"(class_table,class_context,rev_id,version,deltas,op_created,time_created) VALUES('DirectoryListing','Global',l.rev_id,rev+1,doc||jsonb_build_object('status',v->>'status'),(ctx->>'id')::uuid,(ctx->>'time')::bigint);
+ INSERT INTO finfolk."AuditLog"(class_table,class_context,audit_id,entry,op_created,time_created) VALUES('DirectoryListing','Global',l.audit_id,jsonb_build_object('event',op,'status',v->>'status','revokedOwner',coalesce((v->>'revokeOwner')::boolean,false)),(ctx->>'id')::uuid,(ctx->>'time')::bigint);
  RETURN jsonb_build_object('id',l.id);
  ELSIF op='claim-review' THEN
  SELECT * INTO req FROM finfolk."AccessRequest" WHERE id=(v->>'id')::uuid AND class_table='DirectoryListing' AND class_context='Global' FOR UPDATE;
  IF req.id IS NULL OR req.status<>'pending' THEN RAISE EXCEPTION 'Claim no longer pending' USING ERRCODE='40001'; END IF;
  SELECT * INTO l FROM finfolk."DirectoryListing" WHERE access_id=req.access_id FOR UPDATE;
  IF coalesce((v->>'approve')::boolean,false) THEN
- IF req.expires_at<=now() OR length(trim(coalesce(v->>'evidence','')))=0 THEN RAISE EXCEPTION 'Challenge expired or verification evidence missing' USING ERRCODE='22023'; END IF;
+ IF req.expires_at<=(extract(epoch from clock_timestamp())*1000000)::bigint OR length(trim(coalesce(v->>'evidence','')))=0 THEN RAISE EXCEPTION 'Challenge expired or verification evidence missing' USING ERRCODE='22023'; END IF;
  IF l.status<>'published' OR EXISTS(SELECT 1 FROM finfolk."AccessRole" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=l.access_id AND level='owner' AND is_active) THEN
  RAISE EXCEPTION 'Page already managed or unavailable' USING ERRCODE='40001'; END IF;
  INSERT INTO finfolk."AccessRole"(class_table,class_context,access_id,member_id,from_id,level)
@@ -14369,13 +17712,282 @@ BEGIN
  RAISE EXCEPTION 'This directory operation is not available on the native database' USING ERRCODE='22023';
 END $$ LANGUAGE plpgsql;
 
+-- Native events use UUID members and shared page/event access providers.
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_event_manager(e finfolk."Event",actor uuid) RETURNS boolean LANGUAGE sql STABLE AS $$
+ SELECT EXISTS(SELECT 1 FROM finfolk."DirectoryListing" p JOIN finfolk."AccessRole" a ON a.class_table='DirectoryListing' AND a.class_context='Global' AND a.access_id=p.access_id WHERE p.id=e.listing_id AND a.member_id=actor AND a.level IN('owner','admin') AND a.is_active)
+$$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_event_active(e finfolk."Event") RETURNS boolean LANGUAGE sql STABLE AS $$
+ SELECT EXISTS(SELECT 1 FROM finfolk."DirectoryListing" p JOIN finfolk."AccessRole" a ON a.class_table='DirectoryListing' AND a.class_context='Global' AND a.access_id=p.access_id JOIN finfolk."User" u ON u.id=a.member_id AND NOT u.deleted WHERE p.id=e.listing_id AND p.status='published' AND a.level='owner' AND a.is_active)
+$$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_event_visible(e finfolk."Event",actor uuid,verified boolean) RETURNS boolean LANGUAGE sql STABLE AS $$
+ SELECT (verified AND finfolk_rpc.native_event_manager(e,actor)) OR (finfolk_rpc.native_event_active(e) AND NOT e.hidden AND e.status IN('published','cancelled') AND (e.visibility='public' OR (verified AND EXISTS(SELECT 1 FROM finfolk."AccessInviteEmail" i WHERE i.class_table='Event' AND i.class_context='Global' AND i.access_id=e.access_id AND i.status='accepted' AND i.reply_id=actor))))
+$$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_event_row(e finfolk."Event",actor uuid,verified boolean,adm boolean) RETURNS jsonb LANGUAGE sql STABLE AS $$
+ SELECT jsonb_build_object('id',e.id,'page_id',e.listing_id,'document',e.detail,'state',e.status,'visibility',e.visibility,
+ 'starts_at',finfolk.as_iso_time(e.starts_at),'ends_at',finfolk.as_iso_time(e.ends_at),'timezone',e.timezone,'capacity',e.capacity,
+ 'going',(SELECT count(*) FROM finfolk."EventRsvp" r WHERE r.event_id=e.id AND r.status='going'),
+ 'myRsvp',(SELECT r.status FROM finfolk."EventRsvp" r WHERE r.event_id=e.id AND r.member_id=actor),
+ 'canManage',verified AND finfolk_rpc.native_event_manager(e,actor),'canModerate',verified AND adm,
+ 'revision',(SELECT index FROM finfolk."Rev" WHERE id=e.rev_id AND class_table='Event' AND class_context='Global'),
+ 'organiser',(SELECT detail->>'name' FROM finfolk."DirectoryListing" WHERE id=e.listing_id))
+$$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_event_operation(op text,v jsonb) RETURNS jsonb LANGUAGE plpgsql AS $$
+DECLARE actor uuid:=finfolk.auth_uid(); verified boolean:=coalesce(current_setting('finfolk.event_verified',true),'')='true'; adm boolean:=coalesce(current_setting('finfolk.directory_admin',true),'')='true';
+ e finfolk."Event"; p finfolk."DirectoryListing"; inv finfolk."AccessInviteEmail"; ident uuid; ctx jsonb; doc jsonb; answer jsonb; token text; mail text; n integer; revision integer; starts bigint; ends bigint; cap integer; now_us bigint:=(extract(epoch from clock_timestamp())*1000000)::bigint; manager boolean; allowed boolean;
+BEGIN
+ IF jsonb_typeof(v) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Invalid event request' USING ERRCODE='22023'; END IF;
+ IF op='list' THEN
+ RETURN jsonb_build_object('events',coalesce((SELECT jsonb_agg(finfolk_rpc.native_event_row(q,NULL,false,false) ORDER BY q.starts_at,q.id) FROM (SELECT ev.* FROM finfolk."Event" ev WHERE ev.status='published' AND ev.visibility='public' AND NOT ev.hidden AND finfolk_rpc.native_event_active(ev) AND ev.ends_at>now_us
+ AND (coalesce(v->>'page','')='' OR ev.listing_id=(v->>'page')::uuid) AND (coalesce(v->>'q','')='' OR strpos(lower(ev.detail->>'title'),lower(v->>'q'))>0)
+ AND (coalesce(v->>'location','')='' OR strpos(lower(ev.detail->>'location'),lower(v->>'location'))>0) AND (coalesce(v->>'category','')='' OR ev.detail->>'category'=v->>'category')
+ AND (coalesce(v->>'from','')='' OR ev.starts_at>=(extract(epoch from (v->>'from')::timestamptz)*1000000)::bigint)
+ ORDER BY ev.starts_at,ev.id LIMIT 20 OFFSET greatest(0,least(10000,coalesce((v->>'offset')::integer,0)))) q),'[]'::jsonb));
+ END IF;
+ IF op='public-detail' THEN
+ SELECT * INTO e FROM finfolk."Event" WHERE id=(v->>'id')::uuid;
+ IF e.id IS NULL OR e.visibility<>'public' OR NOT finfolk_rpc.native_event_visible(e,NULL,false) THEN RETURN NULL; END IF;
+ RETURN finfolk_rpc.native_event_row(e,NULL,false,false);
+ END IF;
+ IF actor IS NULL OR NOT verified OR NOT EXISTS(SELECT 1 FROM finfolk."User" WHERE id=actor AND NOT deleted) THEN RAISE EXCEPTION 'Verified member required' USING ERRCODE='42501'; END IF;
+ IF op='mine' THEN RETURN jsonb_build_object('events',coalesce((SELECT jsonb_agg(finfolk_rpc.native_event_row(q,actor,verified,adm) ORDER BY q.starts_at DESC,q.id) FROM (SELECT ev.* FROM finfolk."Event" ev WHERE (adm OR finfolk_rpc.native_event_visible(ev,actor,verified)) AND (finfolk_rpc.native_event_manager(ev,actor) OR EXISTS(SELECT 1 FROM finfolk."EventRsvp" r WHERE r.event_id=ev.id AND r.member_id=actor) OR EXISTS(SELECT 1 FROM finfolk."AccessInviteEmail" i WHERE i.class_table='Event' AND i.class_context='Global' AND i.access_id=ev.access_id AND i.reply_id=actor AND i.status='accepted')) ORDER BY ev.starts_at DESC,ev.id LIMIT 100) q),'[]'::jsonb)); END IF;
+ IF op='accept' THEN
+ IF coalesce(v->>'token','') !~ '^[0-9a-f]{64}$' THEN RAISE EXCEPTION 'Invitation unavailable' USING ERRCODE='P0002'; END IF;
+ SELECT * INTO inv FROM finfolk."AccessInviteEmail" WHERE class_table='Event' AND class_context='Global' AND secret=encode(digest(v->>'token','sha256'),'hex');
+ IF inv.id IS NULL THEN RAISE EXCEPTION 'Invitation unavailable' USING ERRCODE='P0002'; END IF;
+ SELECT id INTO ident FROM finfolk."Event" WHERE access_id=inv.access_id;
+ ELSE ident:=(v->>'id')::uuid; END IF;
+ SELECT * INTO e FROM finfolk."Event" WHERE id=ident FOR UPDATE;
+ IF op='accept' THEN SELECT * INTO inv FROM finfolk."AccessInviteEmail" WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id AND id=inv.id FOR UPDATE; END IF;
+ IF e.id IS NULL AND op<>'save' THEN RAISE EXCEPTION 'Event unavailable' USING ERRCODE='P0002'; END IF;
+ now_us:=(extract(epoch from clock_timestamp())*1000000)::bigint;
+ SELECT * INTO p FROM finfolk."DirectoryListing" WHERE id=coalesce(e.listing_id,(v->>'page')::uuid) FOR SHARE;
+ manager:=coalesce(EXISTS(SELECT 1 FROM finfolk."AccessRole" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=p.access_id AND member_id=actor AND level IN('owner','admin') AND is_active),false);
+ allowed:=coalesce(finfolk_rpc.native_event_visible(e,actor,verified),false);
+ IF op='detail' THEN IF NOT allowed AND NOT adm THEN RAISE EXCEPTION 'Event unavailable' USING ERRCODE='P0002'; END IF; RETURN finfolk_rpc.native_event_row(e,actor,verified,adm); END IF;
+ IF op IN('save','cancel','roster','invite','invite-retry','revoke') AND NOT manager THEN RAISE EXCEPTION 'Page owner or admin required' USING ERRCODE='42501'; END IF;
+ IF op='save' THEN
+ IF p.status<>'published' OR NOT EXISTS(SELECT 1 FROM finfolk."AccessRole" WHERE class_table='DirectoryListing' AND class_context='Global' AND access_id=p.access_id AND level='owner' AND is_active) THEN RAISE EXCEPTION 'Publish and claim the organising page first' USING ERRCODE='22023'; END IF;
+ IF e.id IS NOT NULL AND e.listing_id IS DISTINCT FROM (v->>'page')::uuid THEN RAISE EXCEPTION 'Event organising page cannot change' USING ERRCODE='22023'; END IF;
+ IF e.id IS NOT NULL THEN SELECT index INTO revision FROM finfolk."Rev" WHERE id=e.rev_id AND class_table='Event' AND class_context='Global'; IF revision IS DISTINCT FROM (v->>'revision')::integer THEN RAISE EXCEPTION 'Event changed; reload' USING ERRCODE='40001'; END IF; END IF;
+ starts:=(extract(epoch from (v->>'starts')::timestamptz)*1000000)::bigint; ends:=(extract(epoch from (v->>'ends')::timestamptz)*1000000)::bigint; cap:=(v->>'capacity')::integer;
+ IF starts IS NULL OR ends IS NULL OR ends<=starts OR length(trim(coalesce(v->>'title','')))=0 OR length(v->>'title')>160 OR length(trim(coalesce(v->>'location','')))=0 OR length(v->>'location')>300 OR length(coalesce(v->>'description',''))>5000 OR length(coalesce(v->>'category',''))>60 OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=v->>'timezone') OR NOT coalesce(v->>'visibility'=ANY(ARRAY['public','private']),false) OR NOT coalesce(v->>'state'=ANY(ARRAY['draft','published']),false) OR cap<=0 OR cap>100000 THEN RAISE EXCEPTION 'Check event fields and times' USING ERRCODE='22023'; END IF;
+ SELECT count(*) INTO n FROM finfolk."EventRsvp" WHERE event_id=e.id AND status='going';
+ IF (cap IS NOT NULL AND cap<n) OR (e.status='published' AND v->>'state'='draft' AND n>0) OR (e.status='published' AND e.visibility::text IS DISTINCT FROM v->>'visibility') THEN RAISE EXCEPTION 'Published visibility and existing places must be preserved' USING ERRCODE='40001'; END IF;
+ ctx:=finfolk.op_fn('event-save',actor,'{}'); doc:=jsonb_build_object('title',trim(v->>'title'),'description',coalesce(v->>'description',''),'location',trim(v->>'location'),'category',coalesce(v->>'category','Meetup'),'capacity',cap);
+ IF e.id IS NULL THEN answer:=finfolk_rpc.insert_event(p.id,doc,v->>'visibility',starts,ends,v->>'timezone',ctx); SELECT * INTO e FROM finfolk."Event" WHERE id=(answer->>'id')::uuid; revision:=1;
+ ELSE UPDATE finfolk."Event" SET detail=doc,starts_at=starts,ends_at=ends,timezone=v->>'timezone',capacity=cap,visibility=(v->>'visibility')::finfolk."EnumEventVisibility",op_updated=(ctx->>'id')::uuid,time_updated=(ctx->>'time')::bigint WHERE id=e.id; END IF;
+ UPDATE finfolk."Event" SET status=(v->>'state')::finfolk."EnumEventStatus" WHERE id=e.id;
+ IF revision<>1 OR (v->>'id') IS NOT NULL THEN UPDATE finfolk."Rev" SET current=doc,index=index+1 WHERE id=e.rev_id AND class_table='Event' AND class_context='Global'; INSERT INTO finfolk."RevLog"(class_table,class_context,rev_id,version,deltas,op_created,time_created) VALUES('Event','Global',e.rev_id,revision+1,doc,(ctx->>'id')::uuid,(ctx->>'time')::bigint); END IF;
+ answer:=jsonb_build_object('id',e.id);
+ ELSIF op IN('cancel','moderate') THEN
+ IF op='moderate' AND NOT adm THEN RAISE EXCEPTION 'Administrator required' USING ERRCODE='42501'; END IF;
+ UPDATE finfolk."EventInviteDelivery" SET state='cancelled',sealed_token='',lease=NULL,lease_until=0,error='' WHERE event_id=e.id AND state<>'sent';
+ ctx:=finfolk.op_fn('event-'||op,actor,'{}');
+ IF op='cancel' THEN UPDATE finfolk."Event" SET status='cancelled',op_updated=(ctx->>'id')::uuid,time_updated=(ctx->>'time')::bigint WHERE id=e.id; ELSE UPDATE finfolk."Event" SET hidden=true,op_updated=(ctx->>'id')::uuid,time_updated=(ctx->>'time')::bigint WHERE id=e.id; END IF;
+ UPDATE finfolk."Rev" SET index=index+1 WHERE id=e.rev_id AND class_table='Event' AND class_context='Global' RETURNING index INTO revision;
+ INSERT INTO finfolk."RevLog"(class_table,class_context,rev_id,version,deltas,op_created,time_created) VALUES('Event','Global',e.rev_id,revision,jsonb_build_object('event',op),(ctx->>'id')::uuid,(ctx->>'time')::bigint); answer:='{"ok":true}';
+ ELSIF op='roster' THEN RETURN jsonb_build_object('attendees',coalesce((SELECT jsonb_agg(jsonb_build_object('id',u.id,'name',coalesce(u.profile->>'displayName','Diver')) ORDER BY u.id) FROM finfolk."EventRsvp" r JOIN finfolk."User" u ON u.id=r.member_id AND NOT u.deleted WHERE r.event_id=e.id AND r.status='going'),'[]'),
+ 'invitations',coalesce((SELECT jsonb_agg(jsonb_build_object('id',i.id,'email',i.email,'expires',i.expires_at/1000,'revoked',i.status IN('expired','rejected'),'delivery',(SELECT jsonb_build_object('state',d.state,'attempts',d.attempts,'error',d.error) FROM finfolk."EventInviteDelivery" d WHERE d.event_id=e.id AND d.invite_id=i.id))) FROM finfolk."AccessInviteEmail" i WHERE i.class_table='Event' AND i.class_context='Global' AND i.access_id=e.access_id),'[]'));
+ ELSIF op='invite-retry' THEN
+ SELECT * INTO inv FROM finfolk."AccessInviteEmail" WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id AND id=(v->>'invite')::uuid; IF inv.id IS NULL THEN RAISE EXCEPTION 'Invitation unavailable' USING ERRCODE='P0002'; END IF; answer:=jsonb_build_object('id',inv.id,'delivery',coalesce((SELECT jsonb_build_object('state',d.state,'attempts',d.attempts,'error',d.error) FROM finfolk."EventInviteDelivery" d WHERE d.event_id=e.id AND d.invite_id=inv.id),jsonb_build_object('state','cancelled','attempts',0,'error','Delivery is no longer available.')));
+ ELSIF op='invite' THEN
+ mail:=lower(trim(coalesce(v->>'email','')));
+ IF e.visibility<>'private' OR e.status<>'published' OR e.starts_at<=now_us OR length(mail)>254 OR mail !~ '^[^[:space:]@]+@[^[:space:]@]+[.][^[:space:]@]+$' THEN RAISE EXCEPTION 'Enter a valid private-event email' USING ERRCODE='22023'; END IF;
+ ident:=coalesce((v->>'requestId')::uuid,uuid_generate_v4()); SELECT * INTO inv FROM finfolk."AccessInviteEmail" WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id AND id=ident;
+ IF inv.id IS NOT NULL THEN IF inv.from_id IS DISTINCT FROM actor OR inv.email<>mail OR inv.detail->'send' IS DISTINCT FROM to_jsonb(coalesce((v->>'send')::boolean,false)) OR inv.status<>'pending' THEN RAISE EXCEPTION 'Invitation request already used' USING ERRCODE='40001'; END IF; RETURN jsonb_build_object('id',inv.id,'token','','expires',inv.expires_at/1000); END IF;
+ IF (SELECT count(*) FROM finfolk."AccessInviteEmail" WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id)>=200 THEN RAISE EXCEPTION 'Invitation limit reached' USING ERRCODE='22023'; END IF;
+ token:=encode(gen_random_bytes(32),'hex');
+ INSERT INTO finfolk."AccessInviteEmail"(id,class_table,class_context,access_id,email,secret,from_id,expires_at,detail) VALUES(ident,'Event','Global',e.access_id,mail,encode(digest(token,'sha256'),'hex'),actor,least(e.starts_at,now_us+604800000000),jsonb_build_object('send',coalesce((v->>'send')::boolean,false))) RETURNING * INTO inv;
+ answer:=jsonb_build_object('id',inv.id,'token',token,'expires',inv.expires_at/1000);
+ ELSIF op='accept' THEN
+ IF inv.status<>'pending' OR inv.expires_at<=now_us OR lower(trim(coalesce(current_setting('finfolk.event_email',true),'')))<>inv.email OR NOT finfolk_rpc.native_event_active(e) OR e.hidden OR e.status<>'published' THEN RAISE EXCEPTION 'Invitation unavailable for this account' USING ERRCODE='40001'; END IF;
+ UPDATE finfolk."AccessInviteEmail" SET reply_id=actor,status='accepted',accepted_at=now_us WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id AND id=inv.id;
+ answer:=jsonb_build_object('id',e.id);
+ ELSIF op='revoke' THEN
+ SELECT * INTO inv FROM finfolk."AccessInviteEmail" WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id AND id=(v->>'invite')::uuid FOR UPDATE;
+ IF inv.id IS NULL THEN RAISE EXCEPTION 'Invitation unavailable' USING ERRCODE='P0002'; END IF;
+ UPDATE finfolk."AccessInviteEmail" SET status='expired' WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id AND email=inv.email;
+ UPDATE finfolk."EventInviteDelivery" SET state='cancelled',sealed_token='',lease=NULL,lease_until=0,error='' WHERE event_id=e.id AND invite_id IN(SELECT id FROM finfolk."AccessInviteEmail" WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id AND email=inv.email) AND state<>'sent';
+ UPDATE finfolk."EventRsvp" SET status='cancelled' WHERE event_id=e.id AND member_id IN(SELECT reply_id FROM finfolk."AccessInviteEmail" WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id AND email=inv.email);
+ answer:='{"ok":true}';
+ ELSIF op='rsvp' THEN
+ IF coalesce(v->>'state','')='going' THEN
+ IF NOT allowed OR NOT finfolk_rpc.native_event_active(e) OR e.hidden OR e.status<>'published' OR e.starts_at<=now_us THEN RAISE EXCEPTION 'Event is closed' USING ERRCODE='40001'; END IF;
+ SELECT count(*) INTO n FROM finfolk."EventRsvp" WHERE event_id=e.id AND status='going' AND member_id<>actor;
+ IF e.capacity IS NOT NULL AND n>=e.capacity THEN RAISE EXCEPTION 'Event is full' USING ERRCODE='40001'; END IF;
+ ELSE IF coalesce(v->>'state','')<>'cancelled' OR (NOT allowed AND NOT EXISTS(SELECT 1 FROM finfolk."EventRsvp" WHERE event_id=e.id AND member_id=actor)) THEN RAISE EXCEPTION 'Invalid RSVP' USING ERRCODE='22023'; END IF; END IF;
+ INSERT INTO finfolk."EventRsvp"(event_id,member_id,status) VALUES(e.id,actor,(v->>'state')::finfolk."EnumEventRsvpStatus") ON CONFLICT(event_id,member_id) DO UPDATE SET status=excluded.status;
+ answer:='{"ok":true}';
+ ELSE RAISE EXCEPTION 'Unknown event operation' USING ERRCODE='22023'; END IF;
+ IF ctx IS NULL THEN ctx:=finfolk.op_fn('event-'||op,actor,'{}'); END IF;
+ IF op<>'save' OR (v->>'id') IS NOT NULL THEN INSERT INTO finfolk."AuditLog"(class_table,class_context,audit_id,entry,op_created,time_created) VALUES('Event','Global',e.audit_id,jsonb_build_object('event',op,'actor',actor),(ctx->>'id')::uuid,(ctx->>'time')::bigint); END IF;
+ RETURN answer;
+END $$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_event_delivery_row(d finfolk."EventInviteDelivery") RETURNS jsonb LANGUAGE sql STABLE AS $$ SELECT jsonb_build_object('state',d.state,'attempts',d.attempts,'error',d.error); $$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_event_delivery_operation(op text,actor uuid,i_event uuid,invite uuid,token text,seal_key text,lease_id uuid,outcome text,receipt_id text) RETURNS jsonb LANGUAGE plpgsql AS $$
+DECLARE e finfolk."Event"; i finfolk."AccessInviteEmail"; delivery finfolk."EventInviteDelivery"; clock bigint:=(extract(epoch from clock_timestamp())*1000000)::bigint;
+BEGIN
+ PERFORM pg_advisory_xact_lock(hashtextextended(actor::text,0));
+ SELECT * INTO e FROM finfolk."Event" WHERE id=i_event FOR UPDATE;
+ IF NOT EXISTS(SELECT 1 FROM finfolk."User" WHERE id=actor AND NOT deleted AND email_verified) OR e.id IS NULL OR NOT finfolk_rpc.native_event_manager(e,actor) THEN RAISE EXCEPTION 'Event manager required' USING ERRCODE='42501'; END IF;
+ SELECT * INTO i FROM finfolk."AccessInviteEmail" WHERE class_table='Event' AND class_context='Global' AND access_id=e.access_id AND id=invite FOR UPDATE;
+ IF i.id IS NULL THEN RAISE EXCEPTION 'Invitation unavailable' USING ERRCODE='P0002'; END IF;
+ SELECT * INTO delivery FROM finfolk."EventInviteDelivery" q WHERE q.event_id=e.id AND q.invite_id=i.id FOR UPDATE;
+ clock:=(extract(epoch from clock_timestamp())*1000000)::bigint;
+ IF op='enqueue' THEN
+ IF length(coalesce(seal_key,''))<32 OR length(seal_key)>512 OR i.from_id IS DISTINCT FROM actor OR i.secret IS DISTINCT FROM encode(digest(token,'sha256'),'hex') OR i.status<>'pending' OR i.expires_at<=clock THEN RAISE EXCEPTION 'Invalid delivery work' USING ERRCODE='22023'; END IF;
+ IF delivery.id IS NULL THEN INSERT INTO finfolk."EventInviteDelivery"(event_id,invite_id,requester_id,sealed_token) VALUES(e.id,i.id,actor,encode(pgp_sym_encrypt(token,seal_key),'hex')) RETURNING * INTO delivery; END IF;
+ RETURN finfolk_rpc.native_event_delivery_row(delivery);
+ END IF;
+ IF delivery.id IS NULL THEN RETURN jsonb_build_object('state','cancelled','attempts',0,'error','Delivery is no longer available.'); END IF;
+ IF op='complete' THEN
+ IF delivery.state<>'sending' OR delivery.lease IS DISTINCT FROM lease_id THEN RETURN finfolk_rpc.native_event_delivery_row(delivery); END IF;
+ IF NOT coalesce(outcome=ANY(ARRAY['sent','failed']),false) THEN RAISE EXCEPTION 'Invalid delivery outcome' USING ERRCODE='22023'; END IF;
+ UPDATE finfolk."EventInviteDelivery" SET state=outcome,receipt=CASE WHEN outcome='sent' THEN left(coalesce(receipt_id,''),200) ELSE '' END,error=CASE WHEN outcome='failed' THEN 'Email could not be delivered. Retry this invitation.' ELSE '' END,sealed_token=CASE WHEN outcome='sent' OR delivery.attempts>=5 THEN '' ELSE sealed_token END,lease=NULL,lease_until=0,time_updated=clock WHERE id=delivery.id RETURNING * INTO delivery;
+ RETURN finfolk_rpc.native_event_delivery_row(delivery);
+ END IF;
+ IF op<>'claim' THEN RAISE EXCEPTION 'Unknown delivery operation' USING ERRCODE='22023'; END IF;
+ IF delivery.state IN('sent','cancelled') THEN RETURN finfolk_rpc.native_event_delivery_row(delivery); END IF;
+ IF i.status<>'pending' OR i.expires_at<=clock OR e.status<>'published' OR e.hidden OR e.starts_at<=clock OR NOT finfolk_rpc.native_event_active(e) THEN UPDATE finfolk."EventInviteDelivery" SET state='cancelled',sealed_token='',lease=NULL,lease_until=0,error='',time_updated=clock WHERE id=delivery.id RETURNING * INTO delivery; RETURN finfolk_rpc.native_event_delivery_row(delivery); END IF;
+ IF delivery.state='sending' AND delivery.lease_until>clock THEN RETURN finfolk_rpc.native_event_delivery_row(delivery); END IF;
+ IF delivery.attempts>=5 THEN UPDATE finfolk."EventInviteDelivery" SET state='failed',sealed_token='',error='Maximum delivery attempts reached.',lease=NULL,lease_until=0,time_updated=clock WHERE id=delivery.id RETURNING * INTO delivery; RETURN finfolk_rpc.native_event_delivery_row(delivery); END IF;
+ IF length(coalesce(seal_key,''))<32 OR lease_id IS NULL THEN RAISE EXCEPTION 'Delivery configuration unavailable' USING ERRCODE='22023'; END IF;
+ token:=pgp_sym_decrypt(decode(delivery.sealed_token,'hex'),seal_key);
+ IF encode(digest(token,'sha256'),'hex') IS DISTINCT FROM i.secret THEN RAISE EXCEPTION 'Invitation changed' USING ERRCODE='40001'; END IF;
+ UPDATE finfolk."EventInviteDelivery" SET state='sending',attempts=attempts+1,lease=lease_id,lease_until=clock+60000000,error='',time_updated=clock WHERE id=delivery.id RETURNING * INTO delivery;
+ RETURN finfolk_rpc.native_event_delivery_row(delivery)||jsonb_build_object('id',delivery.id,'email',i.email,'token',token,'title',e.detail->>'title');
+END $$;
+-- Public atlas projection from canonical native entities. Private payload keys never cross the boundary.
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_site_row(i_site uuid) RETURNS jsonb LANGUAGE plpgsql STABLE AS $$
+DECLARE p finfolk."SiteProfile"; s finfolk."Site"; point jsonb;
+BEGIN
+ SELECT * INTO p FROM finfolk."SiteProfile" WHERE site_id=i_site AND status='published';
+ SELECT * INTO s FROM finfolk."Site" WHERE id=i_site;
+ IF p.id IS NULL OR s.id IS NULL THEN RETURN NULL; END IF;
+ point:=p.payload->'point';
+ IF jsonb_typeof(point) IS DISTINCT FROM 'array' THEN RETURN NULL; END IF;
+ IF jsonb_array_length(point)<>2 OR jsonb_typeof(point->0)<>'number' OR jsonb_typeof(point->1)<>'number' THEN RETURN NULL; END IF;
+ IF abs((point->>0)::numeric)>180 OR abs((point->>1)::numeric)>85 THEN RETURN NULL; END IF;
+ RETURN coalesce((SELECT jsonb_object_agg(key,value) FROM jsonb_each(p.payload) WHERE key=ANY(ARRAY['description','archived','features','requirements','restrictions','timezone','source_url','timezone_provenance','name','reference_label','booking_url','state','access_mode','activity_status','region','coordinate_purpose','licence','area_id','id','attribution','point','depth_evidence','activities','aliases','area_name','coordinate_provenance','facts','source_id','access_points','reviewed_at','waterbody','state_id'])),'{}'::jsonb)||jsonb_build_object('id',s.id,'name',s.name,'timezone',s.timezone,'state',s.state,'state_id',s.state,'area_name',s.area_name,
+ 'area_id',coalesce(nullif(p.payload->>'area_id',''),s.state||'-native'),'point',point,'region',coalesce(p.payload->>'region','site-'||s.id::text),
+ 'waterbody',p.waterbody,'access_mode',p.access_mode,'revision',p.revision,'catalog_managed',true,
+ 'description',left(coalesce(p.payload->>'description',''),2000),
+ 'source_url',CASE WHEN p.payload->>'source_url' ~ '^https://[^/@[:space:]]+([/:?#]|$)' THEN left(p.payload->>'source_url',2048) ELSE '' END,'source_id',left(coalesce(p.payload->>'source_id','native-reviewed-sites'),128),'reference_label',left(coalesce(p.payload->>'reference_label',s.name),200),'attribution',left(coalesce(p.payload->>'attribution',''),2000),'licence',left(coalesce(p.payload->>'licence',''),500),
+ 'aliases',coalesce((SELECT jsonb_agg(value) FROM (SELECT value FROM jsonb_array_elements(CASE WHEN jsonb_typeof(p.payload->'aliases')='array' THEN p.payload->'aliases' ELSE '[]' END) WHERE jsonb_typeof(value)='string' LIMIT 20) q),'[]'::jsonb),
+ 'features',coalesce((SELECT jsonb_agg(value) FROM jsonb_array_elements(CASE WHEN jsonb_typeof(p.payload->'features')='array' THEN p.payload->'features' ELSE '[]' END) WHERE value #>> '{}' IN('beach','reef','wreck','wall','training')),'[]'::jsonb),
+ 'activities',coalesce((SELECT jsonb_agg(value) FROM jsonb_array_elements(CASE WHEN jsonb_typeof(p.payload->'activities')='array' THEN p.payload->'activities' ELSE '[]' END) WHERE value #>> '{}' IN('freediving','ocean-swimming','spearfishing')),'[]'::jsonb));
+END $$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_site_catalog() RETURNS jsonb LANGUAGE sql STABLE AS $$
+ WITH rows AS MATERIALIZED (SELECT finfolk_rpc.native_site_row(site_id) value FROM finfolk."SiteProfile" WHERE status='published'), published AS (SELECT value FROM rows WHERE value IS NOT NULL)
+ SELECT jsonb_build_object('revision',coalesce((SELECT revision FROM finfolk."SiteCatalog" WHERE singleton),0),
+ 'beaches',coalesce((SELECT jsonb_agg(value ORDER BY lower(value->>'name'),value->>'id') FROM published),'[]'::jsonb),
+ 'states',coalesce((SELECT jsonb_agg(jsonb_build_object('id',state,'name',state) ORDER BY state) FROM (SELECT DISTINCT value->>'state_id' state FROM published) states),'[]'::jsonb),
+ 'areas',coalesce((SELECT jsonb_agg(jsonb_build_object('id',id,'name',name,'state_id',state,'center',jsonb_build_array(x,y)) ORDER BY id) FROM (SELECT value->>'area_id' id,min(value->>'area_name') name,min(value->>'state_id') state,avg((value->'point'->>0)::numeric) x,avg((value->'point'->>1)::numeric) y FROM published GROUP BY value->>'area_id') areas),'[]'::jsonb),
+ 'sources','[]'::jsonb,'location_note','Published native dive sites. Reference maps and their attribution are shown separately.');
+$$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_site_detail(i_site uuid) RETURNS jsonb LANGUAGE plpgsql STABLE AS $$
+DECLARE answer jsonb; BEGIN answer:=finfolk_rpc.native_site_row(i_site); IF answer IS NULL THEN RAISE EXCEPTION 'Dive site unavailable' USING ERRCODE='P0002'; END IF; RETURN answer; END $$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_discover_popular() RETURNS jsonb LANGUAGE sql STABLE AS $$
+ SELECT jsonb_build_object('places',coalesce(jsonb_agg(site_id ORDER BY members DESC,site_id),'[]'::jsonb)) FROM (
+ SELECT c.site_id,count(DISTINCT u.id) members FROM finfolk."UserCheckin" c JOIN finfolk."User" u ON u.id=c.user_id
+ JOIN finfolk."Site" s ON s.id=c.site_id WHERE NOT u.deleted AND u.email_verified AND u.profile->>'open'='true'
+ AND c.visit_day<= (now() AT TIME ZONE s.timezone)::date AND c.visit_day>(now() AT TIME ZONE s.timezone)::date-30
+ AND finfolk_rpc.native_site_row(s.id) IS NOT NULL GROUP BY c.site_id HAVING count(DISTINCT u.id)>=3 ORDER BY members DESC,c.site_id LIMIT 12) spots;
+$$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_site_url(value text,required boolean DEFAULT false) RETURNS text LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN
+ IF value IS NULL OR value='' THEN IF required THEN RAISE EXCEPTION 'A source URL is required' USING ERRCODE='22023'; END IF; RETURN ''; END IF;
+ IF length(value)>2048 OR value !~ '^https://[^/@[:space:]]+([/:?#]|$)' OR value ~ '[[:space:]]' THEN RAISE EXCEPTION 'Use a valid HTTPS source URL' USING ERRCODE='22023'; END IF; RETURN value;
+END $$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_site_point(value jsonb) RETURNS boolean LANGUAGE plpgsql IMMUTABLE AS $$
+BEGIN IF jsonb_typeof(value) IS DISTINCT FROM 'array' THEN RETURN false; END IF; IF jsonb_array_length(value)<>2 THEN RETURN false; END IF; IF jsonb_typeof(value->0)<>'number' OR jsonb_typeof(value->1)<>'number' THEN RETURN false; END IF; RETURN abs((value->>0)::numeric)<=180 AND abs((value->>1)::numeric)<=85; END $$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_site_document(d jsonb) RETURNS jsonb LANGUAGE plpgsql STABLE AS $$
+DECLARE item jsonb; field text; doc jsonb; allowed text[]:=ARRAY['description','archived','features','requirements','restrictions','timezone','source_url','timezone_provenance','name','reference_label','booking_url','state','access_mode','activity_status','region','coordinate_purpose','licence','area_id','id','attribution','point','depth_evidence','activities','aliases','area_name','coordinate_provenance','facts','source_id','access_points','reviewed_at','waterbody','state_id'];
+BEGIN
+ IF jsonb_typeof(d) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Enter site details' USING ERRCODE='22023'; END IF;
+ IF EXISTS(SELECT 1 FROM jsonb_object_keys(d) k WHERE NOT k=ANY(allowed)) THEN RAISE EXCEPTION 'Unknown site field' USING ERRCODE='22023'; END IF;
+ FOREACH field IN ARRAY ARRAY['id','name','state_id','area_name','timezone','source_url'] LOOP IF jsonb_typeof(d->field) IS DISTINCT FROM 'string' OR length(trim(d->>field))=0 THEN RAISE EXCEPTION 'Required site field missing' USING ERRCODE='22023'; END IF; END LOOP;
+ FOREACH field IN ARRAY allowed LOOP IF d ? field AND NOT field=ANY(ARRAY['point','archived','features','activities','aliases','access_points','depth_evidence','facts','restrictions']) AND jsonb_typeof(d->field)<>'string' THEN RAISE EXCEPTION 'Invalid site field' USING ERRCODE='22023'; END IF; END LOOP;
+ IF d->>'id' !~ '^[a-z0-9][a-z0-9_-]{0,127}$' OR length(d->>'name')>160 OR length(d->>'area_name')>120 OR NOT d->>'state_id'=ANY(ARRAY['VIC','NSW','JBT','QLD','SA','WA','NT','TAS','ACT','EXT']) OR NOT EXISTS(SELECT 1 FROM pg_timezone_names WHERE name=d->>'timezone') OR NOT finfolk_rpc.native_site_point(d->'point') THEN RAISE EXCEPTION 'Check site identity, timezone and coordinates' USING ERRCODE='22023'; END IF;
+ doc:='{"waterbody":"unknown","access_mode":"unknown","features":[],"activities":[],"aliases":[],"access_points":[],"depth_evidence":[],"facts":[],"restrictions":[],"archived":false,"activity_status":"unknown","coordinate_purpose":"reference"}'::jsonb||d;
+ IF NOT coalesce(doc->>'waterbody'=ANY(ARRAY['ocean','lake','river','quarry','sinkhole','pool','unknown']),false) OR NOT coalesce(doc->>'access_mode'=ANY(ARRAY['shore','boat_only','shore_or_boat','unknown']),false) OR NOT coalesce(doc->>'activity_status'=ANY(ARRAY['documented','unknown']),false) OR NOT coalesce(doc->>'coordinate_purpose'=ANY(ARRAY['reference','entry','dive']),false) OR jsonb_typeof(doc->'archived')<>'boolean' THEN RAISE EXCEPTION 'Invalid site categories' USING ERRCODE='22023'; END IF;
+ PERFORM finfolk_rpc.native_site_url(doc->>'source_url',true); PERFORM finfolk_rpc.native_site_url(doc->>'booking_url',false);
+ FOREACH field IN ARRAY ARRAY['features','activities','aliases','access_points','depth_evidence','facts','restrictions'] LOOP IF jsonb_typeof(doc->field)<>'array' THEN RAISE EXCEPTION 'Site records must be lists' USING ERRCODE='22023'; END IF; IF jsonb_array_length(doc->field)>(CASE WHEN field='facts' THEN 40 ELSE 20 END) THEN RAISE EXCEPTION 'Too many site records' USING ERRCODE='22023'; END IF; END LOOP;
+ IF EXISTS(SELECT 1 FROM jsonb_array_elements(doc->'features') a WHERE NOT a #>> '{}'=ANY(ARRAY['beach','reef','wreck','wall','training'])) OR EXISTS(SELECT 1 FROM jsonb_array_elements(doc->'activities') a WHERE NOT a #>> '{}'=ANY(ARRAY['freediving','ocean-swimming','spearfishing'])) OR EXISTS(SELECT 1 FROM jsonb_array_elements(doc->'aliases') a WHERE jsonb_typeof(a)<>'string' OR length(a #>> '{}')>160) THEN RAISE EXCEPTION 'Invalid site lists' USING ERRCODE='22023'; END IF;
+ FOR item IN SELECT value FROM jsonb_array_elements(doc->'access_points') LOOP
+ IF jsonb_typeof(item)<>'object' OR NOT coalesce(item->>'mode'=ANY(ARRAY['shore','departure']),false) OR length(trim(coalesce(item->>'name','')))=0 OR length(item->>'name')>160 OR NOT finfolk_rpc.native_site_point(item->'point') OR (doc->>'access_mode'='boat_only' AND item->>'mode'='shore') THEN RAISE EXCEPTION 'Check access point details' USING ERRCODE='22023'; END IF;
+ IF NOT ARRAY(SELECT jsonb_object_keys(item)) <@ ARRAY['mode','name','point','source_url','booking_url','notes','verified'] THEN RAISE EXCEPTION 'Unknown access point field' USING ERRCODE='22023'; END IF;
+ PERFORM finfolk_rpc.native_site_url(item->>'source_url',true); PERFORM finfolk_rpc.native_site_url(item->>'booking_url',false);
+ IF item ? 'verified' AND jsonb_typeof(item->'verified')<>'boolean' THEN RAISE EXCEPTION 'Invalid access verification' USING ERRCODE='22023'; END IF; END LOOP;
+ FOR item IN SELECT value FROM jsonb_array_elements(doc->'depth_evidence') LOOP
+ IF jsonb_typeof(item)<>'object' OR NOT coalesce(item->>'kind'=ANY(ARRAY['reported','surveyed']),false) OR jsonb_typeof(item->'depth_m') IS DISTINCT FROM 'number' OR (item->>'depth_m')::numeric<=0 OR (item->>'depth_m')::numeric>1500 OR length(trim(coalesce(item->>'reference','')))=0 THEN RAISE EXCEPTION 'Check depth evidence' USING ERRCODE='22023'; END IF; IF NOT ARRAY(SELECT jsonb_object_keys(item)) <@ ARRAY['kind','depth_m','reference','source_url','reviewed_at','vertical_datum','datum_type','uncertainty_m'] THEN RAISE EXCEPTION 'Unknown depth field' USING ERRCODE='22023'; END IF; PERFORM finfolk_rpc.native_site_url(item->>'source_url',true); END LOOP;
+ FOR item IN SELECT value FROM jsonb_array_elements(doc->'facts') UNION ALL SELECT value FROM jsonb_array_elements(doc->'restrictions') LOOP
+ IF jsonb_typeof(item)<>'object' OR length(trim(coalesce(item->>'text','')))=0 OR length(item->>'text')>2000 OR length(trim(coalesce(item->>'label',item->>'activity','')))=0 THEN RAISE EXCEPTION 'Check source-backed facts' USING ERRCODE='22023'; END IF;
+ IF NOT ARRAY(SELECT jsonb_object_keys(item)) <@ (CASE WHEN item ? 'activity' THEN ARRAY['activity','status','text','source_url','reviewed_at'] ELSE ARRAY['label','text','source_url','reviewed_at'] END) THEN RAISE EXCEPTION 'Unknown site fact field' USING ERRCODE='22023'; END IF; IF item ? 'activity' AND NOT coalesce(item->>'status'=ANY(ARRAY['restricted','closed','unknown']),false) THEN RAISE EXCEPTION 'Check restriction status' USING ERRCODE='22023'; END IF; PERFORM finfolk_rpc.native_site_url(item->>'source_url',true); END LOOP;
+ RETURN doc||jsonb_build_object('name',trim(doc->>'name'),'area_name',trim(doc->>'area_name'),'area_id',coalesce(nullif(doc->>'area_id',''),lower(doc->>'state_id')||'-'||trim(both '-' from regexp_replace(lower(doc->>'area_name'),'[^a-z0-9]+','-','g'))));
+END $$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_site_draft_row(r finfolk."SiteRevision") RETURNS jsonb LANGUAGE sql STABLE AS $$
+ SELECT jsonb_build_object('id',r.id,'site_id',r.site_id,'site_key',r.site_key,'owner_id',r.owner_id,'import_id',r.import_id,'base_revision',r.base_revision,'version',r.version,'status',r.status,'payload',r.payload,'reason',r.reason,'reviewed_by',r.reviewed_by_id,'created_at',finfolk.as_iso_time(r.time_created),'updated_at',finfolk.as_iso_time(r.time_updated));
+$$;
+CREATE OR REPLACE FUNCTION finfolk_rpc.native_site_review_operation(op text,v jsonb) RETURNS jsonb LANGUAGE plpgsql AS $$
+DECLARE actor uuid:=finfolk.auth_uid(); verified boolean:=coalesce(current_setting('finfolk.site_verified',true),'')='true'; adm boolean:=coalesce(current_setting('finfolk.site_admin',true),'')='true'; r finfolk."SiteRevision"; s finfolk."Site"; p finfolk."SiteProfile"; doc jsonb; ctx jsonb; ident uuid; site_key text; base bigint; clock bigint:=(extract(epoch from clock_timestamp())*1000000)::bigint;
+BEGIN
+ IF actor IS NULL OR NOT verified OR NOT EXISTS(SELECT 1 FROM finfolk."User" WHERE id=actor AND NOT deleted) THEN RAISE EXCEPTION 'Verified member required' USING ERRCODE='42501'; END IF;
+ IF op='mine' THEN RETURN jsonb_build_object('admin',adm,'submissions',coalesce((SELECT jsonb_agg(finfolk_rpc.native_site_draft_row(q) ORDER BY q.time_updated DESC,q.id) FROM (SELECT * FROM finfolk."SiteRevision" WHERE owner_id=actor ORDER BY time_updated DESC,id LIMIT 100) q),'[]'::jsonb)); END IF;
+ IF op NOT IN('submit','withdraw') AND NOT adm THEN RAISE EXCEPTION 'Administrator required' USING ERRCODE='42501'; END IF;
+ IF op='admin' THEN RETURN jsonb_build_object('drafts',coalesce((SELECT jsonb_agg(finfolk_rpc.native_site_draft_row(q) ORDER BY q.time_updated DESC,q.id) FROM (SELECT * FROM finfolk."SiteRevision" ORDER BY time_updated DESC,id LIMIT 200) q),'[]'::jsonb),'imports','[]'::jsonb); END IF;
+ IF op IN('save','submit') THEN
+ doc:=finfolk_rpc.native_site_document(v->'site'); site_key:=doc->>'id';
+ PERFORM pg_advisory_xact_lock(hashtextextended('site-key:'||site_key,0));
+ SELECT * INTO s FROM finfolk."Site" WHERE key=site_key OR id::text=site_key;
+ IF s.id IS NOT NULL THEN doc:=doc||jsonb_build_object('id',s.id); END IF;
+ ident:=coalesce((v->>'id')::uuid,(v->>'requestId')::uuid,uuid_generate_v4()); SELECT * INTO r FROM finfolk."SiteRevision" WHERE id=ident FOR UPDATE;
+ IF r.id IS NOT NULL THEN
+ IF NOT adm AND r.owner_id IS DISTINCT FROM actor THEN RAISE EXCEPTION 'Submission unavailable' USING ERRCODE='42501'; END IF;
+ IF NOT (v ? 'id') THEN IF r.owner_id IS DISTINCT FROM actor OR r.payload IS DISTINCT FROM doc THEN RAISE EXCEPTION 'Draft request already used' USING ERRCODE='40001'; END IF; RETURN finfolk_rpc.native_site_draft_row(r); END IF;
+ IF r.status NOT IN('draft','submitted') OR r.version IS DISTINCT FROM (v->>'version')::bigint OR r.payload->>'id' IS DISTINCT FROM doc->>'id' THEN RAISE EXCEPTION 'Draft changed; reload before editing' USING ERRCODE='40001'; END IF;
+ UPDATE finfolk."SiteRevision" SET payload=doc,version=version+1,status=CASE WHEN op='submit' THEN 'submitted'::finfolk."EnumSiteRevisionStatus" ELSE 'draft'::finfolk."EnumSiteRevisionStatus" END,reason='',time_updated=clock WHERE id=r.id RETURNING * INTO r;
+ ELSE
+ IF v ? 'id' THEN RAISE EXCEPTION 'Submission unavailable' USING ERRCODE='P0002'; END IF;
+ IF (SELECT count(*) FROM finfolk."SiteRevision" WHERE owner_id=actor AND status IN('draft','submitted'))>=20 THEN RAISE EXCEPTION 'Review pending submissions before adding more' USING ERRCODE='22023'; END IF;
+ SELECT revision INTO base FROM finfolk."SiteProfile" WHERE site_id=s.id;
+ INSERT INTO finfolk."SiteRevision"(id,site_id,site_key,owner_id,base_revision,version,status,payload,time_created,time_updated) VALUES(ident,s.id,site_key,actor,coalesce(base,0),1,CASE WHEN op='submit' THEN 'submitted'::finfolk."EnumSiteRevisionStatus" ELSE 'draft'::finfolk."EnumSiteRevisionStatus" END,doc,clock,clock) RETURNING * INTO r;
+ END IF;
+ DELETE FROM finfolk."SiteAccessPoint" WHERE revision_id=r.id; DELETE FROM finfolk."SiteDepthEvidence" WHERE revision_id=r.id;
+ INSERT INTO finfolk."SiteAccessPoint"(revision_id,mode,payload) SELECT r.id,(value->>'mode')::finfolk."EnumSiteAccessPointMode",value FROM jsonb_array_elements(doc->'access_points');
+ INSERT INTO finfolk."SiteDepthEvidence"(revision_id,kind,payload) SELECT r.id,(value->>'kind')::finfolk."EnumSiteDepthEvidenceType",value FROM jsonb_array_elements(doc->'depth_evidence');
+ PERFORM finfolk.op_fn('site-'||op,actor,jsonb_build_object('draft',r.id,'version',r.version)); RETURN finfolk_rpc.native_site_draft_row(r);
+ END IF;
+ IF op='publish' THEN PERFORM pg_advisory_xact_lock(hashtextextended('native-site-publication',0)); END IF;
+ SELECT * INTO r FROM finfolk."SiteRevision" WHERE id=(v->>'id')::uuid;
+ IF r.id IS NULL THEN RAISE EXCEPTION 'Submission unavailable' USING ERRCODE='P0002'; END IF;
+ PERFORM pg_advisory_xact_lock(hashtextextended('site-key:'||r.site_key,0)); SELECT * INTO r FROM finfolk."SiteRevision" WHERE id=r.id FOR UPDATE;
+ IF op='withdraw' AND r.owner_id IS DISTINCT FROM actor THEN RAISE EXCEPTION 'Submission unavailable' USING ERRCODE='42501'; END IF;
+ IF op='publish' AND r.status='published' AND r.version=(v->>'version')::bigint+1 THEN RETURN jsonb_build_object('ok',true,'site',r.site_id,'revision',r.base_revision+1); END IF;
+ IF r.version IS DISTINCT FROM (v->>'version')::bigint OR r.status NOT IN('draft','submitted') THEN RAISE EXCEPTION 'Submission changed; reload before reviewing' USING ERRCODE='40001'; END IF;
+ IF op='withdraw' THEN UPDATE finfolk."SiteRevision" SET status='withdrawn',version=version+1,time_updated=clock WHERE id=r.id; RETURN '{"ok":true}'; END IF;
+ IF op='reject' THEN IF length(trim(coalesce(v->>'reason','')))=0 OR length(v->>'reason')>2000 THEN RAISE EXCEPTION 'A review reason is required' USING ERRCODE='22023'; END IF; UPDATE finfolk."SiteRevision" SET status='rejected',reason=trim(v->>'reason'),reviewed_by_id=actor,version=version+1,time_updated=clock WHERE id=r.id; RETURN '{"ok":true}'; END IF;
+ IF op<>'publish' THEN RAISE EXCEPTION 'Unknown site operation' USING ERRCODE='22023'; END IF;
+ IF r.import_id IS NOT NULL THEN RAISE EXCEPTION 'Publish this record with its import batch' USING ERRCODE='40001'; END IF;
+ doc:=finfolk_rpc.native_site_document(r.payload);
+ SELECT * INTO s FROM finfolk."Site" WHERE id=r.site_id OR key=r.site_key OR id::text=r.site_key FOR UPDATE;
+ SELECT * INTO p FROM finfolk."SiteProfile" WHERE site_id=s.id FOR UPDATE;
+ IF r.base_revision<>coalesce(p.revision,0) THEN RAISE EXCEPTION 'Published site changed; refresh the draft' USING ERRCODE='40001'; END IF;
+ IF s.id IS NULL THEN INSERT INTO finfolk."Site"(key,name,timezone,state,area_name) VALUES(r.site_key,doc->>'name',doc->>'timezone',doc->>'state_id',doc->>'area_name') RETURNING * INTO s;
+ ELSE UPDATE finfolk."Site" SET name=doc->>'name',timezone=doc->>'timezone',state=doc->>'state_id',area_name=doc->>'area_name' WHERE id=s.id; END IF;
+ doc:=doc||jsonb_build_object('id',s.id); base:=coalesce(p.revision,0)+1;
+ INSERT INTO finfolk."SiteProfile"(site_id,revision,waterbody,access_mode,status,payload,time_updated) VALUES(s.id,base,(doc->>'waterbody')::finfolk."EnumSiteProfileWaterbody",(doc->>'access_mode')::finfolk."EnumSiteProfileAccessMode",CASE WHEN (doc->>'archived')::boolean THEN 'archived'::finfolk."EnumSiteProfileStatus" ELSE 'published'::finfolk."EnumSiteProfileStatus" END,doc,clock)
+ ON CONFLICT(site_id) DO UPDATE SET revision=excluded.revision,waterbody=excluded.waterbody,access_mode=excluded.access_mode,status=excluded.status,payload=excluded.payload,time_updated=excluded.time_updated;
+ INSERT INTO finfolk."SiteCatalog"(singleton,revision,metadata) VALUES(true,1,'{}') ON CONFLICT(singleton) DO UPDATE SET revision=finfolk."SiteCatalog".revision+1;
+ UPDATE finfolk."SiteRevision" SET site_id=s.id,payload=doc,status='published',version=version+1,reviewed_by_id=actor,time_updated=clock WHERE id=r.id;
+ PERFORM finfolk.op_fn('site-publish',actor,jsonb_build_object('draft',r.id,'site',s.id,'revision',base));
+ RETURN jsonb_build_object('ok',true,'site',s.id,'revision',base);
+END $$;
 REVOKE ALL ON ALL TABLES IN SCHEMA finfolk FROM PUBLIC;
 REVOKE ALL ON ALL FUNCTIONS IN SCHEMA finfolk,finfolk_rpc FROM PUBLIC;
 GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_api;
 DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='finfolk_directory') THEN CREATE ROLE finfolk_directory NOLOGIN NOINHERIT; END IF; END $$;
-GRANT USAGE ON SCHEMA finfolk,finfolk_rpc,neon_auth TO finfolk_directory;
-GRANT SELECT,INSERT,UPDATE ON finfolk."DirectoryListing",finfolk."DirectoryReport",finfolk."Access",finfolk."AccessRole",finfolk."AccessRequest",finfolk."Rev",finfolk."RevLog",finfolk."Audit",finfolk."AuditLog",finfolk."Social",finfolk."Op",finfolk."User",finfolk."Activity",finfolk."ActivityLog" TO finfolk_directory;
-GRANT SELECT(id) ON finfolk."DatabaseRelease" TO finfolk_directory;
-GRANT SELECT(id,"emailVerified",banned) ON neon_auth."user" TO finfolk_directory;
-GRANT EXECUTE ON FUNCTION finfolk.auth_uid(),finfolk.as_jsonb(jsonb),finfolk.op_fn(text,uuid,jsonb),finfolk.insert_base_addons(text,uuid,jsonb,jsonb),finfolk.ret_social_url(text),finfolk.ret_social_urls(jsonb),finfolk_rpc.insert_user(uuid,jsonb,jsonb),finfolk_rpc.insert_directory_listing(jsonb,jsonb),finfolk_rpc.ret_directory_public(uuid),finfolk_rpc.directory_document(jsonb),finfolk_rpc.directory_owner_row(finfolk."DirectoryListing"),finfolk_rpc.directory_operation(text,jsonb) TO finfolk_directory;
+GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_directory;
+GRANT SELECT,INSERT,UPDATE ON finfolk."DirectoryRun",finfolk."DirectoryListing",finfolk."DirectoryReport",finfolk."Access",finfolk."AccessRole",finfolk."AccessRequest",finfolk."AccessInviteExternal",finfolk."Rev",finfolk."RevLog",finfolk."Audit",finfolk."AuditLog",finfolk."Social",finfolk."Op",finfolk."User",finfolk."Activity",finfolk."ActivityLog" TO finfolk_directory;
+GRANT EXECUTE ON FUNCTION finfolk.auth_uid(),finfolk.as_jsonb(jsonb),finfolk.op_fn(text,uuid,jsonb),finfolk.insert_base_addons(text,uuid,jsonb,jsonb),finfolk.ret_social_url(text),finfolk.ret_social_urls(jsonb),finfolk_rpc.insert_user(uuid,jsonb,jsonb),finfolk_rpc.insert_directory_listing(jsonb,jsonb),finfolk_rpc.ret_directory_public(uuid),finfolk_rpc.account_portrait(text),finfolk_rpc.account_link(text,text),finfolk_rpc.directory_socials(jsonb),finfolk_rpc.directory_document(jsonb),finfolk_rpc.directory_owner_row(finfolk."DirectoryListing"),finfolk_rpc.directory_operation(text,jsonb) TO finfolk_directory;
 COMMIT;

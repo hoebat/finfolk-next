@@ -1,0 +1,41 @@
+-- Generated native site-notes server privileges. Apply explicitly to the fresh entity database only.
+BEGIN;
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='finfolk_site_notes') THEN CREATE ROLE finfolk_site_notes NOLOGIN NOINHERIT; END IF; END $$;
+GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_site_notes;
+GRANT SELECT,INSERT,UPDATE,DELETE ON finfolk."SiteNote",finfolk."SiteNoteVote",finfolk."SiteNoteReport" TO finfolk_site_notes;
+GRANT SELECT,INSERT,UPDATE ON finfolk."Rev",finfolk."RevLog",finfolk."Op" TO finfolk_site_notes;
+GRANT SELECT(id,deleted,profile,email_verified) ON finfolk."User" TO finfolk_site_notes;
+GRANT SELECT ON finfolk."UserBlock",finfolk."Site" TO finfolk_site_notes;
+GRANT SELECT(site_id,status) ON finfolk."SiteProfile" TO finfolk_site_notes;
+GRANT EXECUTE ON FUNCTION finfolk.as_bounded_text(text,integer,integer),finfolk.as_finite_date(date),finfolk.as_jsonb(jsonb),finfolk.op_fn(text,uuid,jsonb),finfolk.auth_uid(),finfolk.as_iso_time(bigint),finfolk.is_user_active(uuid),finfolk.is_user_blocked(uuid,uuid) TO finfolk_site_notes;
+DO $$ DECLARE f record; BEGIN FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' AND p.proname IN ('site_note_version','insert_site_note','record_site_note_revision','is_site_note_member','require_site_note_member','is_site_note_site','site_note_score','ret_site_note','ret_site_notes','save_site_note','set_site_note_vote','set_site_note_withdrawn','report_site_note','moderate_site_note') LOOP EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO finfolk_site_notes',f.signature); END LOOP; END $$;
+-- Grant this role only to the trusted notes server login. Actor/admin settings are set by that server, never browser input.
+COMMIT;
+-- Generated from finfolkdb.schema.account-access.
+BEGIN;
+SELECT pg_advisory_xact_lock(hashtextextended('finfolk-account-role',0));
+DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='finfolk_account') THEN CREATE ROLE finfolk_account NOLOGIN NOSUPERUSER NOBYPASSRLS; END IF; END $$;
+GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_account;
+REVOKE ALL ON finfolk."UserRole",finfolk."ApplicationFeature" FROM finfolk_account;
+GRANT SELECT,INSERT,UPDATE,DELETE ON finfolk."User",finfolk."UserBlock",finfolk."UserConnection" TO finfolk_account;
+GRANT INSERT,UPDATE ON finfolk."DiveSession" TO finfolk_account;
+GRANT INSERT ON finfolk."UserCheckin" TO finfolk_account;
+GRANT SELECT,INSERT,UPDATE ON finfolk."Op" TO finfolk_account;
+GRANT SELECT ON finfolk."Site",finfolk."UserRole",finfolk."ApplicationFeature" TO finfolk_account;
+GRANT SELECT,INSERT,UPDATE ON finfolk."Rev",finfolk."RevLog",finfolk."Audit",finfolk."AuditLog",finfolk."Activity",finfolk."ActivityLog" TO finfolk_account;
+DO $$ DECLARE f record; BEGIN FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE (n.nspname='finfolk_rpc' AND p.proname IN ('account_featured','account_link','account_list','account_portrait','call_native_directory','call_native_events','call_native_notes','call_native_site_review','complete_account_deletion','delete_private_session','discover_community_people','ensure_account','erase_account','event_delivery_claim','event_delivery_complete','event_delivery_enqueue','insert_dive_session','insert_user','lock_account_pair','native_directory_admin','native_directory_admin_remove','native_directory_admin_save','native_directory_claim','native_directory_claim_review','native_directory_discovery_finish','native_directory_discovery_start','native_directory_invite_create','native_directory_invite_redeem','native_directory_invite_revoke','native_directory_merge','native_directory_mine','native_directory_owner_create','native_directory_owner_save','native_directory_page_access','native_directory_public_detail','native_directory_public_list','native_directory_report','native_directory_report_resolve','native_events_accept','native_events_cancel','native_events_detail','native_events_invite','native_events_invite_retry','native_events_list','native_events_mine','native_events_moderate','native_events_public_detail','native_events_revoke','native_events_roster','native_events_rsvp','native_events_save','native_notes_list','native_notes_moderate','native_notes_public_list','native_notes_report','native_notes_save','native_notes_vote','native_notes_withdraw','native_public_popular','native_public_site_catalog','native_public_site_detail','native_site_review_admin','native_site_review_mine','native_site_review_publish','native_site_review_reject','native_site_review_save','native_site_review_submit','native_site_review_withdraw','pending_account_deletions','private_session_row','private_session_values','profile_post_links','public_session_row','record_account_deletion_failure','record_community_checkin','remove_community_checkin','ret_account','ret_account_blocks','ret_account_connections','ret_account_sites','ret_account_status','ret_community_checkins','ret_dive_session_owned','ret_my_profile_posts','ret_private_sessions','ret_profile_statistics','ret_public_profile','ret_public_session','ret_public_sessions','ret_visible_profile','ret_visible_session','ret_visible_sessions','save_account_preferences','save_private_session','set_account_block','set_account_connection','set_session_visibility','sync_account_identity')) OR (n.nspname='finfolk' AND p.proname IN ('op_fn','as_jsonb','is_user_active','is_user_blocked','insert_base_addons')) LOOP EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO finfolk_account',f.signature); END LOOP; END $$;
+-- Cleanup follows only declared User foreign keys, with identifiers from pg_catalog.
+DO $$ DECLARE t record; BEGIN FOR t IN SELECT c.relname,a.attname,k.confdeltype,a.attnotnull FROM pg_constraint k JOIN pg_class c ON c.oid=k.conrelid JOIN pg_namespace n ON n.oid=c.relnamespace JOIN pg_attribute a ON a.attrelid=c.oid AND a.attnum=k.conkey[1] WHERE k.contype='f' AND k.confrelid='finfolk."User"'::regclass AND n.nspname='finfolk' AND cardinality(k.conkey)=1 LOOP EXECUTE format('GRANT SELECT ON finfolk.%I TO finfolk_account',t.relname); IF t.confdeltype='c' THEN EXECUTE format('GRANT DELETE ON finfolk.%I TO finfolk_account',t.relname); ELSIF NOT t.attnotnull THEN EXECUTE format('GRANT UPDATE(%I) ON finfolk.%I TO finfolk_account',t.attname,t.relname); END IF; END LOOP; END $$;
+GRANT DELETE ON finfolk."SiteRevision",finfolk."SiteImport",finfolk."Rev",finfolk."Audit",finfolk."Activity" TO finfolk_account;
+GRANT finfolk_directory,finfolk_site_notes TO finfolk_account;
+GRANT SELECT,INSERT,UPDATE ON finfolk."Event",finfolk."EventRsvp",finfolk."AccessInviteEmail" TO finfolk_account;
+GRANT EXECUTE ON FUNCTION finfolk_rpc.insert_event(uuid,jsonb,text,bigint,bigint,text,jsonb),finfolk_rpc.native_event_operation(text,jsonb),finfolk_rpc.native_event_manager(finfolk."Event",uuid),finfolk_rpc.native_event_active(finfolk."Event"),finfolk_rpc.native_event_visible(finfolk."Event",uuid,boolean),finfolk_rpc.native_event_row(finfolk."Event",uuid,boolean,boolean),finfolk.as_iso_time(bigint) TO finfolk_account;
+GRANT SELECT,INSERT,UPDATE,DELETE ON finfolk."EventInviteDelivery" TO finfolk_account;
+GRANT EXECUTE ON FUNCTION finfolk_rpc.native_event_delivery_row(finfolk."EventInviteDelivery"),finfolk_rpc.native_event_delivery_operation(text,uuid,uuid,uuid,text,text,uuid,text,text) TO finfolk_account;
+GRANT SELECT ON finfolk."SiteProfile",finfolk."SiteCatalog",finfolk."UserCheckin" TO finfolk_account;
+GRANT EXECUTE ON FUNCTION finfolk_rpc.native_site_row(uuid),finfolk_rpc.native_site_catalog(),finfolk_rpc.native_site_detail(uuid),finfolk_rpc.native_discover_popular() TO finfolk_account;
+GRANT SELECT,INSERT,UPDATE ON finfolk."SiteRevision",finfolk."SiteImport",finfolk."SiteProfile",finfolk."SiteCatalog",finfolk."Site" TO finfolk_account;
+GRANT SELECT,INSERT,UPDATE,DELETE ON finfolk."SiteAccessPoint",finfolk."SiteDepthEvidence" TO finfolk_account;
+GRANT EXECUTE ON FUNCTION finfolk_rpc.native_site_url(text,boolean),finfolk_rpc.native_site_point(jsonb),finfolk_rpc.native_site_document(jsonb),finfolk_rpc.native_site_draft_row(finfolk."SiteRevision"),finfolk_rpc.native_site_review_operation(text,jsonb) TO finfolk_account;
+-- Grant membership only to the trusted account server login.
+COMMIT;
