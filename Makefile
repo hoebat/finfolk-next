@@ -6,7 +6,7 @@ export PYTHON := $(ROOT)/.venv/bin/python
 export WRANGLER_SEND_METRICS := false
 .PHONY: help bootstrap generate check-generated test test-db test-browser build dev deploy deploy-api db-release
 help:
-	@echo 'manage manage-preview manage-plan manage-check manage-build demo-logbook build-page-verifier test-page-models'
+	@echo 'manage manage-preview manage-preview-native manage-plan manage-check manage-build demo-logbook build-page-verifier test-page-models test-native-account'
 	@echo 'generate-db-sql generate-db-json check-generated-db-sql check-generated-db-json'
 	@echo 'bootstrap generate check-generated test test-db test-browser build dev deploy db-release generate-db check-generated-db test-db-types scaffold-db-common test-db-common'
 bootstrap:
@@ -17,6 +17,7 @@ generate:
 check-generated:
 	node scripts/check_generated.mjs
 test:
+	node --test tests/test_page_health.mjs
 	node --test tests/test_local_supabase.mjs
 	lein run -m finfolkdb.test --application-contracts
 	lein run -m finfolkdb.test
@@ -35,6 +36,14 @@ test-db-notes: generate-db
 	node scripts/test_database.mjs --notes
 test-browser:
 	corepack yarn playwright test
+
+.PHONY: check-pages
+check-pages:
+	node scripts/check_pages.mjs
+
+.PHONY: test-page-health-workbench
+test-page-health-workbench:
+	lein $(LEIN_FLAGS) run -m clojure.main -e "(require '[app.manage.integration :as i]) (let [r (i/run! '[finfolkbuild.project.page-health-test])] (prn r) (shutdown-agents) (System/exit (if (= :ok (:status r)) 0 1)))"
 build:
 	corepack yarn build:next
 dev:
@@ -139,7 +148,7 @@ manage-check:
 	lein $(LEIN_FLAGS) app check
 manage-build:
 	lein $(LEIN_FLAGS) app build
-manage-preview:
+manage-preview: generate
 	lein $(LEIN_FLAGS) run -m finfolkbuild.project.preview
 
 .PHONY: generate-db-sql generate-db-json check-generated-db-sql check-generated-db-json
@@ -178,3 +187,11 @@ page-migration-status:
 	lein $(LEIN_FLAGS) run -m finfolkbuild.project.page-coverage
 check-page-migration:
 	lein $(LEIN_FLAGS) run -m clojure.main -e "(require '[app.manage.integration :as i]) (let [r (i/run! '[finfolkbuild.project.page-coverage-test])] (prn r) (shutdown-agents) (System/exit (if (= :ok (:status r)) 0 1)))"
+
+.PHONY: test-native-account
+test-native-account: generate
+	lein $(LEIN_FLAGS) run -m clojure.main -e "(require '[app.manage.integration :as i]) (let [r (i/run! '[finfolkbuild.project.native-account-test finfolkdb.schema.account-contracts-test])] (prn r) (shutdown-agents) (System/exit (if (= :ok (:status r)) 0 1)))"
+
+.PHONY: manage-preview-native
+manage-preview-native: generate
+	lein $(LEIN_FLAGS) run -m finfolkbuild.project.native-preview

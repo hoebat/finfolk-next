@@ -6,7 +6,7 @@
 
 (def GROUPS
   (array-map
-   :account #{"account" "account-identity" "account-settings" "account-privacy"}
+   :account #{"account-config-resource" "account" "account-identity" "account-settings" "account-privacy"}
    :community #{"people" "profile" "profile-editor" "member-chooser" "account-checkin" "place-community"}
    :logbook #{"logbook" "logbook-editor" "logbook-list" "logbook-extras"}
    :directory #{"directory" "listing" "pages" "page-owner" "page-invitation" "directory-review"}

@@ -3,19 +3,32 @@
             [finfolkbuild.project.management :as management])
   (:use code.test))
 
-^{:refer app.manage.verify/run-cases! :id native-page-verification :timeout 120000 :added "0.1"}
+^{:refer app.manage.verify/run-cases! :id native-page-verification :timeout 240000 :added "0.1"}
 (fact "saved page checks execute native RPCs through generated page/models and isolate actors"
   (let [report (verify/run-cases! management/PROJECT)]
     (when-not (= :ok (:status report)) (spit "/tmp/finfolk-page-verification-failure.edn" (pr-str report)))
     [(:status report) (mapv (fn [c] [(:id c) (mapv :status (:steps c))]) (:cases report))])
-  => [:ok [["logbook-branches" [:passed :passed :passed]]
+  => [:ok [["account-native" [:passed :passed :passed :passed :passed :passed]]
+           ["atlas-native" [:passed :passed :passed :passed]]
+           ["community-checkins" [:passed :passed :passed :passed :passed :passed]]
+           ["community-discovery" [:passed :passed :passed :passed :passed :passed :passed]]
+           ["community-profiles" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]
+           ["directory-discovery" [:passed :passed :passed :passed :passed :passed :passed :passed :passed]]
+           ["directory-native" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]
+           ["event-delivery-native" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]
+           ["events-native" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]
+           ["logbook-branches" [:passed :passed :passed]]
+           ["logbook-native" [:passed :passed :passed :passed :passed :passed :passed :passed :passed]]
            ["logbook-ownership" [:passed :passed :passed :passed :passed]]
-           ["model-contracts" [:passed :passed :passed]]]])
+           ["logbook-public" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]
+           ["model-contracts" [:passed :passed :passed]]
+           ["site-notes-native" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]
+           ["site-review-native" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]]])
 
 ^{:refer app.manage.verify/definitions! :id all-page-contracts :added "0.1"}
 (fact "all registered page read models resolve to declared read operations"
   (select-keys (verify/definitions! management/PROJECT) [:status :pages :findings])
-  => {:status :ok :pages 61 :findings []})
+  => {:status :ok :pages 62 :findings []})
 
 ^{:id workbench-ui-roundtrip :timeout 120000 :added "0.1"}
 (fact "the emitted manager UI loads, verifies, fails, corrects, saves and reloads checks"
