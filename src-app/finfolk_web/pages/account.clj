@@ -1,5 +1,10 @@
 (ns finfolk-web.pages.account
-  (:require [finfolk-web.lib.seed :as seed]))
+  (:require [finfolk-web.lib.seed :as seed]
+            [finfolkdb.schema.site-review-contracts :as site-review]))
+(defn site-save-action [operation]
+  (assoc (seed/action operation) "payload-fields" ["id" "requestId" "version" "site"]
+         "payload-pick" {"site" (mapv name (keys (:properties site-review/DOCUMENT)))}))
+
 (def AUTH_ACTIONS
   (into {} (for [[key method] {"google" ["google"] "email" ["email"] "sign-up" ["auth" "signUp" "email"]
                                "refresh" ["refresh"] "reset" ["reset"] "reset-password" ["resetPassword"]
@@ -22,10 +27,10 @@
                         "adapters" ["theme" "offline-storage" "messaging-settings"]}
    "site-submissions" {"routes" ["/account/sites"] "area" "member"
                         "models" {"submissions" (seed/read-model "mySiteSubmissions")}
-                        "actions" {"save" (seed/action "siteSubmissionSave") "withdraw" (seed/action "siteSubmissionWithdraw")}}
+                        "actions" {"save" (site-save-action "siteSubmissionSave") "withdraw" (seed/action "siteSubmissionWithdraw")}}
    "site-review" {"routes" [] "area" "member" "loader" "site-review"
                    "models" {"sites" (seed/read-model "siteAdmin") "batch" (seed/read-model "siteImportDetail")}
-                   "actions" {"save" (seed/action "siteDraftSave") "publish" (seed/action "siteDraftPublish")
+                   "actions" {"save" (site-save-action "siteDraftSave") "publish" (seed/action "siteDraftPublish")
                               "reject" (seed/action "siteDraftReject") "stage" (seed/action "siteImportStage")
                               "publish-import" (seed/action "siteImportPublish")}}})
 

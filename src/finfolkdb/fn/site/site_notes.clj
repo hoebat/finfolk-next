@@ -18,11 +18,8 @@
 (defn.pg ^{:- [:boolean]}
   is-site-note-member
   [:uuid i-user]
-  (return (and (access/is-user-active i-user)
-               (exists [:select 1 :from (:- "neon_auth.\"user\"") :where
-                        (and (== (:text #{"id"}) (:text i-user))
-                             (pg/coalesce #{"emailVerified"} false)
-                             (not (pg/coalesce #{"banned"} false)))]))))
+  (let [(:boolean v-verified) (pg/t:exists users/User {:where {:id i-user :email-verified true :deleted false}})]
+    (return (and (access/is-user-active i-user) v-verified))))
 
 (defn.pg ^{:- [:uuid]}
   require-site-note-member
@@ -44,12 +41,10 @@
   site-note-score
   [:uuid i-note]
   [:select (count *) :from notes/SiteNoteVote :as #{"v"} :inner-join users/User :as #{"u"} :on
-   (== (. #{"v"} #{"voter_id"}) (. #{"u"} #{"id"})) :inner-join (:- "neon_auth.\"user\"") :as #{"a"}
-   :on (== (:text (. #{"a"} #{"id"})) (:text (. #{"u"} #{"id"}))) :where
+   (== (. #{"v"} #{"voter_id"}) (. #{"u"} #{"id"})) :where
    (and (== (. #{"v"} #{"note_id"}) i-note)
         (not (. #{"u"} #{"deleted"}))
-        (pg/coalesce (. #{"a"} #{"emailVerified"}) false)
-        (not (pg/coalesce (. #{"a"} #{"banned"}) false)))])
+        (. #{"u"} #{"email_verified"}))])
 
 (defn.pg ret-site-note
   [:uuid i-note :uuid i-viewer]
@@ -74,7 +69,7 @@
              "observedOn" (:->> o-note "observed_on")
              "revision" (:integer (:->> o-note "revision"))
              "score" (-/site-note-score i-note)
-             "own" (== v-author i-viewer)
+             "own" (pg/coalesce (== v-author i-viewer) false)
              "upvoted" v-upvoted))))
 
 (defn.pg ret-site-notes

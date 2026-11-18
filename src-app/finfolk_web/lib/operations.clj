@@ -33,7 +33,7 @@
   {"siteNotes" ["siteNotesPublic"] "siteNotesPublic" ["siteNotes"]
    "eventsMember" ["eventsPublic" "directoryPublic"]
    "directoryOwner" ["directoryPublic" "directoryAdmin"] "directoryAdmin" ["directoryPublic" "directoryOwner"]
-   "siteAdmin" ["sites" "siteSubmissions" "conditions"] "siteSubmissions" ["siteAdmin"]
+   "siteAdmin" ["sites" "siteSubmissions" "conditions" "discovery"] "siteSubmissions" ["siteAdmin"]
    "member" ["community" "logbook" "posts" "trips"]
    "community" ["member" "logbook" "posts" "trips"]
    "logbook" ["community" "trips" "member" "instagram"]

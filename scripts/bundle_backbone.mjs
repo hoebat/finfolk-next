@@ -12,4 +12,14 @@ await mkdir(resolve(site,'workers'),{recursive:true});
 for(const [entry,name] of [['kernel','kernel'],['sharedworker','finfolk.sharedworker']])
  await build({entryPoints:[resolve(base,'packages/edge',entry+'.js')],outfile:resolve(site,'workers',name+'.js'),bundle:true,format:'esm',target:'es2022',minify:true,legalComments:'inline',plugins:[plugin]});
 await copyFile(resolve('node_modules/@sqlite.org/sqlite-wasm/dist/sqlite3.wasm'),resolve(site,'workers/sqlite3.wasm'));
+// Next serves these modules directly from public in development. Keep the
+// runtime synchronized without rebuilding unrelated atlas/reference assets.
+const publicRuntime=resolve(base,'site/web-main/public');
+await mkdir(resolve(publicRuntime,'workers'),{recursive:true});
+for(const file of ['next-backbone.js','app-backbone.js','workers/kernel.js','workers/finfolk.sharedworker.js','workers/sqlite3.wasm'])
+ await copyFile(resolve(site,file),resolve(publicRuntime,file));
 console.log('Bundled the Clojure-generated FinFolk backbone and browser adapter.');
+
+// Authored map adapter: parity builds emit into a temporary tree, while this
+// source stays in the workspace just like the shared WASM input above.
+await copyFile(resolve('js/finfolk-next/site/web-main/src/site-catalog.js'),resolve(publicRuntime,'site-catalog.js'));

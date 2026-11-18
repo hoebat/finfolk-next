@@ -36,6 +36,8 @@
                      :sql {:default "{}"}}
    :deleted         {:type :boolean :required true
                      :sql {:default false}}
+   :email-verified {:type :boolean :required true :sql {:default false}}
+   :deletion-state  {:type :text :required true :sql {:default "active"}}
    :invite-eligible {:type :boolean :required true
                      :sql {:default false}}
    :joined-at       {:type :long :required true
@@ -105,3 +107,18 @@
   {:constraints {:ordered-users (< #{"user_id"} #{"target_id"})
                  :valid-requester (or (== #{"requested_by_id"} #{"user_id"})
                                       (== #{"requested_by_id"} #{"target_id"}))}})
+
+;; Granted by trusted administration, never derived from user-editable profiles.
+(deftype.pg ^{:final true
+              :! (et/E {:class :0d/entry :track :track/none :access :none})}
+  UserRole
+  [:user {:type :ref :required true :ref {:ns -/User} :sql {:cascade true :unique ["user_role"]}}
+   :role {:type :text :required true :sql {:unique ["user_role"]}}]
+  {:constraints {:known-role (or (== #{"role"} "admin") (== #{"role"} "moderator"))}})
+
+;; Feature switches are domain policy; provider credentials stay outside the DB.
+(deftype.pg ^{:final true
+              :! (et/E {:class :0d/entry :track :track/none :access :none})}
+  ApplicationFeature
+  [:key {:type :text :required true :sql {:unique ["key"]}}
+   :enabled {:type :boolean :required true :sql {:default false}}])

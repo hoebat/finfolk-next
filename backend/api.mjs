@@ -1,3 +1,5 @@
+import {createDirectorySearch} from './directory-discovery.mjs';
+import {createNativeAccount,nativeAccountSites} from './native-account.mjs';
 import {registerEnvironmentAdmin} from './environment-admin.mjs';
 import {registerEnvironment} from './environment.mjs';
 import {registerEventsPublic,registerEventsPrivate} from './events.mjs';
@@ -58,6 +60,10 @@ export function managedVerifier(env) {
 export function createAPI({
   db,
   siteNotesDb=null,
+  directorySearch=null,
+  eventDelivery=null,
+  deliveryKey=null,
+  invitationOrigin=null,
   verify,
   origins = [
     'https://finfolk.com.au',
@@ -71,6 +77,8 @@ export function createAPI({
 }) {
   const app = new Hono();
   const q = db.query;
+  // This route is registered below the shared origin/CORS middleware.
+
   for(const path of ['/privacy','/data-deletion'])app.get(path,c=>publicPage(c.req.path));
   app.get('/v1/integrations/tiktok/oauth/callback',c=>tiktokReady(c.env||{})?tiktokCallback(c.req.raw,c.env,db,messagingFetch):publicPage(c.req.path));
   app.use('*', async (c, next) => {
@@ -110,6 +118,12 @@ export function createAPI({
   registerFinniesPublic(app,{db});
   registerSitesPublic(app,{db});
   registerSiteNotesPublic(app,{db:siteNotesDb});
+  app.get('/v1/native/sites/catalog',c=>nativeAccountSites(q));
+  app.all('/v1/native/account', c => {
+    const {SUPABASE_URL:supabaseUrl,SUPABASE_PUBLISHABLE_KEY:publishableKey}=c.env||{};
+    if(!supabaseUrl||!publishableKey)return c.json({error:'Native accounts unavailable.'},503);
+    return createNativeAccount({query:q,transaction:db.transaction,supabaseUrl,publishableKey,serviceRoleKey:c.env?.SUPABASE_SERVICE_ROLE_KEY,directorySearch:directorySearch||createDirectorySearch({key:c.env?.BRAVE_SEARCH_API_KEY}),eventDelivery,deliveryKey:deliveryKey||c.env?.FINFOLK_INVITATION_SEAL_KEY,invitationOrigin:invitationOrigin||c.env?.FINFOLK_WEB_ORIGIN||'https://finfolk.com.au'})(c.req.raw);
+  });
   registerEnvironment(app,{db});
   registerDirectoryPublic(app,{db});registerEventsPublic(app,{db});
   registerMessagingAPI(app,{db,verify,fetcher:messagingFetch,registerPrivate:()=>{registerSiteNotesPrivate(app,{db:siteNotesDb});registerFinniesPrivate(app,{db});registerEnvironmentAdmin(app,{db});registerSitesPrivate(app,{db});registerEventsPrivate(app,{db});registerDirectoryPrivate(app,{db,fetcher:messagingFetch});}});

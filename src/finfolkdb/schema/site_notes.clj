@@ -11,13 +11,12 @@
   (str
    "-- Generated native site-notes server privileges. Apply explicitly to the fresh entity database only.\nBEGIN;\n"
    "DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='finfolk_site_notes') THEN CREATE ROLE finfolk_site_notes NOLOGIN NOINHERIT; END IF; END $$;\n"
-   "GRANT USAGE ON SCHEMA finfolk,finfolk_rpc,neon_auth TO finfolk_site_notes;\n"
+   "GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_site_notes;\n"
    "GRANT SELECT,INSERT,UPDATE,DELETE ON finfolk.\"SiteNote\",finfolk.\"SiteNoteVote\",finfolk.\"SiteNoteReport\" TO finfolk_site_notes;\n"
    "GRANT SELECT,INSERT,UPDATE ON finfolk.\"Rev\",finfolk.\"RevLog\",finfolk.\"Op\" TO finfolk_site_notes;\n"
-   "GRANT SELECT(id,deleted,profile) ON finfolk.\"User\" TO finfolk_site_notes;\n"
+   "GRANT SELECT(id,deleted,profile,email_verified) ON finfolk.\"User\" TO finfolk_site_notes;\n"
    "GRANT SELECT ON finfolk.\"UserBlock\",finfolk.\"Site\" TO finfolk_site_notes;\n"
    "GRANT SELECT(site_id,status) ON finfolk.\"SiteProfile\" TO finfolk_site_notes;\n"
-   "GRANT SELECT(id,\"emailVerified\",banned) ON neon_auth.\"user\" TO finfolk_site_notes;\n"
    "GRANT EXECUTE ON FUNCTION finfolk.as_bounded_text(text,integer,integer),finfolk.as_finite_date(date),finfolk.as_jsonb(jsonb),finfolk.op_fn(text,uuid,jsonb),finfolk.auth_uid(),finfolk.as_iso_time(bigint),finfolk.is_user_active(uuid),finfolk.is_user_blocked(uuid,uuid) TO finfolk_site_notes;\n"
    "DO $$ DECLARE f record; BEGIN FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' AND p.proname IN ("
    (str/join "," (map #(str "'" % "'") FUNCTIONS))

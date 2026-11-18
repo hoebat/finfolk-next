@@ -15,6 +15,7 @@ import MessagingSettings from './messaging-settings.jsx';
 import Privacy from './privacy/screen.jsx';
 import MemberTour,{tourSeen} from './member-tour.jsx';
 import GuestAccount from './guest.jsx';
+import PasswordRecovery from './recovery.jsx';
 import AccountFailure from './failure.jsx';
 import {accountURL,accountReturnDestination} from './routing.js';
 import {useAtlas} from '../atlas/runtime.jsx';
@@ -24,8 +25,9 @@ export default function AccountFrame({sites,children}){
  const session=useSession(),path=usePathname(),query=useSearchParams(),router=useRouter();
  const target=accountReturnDestination(query.get('returnTo'));
  const tab=path.endsWith('/instagram')?'instagram':path.endsWith('/review')?'admin':path.endsWith('/sites')?'sites':path.endsWith('/posts')?'posts':path.endsWith('/privacy')?'profile':path.endsWith('/settings')?'settings':'checkin',site=query.get('site')||'';
- useEffect(()=>{if(session.status==='ready'&&session.user&&target)router.replace(target);},[session.status,session.user?.uid,target,router]);
- if(session.status==='ready'&&session.user&&target)return <p role="status">Returning to your page…</p>;
+ useEffect(()=>{if(session.status==='ready'&&session.user&&!session.user.recovery&&target)router.replace(target);},[session.status,session.user?.uid,session.user?.recovery,target,router]);
+ if(session.status==='ready'&&session.user&&!session.user.recovery&&target)return <p role="status">Returning to your page…</p>;
+ if(session.user?.recovery)return <PasswordRecovery session={session}/>;
  return <section id="account-page" className={'account-page'+(session.status==='ready'&&!session.user?' account-page-guest':'')} tabIndex={-1} aria-label="Your FinFolk account"><AccountBody key={session.user?.uid||'guest'} session={session} tab={tab} sites={sites} site={site} requestTour={query.get('tour')==='1'}/>{children}</section>;
 }
 function AccountBody({session,tab:requested,sites,site,requestTour}){const {activateAccountIntegration,revokeAccountIntegration}=useAtlas();const router=useRouter(),requestedTour=useRef(false),focusTab=useRef(false),[hydrated,setHydrated]=useState(false);useEffect(()=>setHydrated(true),[]);const {record,refresh}=usePageData(session,'account'),[tour,setTour]=useState(false),tab=requested==='admin'&&record?.data&&!record.data.status.admin?'checkin':requested,tabs=record?.data?.status.admin?[...accountTabs,['admin','Review']]:accountTabs;

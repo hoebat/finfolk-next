@@ -1,8 +1,13 @@
 (ns finfolk-web.groups.logbook
-  "Browser bindings for logbook; HTTP permissions remain server-owned.")
+  "Browser bindings for logbook; HTTP permissions remain server-owned."
+  (:require [finfolkdb.schema.account-contracts :as contracts]))
 
 (def OPERATIONS
- { "mediaInbox" {"auth" true "domain" "logbook" "name" "mediaInbox" "transport" "action" "write" false}
+ (contracts/annotate
+ { "publicSession" {"auth" false "domain" "logbook" "name" "publicSession" "transport" "action" "write" false}
+   "publicSessions" {"auth" false "domain" "logbook" "name" "publicSessions" "transport" "action" "write" false}
+   "publicProfile" {"auth" false "domain" "member" "name" "publicProfile" "transport" "action" "write" false}
+   "mediaInbox" {"auth" true "domain" "logbook" "name" "mediaInbox" "transport" "action" "write" false}
  "updateImportedMedia" {"auth" true "domain" "logbook" "name" "updateImportedMedia" "transport" "action" "write" true}
  "assignImportedMedia" {"auth" true "domain" "logbook" "name" "assignImportedMedia" "transport" "action" "write" true}
  "hideImportedMedia" {"auth" true "domain" "logbook" "name" "hideImportedMedia" "transport" "action" "write" true}
@@ -34,4 +39,4 @@
  "domain" "logbook"
  "name" "visibility"
  "transport" "action"
- "write" true}})
+ "write" true}}))

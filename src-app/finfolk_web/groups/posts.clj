@@ -1,7 +1,9 @@
 (ns finfolk-web.groups.posts
-  "Browser bindings for posts; HTTP permissions remain server-owned.")
+  "Browser bindings for posts; HTTP permissions remain server-owned."
+  (:require [finfolkdb.schema.account-contracts :as contracts]))
 
 (def OPERATIONS
+ (contracts/annotate
  {"communityMetrics" {"admin" true
  "auth" true
  "domain" "posts"
@@ -74,4 +76,4 @@
  "domain" "posts"
  "name" "reviewPosts"
  "transport" "action"
- "write" false}})
+ "write" false}}))

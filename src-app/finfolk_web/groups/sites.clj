@@ -1,7 +1,8 @@
 (ns finfolk-web.groups.sites
- "Site catalog and review operations; authorization is server-owned.")
+ "Site catalog and review operations; authorization is server-owned."
+ (:require [finfolkdb.schema.account-contracts :as contracts]))
 (def OPERATIONS
- {"environmentSiteLinks" {"name" "environmentSiteLinks" "path" "/v1/admin/environment/site-links/:id" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "siteAdmin"}
+ (contracts/annotate {"environmentSiteLinks" {"name" "environmentSiteLinks" "path" "/v1/admin/environment/site-links/:id" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "siteAdmin"}
  "environmentImportPublish" {"name" "environmentImportPublish" "path" "/v1/admin/environment/imports/publish" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "siteAdmin"}
  "environmentImportPreview" {"name" "environmentImportPreview" "path" "/v1/admin/environment/imports/preview" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "siteAdmin"}
  "siteConditions" {"name" "siteConditions" "path" "/v1/sites/:id/conditions" "method" "GET" "transport" "rest" "auth" false "write" false "domain" "conditions"}
@@ -90,4 +91,4 @@
  "write" true
  "auth" true
  "domain" "siteAdmin"
- "admin" true}})
+ "admin" true}}))

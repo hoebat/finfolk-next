@@ -60,9 +60,10 @@
   (. (Object.entries (or (. entry ["validate"]) {})) (forEach (fn [[field rule]]
     (when (not (. (new RegExp (. rule ["pattern"])) (test (. values [field]))))
       (throw (new Error (. rule ["message"])))))))
+  (var nativeValues values)
   (when (and (. spec ["auth"]) (== (. spec ["transport"]) "rest"))
     (:= values (-/requestValues spec values)))
-  (return {"name" (. entry ["operation"]) "values" values "spec" spec}))
+  (return {"name" (. entry ["operation"]) "values" values "nativeValues" nativeValues "spec" spec}))
 (defn.js ^{:- [:async]} runAction [client key name inputs payload (:= options nil)]
   (var page (-/definition key))
   (var retired (. (or (. page ["retired-actions"]) {}) [name]))
@@ -71,8 +72,23 @@
   (when (not entry) (throw (new Error (+ "Undeclared page action: " name))))
   (var spec (operations/operation (. entry ["operation"])))
   (var input (-/bind entry inputs payload))
+  (when (. entry ["payload-fields"])
+    (var selectedFields [])
+    (for:array [pair (Object.entries input)]
+      (when (. (. entry ["payload-fields"]) (includes (. pair [0])))
+        (. selectedFields (push pair))))
+    (:= input (Object.fromEntries selectedFields)))
+  (for:array [pair (Object.entries (or (. entry ["payload-pick"]) {}))]
+    (var key (. pair [0])) (var fields (. pair [1])) (var value (. input [key]))
+    (when (and value (== (typeof value) "object") (not (Array.isArray value)))
+      (var picked {})
+      (for:array [field fields]
+        (when (Object.hasOwn value field) (:= (. picked [field]) (. value [field]))))
+      (:= (. input [key]) picked)))
   (when (. entry ["sdk"])
     (return (await (-/invokeSdk client (. entry ["sdk"]) (-/sdkArgs (. entry ["sdk"]) input)))))
+  (when (and (== client.authProvider "supabase") (. spec ["native-rpc"]))
+    (return (await (client.call (. entry ["operation"]) input))))
   (when (== (. spec ["transport"]) "rest")
     (var request (-/requestValues spec input))
     (return (await (. client (request (. request ["path"]) (Object.assign {} (or options {}) {"method" (. spec ["method"]) "body" (. request ["body"])}))))))
@@ -83,6 +99,8 @@
   (var entry (. (-/definition key) ["models"] [name]))
   (when (. entry ["sdk"])
     (return (await (-/invokeSdk client (. entry ["sdk"]) (-/sdkArgs (. entry ["sdk"]) (. model ["values"]))))))
+  (when (and (== client.authProvider "supabase") (. model ["spec"] ["native-rpc"]))
+    (return (await (client.call model.name model.nativeValues))))
   (when (and (. model ["spec"] ["auth"]) (== (. model ["spec"] ["transport"]) "rest"))
     (return (await (. client (request (. model ["values"] ["path"])
       {"method" (. model ["spec"] ["method"]) "body" (. model ["values"] ["body"])})))))
@@ -134,7 +152,7 @@
     (-/assertPageActor client tracked actor)
     (return result))
   (var output {})
-  (var context {"inputs" inputs "models" output})
+  (var context {"inputs" inputs "models" output "actor" actor})
   (for:array [name (or (. page ["order"]) (Object.keys (. page ["models"])))]
     (var entry (. page ["models"] [name]))
     (-/assertPageActor client tracked actor)

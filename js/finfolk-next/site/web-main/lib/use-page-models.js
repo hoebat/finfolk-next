@@ -18,10 +18,11 @@ export function usePageModels(session,page,inputs={}){
    if(model.spec.auth&&(!session?.user||session.status!=='ready'))continue;
    publish(name,{status:'loading'});
    Promise.resolve().then(async()=>{
-    const selected=model.spec.auth?session.client:(await nativeApplicationBackbone())?.public;
+    const app=model.spec.auth?null:await nativeApplicationBackbone();
+    const selected=model.spec.auth?session.client:app?.public;
     if(!alive||(current.current.scope!==scope||current.current.client!==client||current.current.status!==status))return;
     if(!selected)throw Error('Application models unavailable.');
-    const release=await selected.subscribe(model.name,model.values,state=>publish(name,state));
+    const release=await selected.subscribe(model.name,session.client?.authProvider==='supabase'?model.nativeValues:model.values,state=>publish(name,state));
     if(!alive||current.current.scope!==scope||current.current.client!==client||current.current.status!==status){release?.();return;}releases.push(release);
     await runModel(selected,page,name,inputs);
    }).catch(error=>publish(name,{status:'error',error}));

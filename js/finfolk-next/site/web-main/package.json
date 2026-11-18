@@ -5,8 +5,9 @@
   "type": "module",
   "dependencies": {
     "@finfolk/edge": "workspace:*",
+    "@supabase/auth-js": "2.79.0",
     "maplibre-gl": "5.12.0",
-    "next": "16.4.4",
+    "next": "16.4.6",
     "polygon-clipping": "0.15.7",
     "react": "19.3.1",
     "react-dom": "19.3.1"

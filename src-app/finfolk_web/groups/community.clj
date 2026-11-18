@@ -1,7 +1,9 @@
 (ns finfolk-web.groups.community
-  "Browser bindings for community; HTTP permissions remain server-owned.")
+  "Browser bindings for community; HTTP permissions remain server-owned."
+  (:require [finfolkdb.schema.account-contracts :as contracts]))
 
 (def OPERATIONS
+ (contracts/annotate
  {"block" {"auth" true
  "domain" "community"
  "name" "block"
@@ -51,4 +53,4 @@
  "domain" "community"
  "name" "unblock"
  "transport" "action"
- "write" true}})
+ "write" true}}))

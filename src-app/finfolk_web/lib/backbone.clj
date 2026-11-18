@@ -143,7 +143,7 @@
                                 {"mutationCommitted" true "result" result "cause" error})))))
     (return result)
     (catch error
-      (when (and (. spec ["write"]) (not (. error ["status"])) (not (. ctx ["closed"])))
+      (when (and (. spec ["write"]) (or (not (. error ["status"])) (. error ["mutationOutcomeUnknown"])) (not (. ctx ["closed"])))
         (. (. ctx ["blocked"]) (add (. spec ["domain"])))
         ((. ctx ["onBlocked"]) (. spec ["domain"]))
         (when (not (. error ["mutationCommitted"])) (:= (. error ["mutationOutcomeUnknown"]) true)))

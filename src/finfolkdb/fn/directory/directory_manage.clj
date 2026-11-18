@@ -71,4 +71,4 @@
                                    "sources" (:-> o-document "sources")
                                    "socials" (tsoc/ret-social-urls (:-> o-document "socials"))
                                    "managed" v-managed
-                                   "reviewedAt" (:-> o-listing "reviewed_at")))))
+                                   "reviewedAt" (/ (:numeric (:->> o-listing "reviewed_at")) 1000)))))

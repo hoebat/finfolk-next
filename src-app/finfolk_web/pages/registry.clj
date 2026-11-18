@@ -1,30 +1,37 @@
 (ns finfolk-web.pages.registry
   "Explicit page reads and actions. Model instances reuse the application backbone."
   (:require [finfolk-web.lib.seed :as seed]
+            [finfolkdb.schema.account-contracts :as contracts]
             [finfolk-web.pages.account :as account]
             [finfolk-web.pages.logbook :as logbook]
             [finfolk-web.pages.atlas :as atlas]))
+(defn directory-action [operation & [bindings]]
+  (let [schema (get-in contracts/OPERATIONS [operation :request])]
+    (cond-> (seed/action operation bindings)
+      schema (assoc "payload-fields" (vec (sort (map name (keys (:properties schema))))))
+      (get-in schema [:properties :document])
+      (assoc "payload-pick" {"document" (vec (sort (map name (keys (get-in schema [:properties :document :properties])))))}))))
 (def PILOT_DEFINITIONS
   {"directory" {"routes" ["/directory"] "area" "public"
                  "models" {"listings" (seed/read-model "publicDirectory" {"*" "query"})} "actions" {}}
    "listing" {"routes" ["/directory/[id]"] "area" "public"
                "models" {"listing" (seed/read-model "publicDirectoryDetail" {"id" "id"})
                          "events" (seed/read-model "publicEvents" {"page" "id"})
-                         "mine" (seed/read-model "directoryMine")}
+                         "mine" (assoc (seed/read-model "directoryMine") "when" [["actor"]])}
                "actions" {"claim" (seed/action "directoryClaim" {"id" "id"})
                           "report" (seed/action "directoryReport" {"id" "id"})}}
    "pages" {"routes" ["/pages"] "area" "member"
              "models" {"mine" (seed/read-model "directoryMine")}
-             "actions" {"create" (seed/action "directoryCreate")}}
+             "actions" {"create" (directory-action "directoryCreate")}}
    "page-owner" {"routes" [] "area" "member"
                   "models" {"access" (seed/read-model "pageAccess" {"id" "id"})}
-                  "actions" {"save" (seed/action "directoryOwnerSave" {"id" "id"})
+                  "actions" {"save" (directory-action "directoryOwnerSave" {"id" "id"})
                              "invite" (seed/action "pageInvite" {"id" "id"})
                              "revoke" (seed/action "pageInviteRevoke" {"id" "id"})
                              "remove-admin" (seed/action "pageAdminRemove" {"id" "id"})}}})
 (def EVENT_ACTIONS
   (into {} (for [[action operation] {"save" "eventSave" "cancel" "eventCancel" "invite" "eventInvite"
-                                     "revoke" "eventRevoke" "accept" "eventAccept" "rsvp" "eventRsvp" "moderate" "eventModerate"}]
+                                     "retry-invite" "eventInviteRetry" "revoke" "eventRevoke" "accept" "eventAccept" "rsvp" "eventRsvp" "moderate" "eventModerate"}]
              [action (seed/action operation)])))
 (def EVENT_DEFINITIONS
   (merge PILOT_DEFINITIONS
@@ -54,7 +61,7 @@
                          "actions" (into {} (for [[key operation] {"save" "directoryAdminSave" "discover" "directoryDiscover"
                                                                    "merge" "directoryMerge" "claim-review" "directoryClaimReview"
                                                                    "report-resolve" "directoryReportResolve"}]
-                                              [key (seed/action operation)]))}}))
+                                              [key (directory-action operation)]))}}))
 (def PROFILE_MODELS
   (into {} (for [[key operation] {"me" "me" "profile" "profile" "connections" "connections" "posts" "myPosts"
                                   "sessions" "sessions" "session" "session" "blocks" "blocks" "stats" "stats"}]
@@ -71,9 +78,10 @@
                "actions" {"connect" (seed/action "connection")}}
      "profile" {"routes" ["/profile" "/members/[id]"] "area" "member" "loader" "profile"
                 "models" PROFILE_MODELS "actions" PROFILE_ACTIONS}
-     "profile-editor" {"routes" ["/profile/edit"] "area" "member" "loader" "profile-editor"
+     "profile-editor" {"policy" {"regularDays" contracts/REGULAR-DAYS} "routes" ["/profile/edit"] "area" "member" "loader" "profile-editor"
                        "models" (select-keys PROFILE_MODELS ["me" "sessions" "session" "posts"])
-                       "actions" {"save" (seed/action "preferences")}}
+                       "actions" {"save" (assoc (seed/action "preferences") "payload-pick"
+                          {"profile" ["displayName" "bio" "instagram" "tiktok" "open" "sharing" "beaches" "activities" "availability" "experience" "depthGoal" "portrait" "featuredLogs" "featuredPosts"]})}}
      "member-chooser" {"routes" ["/members"] "area" "public" "models" {} "actions" {}}
      "instagram-link" {"routes" [] "area" "member" "models" {"status" (seed/read-model "instagramClaimStatus")}
                        "actions" {"disconnect" (seed/action "instagramDisconnect")
@@ -83,6 +91,7 @@
  (merge SCREEN_DEFINITIONS
    {"profiles-compatibility" {"routes" ["/profiles"] "kind" "compatibility" "area" "public" "models" {} "actions" {} "adapters" ["profileDestination"]}
     "legacy-app" {"routes" ["/app"] "kind" "compatibility" "area" "public" "models" {} "actions" {} "adapters" ["legacyDestination"]}
+    "account-config-resource" {"routes" ["/api/account-config"] "kind" "resource" "area" "public" "models" {} "actions" {} "reason" "Public allowlisted authentication configuration; never an offline document."}
     "location-resource" {"routes" ["/api/location"] "kind" "resource" "area" "public" "models" {} "actions" {} "reason" "IP hint resource; never an offline document."}
     "offline-templates" {"routes" ["/offline-app/[screen]"] "kind" "internal" "area" "public" "models" {} "actions" {} "reason" "Build-only public shell templates, rendered at canonical application routes."}}))
 (defn validate! []

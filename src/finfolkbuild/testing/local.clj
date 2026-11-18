@@ -103,3 +103,11 @@
   (try (execute!
         "DROP SCHEMA IF EXISTS finfolk_rpc CASCADE; DROP SCHEMA IF EXISTS finfolk CASCADE;")
        (finally (when-not *suite* (release!)))))
+
+(defn with-suite! [run]
+  (acquire!)
+  (try
+    ;; Load the complete type graph before a selected namespace loads the entity catalog.
+    (namespaces/load-all!)
+    (binding [*suite* true] (run))
+    (finally (release!))))

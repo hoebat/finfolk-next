@@ -63,3 +63,21 @@
             :sql {:cascade true :index true :unique ["entity_key"]}}
    :status {:type :enum :required true
             :enum {:ns finfolkdb.common.type-domain-enum/EnumEventRsvpStatus}}])
+
+(deftype.pg ^{:final true :! (et/E {:class :0d/entry :track :track/none :access :none})}
+  EventInviteDelivery
+  "Server-only invitation outbox. Link tokens are encrypted until acknowledged or cancelled."
+  [:event {:type :ref :required true :ref {:ns -/Event} :sql {:cascade true}}
+   :invite-id {:type :uuid :required true :sql {:unique ["invite"]}}
+   :requester {:type :ref :required true :ref {:ns finfolkdb.common.type-user/User} :sql {:cascade true}}
+   :state {:type :text :required true :sql {:default "queued"}}
+   :sealed-token {:type :text :required true :scope :-/hidden :sql {:default ""}}
+   :attempts {:type :integer :required true :sql {:default 0}}
+   :lease {:type :uuid :scope :-/hidden}
+   :lease-until {:type :long :required true :sql {:default 0}}
+   :receipt {:type :text :required true :sql {:default ""}}
+   :error {:type :text :required true :sql {:default ""}}
+   :time-created {:type :long :required true :sql {:default (pg/time-us)}}
+   :time-updated {:type :long :required true :sql {:default (pg/time-us)}}]
+  {:constraints {:state-valid (or (== #{"state"} "queued") (== #{"state"} "sending") (== #{"state"} "sent") (== #{"state"} "failed") (== #{"state"} "cancelled"))
+                 :attempts-valid (and (>= #{"attempts"} 0) (<= #{"attempts"} 5))}})

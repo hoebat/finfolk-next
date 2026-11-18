@@ -2,6 +2,7 @@
   "Standalone database publication. Generates files; never connects to PostgreSQL."
   (:require [clojure.java.io :as io]
             [finfolkdb.schema.entity :as entity]
+            [finfolkdb.schema.account-access :as account-access]
             [finfolkdb.schema.entity-catalog :as catalog]
             [finfolkdb.schema.entity-coverage :as coverage]
             [finfolkdb.schema.enums :as enums]
@@ -18,7 +19,7 @@
   ["resources/finfolkdb/entity-schema.sql" "resources/finfolkdb/enums.sql"
    "resources/finfolkdb/rebuild.sql" "resources/finfolkdb/shop.sql"
    "resources/finfolkdb/messaging-grants.sql" "resources/finfolkdb/site-notes-grants.sql"
-   "resources/finfolkdb/social-grants.sql"])
+   "resources/finfolkdb/social-grants.sql" "resources/finfolkdb/account-grants.sql"])
 
 (def JSON-OUTPUTS
   ["resources/finfolkdb/entity-catalog.json" "resources/finfolkdb/entity-coverage.json"
@@ -30,6 +31,7 @@
   []
   (namespaces/load-all!)
   (sorted-map
+   "resources/finfolkdb/account-grants.sql" (account-access/grants-sql)
    "resources/finfolkdb/entity-schema.sql" (entity/sql)
    "resources/finfolkdb/enums.sql" (enums/sql)
    "resources/finfolkdb/rebuild.sql" (rebuild/sql)

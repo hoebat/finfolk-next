@@ -5,7 +5,7 @@ import {nativeApplicationBackbone} from './application-client.js';
 import {readInstagramFeed} from './instagram-feed.js';
 export async function publicPageClient(page='place-public'){
  const path='/app-backbone.js',module=await import(/* webpackIgnore: true */ path);
- const app=await nativeApplicationBackbone(),config=await module.appConfiguration();
+ const app=await nativeApplicationBackbone(),config=app?.authProvider==='supabase'?app.configuration:await module.appConfiguration();
  const client=bindPageClient(page,app?.public||{call:(name,values,options)=>module.httpOperation({...config,apiUrl:location.origin+'/'},name,values,options)});
  return {call(name,values,options={}){
   const signal=options.signal||(name==='publicInstagram'?AbortSignal.timeout(12000):undefined);

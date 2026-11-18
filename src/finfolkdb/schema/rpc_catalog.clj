@@ -1,6 +1,7 @@
 (ns finfolkdb.schema.rpc-catalog
   "Generated trusted-server call signatures for native RPC functions."
   (:require [clojure.string :as str]
+            [finfolkdb.schema.account-contracts :as contracts]
             [finfolkdb.schema.namespaces :as namespaces]
             [finfolkdb.main.scaffold-001-entity]
             [lang.core.impl :as impl]
@@ -21,4 +22,5 @@
               :schema "finfolk_rpc"
               :arguments (mapv (fn [[type argument]] {:name (str argument) :type (name type)})
                                (partition 2 (nth (:form entry) 2)))
-              :returns (mapv str (:static/return entry))}]))))
+              :returns (mapv str (:static/return entry))
+              :contract (get contracts/RPCS (str/replace (str (:id entry)) "-" "_"))}]))))

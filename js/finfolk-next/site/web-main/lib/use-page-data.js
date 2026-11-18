@@ -24,7 +24,7 @@ export function useConfiguredPageData(session,page,inputs={},options={}){
   const expectedUser=api.user;
   const path='/app-backbone.js';
   const {appConfiguration,httpOperation}=await import(/* webpackIgnore: true */ path);
-  const config=await appConfiguration();let publicClient;
+  const config=api.authProvider==='supabase'?api.configuration:await appConfiguration();let publicClient;
   if(page==='logbook-extras'){
    const {nativeApplicationBackbone}=await import('./application-client.js');
    publicClient=(await nativeApplicationBackbone())?.public||{call:(name,values)=>httpOperation({...config,apiUrl:location.origin+'/'},name,values,{signal:AbortSignal.timeout(12000)})};

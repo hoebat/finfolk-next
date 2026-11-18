@@ -93,8 +93,9 @@
                         :track  :track/none
                         :access :none})}
   SiteRevision
-  [:site          {:type :ref :required true
+  [:site          {:type :ref
                    :ref {:ns finfolkdb.common.type-system-site/Site}}
+   :site-key      {:type :text :required true :sql {:default ""}}
    :owner         {:type :ref
                    :ref {:ns finfolkdb.common.type-user/User} :sql {:raw [:on-delete-set-null]}}
    :import        {:type :ref

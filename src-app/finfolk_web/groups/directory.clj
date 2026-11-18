@@ -1,5 +1,6 @@
-(ns finfolk-web.groups.directory)
+(ns finfolk-web.groups.directory (:require [finfolkdb.schema.account-contracts :as contracts]))
 (def OPERATIONS
+ (contracts/annotate
  {"directoryCreate" {"name" "directoryCreate" "path" "/v1/me/directory/create" "method" "POST" "transport" "rest" "auth" true "write" true "domain" "directoryOwner"}
  "pageAccess" {"name" "pageAccess" "path" "/v1/me/directory/access" "method" "POST" "transport" "rest" "auth" true "write" false "domain" "directoryOwner"}
 "pageInvite" {"name" "pageInvite" "path" "/v1/me/directory/invite" "method" "POST" "transport" "rest" "auth" true "write" true "domain" "directoryOwner"}
@@ -17,4 +18,4 @@
 "directoryAdminSave" {"name" "directoryAdminSave" "path" "/v1/admin/directory/save" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}
 "directoryClaimReview" {"name" "directoryClaimReview" "path" "/v1/admin/directory/claim-review" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}
 "directoryDiscover" {"name" "directoryDiscover" "path" "/v1/admin/directory/discover" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}
-"directoryReportResolve" {"name" "directoryReportResolve" "path" "/v1/admin/directory/report-resolve" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}})
+"directoryReportResolve" {"name" "directoryReportResolve" "path" "/v1/admin/directory/report-resolve" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}}))

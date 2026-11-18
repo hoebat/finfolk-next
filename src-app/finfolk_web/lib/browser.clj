@@ -53,7 +53,10 @@
   (when (not (. config ["backbone"])) (return nil))
   (var runtime (await (import "./next-backbone.js")))
   (var app (. runtime (createApplicationBackbone config)))
-  (. app (setPublicTransport (fn [name input options] (return (-/httpOperation config name input options)))))
+  ;; Legacy map helpers share this application. They must not replace the native
+  ;; transport selected by the Supabase client, including for anonymous readers.
+  (when (not= app.authProvider "supabase")
+    (. app (setPublicTransport (fn [name input options] (return (-/httpOperation config name input options))))))
   (return app))
 (defn.js ^{:- [:async]} publicOperation [name input apiUrl legacy options]
   (when (not (. -/Configuration ["promise"])) (return (legacy)))

@@ -2,7 +2,10 @@
   (:require [finfolk-web.lib.seed :as seed]
             [finfolk-web.pages.account :as account]))
 (defn sdk-read [operation method args]
-  (assoc (seed/read-model operation) "sdk" {"method" [method] "args" args}))
+  (assoc (seed/read-model operation) "sdk"
+    (cond-> {"method" [method] "args" args}
+      (contains? #{"session" "sessions" "profile"} operation)
+      (assoc "public-operation" (get {"session" "publicSession" "sessions" "publicSessions" "profile" "publicProfile"} operation)))))
 (defn sdk-action [operation method args]
   (assoc (seed/action operation) "sdk" {"method" [method] "args" args}))
 (def SDK_ACTIONS

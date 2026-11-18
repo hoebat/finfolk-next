@@ -20,10 +20,9 @@
   (str
    "-- Generated trusted entity messaging worker privileges. Apply explicitly to the fresh native database only.\nBEGIN;\n"
    "DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='finfolk_messaging') THEN CREATE ROLE finfolk_messaging NOLOGIN NOINHERIT; END IF; END $$;\n"
-   "GRANT USAGE ON SCHEMA finfolk,finfolk_rpc,neon_auth TO finfolk_messaging;\n"
+   "GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_messaging;\n"
    "GRANT SELECT,INSERT,UPDATE ON " (str/join "," (map #(str "finfolk.\"" % "\"") TABLES))
    " TO finfolk_messaging;\n" "GRANT SELECT(id,deleted) ON finfolk.\"User\" TO finfolk_messaging;\n"
-   "GRANT SELECT(id,\"emailVerified\",banned) ON neon_auth.\"user\" TO finfolk_messaging;\n"
    "GRANT EXECUTE ON FUNCTION finfolk.as_jsonb(jsonb) TO finfolk_messaging;\n"
    "DO $$ DECLARE f record; BEGIN FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' AND p.proname IN ("
    (str/join "," (map #(str "'" % "'") FUNCTIONS))
