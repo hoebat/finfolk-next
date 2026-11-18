@@ -1,3 +1,4 @@
+import {osmTileURL} from './map-data.js';
 import {activity,resourceLabel} from './activity.js';
 import {ContourRenderer,cachedTile,coversView} from './render-cache.js';
 import {OCEAN_COLOUR,contourColour,shoreTile,FINFOLK_COLOURS} from './map-style.js';
@@ -84,7 +85,7 @@ export class DepthMap {
     if(this.layers.basemap&&this.baseFrame){const a=this.toScreen([this.baseFrame.bounds[0],this.baseFrame.bounds[3]]),b=this.toScreen([this.baseFrame.bounds[2],this.baseFrame.bounds[1]]);if(b[0]>=0&&b[1]>=0&&a[0]<=w&&a[1]<=h)c.drawImage(this.baseFrame.canvas,...a,b[0]-a[0],b[1]-a[1]);}
     for(let x=Math.floor(left/256);x<=Math.floor((left+w)/256);x++)for(let y=Math.floor(top/256);y<=Math.floor((top+h)/256);y++){
       if(x<0||y<0||x>=2**this.zoom||y>=2**this.zoom)continue;totalTiles++;const dx=x*256-left,dy=y*256-top;
-      if(this.layers.basemap||(this.surface&&this.layers.depth)){const current=this.image(`https://tile.openstreetmap.org/${this.zoom}/${x}/${y}.png`,true,Math.hypot(dx+128-w/2,dy+128-h/2));if(current.complete&&current.naturalWidth)currentTiles++;const tile=cachedTile(this.images,this.zoom,x,y);if(tile){if(this.layers.basemap)c.drawImage(tile.image.styled||tile.image,tile.sx,tile.sy,tile.sw,tile.sh,Math.floor(dx),Math.floor(dy),257,257);basemapTiles++;}}
+      if(this.layers.basemap||(this.surface&&this.layers.depth)){const current=this.image(osmTileURL(this.zoom,x,y),true,Math.hypot(dx+128-w/2,dy+128-h/2));if(current.complete&&current.naturalWidth)currentTiles++;const tile=cachedTile(this.images,this.zoom,x,y);if(tile){if(this.layers.basemap)c.drawImage(tile.image.styled||tile.image,tile.sx,tile.sy,tile.sw,tile.sh,Math.floor(dx),Math.floor(dy),257,257);basemapTiles++;}}
       if(this.layers.depth&&this.rasters.length){const z=Math.min(this.zoom,this.tileMaxZoom),factor=2**(this.zoom-z),sx=Math.floor(x/factor),sy=Math.floor(y/factor),file=this.tileFiles?.[`${z}/${sx}/${sy}`];if(file){const image=this.image(new URL(file,this.dataBase||new URL('./',import.meta.url)).href);if(image.complete&&image.naturalWidth){c.imageSmoothingEnabled=false;c.drawImage(image,(x%factor)*256/factor,(y%factor)*256/factor,256/factor,256/factor,Math.floor(dx),Math.floor(dy),257,257);}}}
     }
     const baseKey=`${this.zoom}/${left}/${top}/${w}/${h}`;

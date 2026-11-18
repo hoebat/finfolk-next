@@ -3,7 +3,7 @@ const recoveryURL=value=>{try{const url=new URL(value,globalThis.location?.href|
 const now=()=>globalThis.performance?.now?.()??Date.now();
 export function resourceLabel(value){
   try{const u=new URL(value,globalThis.location?.href||'https://local.invalid/'),p=u.pathname;
-    if(u.hostname==='tile.openstreetmap.org')return {label:'Shore & place names',kind:'Shore tiles'};
+    if(u.hostname==='tile.openstreetmap.org'||p.startsWith('/v1/map/providers/osm/'))return {label:'Shore & place names',kind:'Shore tiles'};
     if(p.endsWith('/export'))return {label:'Government seabed image',kind:'Seabed imagery'};
     if(p.endsWith('/legend'))return {label:'Publisher colour legend',kind:'Legends'};
     if(p.includes('/contours/'))return {label:'Depth contours',kind:'Survey data'};

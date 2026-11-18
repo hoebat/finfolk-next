@@ -1,3 +1,4 @@
+import {osmTileURL} from './map-data.js';
 import {activity} from './activity.js';
 import {OCEAN_COLOUR,contourColour} from './map-style.js';
 const EMPTY=[];
@@ -37,6 +38,6 @@ export class ContourRenderer {
 }
 // Cached parent tiles provide geographic context while sharper tiles arrive.
 export function cachedTile(images,z,x,y){
-  for(let delta=0;delta<=4&&z-delta>=0;delta++){const factor=2**delta,px=Math.floor(x/factor),py=Math.floor(y/factor),image=images.get(`https://tile.openstreetmap.org/${z-delta}/${px}/${py}.png`);if(image?.complete&&image.naturalWidth&&!image.failed)return {image,sx:(x%factor)*256/factor,sy:(y%factor)*256/factor,sw:256/factor,sh:256/factor};}return null;
+  for(let delta=0;delta<=4&&z-delta>=0;delta++){const factor=2**delta,px=Math.floor(x/factor),py=Math.floor(y/factor),image=images.get(osmTileURL(z-delta,px,py));if(image?.complete&&image.naturalWidth&&!image.failed)return {image,sx:(x%factor)*256/factor,sy:(y%factor)*256/factor,sw:256/factor,sh:256/factor};}return null;
 }
 export function coversView(snapshot,bounds,zoom){return snapshot?.zoom===zoom&&snapshot.bounds[0]<=bounds[0]&&snapshot.bounds[1]<=bounds[1]&&snapshot.bounds[2]>=bounds[2]&&snapshot.bounds[3]>=bounds[3];}

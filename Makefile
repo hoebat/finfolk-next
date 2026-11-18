@@ -17,7 +17,7 @@ generate:
 check-generated:
 	node scripts/check_generated.mjs
 test:
-	node --test tests/test_page_health.mjs
+	node --test tests/test_page_health.mjs tests/test_mapping_data_origin.mjs
 	node --test tests/test_local_supabase.mjs
 	lein run -m finfolkdb.test --application-contracts
 	lein run -m finfolkdb.test

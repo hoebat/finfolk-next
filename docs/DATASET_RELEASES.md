@@ -1,10 +1,21 @@
 # Runtime dataset releases
 
 The map reads a pinned release under `https://datasets.finfolk.com.au/v1/map/releases/<id>/`.
-`app/(atlas)/atlas/dataset-release.js` selects the release. It never follows a mutable
+`src/map-data.js` selects the release; `app/(atlas)/atlas/dataset-release.js` re-exports it. It never follows a mutable
 catalog while a user is downloading a region. Original surveys and generated runtime
 copies remain in Git LFS; the dataset service streams materialized copies from an
 allowlisted Git commit, without introducing another authoritative data store.
+
+All geographic network data comes through `datasets.finfolk.com.au`. Display
+providers use bounded `/v1/map/providers/` endpoints: OpenFreeMap styles, nested
+vector tiles, glyphs and sprites; global Terrarium terrain; OSM raster basemaps;
+and the existing NSW/Victorian publisher imagery and legends. The dataset service
+fetches these public providers, preserves attribution and cache headers, and
+rewrites map resource URLs to its own origin. Redirects and arbitrary upstream
+URLs are rejected. Provider imagery remains display context, not reviewed numeric
+depth data. Application code and live community/account overlays remain app/API
+services; published survey assets and offline downloads retain their pinned Git
+LFS release and integrity checks.
 
 ## Build
 
@@ -77,3 +88,14 @@ records the source overlap analysis and inference from the publisher's non-blend
 mosaic ordering. Source survey uncertainty is not a compiled-pixel accuracy promise.
 Other VCDEM tiles remain unverified. The original full tile, full coastal COG and
 footprint geometry remain available to reconstruct the prior representation.
+
+## Display-provider gateway
+
+Sites version 13 (`c73e26195bbde77f626ac15b34a531afb07bab44`) adds the display
+provider endpoints without changing the dataset hostname or pinned survey release.
+The provider suite covers metadata URL rewriting, byte preservation, CORS/cache
+headers, bounded image exports, invalid paths, redirects and failed upstreams.
+`corepack yarn test:map-data` checks the app's configured geographic origins,
+parent-tile caching, projection/rendering and activity labels. Against a local Next
+server, `NEXTJS_TEST_URL=http://localhost:3032 node tests/test_mapping_data_network.mjs`
+uses the live dataset service and rejects direct third-party mapping requests.

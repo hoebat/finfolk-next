@@ -10,8 +10,8 @@ for(let y=0;y<256;y++)for(let x=0;x<256;x++){const encoded=elevations[Math.floor
 const tile=PNG.sync.write(dem),browser=await chromium.launch();await mkdir('.cache/explore-map',{recursive:true});
 try{for(const width of [1440,390]){
  const page=await browser.newPage({viewport:{width,height:1000},reducedMotion:'reduce',serviceWorkers:'block'}),errors=[];page.on('pageerror',e=>errors.push(e.message));await mockMapTools(page,base);
- await page.route('https://tiles.openfreemap.org/styles/liberty',r=>r.fulfill({json:{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#ffffff'}}]}}));
- let requests=0;await page.route('https://s3.amazonaws.com/elevation-tiles-prod/terrarium/**',r=>{requests++;return r.fulfill({body:tile,contentType:'image/png',headers:{'Access-Control-Allow-Origin':'*'}});});
+ await page.route('https://datasets.finfolk.com.au/v1/map/providers/openfreemap/styles/liberty',r=>r.fulfill({json:{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#ffffff'}}]}}));
+ let requests=0;await page.route('https://datasets.finfolk.com.au/v1/map/providers/terrain/**',r=>{requests++;return r.fulfill({body:tile,contentType:'image/png',headers:{'Access-Control-Allow-Origin':'*'}});});
  await page.goto(base+'/map');const canvas=page.locator('.maplibregl-canvas');await canvas.waitFor();
  const targetColors=[LAND_COLOR,...DEPTH_STOPS.filter(([d])=>elevations.includes(d)).map(([,color])=>color)].map(color=>color.match(/\w\w/g).map(v=>parseInt(v,16)));
  async function colors(){const pixels=PNG.sync.read(await canvas.screenshot()).data,counts=targetColors.map(()=>0);for(let i=0;i<pixels.length;i+=4)targetColors.forEach((rgb,j)=>{if(rgb.every((v,k)=>Math.abs(v-pixels[i+k])<=3))counts[j]++;});return counts;}

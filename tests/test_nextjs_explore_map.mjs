@@ -10,14 +10,14 @@ const browser=await chromium.launch(),out='.cache/explore-map';await mkdir(out,{
 try{for(const width of [1440,390]){
  const context=await browser.newContext({viewport:{width,height:width===390?844:1000},serviceWorkers:'block',reducedMotion:'reduce'}),page=await context.newPage(),errors=[];page.on('pageerror',e=>errors.push(e.message));
  await mockMapTools(page,base);
- await page.route('https://s3.amazonaws.com/elevation-tiles-prod/terrarium/**',r=>r.fulfill({body:depthTile,contentType:'image/png',headers:{'Access-Control-Allow-Origin':'*'}}));
+ await page.route('https://datasets.finfolk.com.au/v1/map/providers/terrain/**',r=>r.fulfill({body:depthTile,contentType:'image/png',headers:{'Access-Control-Allow-Origin':'*'}}));
  const school={id:'school',name:'Ocean School',locality:'Bondi Beach',state:'NSW',country:'Australia',category:'School',description:'Published school listing'},unmapped={id:'unmapped',name:'Unmapped School',locality:'Unknown',state:'VIC',category:'School'},event={id:'meetup',document:{title:'Shore meetup',location:'Bondi Beach',category:'Meetup'},starts_at:'2030-01-01T00:00:00Z'};
  await page.route('**/v1/directory*',r=>r.fulfill({json:new URL(r.request().url()).searchParams.has('offset')?{listings:[unmapped],next:null}:{listings:[school],next:50}}));
  await page.route('**/v1/directory/school',r=>r.fulfill({json:school}));
  await page.route('**/v1/events*',r=>r.fulfill({json:{events:[event]}}));
  await page.route('**/v1/events/meetup',r=>r.fulfill({json:event}));
  await page.route('**/v1/discover/popular*',r=>r.fulfill({json:{places:['bondi']}}));
- await page.route('https://tiles.openfreemap.org/styles/liberty',r=>r.fulfill({json:{version:8,glyphs:base+'/test-glyphs/{fontstack}/{range}.pbf',sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#bbdadd'}}]}}));
+ await page.route('https://datasets.finfolk.com.au/v1/map/providers/openfreemap/styles/liberty',r=>r.fulfill({json:{version:8,glyphs:base+'/test-glyphs/{fontstack}/{range}.pbf',sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#bbdadd'}}]}}));
  await page.route('**/test-glyphs/**',r=>r.fulfill({body:Buffer.alloc(0),contentType:'application/x-protobuf'}));
  await page.goto(base+'/map?site=bondi');await page.locator('.fm-detail h2').filter({hasText:'Bondi Beach'}).waitFor();
  await page.locator('.fm-map-canvas .maplibregl-canvas').waitFor();await page.waitForFunction(()=>!document.querySelector('.fm-map-status'));
@@ -43,7 +43,7 @@ try{for(const width of [1440,390]){
  await page.getByRole('button',{name:'Close place details',exact:true}).click();
  await page.getByRole('button',{name:'Layers',exact:true}).click();await page.getByRole('link',{name:'Depth & survey tools',exact:false}).click();await page.waitForURL(url=>url.searchParams.get('mode')==='survey');await page.locator('#explorer').waitFor({state:'visible'});assert.equal(await page.locator('.fm-explore').isVisible(),false);
  await page.getByRole('link',{name:'← Explore map',exact:true}).click();await page.locator('.fm-explore').waitFor({state:'visible'});
- if(width===1440){await page.route('https://tiles.openfreemap.org/styles/liberty',r=>r.abort());await page.reload();await page.locator('.fm-map-status').filter({hasText:'could not load'}).waitFor();await page.getByRole('button',{name:'Dive spots',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.fm-card').length===2);assert.equal(await page.locator('.fm-result-tools a').first().isVisible(),true);}
+ if(width===1440){await page.route('https://datasets.finfolk.com.au/v1/map/providers/openfreemap/styles/liberty',r=>r.abort());await page.reload();await page.locator('.fm-map-status').filter({hasText:'could not load'}).waitFor();await page.getByRole('button',{name:'Dive spots',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.fm-card').length===2);assert.equal(await page.locator('.fm-result-tools a').first().isVisible(),true);}
  assert.deepEqual(errors,[]);await context.close();
  }
  console.log('EXPLORE_MAP_PASS: real WebGL engine with local style fixture, categories, search, cards, pagination, shared links, history, mobile sheet, layers and retained survey map.');

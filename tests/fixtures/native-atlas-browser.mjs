@@ -7,8 +7,8 @@ export async function nativeAtlasReferences(page){
   const value=path.endsWith('/data/catalog.json')?atlasCatalog:path.endsWith('/beaches.json')||path.endsWith('/sites-snapshot.json')?{beaches:[],states:[],areas:[],sources:[]}:path.endsWith('/data/beach-summaries.json')?{beaches:[]}:path.endsWith('/guides.json')?{}:path.endsWith('/social.json')?{posts:[]}:path.endsWith('-contours.json')?atlasContours:path.includes('coastline')?{type:'FeatureCollection',features:[]}:{stays:[],surveys:[]};
   return route.fulfill({json:value});
  });
- await page.route('https://tiles.openfreemap.org/**',route=>route.fulfill({json:{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#d8eeeb'}}]}}));
- await page.route('https://tile.openstreetmap.org/**',route=>route.abort());
+ await page.route('https://datasets.finfolk.com.au/v1/map/providers/openfreemap/**',route=>route.fulfill({json:{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#d8eeeb'}}]}}));
+ await page.route('https://datasets.finfolk.com.au/v1/map/providers/osm/**',route=>route.abort());
 }
 export async function nativeAtlasBrowser({browser,page,origin,siteId}){
  await nativeAtlasReferences(page);

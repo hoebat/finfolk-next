@@ -114,7 +114,8 @@
     "test:nextjs-site-notes": "node tests/test_nextjs_site_notes.mjs",
     "test:nextjs-explore-depth": "node tests/test_nextjs_explore_depth.mjs",
     "test:explore-contours": "node tests/test_explore_contours_build.mjs && node tests/test_explore_contours_runtime.mjs && node tests/test_explore_coast_mask.mjs",
-    "test:nextjs-explore-contours": "node tests/test_nextjs_explore_contours.mjs"
+    "test:nextjs-explore-contours": "node tests/test_nextjs_explore_contours.mjs",
+    "test:map-data": "node --test tests/test_mapping_data_origin.mjs && node tests/test_rendering.mjs && node tests/test_map.mjs && node tests/test_activity.mjs"
   },
   "dependencies": {
     "@hono/node-server": "2.1.5",

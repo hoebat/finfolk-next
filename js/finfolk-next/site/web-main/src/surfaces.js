@@ -1,10 +1,11 @@
+import {DATASET_PROVIDER_BASE} from './map-data.js';
 import {activity,readResource} from './activity.js';
 import {DEPTH_COLOURS} from './map-style.js';
 // Publisher-rendered rasters are display context, never numeric grid samples.
 // Recolour by the order of the publisher's legend, without assuming a linear
 // stretch or converting rendered RGB values into measured metres.
-const NSW='https://mapprod2.environment.nsw.gov.au/arcgis/rest/services/Coastal_Marine/NSW_Marine_Lidar_Bathymetry_Data_2018/MapServer';
-const VIC='https://biod-gis.mapshare.vic.gov.au/arcgis/rest/services/CoastKit/Bathymetry/MapServer';
+const NSW=DATASET_PROVIDER_BASE+'nsw';
+const VIC=DATASET_PROVIDER_BASE+'vic';
 const nswRegions=new Set(['bondi','jervis-bay','nsw-northern-beaches','nsw-southern-sydney','nsw-central-coast','nsw-hunter','nsw-northern-rivers','nsw-illawarra','nsw-eurobodalla','nsw-sapphire','qld-southern-gold-coast']);
 export function surfaceForRegion(region){
   if(region.rasters?.length)return null;

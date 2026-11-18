@@ -21,7 +21,7 @@ try{for(const width of [1440,390]){
   if(action==='withdraw'){note.withdrawn=value.withdrawn;note.revision++;return reply({id:note.id,revision:note.revision,withdrawn:note.withdrawn});}
   if(action==='report')return reply({reported:true});return route.fulfill({status:404,json:{error:'Unexpected action'}});
  });
- await page.route('https://tiles.openfreemap.org/**',r=>r.abort());await page.goto(base+'/map?site=bondi');const notes=page.locator('.fm-detail .fn-notes');await notes.locator('.fn-note').first().waitFor();assert.equal(await notes.locator('.fn-note').count(),2);
+ await page.route('https://datasets.finfolk.com.au/v1/map/providers/openfreemap/**',r=>r.abort());await page.goto(base+'/map?site=bondi');const notes=page.locator('.fm-detail .fn-notes');await notes.locator('.fn-note').first().waitFor();assert.equal(await notes.locator('.fn-note').count(),2);
  await notes.getByRole('button',{name:'Upvote note by Maya',exact:true}).click();await notes.getByRole('button',{name:'Remove upvote from note by Maya',exact:true}).waitFor();assert.match(await notes.locator('.fn-note').first().locator('.fn-note-upvote').innerText(),/9/);
  await notes.getByRole('button',{name:'Remove upvote from note by Maya',exact:true}).click();await notes.getByRole('button',{name:'Upvote note by Maya',exact:true}).waitFor();
  await notes.getByRole('combobox',{name:'Sort community notes',exact:true}).selectOption('newest');await notes.locator('.fn-note').first().filter({hasText:'Kai'}).waitFor();

@@ -1,3 +1,4 @@
+import {DATASET_PROVIDER_BASE} from './dataset-release.js';
 import {createCoastMask} from './explore-coast-mask.js';
 import {createContourLayers} from './explore-contours.js';
 import {addDepthShading,styleExploreMap} from './explore-style.js';
@@ -12,7 +13,7 @@ function markerImage(kind){const canvas=document.createElement('canvas');canvas.
 export async function createExploreMap(container,{rows=[],onSelect,onMove,onStatus,onReady,onContourStatus,onContourInspect}={}){
  const imported=await import('maplibre-gl'),lib=imported.default||imported;
  let camera;try{const stored=JSON.parse(sessionStorage.getItem('finfolk:explore-camera'));if(validPoint(stored?.center)&&Number.isFinite(stored.zoom)&&stored.zoom>=3&&stored.zoom<=18)camera=stored;}catch{}
- const map=new lib.Map({container,style:'https://tiles.openfreemap.org/styles/liberty',center:camera?.center||[134,-27],zoom:camera?.zoom||3.6,minZoom:3,maxZoom:18,dragRotate:false,pitchWithRotate:false,renderWorldCopies:false,attributionControl:true});
+ const map=new lib.Map({container,style:DATASET_PROVIDER_BASE+'openfreemap/styles/liberty',center:camera?.center||[134,-27],zoom:camera?.zoom||3.6,minZoom:3,maxZoom:18,dragRotate:false,pitchWithRotate:false,renderWorldCopies:false,attributionControl:true});
  let ready=false,alive=true,latestRows=rows,highlight=null,appearance='coast',contours=null,coastMask=null,contourVisibility={survey:true,regional:true};
  map.addControl(new lib.NavigationControl({showCompass:false}),'top-right');
  const timer=setTimeout(()=>{if(alive&&!ready)onStatus?.('The map is taking longer to load. You can still browse results.');},15000);

@@ -1,3 +1,4 @@
+import {DATASET_RELEASE_BASE} from './map-data.js';
 import {installMapSettings} from './map-settings.js';
 import {renderDirectory} from './directory.js';
 import {renderEvents} from './events.js';
@@ -28,7 +29,7 @@ const appBackbone=await applicationBackbone();
 const $=id=>document.getElementById(id), map=new DepthMap($('map'));
 try{map.layers.measurement=globalThis.localStorage?.getItem('shore-depth:measurement-visible')!=='false';}catch{}
 installSystemPanel();
-const data=new StaticData();map.dataBase=data.base;
+const data=new StaticData(new URL(DATASET_RELEASE_BASE));map.dataBase=data.base;
 let catalog,region,profile=null,drawing=false,measuring=false,vertices=[],viewTimer,inspectionRequest=0,profileRequest=0,viewRequest=0,loadRequest=0;
 let beachCatalog={beaches:[]},selectedBeachId='',contoursReady=false,discovery,selectionRequest=0,activeAreaId='';
 const shell=installAppShell({backbone:appBackbone,onLayout:()=>map.resize(),onMapActivity:active=>map.setActive(active),onOpen:()=>map.cancelGesture()});
