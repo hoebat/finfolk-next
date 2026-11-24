@@ -38,6 +38,7 @@ jobs:
     env:
       NETLIFY_SITE_ID: fe66fb45-09ab-4e37-8474-3a4f2e162123
       NETLIFY_TELEMETRY_DISABLED: '1'
+      CONTEXT: production
       NETLIFY_SKEW_PROTECTION_TOKEN: finfolk-publish-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Check publishing credential
@@ -87,7 +88,7 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run: |
-          netlify deploy --no-build --context production --filter @finfolk/web-main --site "$NETLIFY_SITE_ID" --json > .cache/frontend-preview-deploy.json
+          netlify deploy --no-build --filter @finfolk/web-main --site "$NETLIFY_SITE_ID" --json > .cache/frontend-preview-deploy.json
       - name: Verify the hosted preview
         run: |
           preview_url=$(jq -er '.deploy_url | select(startswith("https://"))' .cache/frontend-preview-deploy.json)
@@ -96,7 +97,7 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run: |
-          netlify deploy --no-build --context production --filter @finfolk/web-main --site "$NETLIFY_SITE_ID" --prod --message "GitHub Actions $GITHUB_SHA" --json > .cache/frontend-production-deploy.json
+          netlify deploy --no-build --filter @finfolk/web-main --site "$NETLIFY_SITE_ID" --prod --message "GitHub Actions $GITHUB_SHA" --json > .cache/frontend-production-deploy.json
       - name: Record the published release
         env:
           RELEASE_SHA: ${{ github.sha }}
