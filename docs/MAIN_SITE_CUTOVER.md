@@ -9,6 +9,10 @@ the API or install SQL. The apex uses a DNS-only flattened CNAME to
 `apex-loadbalancer.netlify.com`; `www` uses a DNS-only CNAME to
 `finfolk.netlify.app`. Netlify owns frontend HTTPS and the www redirect.
 
+For a manual GitHub Actions publish, use **Publish FinFolk frontend → Run workflow**
+on `main`. See [the publishing guide](FRONTEND_PUBLISH.md) for checks and credentials.
+Pushes and pull requests do not publish.
+
 For a local frontend publish, run from this repository:
 
 ```sh
