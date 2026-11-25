@@ -98,3 +98,43 @@
 .ff-account-workspace .acct-submissions>h3 {padding-bottom:16px;border-bottom:1px solid var(--account-line)}
 
 .ff-account-workspace :is(#account-checkin,#account-sites) {padding-top:28px}
+
+/* A check-in is composed as one small post, with the place as its focus. */
+:root[data-theme] .ff-account-workspace .acct-checkin-layout {grid-template-columns:minmax(0,2fr) minmax(260px,1fr)}
+:root[data-theme] .ff-account-workspace .acct-panel .checkin-composer {padding:0;overflow:hidden}
+.ff-account-workspace .checkin-composer-heading {display:flex;align-items:center;justify-content:space-between;gap:16px;padding:16px 24px;border-bottom:1px solid var(--account-line)}
+:root[data-theme] .ff-account-workspace .checkin-composer-heading h2 {font:600 16px/1.4 Avenir,Arial,sans-serif;letter-spacing:-.02em;margin:0;max-width:none}
+:root[data-theme] .ff-account-workspace .checkin-composer-heading button {margin:0;padding:10px 17px;white-space:nowrap}
+.ff-account-workspace .checkin-author {display:flex;align-items:center;gap:12px;padding:21px 24px}
+.ff-account-workspace .checkin-author .person-portrait {width:42px;height:42px;flex:none;border-radius:50%;overflow:hidden}
+.ff-account-workspace .checkin-author img {width:100%;height:100%;object-fit:cover}
+.ff-account-workspace .checkin-author strong {font-size:13px}
+.ff-account-workspace .checkin-author small {font-size:11px}
+.ff-account-workspace .checkin-composer-body {display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);border-top:1px solid var(--account-line)}
+.ff-account-workspace .checkin-preview {position:relative;display:flex;align-items:center;justify-content:center;min-width:0;aspect-ratio:1;background:color-mix(in srgb,var(--account-bg) 32%,var(--account-surface));border-right:1px solid var(--account-line);overflow:hidden}
+.ff-account-workspace .checkin-preview-empty {text-align:center;padding:28px 18px}
+.ff-account-workspace .checkin-preview-empty>.acct-icon {width:38px;height:38px;margin-bottom:10px}
+.ff-account-workspace .checkin-preview h3 {font:400 26px/1.2 Georgia,serif;letter-spacing:-.035em;margin:10px 0}
+.ff-account-workspace .checkin-preview p {font-size:12px;margin:10px 0}
+.ff-account-workspace .checkin-preview .ff-location-art {position:absolute;inset:0;width:100%;height:100%;padding:24px 20px 100px;box-sizing:border-box;color:var(--account-ink)}
+.ff-account-workspace .checkin-preview .ff-location-art path {fill:color-mix(in srgb,var(--account-ink) 12%,var(--account-surface));stroke:var(--account-ink);stroke-width:.6}
+.ff-account-workspace .checkin-preview .ff-location-art circle {fill:var(--account-ink);stroke:var(--account-surface);stroke-width:1.5}
+.ff-account-workspace .checkin-preview .ff-location-art text {display:none}
+.ff-account-workspace .checkin-preview-caption {align-self:flex-end;position:relative;width:100%;padding:20px;box-sizing:border-box;background:linear-gradient(transparent,var(--account-surface))}
+.ff-account-workspace .checkin-preview-caption .acct-icon {width:17px;height:17px}
+.ff-account-workspace .checkin-preview-caption h3 {font-size:26px;margin:7px 0}
+.ff-account-workspace .checkin-preview-caption p {margin:0}
+.ff-account-workspace .checkin-place-picker {min-width:0;padding:24px 20px}
+.ff-account-workspace .checkin-place-picker>h3 {font-size:16px;margin:8px 0 20px}
+.ff-account-workspace .checkin-place-picker form {margin:0;padding:0;border:0}
+.ff-account-workspace .checkin-sharing {display:flex;align-items:flex-start;gap:10px;margin-top:24px;padding-top:18px;border-top:1px solid var(--account-line)}
+.ff-account-workspace .checkin-sharing .acct-icon {width:16px;height:16px;margin-top:3px;color:var(--account-muted)}
+.ff-account-workspace .checkin-sharing small {font-size:11px}
+.ff-account-workspace .checkin-composer-footnote {display:flex;gap:10px;align-items:center;padding:16px 24px;border-top:1px solid var(--account-line)}
+.ff-account-workspace .checkin-composer-footnote .acct-icon {width:16px;height:16px;color:var(--account-muted)}
+.ff-account-workspace .checkin-composer .checkin-success {margin:16px 24px;padding:14px;border:1px solid var(--account-line);border-radius:12px}
+@media(max-width:1250px){:root[data-theme] .ff-account-workspace .acct-checkin-layout{grid-template-columns:minmax(0,1fr)}.ff-account-workspace .checkin-preview{max-height:400px;aspect-ratio:auto;min-height:340px}}
+@media(max-width:600px){.ff-account-workspace .checkin-composer-body{grid-template-columns:1fr}.ff-account-workspace .checkin-preview{aspect-ratio:1.15;min-height:0;max-height:none;border-right:0;border-bottom:1px solid var(--account-line)}.ff-account-workspace .checkin-composer-heading{padding:14px 16px;gap:8px}:root[data-theme] .ff-account-workspace .checkin-composer-heading h2{font-size:14px}:root[data-theme] .ff-account-workspace .checkin-composer-heading button{font-size:12px;padding:10px 12px}.ff-account-workspace .checkin-author{padding:17px 20px}.ff-account-workspace .checkin-place-picker{padding:22px 20px}.ff-account-workspace .checkin-composer-footnote{padding:16px 20px}}
+.ff-account-workspace .checkin-composer-footnote {justify-content:flex-start;text-align:left}
+.ff-account-workspace .checkin-composer-footnote small {flex:1}
+:root[data-theme] .ff-account-workspace .checkin-sharing a {color:var(--account-ink)}
