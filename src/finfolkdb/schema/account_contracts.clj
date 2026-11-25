@@ -71,7 +71,17 @@
   {:rpc rpc :arguments arguments :actor "server" :request request :result result :write write})
 (def OPERATIONS
   (merge directory/OPERATIONS events/OPERATIONS notes/OPERATIONS sites/OPERATIONS site-review/OPERATIONS
-  {"myPosts" (operation "ret_my_profile_posts" ["$actor"] EMPTY {:type "array" :items PROFILE-POST} false)
+  {"publicTrips" (assoc (operation "ret_public_trips" ["$values"]
+                    {:type "object" :additionalProperties false :properties {:beachId UUID :ownerId UUID}}
+                    {:type "object" :additionalProperties false :required ["trips"]
+                     :properties {:trips {:type "array" :items {:type "object" :additionalProperties false
+                       :required ["id" "title" "authorName" "beachId" "beachName" "start" "end" "total" "publishedAt"]
+                       :properties {:id UUID :title STRING :authorName STRING :beachId UUID :beachName STRING
+                         :start STRING :end STRING :total {:type "object" :additionalProperties true} :publishedAt STRING}}}}} false) :public true)
+   "publicTrip" (assoc (operation "ret_trip_public" ["id"]
+                    {:type "object" :additionalProperties false :required ["id"] :properties {:id UUID}}
+                    {:type "object" :additionalProperties true} false) :public true :not-found "Trip unavailable.")
+   "myPosts" (operation "ret_my_profile_posts" ["$actor"] EMPTY {:type "array" :items PROFILE-POST} false)
    "stats" (operation "ret_profile_statistics" ["$actor" "target" "beachId"]
              {:type "object" :additionalProperties false :required ["target" "beachId"] :properties {:target UUID :beachId UUID}}
              {:type "object" :additionalProperties false :required ["profile" "level" "stats" "progress" "sharingClosed" "expiresWithActivity"]

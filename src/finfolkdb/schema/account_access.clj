@@ -14,6 +14,7 @@
        "GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_account;\n"
        "REVOKE ALL ON finfolk.\"UserRole\",finfolk.\"ApplicationFeature\" FROM finfolk_account;\n"
        "GRANT SELECT,INSERT,UPDATE,DELETE ON finfolk.\"User\",finfolk.\"UserBlock\",finfolk.\"UserConnection\" TO finfolk_account;\n"
+       "GRANT SELECT ON finfolk.\"Trip\",finfolk.\"TripPublication\" TO finfolk_account;\n"
        "GRANT INSERT,UPDATE ON finfolk.\"DiveSession\" TO finfolk_account;\n"
        "GRANT INSERT ON finfolk.\"UserCheckin\" TO finfolk_account;\n"
        "GRANT SELECT,INSERT,UPDATE ON finfolk.\"Op\" TO finfolk_account;\n"

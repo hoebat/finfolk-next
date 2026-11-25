@@ -5,6 +5,7 @@
 (def SITE (d/object (merge (:properties review/DOCUMENT) {:id d/U :name d/S :timezone d/S :state d/S :state_id d/S :area_name d/S :area_id d/S :point POINT
                      :region d/S :waterbody d/S :access_mode d/S :revision d/N :catalog_managed d/B :description d/S
                      :source_url d/S :source_id d/S :reference_label d/S :attribution d/S :licence d/S
+                     :facts (d/array-of (assoc-in review/FACT [:properties :category] d/S))
                      :aliases (d/array-of d/S) :features (d/array-of d/S) :activities (d/array-of d/S)})
                     ["id" "name" "timezone" "state" "state_id" "area_name" "area_id" "point" "region" "waterbody" "access_mode" "revision" "catalog_managed" "description" "source_url" "source_id" "reference_label" "attribution" "licence" "aliases" "features" "activities"]))
 (def CATALOG (d/object {:revision d/N :beaches (d/array-of SITE)

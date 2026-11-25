@@ -306,6 +306,11 @@
                                    "publishedAt" (util/as-iso-time
                                                   (:bigint (:->> o-publication "published_at")))))))
 
+(defn.pg ^{:- [:jsonb]} ret-public-trips [:jsonb i-values]
+  (let [o-result nil]
+    [:execute "SELECT jsonb_build_object('trips',coalesce(jsonb_agg(jsonb_build_object('id',data->'id','title',data->'title','authorName',data->'authorName','beachId',data->'beachId','beachName',data->'beachName','start',data->'start','end',data->'end','total',data->'summary'->'total','publishedAt',data->'publishedAt') ORDER BY published_at DESC,trip_id DESC),'[]'::jsonb)) FROM (SELECT p.trip_id,p.published_at,finfolk_rpc.ret_trip_public(p.trip_id) AS data FROM finfolk.\"TripPublication\" p JOIN finfolk.\"Trip\" t ON t.id=p.trip_id WHERE p.status='published' AND p.public_consent=true AND finfolk.is_user_active(t.owner_id) AND (nullif($1->>'beachId','') IS NULL OR p.site_id=(nullif($1->>'beachId',''))::uuid) AND (nullif($1->>'ownerId','') IS NULL OR t.owner_id=(nullif($1->>'ownerId',''))::uuid) ORDER BY p.published_at DESC,p.trip_id DESC LIMIT 20) rows WHERE data IS NOT NULL" :into o-result :using i-values]
+    (return o-result)))
+
 ;;
 ;; Moderation and Withdrawal
 ;;

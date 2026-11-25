@@ -1,5 +1,6 @@
 import {ids,nativeTime} from './fixtures/ids.mjs';
 import assert from 'node:assert/strict';
+import {validate,operations} from '../../js/finfolk-next/packages/edge/native-account-contracts.js';
 import {randomUUID} from 'node:crypto';
 import {connect} from './harness.mjs';
 import {installEntities,user,operation,trip,beginImport,batch,completeImport,publishTrip,reviewTrip,withdrawTrip} from './fixtures/entities.mjs';
@@ -61,6 +62,10 @@ try{
  await db.query(`UPDATE finfolk."TripPublication" SET published_at=${nativeTime('2026-11-04T01:02:03.456+11:00')+789} WHERE trip_id=$1 AND status='published'`,[created.id]);
  await db.query("SET TIME ZONE 'Australia/Melbourne'");
  const visible=await publicTrip();assert.equal(visible.publishedAt,'2026-11-03T14:02:03.456Z');assert.equal(visible.title,'Updated public trip');assert.equal(visible.selfReported,true);assert.equal(visible.beachId,ids.bondi);assert.deepEqual(visible.summary,snapshot.summary);assert.match(visible.publishedAt,/\.\d{3}Z$/);
+ const feed=(await db.query('SELECT finfolk_rpc.ret_public_trips($1) AS value',[{}])).rows[0].value;
+ validate(operations.publicTrips.result,feed);
+ assert.equal(feed.trips.length,1);assert.equal(feed.trips[0].id,created.id);assert.equal(feed.trips[0].publishedAt,visible.publishedAt);assert.deepEqual(feed.trips[0].total,snapshot.summary.total);assert.ok(!JSON.stringify(feed).includes('PRIVATE_'));assert.equal(Object.hasOwn(feed.trips[0],'story'),false);
+ assert.deepEqual((await db.query('SELECT finfolk_rpc.ret_public_trips($1) AS value',[{ownerId:ids.bob}])).rows[0].value,{trips:[]});
  assert.ok(!JSON.stringify(visible).includes('PRIVATE_'));assert.deepEqual(Object.keys(visible).sort(),['authorName','beachId','beachName','end','id','links','publishedAt','selfReported','start','story','summary','timezone','title']);
  const replacements=await Promise.all([beginImport(db,created.id,1),beginImport(db,created.id,1)]);
  for(let i=0;i<2;i++)await batch(db,created.id,replacements[i].id,0,[{...rows[0],sourceId:'race-'+i}]);

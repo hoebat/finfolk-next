@@ -17,7 +17,7 @@
   "vars": {
     "ENVIRONMENT": "production",
     "SUPABASE_URL": "https://supabase.finfolk.com.au",
-    "NATIVE_SCHEMA_SHA": "e846ff0010b9a63363108659555f74e9251ce26396d39461e03804ebaf9bee5e",
+    "NATIVE_SCHEMA_SHA": "b9f3ae8a0142cc4954fa37af9e317c57f9038a17d75f2c3410a16cab1f9d0cd5",
     "FINFOLK_FEATURE_ENVIRONMENT": "production"
   },
   "routes": [

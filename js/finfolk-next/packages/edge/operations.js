@@ -1275,7 +1275,8 @@ export var operations = {
                     "label":{"type":"string"},
                     "text":{"type":"string"},
                     "source_url":{"type":"string"},
-                    "reviewed_at":{"type":"string"}
+                    "reviewed_at":{"type":"string"},
+                    "category":{"type":"string"}
                   },
                   "required":["label","text","source_url"]
                 }
@@ -3917,7 +3918,8 @@ export var operations = {
               "label":{"type":"string"},
               "text":{"type":"string"},
               "source_url":{"type":"string"},
-              "reviewed_at":{"type":"string"}
+              "reviewed_at":{"type":"string"},
+              "category":{"type":"string"}
             },
             "required":["label","text","source_url"]
           }

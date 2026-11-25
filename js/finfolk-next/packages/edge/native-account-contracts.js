@@ -244,6 +244,21 @@ export var operations = {
     },
     "write":false
   },
+  "publicTrip":{
+    "rpc":"ret_trip_public",
+    "arguments":["id"],
+    "actor":"server",
+    "request":{
+      "type":"object",
+      "additionalProperties":false,
+      "required":["id"],
+      "properties":{"id":{"type":"string","format":"uuid"}}
+    },
+    "result":{"type":"object","additionalProperties":true},
+    "write":false,
+    "public":true,
+    "not_found":"Trip unavailable."
+  },
   "directoryAdminSave":{
     "rpc":"native_directory_admin_save",
     "request":{
@@ -1042,7 +1057,8 @@ export var operations = {
                     "label":{"type":"string"},
                     "text":{"type":"string"},
                     "source_url":{"type":"string"},
-                    "reviewed_at":{"type":"string"}
+                    "reviewed_at":{"type":"string"},
+                    "category":{"type":"string"}
                   },
                   "required":["label","text","source_url"]
                 }
@@ -2729,6 +2745,57 @@ export var operations = {
     },
     "write":true
   },
+  "publicTrips":{
+    "rpc":"ret_public_trips",
+    "arguments":["$values"],
+    "actor":"server",
+    "request":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "beachId":{"type":"string","format":"uuid"},
+        "ownerId":{"type":"string","format":"uuid"}
+      }
+    },
+    "result":{
+      "type":"object",
+      "additionalProperties":false,
+      "required":["trips"],
+      "properties":{
+        "trips":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":[
+              "id",
+              "title",
+              "authorName",
+              "beachId",
+              "beachName",
+              "start",
+              "end",
+              "total",
+              "publishedAt"
+            ],
+            "properties":{
+              "authorName":{"type":"string"},
+              "publishedAt":{"type":"string"},
+              "beachId":{"type":"string","format":"uuid"},
+              "start":{"type":"string"},
+              "title":{"type":"string"},
+              "beachName":{"type":"string"},
+              "total":{"type":"object","additionalProperties":true},
+              "id":{"type":"string","format":"uuid"},
+              "end":{"type":"string"}
+            }
+          }
+        }
+      }
+    },
+    "write":false,
+    "public":true
+  },
   "eventSave":{
     "rpc":"native_events_save",
     "request":{
@@ -3151,7 +3218,8 @@ export var operations = {
               "label":{"type":"string"},
               "text":{"type":"string"},
               "source_url":{"type":"string"},
-              "reviewed_at":{"type":"string"}
+              "reviewed_at":{"type":"string"},
+              "category":{"type":"string"}
             },
             "required":["label","text","source_url"]
           }
