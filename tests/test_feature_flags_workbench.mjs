@@ -48,7 +48,7 @@ try{await withTestDatabase(admin,base,async url=>{
   await shop.getByLabel('Tester member IDs').fill('unsaved tester edit');await page.waitForTimeout(2500);assert.equal(await shop.getByLabel('Tester member IDs').inputValue(),'unsaved tester edit');
   assert.deepEqual(errors,[]);
   // Next workbench embeds the same project panel through Application navigation.
-  
+
   await page.goto(origin);await page.getByRole('button',{name:'Application',exact:true}).click();await page.getByRole('button',{name:'Production flags',exact:true}).click();
   const embedded=page.frameLocator('iframe.legacy').frameLocator('iframe[data-project-panel]');await embedded.getByText('Connected environment: production').waitFor();
   console.log('app.manage project panel: private config loaded with no credential environment variables; real browser save persisted through local manager → API → PostgreSQL; token/origin/action/asset controls passed.');

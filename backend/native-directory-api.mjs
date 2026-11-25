@@ -26,7 +26,8 @@ export function createNativeDirectoryAPI({db,verify,releaseId,origins=[]}){
   const token=c.req.header('Authorization');let claims;
   try{if(!token?.startsWith('Bearer '))throw Error();claims=await verify(token.slice(7));if(typeof claims?.sub!=='string'||!claims.sub)throw Error();}
   catch{return c.json({error:'Sign in to continue.'},401);}
-  // The database rechecks verified/banned/deleted state for each operation.
+  // Private operations require the trusted verifier's explicit confirmation flag.
+  // The database checks account removal on every operation.
   c.set('messagingIdentity',{uid:claims.sub,verified:claims.email_verified===true});await next();
  });
  registerDirectoryPrivate(app,{db:nativeDb,fetcher:async()=>{throw Object.assign(Error('Discovery is not enabled on this native candidate.'),{status:503});}});

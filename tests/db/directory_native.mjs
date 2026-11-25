@@ -1,4 +1,4 @@
-import {ids,nativeTime} from './fixtures/ids.mjs';
+import {ids} from './fixtures/ids.mjs';
 import assert from 'node:assert/strict';
 import {randomUUID} from 'node:crypto';
 import {createNativeDirectoryAPI} from '../../backend/native-directory-api.mjs';

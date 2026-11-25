@@ -15,7 +15,7 @@ try{
  ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum,n) JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=k.attnum ORDER BY k.n) AS columns,
  p.relname AS parent,ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum,n) JOIN pg_attribute a ON a.attrelid=p.oid AND a.attnum=k.attnum ORDER BY k.n) AS "parentColumns"
  FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid JOIN pg_namespace n ON n.oid=t.relnamespace LEFT JOIN pg_class p ON p.oid=c.confrelid WHERE n.nspname='finfolk' ORDER BY t.relname,c.conname`)).rows;
- // PostgreSQL versions before 18 expose NOT NULL through pg_attribute.
+ // Some PostgreSQL versions expose NOT NULL only through pg_attribute.
  const required=(await db.query(`SELECT t.relname AS "table",a.attname AS column FROM pg_attribute a JOIN pg_class t ON t.oid=a.attrelid JOIN pg_namespace n ON n.oid=t.relnamespace WHERE n.nspname='finfolk' AND t.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped AND a.attnotnull`)).rows;
  for(const row of required)if(!constraints.some(c=>c.table===row.table&&c.type==='n'&&c.columns.includes(row.column)))constraints.push({table:row.table,name:row.table+'_'+row.column+'_not_null',type:'n',definition:'NOT NULL '+row.column,columns:[row.column]});
  for(const [table,spec] of Object.entries(schema)){

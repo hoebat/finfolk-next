@@ -4,7 +4,7 @@ import handler from './___netlify-server-handler.mjs';
 const work=[];
 const context={account:{id:'local-check'},deploy:{id:'0'},site:{id:'finfolklocal'},requestId:'local-check',waitUntil:promise=>work.push(promise)};
 const get=path=>handler(new Request('http://localhost:3204'+path),context);
-for(const [path,content] of [['/account',/Sign in|Account/],['/directory',/Melbourne Freedivers/],['/map',/id="explorer"/]]){
+for(const [path,content] of [['/account',/aria-label="Your FinFolk account"/],['/directory',/Melbourne Freedivers/],['/map',/id="explorer"/]]){
  const response=await get(path);assert.equal(response.status,200,path);assert.match(await response.text(),content,path);
 }
 const legacy=await get('/app?view=maps');assert.equal(legacy.status,307);assert.equal(new URL(legacy.headers.get('location'),'http://localhost:3204').pathname,'/map');await legacy.arrayBuffer();

@@ -64,7 +64,7 @@ const originalFetch = globalThis.fetch;
 try {
   await pg.exec('CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api; GRANT USAGE ON SCHEMA legacy_auth TO finfolk_api; GRANT SELECT ON legacy_auth."user" TO finfolk_api;');
   for (const name of (await readdir('backend/migrations')).filter(n => n.endsWith('.sql')).sort())
-    await pg.exec(await readFile('backend/migrations/' + name, 'utf8'));
+    await pg.exec((await readFile('backend/migrations/' + name,'utf8')).replaceAll('neon_auth','legacy_auth'));
   await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; SET ROLE finfolk_api');
   f = make();
   Object.assign(f.env, { INSTAGRAM_COMMAND_REPLIES_ENABLED: 'true', INSTAGRAM_COMMENT_MODE: 'public', INSTAGRAM_COMMENT_ACTIVE_SINCE: new Date(Date.now()-60000).toISOString(), INSTAGRAM_DISCOVERY_ENABLED: 'true' });

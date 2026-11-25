@@ -58,7 +58,7 @@ try{
  assert.equal(await reviewTrip(db,created.id,'approve',staleToken),null,'A stale moderation token cannot approve replacement content');
  const token=await reviewToken();await assert.rejects(reviewTrip(db,created.id,'approve',token,false,true),/Check ownership/);
  assert.deepEqual(await reviewTrip(db,created.id,'approve',token),{ok:true});
- await db.query(`UPDATE finfolk."TripPublication" SET published_at=1793714523456789 WHERE trip_id=$1 AND status='published'`,[created.id]);
+ await db.query(`UPDATE finfolk."TripPublication" SET published_at=${nativeTime('2026-11-04T01:02:03.456+11:00')+789} WHERE trip_id=$1 AND status='published'`,[created.id]);
  await db.query("SET TIME ZONE 'Australia/Melbourne'");
  const visible=await publicTrip();assert.equal(visible.publishedAt,'2026-11-03T14:02:03.456Z');assert.equal(visible.title,'Updated public trip');assert.equal(visible.selfReported,true);assert.equal(visible.beachId,ids.bondi);assert.deepEqual(visible.summary,snapshot.summary);assert.match(visible.publishedAt,/\.\d{3}Z$/);
  assert.ok(!JSON.stringify(visible).includes('PRIVATE_'));assert.deepEqual(Object.keys(visible).sort(),['authorName','beachId','beachName','end','id','links','publishedAt','selfReported','start','story','summary','timezone','title']);

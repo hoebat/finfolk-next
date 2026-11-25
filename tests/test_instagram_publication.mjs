@@ -63,7 +63,7 @@ const approveDiscovery = id => discovery('instagramReviewPost', { id, beachId: '
 try {
   await pg.exec('CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api; GRANT USAGE ON SCHEMA legacy_auth TO finfolk_api; GRANT SELECT ON legacy_auth."user" TO finfolk_api;');
   for (const name of (await readdir('backend/migrations')).filter(n => n.endsWith('.sql')).sort())
-    await pg.exec(await readFile('backend/migrations/' + name, 'utf8'));
+    await pg.exec((await readFile('backend/migrations/' + name,'utf8')).replaceAll('neon_auth','legacy_auth'));
   await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; REVOKE ALL ON SCHEMA legacy_auth FROM finfolk_api');
   await q(`INSERT INTO legacy_auth."user" VALUES('owner','Owner',true,false),('admin','Admin',true,false),('other','Other',true,false)`);
   await q(`INSERT INTO finfolk.members(user_id) VALUES('owner'),('admin'),('other')`);

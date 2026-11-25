@@ -4,9 +4,10 @@ import {gzipSync} from 'node:zlib';
 import {resolve,relative,dirname} from 'node:path';
 import {buildExploreContours} from './build_explore_contours.mjs';
 import {addSocialMetadata} from '../backend/social-metadata.mjs';
+// Read the release pins together after generation, which can take several minutes.
+execFileSync(process.execPath,['scripts/generate_db.mjs','--check'],{stdio:'inherit'});
 const environment=JSON.parse(await readFile('production.environment.json','utf8'));
 if(environment.authProvider!=='supabase'||environment.supabaseUrl!=='https://supabase.finfolk.com.au'||environment.apiOrigin!=='https://api.finfolk.com.au')throw Error('Unexpected production services');
-execFileSync(process.execPath,['scripts/generate_db.mjs','--check'],{stdio:'inherit'});
 const apiConfig=JSON.parse(await readFile('wrangler.supabase-api.jsonc','utf8'));
 if(apiConfig.vars.NATIVE_SCHEMA_SHA!==environment.schemaSha)throw Error('Native API release does not match production configuration');
 if(process.env.FINFOLK_BACKBONE_PREPARED!=='1')execFileSync(process.execPath,['scripts/bundle_backbone.mjs'],{stdio:'inherit'});
