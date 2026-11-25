@@ -44,7 +44,7 @@ const community=installCommunity({shell,getBeaches:()=>beachCatalog.beaches,getS
 let signedIn=false;
 const guardMemberRoute=()=>{if(!signedIn&&['logbook','trip'].includes(shell.route.view))shell.navigate('account',{historyMode:'replace',params:{session:null,profile:null,trip:null}});};
 shell.subscribe(guardMemberRoute);
-(async()=>{try{const config=await appConfiguration();if(config.enabled&&config.authUrl){const {createLogbookClient}=await import('./neon-client.js');const client=await createLogbookClient(config);client.observe(user=>{signedIn=!!user;navigation.setUser(user);$('log-session').hidden=!user||!selectedBeachId;guardMemberRoute();});}else guardMemberRoute();}catch{guardMemberRoute();}})();
+(async()=>{try{const config=await appConfiguration();if(config.enabled&&config.authUrl){const {createLogbookClient}=await import('./account-client.js');const client=await createLogbookClient(config);client.observe(user=>{signedIn=!!user;navigation.setUser(user);$('log-session').hidden=!user||!selectedBeachId;guardMemberRoute();});}else guardMemberRoute();}catch{guardMemberRoute();}})();
 $('log-session').onclick=()=>logbook.newSession(findBeach(beachCatalog,selectedBeachId)).catch(e=>notice(e.message));
 function revealMap(){map.resize();}
 const number=(value,places=1)=>Number(value).toLocaleString('en-AU',{maximumFractionDigits:places});

@@ -15,6 +15,9 @@ try{
  ARRAY(SELECT a.attname::text FROM unnest(c.conkey) WITH ORDINALITY AS k(attnum,n) JOIN pg_attribute a ON a.attrelid=t.oid AND a.attnum=k.attnum ORDER BY k.n) AS columns,
  p.relname AS parent,ARRAY(SELECT a.attname::text FROM unnest(c.confkey) WITH ORDINALITY AS k(attnum,n) JOIN pg_attribute a ON a.attrelid=p.oid AND a.attnum=k.attnum ORDER BY k.n) AS "parentColumns"
  FROM pg_constraint c JOIN pg_class t ON t.oid=c.conrelid JOIN pg_namespace n ON n.oid=t.relnamespace LEFT JOIN pg_class p ON p.oid=c.confrelid WHERE n.nspname='finfolk' ORDER BY t.relname,c.conname`)).rows;
+ // PostgreSQL versions before 18 expose NOT NULL through pg_attribute.
+ const required=(await db.query(`SELECT t.relname AS "table",a.attname AS column FROM pg_attribute a JOIN pg_class t ON t.oid=a.attrelid JOIN pg_namespace n ON n.oid=t.relnamespace WHERE n.nspname='finfolk' AND t.relkind IN ('r','p') AND a.attnum>0 AND NOT a.attisdropped AND a.attnotnull`)).rows;
+ for(const row of required)if(!constraints.some(c=>c.table===row.table&&c.type==='n'&&c.columns.includes(row.column)))constraints.push({table:row.table,name:row.table+'_'+row.column+'_not_null',type:'n',definition:'NOT NULL '+row.column,columns:[row.column]});
  for(const [table,spec] of Object.entries(schema)){
   const columns=(await db.query(`SELECT a.attname AS name,format_type(a.atttypid,a.atttypmod) AS type,NOT a.attnotnull AS nullable,pg_get_expr(d.adbin,d.adrelid) AS "default",a.attidentity AS identity FROM pg_attribute a JOIN pg_class t ON t.oid=a.attrelid JOIN pg_namespace n ON n.oid=t.relnamespace LEFT JOIN pg_attrdef d ON d.adrelid=t.oid AND d.adnum=a.attnum WHERE n.nspname='finfolk' AND t.relname=$1 AND a.attnum>0 AND NOT a.attisdropped ORDER BY a.attnum`,[table])).rows;
   assert.equal(columns.length,spec.columns.length,table+' columns');

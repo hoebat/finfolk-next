@@ -16,7 +16,7 @@ const pages = {
       <p>FinFolk is a coastal atlas and community logbook at <a href="https://finfolk.com.au/">finfolk.com.au</a>. This policy explains how information is handled when you browse, create an account, or interact with @finfolk.com.au on Instagram.</p>
       <h2>Information we use</h2>
       <ul>
-        <li><strong>Account information:</strong> your account identifier, name, email address, verification status and sign-in information handled by our authentication provider, Neon Auth.</li>
+        <li><strong>Account information:</strong> your account identifier, name, email address, verification status and sign-in information handled by our authentication provider, Supabase Auth.</li>
         <li><strong>Information you choose to save:</strong> profile details, social profile links, beaches of interest, check-ins, dive sessions, trips, posts, sharing preferences, buddy connections and reports.</li>
         <li><strong>Instagram interactions:</strong> Instagram-scoped sender and message identifiers, timestamps, commands and command arguments sent to FinFolk, replies, and account-link verification information. When needed for an enabled command, Meta may provide your Instagram username and whether you follow @finfolk.com.au. Public Instagram content associated with a beach may also be reviewed for display.</li>
         <li><strong>Technical information:</strong> hosting and authentication services process network and security information needed to deliver and protect the service. Your browser stores sign-in state, preferences and saved offline map data.</li>
@@ -25,7 +25,7 @@ const pages = {
       <p>We use this information to operate accounts and logbooks, apply your sharing choices, verify linked Instagram accounts, respond to commands you send, support community features, moderate content, prevent abuse and diagnose service failures. FinFolk does not need your Instagram password; account authorization is handled by Meta.</p>
       <h2>Sharing and service providers</h2>
       <p>Information shown to other members depends on your profile, field-level sharing and buddy settings. Content you submit for public display may be visible publicly after publication. Instagram messages and activity remain subject to Meta's own privacy policy.</p>
-      <p>FinFolk uses GitHub Pages for website hosting, Cloudflare for API and queue processing, Neon for authentication and database storage, and Meta for Instagram integration. Map, imagery and social-content providers receive requests when their services are used. These providers may process information outside Australia under their own service and privacy terms.</p>
+      <p>FinFolk uses Netlify for website hosting, Cloudflare for API and queue processing, Supabase for authentication and database storage, and Meta for Instagram integration. Map, imagery and social-content providers receive requests when their services are used. These providers may process information outside Australia under their own service and privacy terms.</p>
       <h2>Storage and retention</h2>
       <p>Account and activity information is retained to provide the features you use until you remove it or request deletion. Instagram command-event and messaging audit records are scheduled for removal after 30 days. Operational records and provider backups may have separate retention periods. Removing data from FinFolk does not remove a message or post held by Instagram or another external service.</p>
       <h2>Your choices and deletion</h2>
@@ -42,7 +42,7 @@ const pages = {
         <li>Open <strong>Profile &amp; buddies</strong> and expand <strong>Delete account</strong>.</li>
         <li>Complete the requested sign-in confirmation, select <strong>Delete my account and data</strong>, and confirm the deletion.</li>
       </ol>
-      <p>This removes your FinFolk profile information, check-ins, saved sessions, trips, posts, buddy connections and linked-account records. Associated Instagram command records are removed with the account. A minimal deleted-member marker may remain so a deleted account cannot continue to use the service. Authentication deletion is completed through Neon Auth; if that final step is interrupted, sign in again and follow the account-deletion prompt.</p>
+      <p>This removes your FinFolk profile information, check-ins, saved sessions, trips, posts, buddy connections and linked-account records. Associated Instagram command records are removed with the account. A minimal deleted-member marker may remain so a deleted account cannot continue to use the service. Authentication deletion is completed through Supabase Auth; if that final step is interrupted, sign in again and follow the account-deletion prompt.</p>
       <h2>Remove an Instagram link</h2>
       <p>To stop using your Instagram account with FinFolk, open <strong>Your FinFolk → Instagram → Remove link</strong>. This removes the connection; it does not delete your FinFolk account or messages stored by Instagram. You can also review and revoke FinFolk's access using Meta's connected-app or business-integration settings.</p>
       <h2>Request help or delete unlinked Instagram interaction data</h2>

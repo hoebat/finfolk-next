@@ -23,8 +23,10 @@
                     (pg/coalesce (:->> i-values "topic") "all")
                     (pg/coalesce (:integer (:->> i-values "offset")) 0) (== i-operation "list"))
                    (pg/jsonb-build-object "enabled" true)))
-      (== i-operation "save") (return (notes/save-site-note v-site v-id (:->> i-values "topic") (:->> i-values "text") (:date (nullif (:->> i-values "observedOn") ""))))
-      (== i-operation "vote") (return (notes/set-site-note-vote v-site v-id (:boolean (:->> i-values "upvoted"))))
+      (== i-operation "save") (return (notes/save-site-note v-site v-id (:->> i-values "topic") (:->> i-values "text") (:date (nullif (:->> i-values "observedOn") "")) (:integer (:->> i-values "revision"))))
+      (== i-operation "vote") (return (pg/case [(:->> i-values "vote") :is-not-null]
+                                (notes/set-site-note-rating v-site v-id (:integer (:->> i-values "vote"))) true
+                                (notes/set-site-note-vote v-site v-id (:boolean (:->> i-values "upvoted")))))
       (== i-operation "withdraw") (return (notes/set-site-note-withdrawn v-site v-id (:integer (:->> i-values "revision")) (:boolean (:->> i-values "withdrawn"))))
       (== i-operation "report") (return (notes/report-site-note v-site v-id (:->> i-values "reason")))
       (== i-operation "moderate") (return (notes/moderate-site-note v-site v-id (:boolean (:->> i-values "hidden"))))

@@ -1,6 +1,6 @@
 # FinFolk management and page verification
 
-Run `make manage` and open <http://127.0.0.1:8131>. The manager reads the project declaration in `src/finfolkbuild/project/management.clj`; it loads the shared `app.manage` framework from the local Maven artifact `xyz.zcaudate/app.manage` at the version pinned in `project.version`. The Pipeline and Slices views show generation targets and build evidence. Pages & models lists the application registry and provides the verification workbench.
+Run `make manage` and open <http://127.0.0.1:8135>. The manager reads the project declaration in `src/finfolkbuild/project/management.clj`; it loads the shared `app.manage` framework from the local Maven artifact `xyz.zcaudate/app.manage` at the version pinned in `project.version`. The Pipeline and Slices views show generation targets and build evidence. Pages & models lists the application registry and provides the verification workbench.
 
 ## Native account slice
 
@@ -252,3 +252,238 @@ FinFolk exposes a fixed `page-health` action, run polling, reports and screensho
 See [WORKBENCH_HTTP_API.md](WORKBENCH_HTTP_API.md) for HTTP examples and the Node
 client. Discover the live schema at `/api/v1/openapi.json`. The API shares the UI's
 controller, queue and run history; no FinFolk-specific server is required.
+
+## Shared Web Pipeline v1
+
+FinFolk and Auspo share six stages and their execution contract: Database SQL,
+Contracts, Application, Browser assets, App build, Verification. Stage cards are
+identical; their inspector exposes actual project-specific steps and results.
+The detailed target graph is retained below stage inspection. Run stage includes
+its prerequisites; Run pipeline includes verification unless checks are disabled.
+Failures block dependants, and disabled verification remains explicitly not run.
+
+Use `lein run -m app.manage.pipeline finfolkbuild.project.management/PROJECT`
+with an optional final stage id to run the same pipeline from a terminal.
+Existing target-specific commands remain available. Generation and drift checks
+never execute build commands, services or SQL installation. Worker packaging uses
+a dry run and does not deploy. Pipeline results track source fingerprints and
+artifact hashes to flag stale evidence. Development servers remain independently
+controlled through Servers. Both apps pin the same immutable local app.manage
+pipeline release, leaving the other Foundation dependencies at their existing versions.
+
+## Mock-backed UI previews
+
+`make manage-preview` now starts Next.js with a loopback mock service rather than
+Supabase Auth/database provisioning. No login is needed. Public SSR and browser
+reads use the same fixture service; the authored Clojure preview adapter retains
+real Substrate models, subscriptions and invalidation. The default port remains
+3010 (`PREVIEW_PORT` overrides it). Run the real Auth/database integration preview
+separately with `make manage-preview-native`; it is no longer in the UI preview list.
+
+The preview-only toolbar selects Alice, Bob, the page owner or administrator.
+Manager links to review and Coop management select the administrator; My pages
+selects the owner. Ordinary navigation retains the actor. Reset demo restores
+sample data. Records persist under `.cache/mock-preview/state.json` across
+refresh/server restarts; `FINFOLK_PREVIEW_STATE_DIR` selects an isolated test store.
+No mock configuration is returned in production, and mock proxy routes are
+registered only for an explicitly enabled development server.
+
+Mock writes currently include profiles, sessions/publication, check-ins,
+connections, event creation/RSVP, page creation/editing, site suggestions and
+Coop reward creation/redemption/fulfilment/refunds. Unimplemented actions return
+explicit mock-operation errors; provider integrations remain disabled. The route
+sweep is `NEXTJS_TEST_URL=http://127.0.0.1:3010 node tests/test_mock_preview.mjs`.
+It includes a profile-save/refresh/reset journey, so use an isolated preview store
+when running it. Full provider, moderation and import simulation is still pending.
+
+Validation: the static-route and representative detail-route sweep passes against
+the isolated mock preview, including profile save/reload/reset. Direct mock-state
+checks also cover closed-profile access, reciprocal connection acceptance and
+private-session ownership. Generation parity, manager configuration loading and
+both site/Next production builds pass. The full repository test command still
+stops on the four ocean-data compression/checksum failures. Dynamic report and
+advanced import/provider scenarios are not covered by this preview sweep.
+
+## Preview groups
+
+Each app owns its group labels, order and membership in its project map:
+
+```clojure
+:preview-groups [{:id :explore :label "Explore"}
+                 {:id :community :label "Community"}]
+:previews [{:id :map :label "Map" :group :explore
+            :target :web-main :url "http://127.0.0.1:3010/map"}]
+```
+
+Groups follow declaration order. Unassigned previews appear under Other; empty
+groups are hidden. Apps without group definitions keep flat preview navigation.
+Group IDs must be unique and references must name a declared group. Selecting a
+group restores its last selection during the manager session. Existing preview
+hashes remain unchanged, so deep links, refresh and browser history select the
+correct group automatically.
+
+FinFolk declares Home, Explore, Community, Events, Practice, You and Administration.
+Its route classifier assigns both named samples and discovered screens; future
+unmatched routes appear under Other.
+
+The shared grouping patch is installed locally as app.manage
+`4.1.9-preview-groups.1`, preserving the installed `4.1.9-web-pipeline.8` dependency
+graph and frontend assets. Reproduce the local package with
+`python3 scripts/package_manage_preview_groups.py`, then restart `make manage`.
+The script packages the authored Foundation server/UI/CSS; no remote publication
+is performed. Other apps can adopt this package and declare their own groups.
+
+### Starting the correct preview runtime
+
+`corepack yarn workspace @finfolk/web-main dev --port 3010` starts the mock
+service and Next together, just like `make manage-preview`. The launcher resolves
+its project root independently of the caller's working directory. Use `dev:live`
+only when deliberately testing a configured live backend; raw `next dev` does
+not supply the mock API and can show server-rendered data failures. Check
+`/api/account-config`: a mock preview returns `authProvider: "preview"`.
+
+## Project panels and production feature flags
+
+FinFolk uses `app.manage:4.1.9-environment-flags.1`. Reproduce this local package with
+`python3 scripts/package_manage_project_panels.py --build-frontend`, then restart
+`make manage`. This packages the authored Foundation extension and regenerates
+the optional Next workspace; it does not publish to Maven remotely.
+
+Projects may declare `:project-panels` with `:id`, `:label`, `:entry`, an explicit
+`:assets` URL-to-project-file map, `:read`, and named `:actions`. Handlers are
+functions or qualified symbols accepting `{:project project :input input}` and
+returning JSON-compatible data. The workbench exposes panels in its sidebar and
+under Application in the optional workspace. It serves declared assets beneath
+`/project-panels/<id>/`; `GET api/state` and `POST api/actions/<name>` require the
+local session token. Requests from another origin, undeclared files/actions and
+paths outside the project are rejected. Polling preserves active panel edits.
+Framework code contains no FinFolk flag behavior.
+
+### Environment preview flags
+
+Open [Environments](http://127.0.0.1:8135/#/environments), expand **Development**,
+and use its **Feature flags** checkboxes. Start the Mock Next.js preview or native
+preview from that environment's service controls. Linked open screens update
+within about one second; disabled operations also close at the preview API.
+Settings are independent per environment and survive stopping previews,
+restarting them, and restarting the environment console. The environment console
+stays available while the application is stopped. No production credential is
+needed. Standalone preview launchers retain their existing Everyone defaults.
+
+`config/environments.json` declares the feature definitions file at
+`feature_flags.definitions_file`. Each local environment declares
+`feature_flags.resources` (its preview resource IDs) and optional boolean
+`feature_flags.defaults`. Inline `feature_flags.definitions` are also supported.
+FinFolk reuses `resources/finfolkdb/feature-flags.json`; Development starts with all
+six flags Off. Each flag-aware preview resource belongs to one environment.
+Create separate preview resources and ports for additional environments.
+
+The controller injects `APP_MANAGE_ENVIRONMENT` and
+`APP_MANAGE_FEATURE_FLAGS_URL` when starting linked processes. The local preview
+adapter accepts only a loopback controller URL. Values live in the ignored
+`.cache/app.manage/environments/state.json`, alongside lifecycle state. Writes
+require the console's local session token and expected revision; stale writes
+return 409. A healthy external preview is observed without taking ownership;
+stop its original launcher, then start it through Environments to link its flags.
+Remote environment entries remain read-only.
+
+Run `yarn test:environment-flags` for environment isolation, write protection,
+native API enforcement, lifecycle persistence, and live Next.js screen updates
+through the workbench in Chromium. The shared controls are included in the local
+`4.1.9-environment-flags.1` package used by the other app.manage consumers; each
+project supplies its own flag definitions and environment mappings.
+
+### Production flag connection
+
+The **Production flags** panel is declared by `finfolkbuild.project.feature-flags`.
+
+For normal `make manage` startup, store the connection in the ignored, private
+`config/feature-flags.local.json` file. It has `apiOrigin` and `managementToken`
+fields and is read server-side on each panel request. Environment variables
+still take precedence for automation. Configure it using an existing API token
+file without printing the secret:
+
+```sh
+node scripts/configure_feature_flags.mjs --api-origin https://api.finfolk.com.au --token-file /private/path/to/flag-token
+node scripts/configure_feature_flags.mjs --check
+```
+
+`--generate` creates a new credential in a mode-0600 local configuration file;
+it must also be provisioned as `FINFOLK_FLAG_MANAGEMENT_TOKEN` on the selected API.
+It does not deploy that API, install SQL, or establish a connection by itself.
+Existing configuration is preserved unless `--replace` is specified. The check
+reports connection status without exposing credentials. A 503 response means
+backend/database readiness must be repaired; refreshing or replacing the token
+cannot repair an unavailable backend. Never point a production-labeled panel at
+a local database merely to clear a connection error.
+
+Set `FINFOLK_FLAG_API_ORIGIN` on the manager process (defaults to
+`https://api.finfolk.com.au`) and supply `FINFOLK_FLAG_MANAGEMENT_TOKEN` through its
+local environment. Install the same secret on the API runtime. Use a randomly
+generated credential of at least 32 characters dedicated to this API. It is
+never sent to the panel browser or exposed by the public account configuration.
+`FINFOLK_FLAG_OPERATOR` labels changes in the audit history; it defaults to
+`app.manage`, identifying the shared credential rather than an individual user.
+
+`GET /v1/admin/feature-flags` returns definitions, settings, environment and the
+latest 100 changes. `POST` accepts `{id,mode,testers,revision}`. Modes are `off`,
+`testers`, `everyone`; testers are up to 1,000 unique member UUIDs. Saving takes a
+row lock, compares the revision and writes settings plus history atomically.
+Stale saves return 409. The dedicated credential grants no other application
+administration access. Neither ordinary members nor administrators can bypass
+these gates. `GET /v1/features` returns only evaluated boolean flags and a revision,
+using optional verified member identity for tester evaluation.
+
+Initial flags are `shop`, `events`, `practice.progress`, `practice.breathing`,
+`practice.watch-imports`, `practice.breath-check`, all Off. Sessions and the
+logbook stay available. Practice flags expose existing placeholder cards; they
+do not implement their future workflows. Feature gates supplement existing
+permissions, provider readiness and infrastructure switches. They cover public
+and private REST paths, native event dispatch, navigation, direct Next routes
+and event sections embedded in the map/directory. Disabled API operations return
+403 `feature_disabled`. Accepted delivery work and provider completion callbacks
+retain their existing behavior. Production changes take effect on subsequent
+API requests; online screens refresh within 30 seconds or on focus/auth change.
+Gated pages unmount when access is revoked. Flag decisions are never persisted;
+missing data, request failures and offline status close the gates.
+
+### Installation and rollout
+
+1. Run `make generate` and review the separate SQL and JSON outputs. The additive
+   `resources/finfolkdb/feature-flags.sql` creates only the flag schema/settings/history;
+   rerunning preserves existing values. Install it through the existing database
+   release workflow before rolling out the application gates. Do not run a full
+   schema rebuild to install flags. It grants access to existing trusted
+   `finfolk_api`, `finfolk_next_api` and `finfolk_account` roles, never browser roles.
+2. Provision the dedicated API secret and local manager environment, deploy the API
+   and frontend through their existing release workflows, and open Production flags.
+   Until schema/configuration is ready, gated features remain closed.
+3. Verify all six production settings are Off. Enable Testers with selected member
+   IDs to verify a feature, then switch it to Everyone when ready. Off provides
+   the immediate backend rollback without redeployment.
+
+Local native previews explicitly set `FINFOLK_FEATURE_ENVIRONMENT=development`
+and `FINFOLK_FEATURE_FLAGS_DEFAULT=everyone`; both are required for the local
+fallback. Mock previews return an explicit Everyone response from their mock API.
+Production defaults to closed gates and does not use the local fallback.
+
+Verification: `yarn test:feature-flags` exercises a disposable local PostgreSQL
+fixture, credential and route enforcement, concurrent updates, history, and both
+workbench interfaces in Chromium. `node tests/test_nextjs_feature_flags.mjs`
+checks Sessions-only Practice, independent cards, navigation, direct URLs and
+live revocation using the explicit local mock preview. No production flags or
+production data are changed by these checks.
+
+## Durable history prerelease
+
+FinFolk pins `xyz.zcaudate/app.manage` `4.1.9-history.1`.
+`make manage` installs this local prerelease from the pinned baseline package
+and the authored sources in `ref/foundation` before starting the server.
+The baseline `4.1.9-environment-flags.1` artifact must exist in the local Maven
+repository. This is a local packaging path, not a published Maven release.
+
+History is stored in `.app-manage/state/history.sqlite`, outside `.cache` and
+ignored by Git. Preserve it when cleaning generated assets. The Foundation
+[local history and Cloud design](../ref/foundation/docs/app-manage.md#durable-local-execution-history)
+documents the retention settings, read APIs, process capture and hosted roadmap.
+The cloud blueprint provisions no hosted services and uploads no local data.

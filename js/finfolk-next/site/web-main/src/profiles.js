@@ -9,7 +9,7 @@ import {createWordmark} from './identity.js';
 import {applySavedTheme,setTheme} from './theme.js';
 import {AVAILABILITY,EXPERIENCES,SHARING,profileURL,socialURL,publishedLogs,portraitDataURL} from './profile-model.js';
 
-export async function installProfiles({doc=document,api:providedAPI,directory:providedDirectory,loadClient=async config=>(await import('./neon-client.js')).createLogbookClient(config)}={}){
+export async function installProfiles({doc=document,api:providedAPI,directory:providedDirectory,loadClient=async config=>(await import('./account-client.js')).createLogbookClient(config)}={}){
  const win=doc.defaultView,main=doc.getElementById('profile-main'),status=doc.getElementById('profile-status');
  const node=(tag,text,cls)=>{const n=doc.createElement(tag);if(text!==undefined)n.textContent=text;if(cls)n.className=cls;return n;};
  const button=(text,fn,cls='profile-action')=>{const n=node('button',text,cls);n.type='button';n.onclick=fn;return n;};
@@ -22,7 +22,7 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
  applySavedTheme();
  if(current().get('presentation')==='landing')doc.body.classList.add('profile-landing-preview');
  if(!api){
-  const response=await fetch(new URL('./neon-config.json',import.meta.url),{cache:'no-store'});config=await response.json();
+  const response=await fetch(new URL('/api/account-config',import.meta.url),{cache:'no-store'});config=await response.json();
   if(!config.enabled){if(!['directory','listing','events'].includes(current().get('screen')))throw Error('Accounts are unavailable.');api={user:null};}else api=await loadClient(config);
  }
  if(!directory){

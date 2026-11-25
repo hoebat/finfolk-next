@@ -14,7 +14,7 @@ export const api={get user(){return user},observe(fn){listeners.add(fn);queueMic
 export async function createLogbookClient(){return api;}
 `;
 export async function mockLogbook(page,base){
- await page.route('**/neon-config.json*',r=>r.fulfill({json:{enabled:true,apiUrl:base+'/',authUrl:'https://auth.invalid',instagramHandle:'finfolk.com.au',instagram:{enabled:true}}}));
- await page.route('**/neon-client.js',r=>r.fulfill({contentType:'text/javascript',body:logbookModule}));
+ await page.route(/\/(?:account-config\.json|api\/account-config)(?:\?|$)/,r=>r.fulfill({json:{enabled:true,authProvider:'supabase',supabaseUrl:'https://supabase.finfolk.com.au',publishableKey:'sb_publishable_fixture',apiUrl:base+'/',authUrl:'https://auth.invalid',instagramHandle:'finfolk.com.au',instagram:{enabled:true}}}));
+ await page.route('**/account-client.js',r=>r.fulfill({contentType:'text/javascript',body:logbookModule}));
  await page.route(/\/trips(?:\?|$)/,r=>r.fulfill({json:{trips:[{id:'trip-one',title:'Reef week',beachName:'Bondi',start:'2026-10-20',end:'2026-10-25',authorName:'Alice',total:{dives:12}}]}}));
 }

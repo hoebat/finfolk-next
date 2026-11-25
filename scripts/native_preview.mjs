@@ -1,3 +1,5 @@
+process.env.FINFOLK_FEATURE_ENVIRONMENT='development';
+import {localPreviewFeatureFlags} from './lib/environment_feature_flags.mjs';
 import {mockEventDelivery} from './lib/mock_event_delivery.mjs';
 import {mockDirectorySearch} from './lib/mock_directory_search.mjs';
 // Local environment ownership only; DB rules and application models are emitted from Clojure.
@@ -40,11 +42,11 @@ const stopped=new Promise(resolve=>{stop=resolve;});
 process.once('SIGINT',stop);process.once('SIGTERM',stop);
 try{
  const origin='http://127.0.0.1:'+port;
- const api=createAPI({db,directorySearch:mockDirectorySearch,eventDelivery:mockEventDelivery,deliveryKey,invitationOrigin:origin,origins:[origin],verify:async()=>{throw Error('Legacy identity is unavailable in the native preview.');}});
+ const api=createAPI({previewFeatureFlags:localPreviewFeatureFlags(),db,directorySearch:mockDirectorySearch,eventDelivery:mockEventDelivery,deliveryKey,invitationOrigin:origin,origins:[origin],verify:async()=>{throw Error('Legacy identity is unavailable in the native preview.');}});
  const apiOrigin=await new Promise(resolve=>{server=serve({fetch:request=>{
-  if(!['/v1/native/account','/v1/native/sites/catalog','/health'].includes(new URL(request.url).pathname))
+  if(!['/v1/features','/v1/native/account','/v1/native/sites/catalog','/health'].includes(new URL(request.url).pathname))
    return Response.json({error:'This feature is not available in this build.',code:'native_operation_unavailable'},{status:501,headers:{'Cache-Control':'no-store'}});
-  return api.fetch(request,{SUPABASE_URL:url,SUPABASE_PUBLISHABLE_KEY:key,SUPABASE_SERVICE_ROLE_KEY:secret});
+  return api.fetch(request,{FINFOLK_FEATURE_ENVIRONMENT:'development',SUPABASE_URL:url,SUPABASE_PUBLISHABLE_KEY:key,SUPABASE_SERVICE_ROLE_KEY:secret});
  },hostname:'127.0.0.1',port:0},info=>resolve('http://127.0.0.1:'+info.port));});
  const accounts=[];
  async function seedAccount(account){

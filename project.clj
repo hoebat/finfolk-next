@@ -8,7 +8,7 @@
                  [org.clojure/data.json "2.4.0"]
                  [org.postgresql/postgresql "42.7.2"]
                  [http-kit "2.8.0"]
-                 [xyz.zcaudate/app.manage ~FOUNDATION_VERSION]
+                 [xyz.zcaudate/app.manage "4.1.9-history.1"]
                  [xyz.zcaudate/lang ~FOUNDATION_VERSION]
                  [xyz.zcaudate/postgres ~FOUNDATION_VERSION]
                  [xyz.zcaudate/js.core ~FOUNDATION_VERSION]

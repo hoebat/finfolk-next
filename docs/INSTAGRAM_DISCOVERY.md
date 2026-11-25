@@ -1,6 +1,6 @@
 # Instagram discovery operations
 
-FinFolk stores Instagram links and minimal metadata in Neon. Photos and videos stay on Instagram. Public beach galleries load embeds on request, provide original links and reporting, and show the original post date. These are historical posts, not live conditions.
+FinFolk stores Instagram links and minimal metadata in the legacy database. Photos and videos stay on Instagram. Public beach galleries load embeds on request, provide original links and reporting, and show the original post date. These are historical posts, not live conditions.
 
 ## Rollout gates
 
@@ -11,7 +11,7 @@ All gates default off in `wrangler.jsonc`:
 - `INSTAGRAM_HASHTAGS_ENABLED`: allow hashtag polling after the actual app has the required access and tested quota behavior.
 - `INSTAGRAM_ENABLED`: existing reviewed outbound Actions; leave off while discovery is piloted. Discovery does not send public comments or DMs.
 
-Before enabling collection, verify the final Meta app grant, current token scopes, linked brand ID `17841461601419539`, account-level webhook subscriptions, app publishing/review requirements and real-account deliveries. Dashboard test webhooks alone are insufficient. Keep tokens in Worker secrets and ignored `.env.local`, run `npm run env:backup` after changes. Do not put credentials in static client config. Configure `INSTAGRAM_ADMIN_IDS` using intended administrators' Neon IDs.
+Before enabling collection, verify the final Meta app grant, current token scopes, linked brand ID `17841461601419539`, account-level webhook subscriptions, app publishing/review requirements and real-account deliveries. Dashboard test webhooks alone are insufficient. Keep tokens in Worker secrets and ignored `.env.local`, run `npm run env:backup` after changes. Do not put credentials in static client config. Configure `INSTAGRAM_ADMIN_IDS` using intended administrators' account IDs.
 
 Apply `0006_instagram_discovery.sql` using `npm run db:migrate`. The migration is additive and includes grants for `finfolk_api`. Existing reviewed Instagram/TikTok community posts keep their own moderation and rollout gate. Imported Instagram controls appear alongside manual submissions in Your posts; the profile retains connection and Actions controls. GitHub Pages still serves the static frontend; Cloudflare handles public feed and authenticated controls.
 
@@ -46,6 +46,6 @@ The Instagram panel includes opt-in, pending/published states, beach selection a
 
 ## Validation
 
-Run `npm test`, `npm run build`, `npm run test:instagram-actions`, `npm run test:instagram-discovery`, `npm run test:neon` and `npm run test:deployed`. Database tests require `NEON_BRANCH=finfolk-regulars-dev`; they create and clean synthetic fixtures and mock Meta transport, never send live Instagram messages.
+Run `npm test`, `npm run build`, `npm run test:instagram-actions`, `npm run test:instagram-discovery`, `npm run test:db` and `npm run test:deployed`. Database tests require `FINFOLK_TEST_DATABASE_URL pointing at a disposable local finfolk_test_* database`; they create and clean synthetic fixtures and mock Meta transport, never send live Instagram messages.
 
 Real-provider acceptance remains a separate activation requirement: two public test accounts, captions/comments/photo tags, authored vs third-party posts, identity binding, ambiguous beaches, private/deleted sources, token expiry and hashtag eligibility. No promise of complete Instagram coverage, Stories ingestion, follower/mutual verification or automatic reposting.

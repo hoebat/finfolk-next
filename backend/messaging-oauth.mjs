@@ -1,3 +1,4 @@
+import {createMessagingRPC} from './messaging-rpc.mjs';
 import {createHash,randomBytes} from 'node:crypto';
 import {MessagingAuthorizationChanged} from './messaging-authorization-store.mjs';
 
@@ -18,9 +19,7 @@ export function createMessagingOAuth({db,application,account,provider,providerAu
  const cookieName='__Host-finfolk-messaging-'+hash(JSON.stringify([application,account])).slice(0,16);
  const cookie=(value,age)=>`${cookieName}=${value}; Path=/; Secure; HttpOnly; SameSite=Lax; Max-Age=${age}`;
  async function call(name,args){
-  const values=[application,account,...args];
-  const result=await db.query(`SELECT finfolk_rpc.${name}(${values.map((_,i)=>'$'+(i+1))}) AS value`,values);
-  return (Array.isArray(result)?result:result.rows)[0].value;
+  return createMessagingRPC((sql,values)=>db.query(sql,values))(name,[application,account,...args]);
  }
  return {
   clearCookie:()=>cookie('',0),

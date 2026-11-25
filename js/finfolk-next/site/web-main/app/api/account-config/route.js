@@ -1,11 +1,7 @@
-// Explicit public allowlist. Administrator credentials never enter this response.
+import {publicAccountConfig} from '../../../lib/public-account-config.js';
 export const dynamic='force-dynamic';
 export function GET(request){
- if(process.env.FINFOLK_AUTH_PROVIDER!=='supabase')return new Response(null,{status:307,headers:{Location:new URL('/neon-config.json',request.url).href,'Cache-Control':'no-store'}});
- const supabaseUrl=process.env.FINFOLK_SUPABASE_URL,publishableKey=process.env.FINFOLK_SUPABASE_PUBLISHABLE_KEY;
- let publicKey=publishableKey?.startsWith('sb_publishable_');
- if(publishableKey&&!publicKey){try{publicKey=JSON.parse(Buffer.from(publishableKey.split('.')[1],'base64url').toString()).role==='anon';}catch{publicKey=false;}}
- if(!supabaseUrl||!publicKey)return Response.json({enabled:false},{status:503,headers:{'Cache-Control':'no-store'}});
- return Response.json({enabled:true,authProvider:'supabase',supabaseUrl,publishableKey,googleEnabled:process.env.FINFOLK_GOOGLE_AUTH_ENABLED==='true'},
-  {headers:{'Cache-Control':'no-store'}});
+ if(process.env.NODE_ENV==='development'&&process.env.FINFOLK_MOCK_PREVIEW==='1')return Response.json({enabled:true,authProvider:'preview',backbone:true,cacheBackend:'memory',authUrl:'preview',cacheApiUrl:'preview',apiUrl:new URL('/',request.url).href,instagram:{enabled:false}},{headers:{'Cache-Control':'no-store'}});
+ const config=publicAccountConfig(process.env);
+ return Response.json(config?{...config,apiUrl:new URL('/',request.url).href,authUrl:config.supabaseUrl,backbone:true,cacheBackend:'memory'}:{enabled:false},{status:config?200:503,headers:{'Cache-Control':'no-store'}});
 }

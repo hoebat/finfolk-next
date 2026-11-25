@@ -1,4 +1,5 @@
 'use client';
+import {Feature} from '../../../feature-flags.jsx';
 import {useState} from 'react';
 import {useSession} from '../../../../lib/use-session.js';
 import {usePageModel} from '../../../../lib/use-page-model.js';
@@ -14,5 +15,5 @@ function Actions({session,id,managed}){
  if(session.status==='loading')return <p role="status">Restoring your session…</p>;
  if(session.error)return <p role="alert">{session.error.message}<button onClick={session.retry}>Try again</button></p>;
  if(!actor)return <><p>Sign in to claim this page or request a correction.</p><a href={'/account?returnTo='+encodeURIComponent('/directory/'+id)}>Sign in</a></>;
- return <>{record?.data?.listings.some(p=>p.id===id&&p.status==='published'&&p.owner_id)&&<a className="profile-action" href={'/events/new?page='+id}>Create event</a>}{!managed&&<button className="profile-action" disabled={busy} onClick={()=>send('/v1/me/directory/claim',{id},claim=>'Send this challenge from a listed social account to @finfolk.com.au on the same platform. Superadmin will review your message: '+claim.challenge+' · Expires '+new Date(claim.expires_at).toLocaleString())}>Claim this page</button>}<label>Correction or removal request<input value={reason} onChange={e=>setReason(e.target.value)}/></label><button className="profile-action" disabled={busy} onClick={()=>send('/v1/me/directory/report',{id,message:reason},()=> 'Request sent for review.')}>Submit request</button>{notice&&<p role="status">{notice}</p>}</>;
+ return <>{record?.data?.listings.some(p=>p.id===id&&p.status==='published'&&p.owner_id)&&<Feature name="events"><a className="profile-action" href={'/events/new?page='+id}>Create event</a></Feature>}{!managed&&<button className="profile-action" disabled={busy} onClick={()=>send('/v1/me/directory/claim',{id},claim=>'Send this challenge from a listed social account to @finfolk.com.au on the same platform. Superadmin will review your message: '+claim.challenge+' · Expires '+new Date(claim.expires_at).toLocaleString())}>Claim this page</button>}<label>Correction or removal request<input value={reason} onChange={e=>setReason(e.target.value)}/></label><button className="profile-action" disabled={busy} onClick={()=>send('/v1/me/directory/report',{id,message:reason},()=> 'Request sent for review.')}>Submit request</button>{notice&&<p role="status">{notice}</p>}</>;
 }

@@ -31,7 +31,7 @@
                       {:where {:id (:uuid (:->> o-receipt "message_id"))}})
           (:bigint v-sent) (pg/coalesce (:bigint (:->> o-message "sent_at")) (pg/time-us))
           (:bigint v-deadline) (pg/coalesce (:bigint (:->> o-receipt "deadline"))
-                                            (+ v-sent (* i-window 1000000)))]
+                                            (+ v-sent (* (:bigint i-window) 1000000)))]
       (return (messaging/receive-message i-application
                                          i-account
                                          (pg/jsonb-build-object "eventId" v-key

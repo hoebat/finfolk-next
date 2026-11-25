@@ -1,0 +1,7 @@
+import {test} from 'node:test';import assert from 'node:assert/strict';
+import {createAccountClient} from '../js/finfolk-next/packages/edge/supabase-client.js';
+const session={access_token:'owned-fixture',user:{id:'00000000-0000-4000-8000-000000000001',email:'owned@example.test',email_confirmed_at:'2026-11-25'}};
+function fixture(passwordRecovery){let observe;const auth={getSession:async()=>({data:{session}}),onAuthStateChange(fn){observe=fn;return {data:{subscription:{unsubscribe(){}}}}},updateUser:async()=>({data:{user:session.user}})};
+ const app={member:()=>({}),clearMember(){},setPublicTransport(){},public:{}};return {client:createAccountClient(auth,{passwordRecovery},app),observe:(...args)=>observe(...args)};}
+test('a verified recovery exchange survives initialization and finishes after a password change',async()=>{const {client}=fixture(true);await client.ready;assert.equal(client.user.recovery,true);await client.resetPassword(null,'New-owned-password!');assert.equal(client.user.recovery,false);});
+test('normal sessions and URL-shaped values cannot enable recovery; signing out clears it',async()=>{for(const value of [undefined,false,'true']){const {client}=fixture(value);await client.ready;assert.equal(client.user.recovery,false);await assert.rejects(client.resetPassword(null,'New-owned-password!'),/valid password recovery link/);}const {client,observe}=fixture(true);await client.ready;observe('SIGNED_OUT',null);assert.equal(client.user,null);observe('SIGNED_IN',session);assert.equal(client.user.recovery,false);});

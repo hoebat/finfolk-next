@@ -1,5 +1,38 @@
 # Original-design migration checklist
 
+## Native member and logbook design refresh · 19 November 2026
+
+The native People, profile, profile editor, logbook list/detail and session editor
+now follow the landing walkthroughs' presentation: compact sans-serif headings,
+illustrated portraits, location artwork, consistent cards and controls, explicit
+privacy labels and prominent duration/depth measurements. Saved sessions precede
+the tagged-media inbox. The shared styles live in `app/product-design.css` and
+are scoped to these native views; the original HTML renderers remain unchanged.
+
+Earlier member/logbook pixel-parity passes below describe the pre-refresh UI.
+These views now intentionally differ from that legacy design. The legacy pixel
+comparison suites and thresholds are retained as independent comparison tools;
+they are not expected to pass for the refreshed views, and their references must
+not be replaced with React screenshots to conceal this change.
+
+Run `corepack yarn test:nextjs-product-design` against the local Next test server
+(`NEXTJS_TEST_URL` overrides the usual port 3202). It uses the existing synthetic
+member/logbook adapters; the server needs the same public site-catalog fixture
+as the other Next suites. The 72-view matrix checks all four themes at 320, 390
+and 1440 pixels for horizontal overflow, usable form controls, retained notes,
+private-content exclusion and browser exceptions. Review captures and its JSON
+report under `.cache/product-design`. Session editor captures include both its
+initial view and reachable save controls. Functional profile/logbook suites
+remain required; these checks do not establish live provider or deployment
+acceptance.
+
+Validation: the 72-view matrix and existing profile/logbook functional suites
+pass. `make generate`, `make check-generated`, `make build` and a separate Next
+production compile pass. `make test` stops in the ocean-data Python suite with
+three failures and one error: audit-storage compaction and VCDEM source hashes /
+gzip payload checks. Those dataset checks are outside this presentation change.
+
+
 Reference: current FinFolk production, with matching authored HTML/CSS/JS in
 `js/finfolk-next/site/web-main/src`. The reference is independent of the React
 pages. No migration screen is accepted solely because its actions work.

@@ -1,3 +1,4 @@
+import {createMessagingRPC} from './messaging-rpc.mjs';
 import {seal,unseal,encryptionKey} from './messaging-config.mjs';
 
 const object=value=>value!==null&&typeof value==='object'&&!Array.isArray(value);
@@ -11,9 +12,7 @@ export function createMessagingAuthorizationStore({db,application,account,encryp
  if(!db?.query||typeof application!=='string'||!application||typeof account!=='string'||!account)
   throw Error('A scoped messaging database is required.');
  async function call(name,args=[]){
-  const values=[application,account,...args];
-  const output=await db.query(`SELECT finfolk_rpc.${name}(${values.map((_,i)=>'$'+(i+1)).join(',')}) AS value`,values);
-  return (Array.isArray(output)?output:output.rows)[0].value;
+  return createMessagingRPC((sql,values)=>db.query(sql,values))(name,[application,account,...args]);
  }
  const read=()=>call('ret_messaging_account');
  function decode(row,{allowExpired=false}={}){

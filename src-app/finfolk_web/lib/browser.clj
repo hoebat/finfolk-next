@@ -5,13 +5,13 @@
 (def.js Configuration {"promise" nil})
 (defn.js ^{:- [:async]} appConfiguration []
   (when (not (. -/Configuration ["promise"]))
-    (var url (new URL "./neon-config.json" (. import.meta ["url"])))
+    (var url (new URL "/api/account-config" (. import.meta ["url"])))
     (. (. url ["searchParams"]) (set "v" (. import.meta ["url"])))
     (:= (. -/Configuration ["promise"])
         (. (fetch url
                   {"cache" "no-cache" "signal" (AbortSignal.timeout 5000)})
            (catch (fn [_]
-                    (return (fetch (new URL "./neon-config.json" (. import.meta ["url"]))
+                    (return (fetch (new URL "/api/account-config" (. import.meta ["url"]))
                                    {"cache" "no-cache" "signal" (AbortSignal.timeout 5000)}))))
            (then (fn [response]
                    (when (not (. response ["ok"])) (throw (new Error "Account configuration unavailable.")))

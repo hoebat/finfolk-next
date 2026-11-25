@@ -25,6 +25,6 @@ export async function createLogbookClient(){return api;}
 `;
 export async function mockMembers(page,base){
  await page.route('**/v1/sites/catalog',r=>r.fulfill({json:{beaches:[{id:'bondi',name:'Bondi Beach',state_id:'NSW',state:'NSW'},{id:'portsea',name:'Portsea Beach',state_id:'VIC',state:'VIC'}]}}));
- await page.route('**/neon-config.json*',route=>route.fulfill({json:{enabled:true,backbone:true,apiUrl:base+'/',authUrl:'https://auth.invalid'}}));
- await page.route('**/neon-client.js',route=>route.fulfill({contentType:'text/javascript',body:memberModule}));
+ await page.route(/\/(?:account-config\.json|api\/account-config)(?:\?|$)/,route=>route.fulfill({json:{enabled:true,authProvider:'supabase',supabaseUrl:'https://supabase.finfolk.com.au',publishableKey:'sb_publishable_fixture',backbone:true,apiUrl:base+'/',authUrl:'https://auth.invalid'}}));
+ await page.route('**/account-client.js',route=>route.fulfill({contentType:'text/javascript',body:memberModule}));
 }

@@ -3,11 +3,16 @@
   (:require [clojure.string :as str]
             [finfolkdb.common.type-domain-enum :as domain]
             [lang.core.compile :as compile]
-            [std.make.compile :as make]))
+            [std.make.compile :as make]
+            [lang.core.impl :as impl]
+            [lang.core.library :as library]
+            [lang.core.library-snapshot :as snapshot]))
 
 ;;
 ;; Publication
 ;;
+
+(declare contracts)
 
 (defn sql
   []
@@ -24,7 +29,7 @@
          ;; labels explicitly so missing/conflicting types cannot pass silently.
          (str/join
           "\n"
-          (for [{:keys [name values]} (vals domain/COLUMN_ENUMS)]
+          (for [{:keys [name values]} (contracts)]
             (str "DO $$ BEGIN IF (SELECT array_agg(e.enumlabel::text ORDER BY e.enumsortorder) "
                  "FROM pg_enum e JOIN pg_type t ON t.oid=e.enumtypid "
                  "JOIN pg_namespace n ON n.oid=t.typnamespace "
@@ -38,6 +43,13 @@
          "\n")))
 
 (defn contracts
+  "Publish every declared enum, including provider-neutral social vocabulary."
   []
-  (mapv (fn [[[table column] spec]] (assoc spec :table table :column column))
-        (sort-by key domain/COLUMN_ENUMS)))
+  (let [book (snapshot/get-book (library/get-snapshot (impl/runtime-library)) :postgres)
+        entries (get-in book [:modules 'finfolkdb.common.type-domain-enum :code])
+        columns (into {} (for [[[table column] spec] domain/COLUMN_ENUMS]
+                           [(:name spec) (assoc spec :table table :column column)]))]
+    (mapv (fn [entry]
+            (merge (get columns (str (:id entry)))
+                   {:name (str (:id entry)) :values (mapv name (nth (:form entry) 2))}))
+          (sort-by :id (filter #(= :enum (:static/dbtype %)) (vals entries))))))

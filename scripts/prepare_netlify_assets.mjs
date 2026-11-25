@@ -1,7 +1,7 @@
 import {readdir,writeFile} from 'node:fs/promises';
 const root=new URL('../js/finfolk-next/site/web-main/public/',import.meta.url);
 let packed=[];try{packed=(await readdir(new URL('__compressed/',root),{recursive:true})).filter(path=>path.endsWith('.gz')).sort();}catch(error){if(error.code!=='ENOENT')throw error;}
-const redirects=[],headers=['/offline/*\n  Cache-Control: no-store\n  X-Robots-Tag: noindex','/sw.js\n  Cache-Control: no-cache','/neon-config.json\n  Cache-Control: no-cache','/workers/*\n  Cache-Control: no-cache'];
+const redirects=[],headers=['/offline/*\n  Cache-Control: no-store\n  X-Robots-Tag: noindex','/sw.js\n  Cache-Control: no-cache','/account-config.json\n  Cache-Control: no-cache','/workers/*\n  Cache-Control: no-cache'];
 for(const path of packed){
  if(!path.startsWith('data/')||/[\s#?]/.test(path)||path.includes('..'))throw Error('Unexpected compressed atlas path: '+path);
  redirects.push('/'+path.slice(0,-3)+' /__compressed/'+path+' 200');

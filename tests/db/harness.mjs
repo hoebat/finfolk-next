@@ -13,8 +13,9 @@ export async function connect(){
 export async function migrate(db){
  await db.query(`DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
  DO $$ BEGIN CREATE ROLE finfolk_untrusted NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
- CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);`);
- for(const file of (await readdir('backend/migrations')).filter(f=>f.endsWith('.sql')).sort())await db.query(await readFile('backend/migrations/'+file,'utf8'));
+ CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);`);
+ for(const file of (await readdir('backend/migrations')).filter(f=>f.endsWith('.sql')).sort())await db.query((await readFile('backend/migrations/'+file,'utf8')).replaceAll('neon_auth','legacy_auth'));
+ await db.query('GRANT finfolk_api,finfolk_untrusted TO CURRENT_USER WITH SET TRUE');
  // This schema grant is part of role provisioning on Next, outside migrations.
  await db.query('GRANT USAGE ON SCHEMA finfolk TO finfolk_api');
 }

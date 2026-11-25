@@ -27,7 +27,8 @@ def compact(path, minimum_bytes=64*1024**2):
     checksum=digest(path)
     with tempfile.TemporaryDirectory(prefix='.audit-compact-',dir=path.parent) as directory:
         target=Path(directory)/path.name
-        subprocess.run(['ditto','--hfsCompression',str(path),str(target)],check=True,capture_output=True)
+        # A same-volume clone can bypass compression; force a real compressed copy.
+        subprocess.run(['ditto','--noclone','--hfsCompression',str(path),str(target)],check=True,capture_output=True)
         if digest(target)!=checksum:raise ValueError('Audit compression changed logical bytes')
         current=path.stat()
         if (current.st_mtime_ns,current.st_size)!=(before.st_mtime_ns,before.st_size):

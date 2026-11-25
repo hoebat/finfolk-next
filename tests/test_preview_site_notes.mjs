@@ -1,0 +1,27 @@
+import assert from 'node:assert/strict';
+import {previewSiteNotes as notes} from '../scripts/preview_site_notes.mjs';
+const state={profiles:{alice:{displayName:'Alice'},bob:{displayName:'Bob'},admin:{displayName:'Administrator'}}},read=(site,actor='alice')=>notes(state,'/v1/me/sites/'+site+'/notes',{},actor),post=(site,action,body,actor='alice')=>notes(state,'/v1/me/sites/'+site+'/notes/'+action,{method:'POST',body},actor),id='11111111-1111-4111-8111-111111111111';
+assert.deepEqual(read('bondi'),{enabled:true,notes:[],next:null,ownNote:null});
+const value={id,topic:'access',text:'Meet at the signed beach entrance.',observedOn:null};post('bondi','save',value);post('bondi','save',value);
+assert.equal(read('bondi').notes.length,1);assert.equal(read('bondi').notes[0].author,'Alice');assert.equal(read('portsea').notes.length,0);
+post('bondi','vote',{id,upvoted:true},'bob');post('bondi','vote',{id,upvoted:true},'bob');assert.equal(read('bondi','bob').notes[0].score,1);
+post('bondi','vote',{id,vote:-1},'bob');post('bondi','vote',{id,vote:-1},'bob');assert.equal(read('bondi','bob').notes[0].score,-1);assert.equal(read('bondi','bob').notes[0].downvoted,true);assert.equal(read('bondi','bob').notes[0].upvoted,false);
+post('bondi','vote',{id,vote:1},'bob');assert.equal(read('bondi','bob').notes[0].score,1);assert.equal(read('bondi','bob').notes[0].downvoted,false);
+post('bondi','vote',{id,vote:0},'bob');assert.equal(read('bondi','bob').notes[0].score,0);
+assert.equal(notes(state,'/v1/sites/bondi/notes',{},'bob').notes[0].downvoted,false);
+for(const vote of [2,-2,'-1',null])assert.throws(()=>post('bondi','vote',{id,vote},'bob'),/valid note vote/);
+assert.throws(()=>post('portsea','vote',{id,upvoted:true},'bob'),/unavailable/);
+assert.throws(()=>post('bondi','withdraw',{id,revision:1,withdrawn:true},'bob'),/Only the author/);
+post('bondi','withdraw',{id,revision:1,withdrawn:true});assert.equal(read('bondi').notes.length,0);post('bondi','withdraw',{id,revision:2,withdrawn:false});assert.equal(read('bondi').notes.length,1);
+assert.throws(()=>post('bondi','save',{...value,id:'new',topic:'conditions'}),/observation date/);
+assert.throws(()=>post('bondi','save',{...value,id:'new',observedOn:'2026-02-31'}),/valid observation date/);
+post('bondi','report',{id,reason:'Please check this information'},'bob');assert.equal(state.siteNoteReports[0].site,'bondi');
+assert.equal(notes(state,'/v1/directory'),undefined);
+console.log('PREVIEW_SITE_NOTES_PASS: empty state, beach isolation, persistence data, idempotency, voting, author controls, undo, date validation and reporting.');
+
+const before=state.siteNotes[0];assert.throws(()=>post('bondi','save',{...value,id:'another'}),e=>e.status===409);
+const revision=before.revision;post('bondi','save',{...value,revision,text:'Updated access instructions for the same note.'});assert.equal(read('bondi').notes.length,1);assert.equal(before.versions[0].text,value.text);assert.equal(before.versions.at(-1).text,'Updated access instructions for the same note.');
+assert.throws(()=>post('bondi','save',{...value,revision,text:'Stale content from an earlier editor.'}),e=>e.status===409);
+assert.equal(notes(state,'/v1/me/sites/bondi/notes?topic=wildlife&offset=100',{},'alice').ownNote.id,id);assert.equal(notes(state,'/v1/sites/bondi/notes').ownNote,null);
+post('bondi','withdraw',{id,revision:before.revision,withdrawn:true});assert.throws(()=>post('bondi','save',{...value,id:'third'}),e=>e.status===409);post('bondi','save',{...value,revision:before.revision});assert.equal(read('bondi').notes.length,1);assert.equal(read('bondi').ownNote.id,id);
+console.log('PREVIEW_NOTE_EDIT_PASS: unique author/site, revision conflicts, owned note across filters, saved versions and republishing.');

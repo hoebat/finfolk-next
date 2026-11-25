@@ -1,3 +1,6 @@
+import {firefoxLaunchOptions} from './firefox-options.mjs';
+import {build} from 'esbuild';
+import {resolve} from 'node:path';
 import {test,expect,chromium,firefox,webkit} from '@playwright/test';
 import {mkdtemp,rm,readFile} from 'node:fs/promises';
 import {tmpdir} from 'node:os';
@@ -48,34 +51,29 @@ test('main-origin shell upgrade preserves saved maps and preferences and bypasse
  expect(requests.statuses).toEqual([401,401]);expect(requests.b).toBe(requests.a+1);
  expect(await fresh.evaluate(async()=>!!await caches.match('/__upgrade/account'))).toBe(false);
 });
-for (const dedicated of [false,true]) test(`REST mutations and import errors retain their metadata across ${dedicated?'dedicated':'shared'} worker transport`,async({page})=>{
+for (const dedicated of [false,true]) test(`native mutations and unavailable REST calls across ${dedicated?'dedicated':'shared'} worker transport`,async({page})=>{
  if(dedicated)await page.addInitScript(()=>{window.SharedWorker=undefined;});
- const source=await readFile('js/finfolk-next/site/web-main/src/neon-client.js','utf8');
- const authFixture='data:text/javascript,'+encodeURIComponent('export const createAuthClient=()=>({getSession:async()=>({data:{user:{id:"rest-fixture",emailVerified:true},session:{token:"header.payload.signature"}}})});');
- await page.route('**/neon-client.js',route=>route.fulfill({contentType:'text/javascript',body:source.replace("'@neondatabase/auth'",JSON.stringify(authFixture))}));
+ const bundle=await build({entryPoints:['js/finfolk-next/packages/edge/supabase-client.js'],bundle:true,write:false,format:'esm',platform:'browser',plugins:[{name:'generated-workspaces',setup(build){build.onResolve({filter:/^@xtalk\//},args=>{const [,family,...parts]=args.path.split('/');return {path:resolve('js/finfolk-next/packages/libs/xt-'+family,...parts)};});}}]});
+ await page.route('**/account-client.js',route=>route.fulfill({contentType:'text/javascript',body:bundle.outputFiles[0].text}));
  const requests=[];
- await page.route('**/v1/**',async route=>{
-  const request=route.request();
-  requests.push({path:new URL(request.url()).pathname,method:request.method(),body:request.postDataJSON(),key:request.headers()['idempotency-key']});
-  await route.fulfill({contentType:'application/json',body:JSON.stringify({data:{handle:'fixture'}})});
+ await page.route('**/v1/native/account',async route=>{
+  const body=route.request().postDataJSON();requests.push(body);
+  await route.fulfill({json:body.operation==='me'?{id:'11111111-1111-4111-a111-111111111111',profile:{displayName:'Fixture'},verified:true}:{displayName:'Fixture'}});
  });
  await page.goto('/__test');
- await page.evaluate(async()=>{
-  const {createLogbookClient}=await import('/neon-client.js');
-  const client=await createLogbookClient({authUrl:'https://rest-fixture.invalid',apiUrl:location.origin,backbone:true,cacheBackend:'sqlite'});
-  await client.refresh();window.restFixtureClient=client;
-  await client.request('/v1/me/instagram/connect',{method:'POST',body:{code:'ABCDEFGH'},idempotencyKey:'connect-fixture'});
-  await client.request('/v1/me/instagram/profile',{method:'PUT',body:{handle:'fixture'},idempotencyKey:'profile-fixture'});
-  await client.request('/v1/me/instagram',{method:'DELETE',idempotencyKey:'unlink-fixture'});
+ const result=await page.evaluate(async()=>{
+  const {createAccountClient}=await import('/account-client.js'),{createApplicationBackbone}=await import('/next-backbone.js');
+  const session={user:{id:'11111111-1111-4111-a111-111111111111',email_confirmed_at:'2026-11-26'},access_token:'fixture'};
+  const auth={onAuthStateChange(){return {data:{subscription:{unsubscribe(){}}}};},async getSession(){return {data:{session}};}};
+  const app=createApplicationBackbone({authUrl:'https://native-fixture.invalid',apiUrl:location.origin,cacheBackend:'sqlite'});
+  const client=createAccountClient(auth,{apiUrl:location.origin},app);await client.ready;
+  const saved=await client.call('preferences',{profile:{displayName:'Fixture'}});
+  let unavailable;try{await client.request('/v1/me/instagram/connect',{method:'POST'});}catch(error){unavailable={status:error.status,code:error.code};}
+  client.close();return {saved,unavailable};
  });
- expect(requests).toEqual([
-  {path:'/v1/me/instagram/connect',method:'POST',body:{code:'ABCDEFGH'},key:'connect-fixture'},
-  {path:'/v1/me/instagram/profile',method:'PUT',body:{handle:'fixture'},key:'profile-fixture'},
-  {path:'/v1/me/instagram',method:'DELETE',body:null,key:'unlink-fixture'},
- ]);
- await page.route('**/v1/admin/sites/imports',route=>route.fulfill({status:400,contentType:'application/json',body:JSON.stringify({error:{message:'Fix import rows.',details:[{row:2,message:'Coordinates need checking.'}]}})}));
- const details=await page.evaluate(async()=>{try{await restFixtureClient.request('/v1/admin/sites/imports',{method:'POST',body:{format:'json',content:'[]'}});}catch(e){return e.details;}});
- expect(details).toEqual([{row:2,message:'Coordinates need checking.'}]);
+ expect(requests[0]).toEqual({operation:'preferences',values:{profile:{displayName:'Fixture'}}});
+ expect(requests.slice(1).every(row=>row.operation==='me')).toBe(true);
+ expect(result).toEqual({saved:{displayName:'Fixture'},unavailable:{status:501,code:'native_operation_unavailable'}});
 });
 test('SQLite uses actual storage and excludes mutations and administrative responses',async({page})=>{
  const stats=await init(page);expect(['persistent','memory']).toContain(stats.mode);
@@ -102,10 +100,10 @@ test('two tabs deduplicate reads, share subscriptions, and clear together on sig
 test('persistent reads survive browser restart; unavailable OPFS reports memory fallback',async({browserName})=>{
  const directory=await mkdtemp(join(tmpdir(),'finfolk-sqlite-')),engine={chromium,firefox,webkit}[browserName];let context;
  try{
-  context=await engine.launchPersistentContext(directory,{headless:true,baseURL:'http://127.0.0.1:8137'});let page=context.pages()[0]||await context.newPage();
+  context=await engine.launchPersistentContext(directory,{headless:true,baseURL:'http://127.0.0.1:8137',...(browserName==='firefox'?firefoxLaunchOptions():{})});let page=context.pages()[0]||await context.newPage();
   const initial=await init(page);await page.evaluate(()=>member.call('me'));await context.close();context=null;
   if(browserName!=='webkit')expect(initial.mode).toBe('persistent');
-  context=await engine.launchPersistentContext(directory,{headless:true,baseURL:'http://127.0.0.1:8137'});page=context.pages()[0]||await context.newPage();
+  context=await engine.launchPersistentContext(directory,{headless:true,baseURL:'http://127.0.0.1:8137',...(browserName==='firefox'?firefoxLaunchOptions():{})});page=context.pages()[0]||await context.newPage();
   await init(page,{offline:true});
   if(initial.mode==='persistent'){
    expect(await page.evaluate(()=>member.call('me'))).toEqual({actor:'alice',name:'me',version:1});

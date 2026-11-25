@@ -1,4 +1,6 @@
+import {registerFeatureFlags} from './feature-flags.mjs';
 import {createDirectorySearch} from './directory-discovery.mjs';
+import {createEmailDelivery} from './email-delivery.mjs';
 import {createNativeAccount,nativeAccountSites} from './native-account.mjs';
 import {registerEnvironmentAdmin} from './environment-admin.mjs';
 import {registerEnvironment} from './environment.mjs';
@@ -22,7 +24,7 @@ import { instagramWebhook } from './instagram-webhook.mjs';
 import {registerFinniesPublic,registerFinniesPrivate,eraseFinnies} from './finnies.mjs';
 import { createShopCheckout } from './shop.mjs';
 import { Hono } from 'hono';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import {verifiedIdentity} from '../js/finfolk-next/packages/edge/supabase-auth.js';
 import {
   preferences,
   compatibility,
@@ -46,20 +48,15 @@ const id = (value) => {
   return value;
 };
 export function managedVerifier(env) {
-  const keys = createRemoteJWKSet(new URL(env.NEON_AUTH_JWKS_URL));
-  const issuer = new URL(env.NEON_AUTH_BASE_URL).origin;
-  return async (token) => {
-    const { payload } = await jwtVerify(token, keys, {
-      issuer,
-      algorithms: ['EdDSA'],
-    });
-    if (!payload.sub) throw Error('Missing identity');
-    return payload;
+  return async token => {
+    const identity=await verifiedIdentity({supabaseUrl:env.SUPABASE_URL,publishableKey:env.SUPABASE_PUBLISHABLE_KEY},'Bearer '+token);
+    return {sub:identity.id,email:identity.email,verified:identity.verified};
   };
 }
 export function createAPI({
   db,
   siteNotesDb=null,
+  previewFeatureFlags=null,
   directorySearch=null,
   eventDelivery=null,
   deliveryKey=null,
@@ -97,6 +94,8 @@ export function createAPI({
     if (c.req.method === 'OPTIONS') return c.body(null, 204);
     await next();
   });
+  const featureFlags=registerFeatureFlags(app,{db,verify,previewFeatureFlags});
+
   app.get('/instagram/posts', async c => {
     const feed=await publicInstagramFeed(q,c.req.query('beachId'),c.req.query('cursor'));
     const last=(await q('SELECT max(last_success) AS last_success FROM finfolk.instagram_sources'))[0];
@@ -122,7 +121,7 @@ export function createAPI({
   app.all('/v1/native/account', c => {
     const {SUPABASE_URL:supabaseUrl,SUPABASE_PUBLISHABLE_KEY:publishableKey}=c.env||{};
     if(!supabaseUrl||!publishableKey)return c.json({error:'Native accounts unavailable.'},503);
-    return createNativeAccount({query:q,transaction:db.transaction,supabaseUrl,publishableKey,serviceRoleKey:c.env?.SUPABASE_SERVICE_ROLE_KEY,directorySearch:directorySearch||createDirectorySearch({key:c.env?.BRAVE_SEARCH_API_KEY}),eventDelivery,deliveryKey:deliveryKey||c.env?.FINFOLK_INVITATION_SEAL_KEY,invitationOrigin:invitationOrigin||c.env?.FINFOLK_WEB_ORIGIN||'https://finfolk.com.au'})(c.req.raw);
+    return createNativeAccount({assertFeature:(operation,request)=>featureFlags.assertNative(operation,request,c.env||{}),query:q,transaction:db.transaction,supabaseUrl,publishableKey,serviceRoleKey:c.env?.SUPABASE_SERVICE_ROLE_KEY,directorySearch:directorySearch||createDirectorySearch({key:c.env?.BRAVE_SEARCH_API_KEY}),eventDelivery:eventDelivery||createEmailDelivery(c.env),deliveryKey:deliveryKey||c.env?.FINFOLK_INVITATION_SEAL_KEY,invitationOrigin:invitationOrigin||c.env?.FINFOLK_WEB_ORIGIN||'https://finfolk.com.au'})(c.req.raw);
   });
   registerEnvironment(app,{db});
   registerDirectoryPublic(app,{db});registerEventsPublic(app,{db});
@@ -170,12 +169,7 @@ export function createAPI({
       fail(401, 'Your sign-in expired. Please sign in again.');
     }
     const uid = id(claims.sub),
-      identity = c.env?.DB_BACKBONE_ENABLED==='true' ? await lookupIdentity(q,uid) : (
-        await q(
-          'SELECT id::text, name, "emailVerified" AS verified FROM neon_auth."user" WHERE id::text=$1 AND coalesce(banned,false)=false',
-          [uid],
-        )
-      )[0];
+      identity = await lookupIdentity(q,uid);
     if (!identity) fail(401, 'Account unavailable.');
     const raw = await c.req.text();
     if (raw.length > 65536) fail(413, 'Request is too large.');
@@ -186,6 +180,7 @@ export function createAPI({
       fail(400, 'Invalid request.');
     }
     const { action, ...v } = input;
+    if(typeof action==='string'&&action.startsWith('invitation'))await featureFlags.assertNative('eventInvite',c.req.raw,c.env||{});
     let me = (
       await q('SELECT * FROM finfolk.members WHERE user_id=$1', [uid])
     )[0];

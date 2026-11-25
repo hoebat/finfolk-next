@@ -34,4 +34,4 @@ const actions=`
  if(action==='tripReport')return {};
 `;
 export const postsModule=setup+accountModule.replace("return {admin:false,enabled:false};", "return {admin:false,enabled:!sessionStorage.getItem('fixture:posts-paused'),pilotBeaches:['bondi','portsea']};").replace("['instagramActions','myPosts','tripList']", "['instagramActions']").replace(" throw Error('Unexpected account fixture '+action);",actions+" throw Error('Unexpected account fixture '+action);");
-export async function mockPosts(page,base){await mockAccount(page,base);await page.route('**/neon-client.js',r=>r.fulfill({contentType:'text/javascript',body:postsModule}));await page.route(/\/trips\//,r=>r.fulfill({json:publishedReport}));}
+export async function mockPosts(page,base){await mockAccount(page,base);await page.route('**/account-client.js',r=>r.fulfill({contentType:'text/javascript',body:postsModule}));await page.route(/\/trips\//,r=>r.fulfill({json:publishedReport}));}

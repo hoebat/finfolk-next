@@ -1154,7 +1154,7 @@ components:
       scheme: bearer
       bearerFormat: JWT
       description: >-
-        Neon Auth JWT, verified server-side; administrators additionally require
+        Supabase Auth JWT, verified server-side; administrators additionally require
         INSTAGRAM_ADMIN_IDS.
     metaSignature:
       type: apiKey

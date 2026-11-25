@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {chromium} from '@playwright/test';
+const base=process.env.NEXTJS_TEST_URL||'http://127.0.0.1:3259';assert.ok(['localhost','127.0.0.1'].includes(new URL(base).hostname));
+const browser=await chromium.launch();
+try{const page=await browser.newPage(),errors=[];page.setDefaultTimeout(20000);page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/api/preview/operation',async route=>{const body=route.request().postDataJSON();if(body.operation==='publicTrips')return route.fulfill({json:{trips:[{id:'sample-report',title:'A morning at Bondi',authorName:'Diver',beachId:'bondi',beachName:'Bondi Beach',publishedAt:'2026-11-24T12:00:00Z',total:{dives:4}}]}});if(body.operation==='discoverPopular')return route.fulfill({json:{places:['bondi']}});return route.continue();});
+ await page.goto(base+'/community?previewActor=guest');await page.locator('.cf-post').first().waitFor();await page.locator('.cf-place strong').filter({hasText:'Bondi Beach'}).waitFor();await page.getByRole('region',{name:'Join the community'}).waitFor();
+ await page.getByRole('button',{name:'Trip reports',exact:true}).click();assert.equal(await page.locator('.cf-post').count(),1);await page.getByRole('button',{name:'Groups & outlets',exact:true}).click();await page.locator('.cf-post').filter({hasText:'Ocean School'}).waitFor();await page.getByRole('button',{name:'Discover',exact:true}).click();
+ for(const theme of ['yellow','cobalt','navy-light','navy'])for(const width of [1440,390]){await page.setViewportSize({width,height:1000});await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,theme+' '+width);}
+ await page.getByRole('link',{name:'Create your account',exact:false}).click();await page.getByRole('button',{name:'Create account',exact:true}).waitFor();assert.equal(new URL(page.url()).searchParams.get('returnTo'),'/community');
+ await page.getByRole('combobox',{name:'Preview role'}).selectOption('alice');await page.goto(base+'/community');await page.locator('.cf-post').first().waitFor();assert.equal(await page.locator('.cf-invitation').count(),0);await page.locator('.ff-account-copy strong').waitFor({state:'attached'});await page.locator('.cf-shortcuts a[href="/people"]').waitFor();assert.deepEqual(errors,[]);console.log('COMMUNITY_FEED_PASS: guest conversion, registration destination, feed filters, ranked place IDs, member state and four responsive themes.');
+}finally{await browser.close();}

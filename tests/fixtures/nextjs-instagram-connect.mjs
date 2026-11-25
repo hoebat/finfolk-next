@@ -8,6 +8,6 @@ export const connectModule=memberModule.replace("if(action==='instagramClaimStat
  },async refresh(){`);
 export async function mockConnect(page,base){
  await page.route('**/v1/sites/catalog',r=>r.fulfill({json:{beaches:[{id:'bondi',name:'Bondi Beach',state_id:'NSW',state:'NSW'},{id:'portsea',name:'Portsea Beach',state_id:'VIC',state:'VIC'}]}}));
- await page.route('**/neon-config.json*',r=>r.fulfill({json:{enabled:true,backbone:true,apiUrl:base+'/',authUrl:'https://auth.invalid'}}));
- await page.route('**/neon-client.js',r=>r.fulfill({contentType:'text/javascript',body:connectModule}));
+ await page.route(/\/(?:account-config\.json|api\/account-config)(?:\?|$)/,r=>r.fulfill({json:{enabled:true,authProvider:'supabase',supabaseUrl:'https://supabase.finfolk.com.au',publishableKey:'sb_publishable_fixture',backbone:true,apiUrl:base+'/',authUrl:'https://auth.invalid'}}));
+ await page.route('**/account-client.js',r=>r.fulfill({contentType:'text/javascript',body:connectModule}));
 }

@@ -78,7 +78,7 @@ export function registerFinniesPrivate(app,{db}){
  app.post('/v1/me/finnies/redeem',async c=>{const uid=who(c),value=await body(c);return c.json({data:await service.redeem(uid,value.itemId,value.requestKey,value.expectedCost)});});
  app.get('/v1/admin/finnies',async c=>{admin(c);return c.json({data:{items:await db.query('SELECT * FROM finfolk_shop.finnie_items ORDER BY updated_at DESC')}});});
  app.post('/v1/admin/finnies/items',async c=>{admin(c);return c.json({data:await service.save(await body(c))});});
- app.post('/v1/admin/finnies/grant',async c=>{admin(c);const v=await body(c);if(typeof v.userId!=='string'||!v.userId.trim())fail(400,'Choose a member.');if(!(await db.query('SELECT id FROM neon_auth."user" WHERE id::text=$1 AND NOT coalesce(banned,false)',[v.userId]))[0])fail(404,'Member not found.');return c.json({data:await service.grant(v.userId,v.amount,v.requestKey,v.reason)});});
+ app.post('/v1/admin/finnies/grant',async c=>{admin(c);const v=await body(c);if(typeof v.userId!=='string'||!v.userId.trim())fail(400,'Choose a member.');if(!(await db.query('SELECT $1 AS id WHERE finfolk_rpc.auth_identity($1) IS NOT NULL',[v.userId]))[0])fail(404,'Member not found.');return c.json({data:await service.grant(v.userId,v.amount,v.requestKey,v.reason)});});
  app.post('/v1/admin/finnies/complete',async c=>{admin(c);const v=await body(c);return c.json({data:await service.complete(v.code,v.refund===true)});});
 }
 

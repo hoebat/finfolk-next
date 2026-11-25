@@ -40,7 +40,7 @@
 (defn.pg ^{:%% :sql :- [:bigint]}
   site-note-score
   [:uuid i-note]
-  [:select (count *) :from notes/SiteNoteVote :as #{"v"} :inner-join users/User :as #{"u"} :on
+  [:select (pg/coalesce (sum (pg/case (. #{"v"} #{"downvoted"}) -1 true 1)) 0) :from notes/SiteNoteVote :as #{"v"} :inner-join users/User :as #{"u"} :on
    (== (. #{"v"} #{"voter_id"}) (. #{"u"} #{"id"})) :where
    (and (== (. #{"v"} #{"note_id"}) i-note)
         (not (. #{"u"} #{"deleted"}))
@@ -53,7 +53,9 @@
         (:uuid v-author) (:uuid (:->> o-note "author_id"))
         o-user (pg/t:get users/User {:where {:id v-author :deleted false} :returning #{:profile}})
         (:boolean v-upvoted) (pg/t:exists notes/SiteNoteVote
-                               {:where {:note i-note :voter i-viewer}})]
+                               {:where {:note i-note :voter i-viewer :downvoted false}})
+        (:boolean v-downvoted) (pg/t:exists notes/SiteNoteVote
+                                 {:where {:note i-note :voter i-viewer :downvoted true}})]
     (when (or [o-note :is-null]
               (not (-/is-site-note-site (:uuid (:->> o-note "site_id"))))
               (not (-/is-site-note-member v-author))
@@ -70,7 +72,19 @@
              "revision" (:integer (:->> o-note "revision"))
              "score" (-/site-note-score i-note)
              "own" (pg/coalesce (== v-author i-viewer) false)
-             "upvoted" v-upvoted))))
+             "upvoted" v-upvoted
+             "downvoted" v-downvoted))))
+
+(defn.pg ret-owned-site-note
+  "The owner's note is independent of feed filters, pagination and withdrawal."
+  [:uuid i-site :uuid i-viewer]
+  (let [o-note (pg/t:get notes/SiteNote {:where {:site i-site :author i-viewer}})]
+    (when (or [o-note :is-null] (not (-/is-site-note-site i-site))) (return nil))
+    (return (pg/jsonb-build-object
+              "id" (:->> o-note "id") "topic" (:->> o-note "topic")
+              "text" (:->> o-note "body") "observedOn" (:->> o-note "observed_on")
+              "revision" (:-> (revision/site-note-version (:uuid (:->> o-note "rev_id"))) "revision")
+              "withdrawn" (:-> o-note "withdrawn") "hidden" (:-> o-note "hidden")))))
 
 (defn.pg ret-site-notes
   "Bounded site feed. Viewer identity comes from the authenticated transaction, never query input."
@@ -103,7 +117,8 @@
                     (-/site-note-score #{"id"}) true
                     0)) (- 0 #{"time_created"}) #{"id"}]) :limit 21 :offset i-offset] :as
       #{"selected_notes"}] :into o-rows]
-    (return (pg/jsonb-build-object "notes" (pg/case (> (pg/jsonb-array-length o-rows) 20)
+    (return (pg/jsonb-build-object "ownNote" (-/ret-owned-site-note i-site v-viewer)
+                                   "notes" (pg/case (> (pg/jsonb-array-length o-rows) 20)
                                              (- o-rows 20) true
                                              o-rows)
                                    "next" (pg/case (> (pg/jsonb-array-length o-rows) 20)
@@ -111,60 +126,82 @@
                                             nil)))))
 
 (defn.pg save-site-note
-  [:uuid i-site :uuid i-id :text i-topic :text i-body :date i-observed]
+  "One note per site/member. Edits require the version the owner opened."
+  [:uuid i-site :uuid i-id :text i-topic :text i-body :date i-observed :integer i-revision]
   (let [(:uuid v-user) (-/require-site-note-member)
         o-op (system/op-fn "save-site-note" v-user (:jsonb "{}"))]
-    [:perform (#{"pg_advisory_xact_lock"} (#{"hashtextextended"} (:text i-id) 0))]
+    [:perform (#{"pg_advisory_xact_lock"} (#{"hashtextextended"} (#{"concat"} (:text i-site) ":" (:text v-user)) 0))]
     (let [o-site (pg/t:get beaches/Site {:where {:id i-site}})
           (:text v-body) (pg/btrim (pg/coalesce i-body ""))
-          o-existing (pg/t:get notes/SiteNote {:where {:id i-id}})]
+          o-existing (pg/t:get notes/SiteNote {:where {:id i-id} :for [:update]})
+          o-own (pg/t:get notes/SiteNote {:where {:site i-site :author v-user}})]
       (when (or [i-id :is-null]
                 (not (-/is-site-note-site i-site))
-                (< (pg/length v-body) 10)
-                (> (pg/length v-body) 1000)
+                (< (pg/length v-body) 10) (> (pg/length v-body) 1000)
                 [i-topic :is-null]
-                (not (or (== i-topic "access")
-                         (== i-topic "facilities")
-                         (== i-topic "wildlife")
-                         (== i-topic "conditions")))
+                (not (or (== i-topic "access") (== i-topic "facilities")
+                         (== i-topic "wildlife") (== i-topic "conditions")))
                 (and (== i-topic "conditions") [i-observed :is-null])
                 (and [i-observed :is-not-null]
                      (or (not (#{"isfinite"} i-observed))
-                         (> i-observed
-                            (:date (#{"timezone"}
-                                    (:->> o-site "timezone")
-                                    (pg/to-timestamp (/ (pg/time-us) 1000000.0))))))))
+                         (> i-observed (:date (#{"timezone"} (:->> o-site "timezone")
+                                                 (pg/to-timestamp (/ (pg/time-us) 1000000.0))))))))
         [:raise-exception "Check the site, topic, note length and observation date"])
       (when [o-existing :is-not-null]
         (when (or (not= (:uuid (:->> o-existing "author_id")) v-user)
-                  (not= (:uuid (:->> o-existing "site_id")) i-site)
-                  (not= (:->> o-existing "topic") i-topic)
-                  (not= (:->> o-existing "body") v-body)
-                  (not= (pg/coalesce (:->> o-existing "observed_on") "")
-                        (pg/coalesce (:text i-observed) "")))
-          [:raise-exception "This note identifier was already used"])
-        (return (pg/jsonb-build-object "id" i-id
-                                       "revision" (:integer (:->> (revision/site-note-version
-                                                                   (:uuid (:->> o-existing
-                                                                                "rev_id")))
-                                                                  "revision")))))
+                  (not= (:uuid (:->> o-existing "site_id")) i-site))
+          [:raise-exception "That note is unavailable"])
+        (let [(:integer v-version) (:integer (:->> (revision/site-note-version (:uuid (:->> o-existing "rev_id"))) "revision"))
+              (:boolean v-same) (and (== (:->> o-existing "topic") i-topic)
+                                     (== (:->> o-existing "body") v-body)
+                                     (== (pg/coalesce (:->> o-existing "observed_on") "")
+                                         (pg/coalesce (:text i-observed) "")))]
+          ;; Retry the exact completed save without creating another version.
+          (when (and v-same (not (:boolean (:->> o-existing "withdrawn")))
+                     (or [i-revision :is-null] (== i-revision v-version) (== (+ i-revision 1) v-version)))
+            (return (pg/jsonb-build-object "id" i-id "revision" v-version)))
+          (when (or [i-revision :is-null] (not= i-revision v-version))
+            [:raise :exception :using '[[errcode := "40001"] [message := "This note changed; reload it before trying again"]]])
+          (let [o-saved (pg/t:update notes/SiteNote
+                          {:set {:topic i-topic :body v-body :observed-on i-observed :withdrawn false}
+                           :where {:id i-id} :track o-op})
+                o-version (revision/record-site-note-revision i-id o-op)]
+            (return (pg/jsonb-build-object "id" i-id "revision" (:-> o-version "revision"))))))
+      (when [o-own :is-not-null]
+        [:raise :exception :using '[[errcode := "40001"] [message := "You already have a note for this site; edit it instead"]]])
+      (when [i-revision :is-not-null]
+        [:raise :exception :using '[[errcode := "40001"] [message := "This note changed; reload it before trying again"]]])
       (let [o-note (revision/insert-site-note i-id i-site v-user i-topic v-body i-observed o-op)]
         (return (pg/jsonb-build-object "id" i-id "revision" 1))))))
 
-(defn.pg set-site-note-vote
-  [:uuid i-site :uuid i-note :boolean i-upvoted]
+(defn.pg set-site-note-rating
+  "Desired vote: -1 unhelpful, 0 clear, 1 helpful. The note lock serializes retries and switches."
+  [:uuid i-site :uuid i-note :integer i-vote]
   (let [(:uuid v-user) (-/require-site-note-member)
-        o-op (system/op-fn "set-site-note-vote" v-user (:jsonb "{}"))
+        o-op (system/op-fn "set-site-note-rating" v-user (:jsonb "{}"))
         o-note (pg/t:get notes/SiteNote {:where {:id i-note :site i-site} :for [:update]})
         (:boolean v-voted) (pg/t:exists notes/SiteNoteVote {:where {:note i-note :voter v-user}})]
-    (when (or [i-upvoted :is-null] [o-note :is-null] [(-/ret-site-note i-note v-user) :is-null])
+    (when (or [o-note :is-null] [(-/ret-site-note i-note v-user) :is-null])
       [:raise-exception "That note is unavailable"])
-    (if i-upvoted
-      (when (not v-voted)
-        (let [o-write (pg/t:insert notes/SiteNoteVote {:note i-note :voter v-user} {:track o-op})]
-          nil))
-      (let [o-write (pg/t:delete notes/SiteNoteVote {:where {:note i-note :voter v-user}})] nil))
+    (when (or [i-vote :is-null] (< i-vote -1) (> i-vote 1))
+      [:raise-exception "Choose a valid note vote"])
+    (cond
+      (== i-vote 0)
+      (let [o-write (pg/t:delete notes/SiteNoteVote {:where {:note i-note :voter v-user}})] nil)
+      v-voted
+      (let [o-write (pg/t:update notes/SiteNoteVote
+                      {:set {:downvoted (== i-vote -1)}
+                       :where {:note i-note :voter v-user} :track o-op})] nil)
+      :else
+      (let [o-write (pg/t:insert notes/SiteNoteVote
+                      {:note i-note :voter v-user :downvoted (== i-vote -1)} {:track o-op})] nil))
     (return (-/ret-site-note i-note v-user))))
+
+(defn.pg set-site-note-vote
+  "Compatibility for existing helpful-only clients."
+  [:uuid i-site :uuid i-note :boolean i-upvoted]
+  (when [i-upvoted :is-null] [:raise-exception "Choose a valid note vote"])
+  (return (-/set-site-note-rating i-site i-note (pg/case i-upvoted 1 true 0))))
 
 (defn.pg set-site-note-withdrawn
   [:uuid i-site :uuid i-note :integer i-revision :boolean i-withdrawn]

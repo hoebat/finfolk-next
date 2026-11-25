@@ -1,0 +1,45 @@
+name: finfolk-edge
+services:
+  traefik:
+    image: ${TRAEFIK_IMAGE:?Set a tested Traefik v3 image digest}
+    restart: unless-stopped
+    command:
+      - --providers.docker.endpoint=tcp://socket-proxy:2375
+      - --providers.docker.exposedbydefault=false
+      - --providers.docker.network=finfolk_edge
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:-}
+      - --certificatesresolvers.letsencrypt.acme.storage=/certificates/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --accesslog=true
+      - --accesslog.fields.headers.defaultmode=drop
+    ports:
+      - '80:80'
+      - '443:443'
+    volumes:
+      - /srv/finfolk/certificates:/certificates
+    networks: [finfolk_edge, socket]
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '5'}
+  socket-proxy:
+    image: ${SOCKET_PROXY_IMAGE:?Set a tested Docker socket proxy image digest}
+    restart: unless-stopped
+    environment:
+      CONTAINERS: '1'
+      EVENTS: '1'
+      NETWORKS: '1'
+      VERSION: '1'
+      PING: '1'
+      POST: '0'
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks: [socket]
+networks:
+  finfolk_edge:
+    name: finfolk_edge
+  socket:
+    internal: true

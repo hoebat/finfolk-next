@@ -3,7 +3,7 @@
 Discover includes Directory and Events alongside the existing location views.
 Public routes are `/directory`, `/directory/<id>`, `/events` and `/events/<id>`.
 Verified members use `/events/my` and manage events through My pages. Event
-creators must currently own or administer a published, claimed Finfolk page.
+creators must currently own or administer a published, claimed FinFolk page.
 
 One-off events support drafts, direct publication, cancellation, duplicate-to-draft,
 public/private visibility and optional capacity. Dates are entered in the
@@ -16,7 +16,7 @@ shares a single-use invitation link manually. Tokens are hashed; invitations exp
 after seven days or at event start. Redemption requires the matching verified
 managed-Auth email. Acceptance grants access; the guest then RSVPs separately.
 Only page managers see the attendee roster and invitation emails. Private event
-operations are excluded from persistent SQLite caching. No email is sent by Finfolk.
+operations are excluded from persistent SQLite caching. No email is sent by FinFolk.
 
 Event business rules and projections live in generated finfolkdb functions.
 The API role has function-only access to event tables; UI data uses xt.substrate.

@@ -12,6 +12,8 @@ export function canonical(value){
 }
 export const digest=value=>createHash('sha256').update(value).digest('hex');
 const id=value=>digest(value);
+const uuidPattern=/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i;
+export const referenceUUID=(kind,value)=>uuidPattern.test(String(value))?String(value):uuid(kind+':'+String(value));
 const uuid=value=>{const h=id(value);return `${h.slice(0,8)}-${h.slice(8,12)}-5${h.slice(13,16)}-a${h.slice(17,20)}-${h.slice(20,32)}`;};
 export async function safeFile(root,path){
  const base=await realpath(root),file=await realpath(resolve(base,path)),rel=relative(base,file);
@@ -50,6 +52,21 @@ async function geojson(root,descriptor){
 const zones={VIC:'Australia/Melbourne',NSW:'Australia/Sydney',JBT:'Australia/Sydney',QLD:'Australia/Brisbane',SA:'Australia/Adelaide',WA:'Australia/Perth',NT:'Australia/Darwin',TAS:'Australia/Hobart',ACT:'Australia/Sydney'};
 const zone=site=>site.timezone||(site.area_id?.includes('lord-howe')?'Australia/Lord_Howe':site.area_id?.includes('christmas')?'Indian/Christmas':site.area_id?.includes('cocos')?'Indian/Cocos':zones[site.state_id]||'Australia/Sydney');
 const assetKind=p=>/\.geojson$/i.test(p)?'geojson':/\.(tif|tiff|bag)$/i.test(p)?'raster':/\.zip$/i.test(p)?'archive':/\.(json|xml|txt|html)$/i.test(p)?'document':'other';
+
+// Use the generated type/reference declarations for every SQL-bound identifier.
+async function rowNormalizer(root){
+ const catalog=JSON.parse(await readFile(resolve(root,'resources/finfolkdb/entity-catalog.json'),'utf8'));
+ return (kind,input)=>{
+  const row={...input},columns=catalog[kind]?.columns;if(!columns)throw Error('Unknown native reference table: '+kind);
+  if(row.id!=null&&columns.some(column=>column['sql-name']==='key')&&row.key==null)row.key=String(row.id);
+  for(const column of columns){
+   const name=column['sql-name'],value=row[name];if(value==null)continue;
+   if(column.reference)row[name]=referenceUUID(column.reference.table,value);
+   else if(column.type==='uuid')row[name]=referenceUUID(kind,value);
+  }
+  return row;
+ };
+}
 
 async function implementation(){
  const files=['./rebuild_reference.mjs','../rebuild_database.mjs','../../backend/sites.mjs','../../js/finfolk-next/site/web-main/src/site-model.js'];
@@ -169,8 +186,10 @@ export async function prepareReferenceRelease({root=process.cwd(),siteRoot='.cac
  }
  const {beaches,revision,...metadata}=catalog;
  add('SiteCatalog',{id:1,revision:1,metadata});
- const schemaFiles=['entity-schema.sql','rebuild.sql','rebuild-contract.json','messaging-grants.sql','site-notes-grants.sql'];
+ const schemaFiles=['entity-catalog.json','entity-schema.sql','rebuild.sql','rebuild-contract.json','messaging-grants.sql','site-notes-grants.sql'];
  for(const file of schemaFiles)await pin('resources/finfolkdb/'+file);
+ const normalize=await rowNormalizer(root);
+ for(const [kind,values]of Object.entries(rows))rows[kind]=values.map(row=>normalize(kind,row));
  const counts=Object.fromEntries(Object.entries(rows).map(([k,v])=>[k,v.length]));counts.GeoFeature=features.filter(f=>!f.kind).reduce((n,f)=>n+f.count,0);counts.GeoBoundary=features.filter(f=>f.kind==='GeoBoundary').reduce((n,f)=>n+f.count,0);
  const manifest={version:1,implementation:await implementation(),inputs:[...inputs.values()].sort((a,b)=>a.path.localeCompare(b.path)),rows,features,counts,warnings,asset_scope:Object.values(assetUris).length?'explicit_asset_uris':'local_files',unavailable_sources:sourceRecords.filter(s=>!(s.observed?.assets?.length||s.acquisitions?.length)).map(s=>({id:s.id,review:s.review}))};
  return {...manifest,id:digest(canonical(manifest))};
@@ -182,6 +201,7 @@ export async function verifyManifest(root,manifest){
  for(const input of manifest.inputs){const actual=await hashFile(root,input.path);if(actual.sha256!==input.sha256||actual.bytes!==input.bytes)throw Error('Source changed since manifest: '+input.path);}
 }
 export async function* referenceBatches(root,manifest,size=100){
+ const normalize=await rowNormalizer(root);
  // Preserve FK order explicitly; the Clojure contract is a map, not an ordering API.
  const order=['DataSource','GeoArea','DataAsset','DepthDataset','DepthDatasetAsset','GeoFeature','GeoBoundary','Site','SiteLocation','SiteProfile','SiteRevision','SiteAccessPoint','SiteDepthEvidence','SiteDepthDataset','TideStation','SiteTideStation','SiteCatalog'];
  for(const kind of order){
@@ -192,10 +212,10 @@ export async function* referenceBatches(root,manifest,size=100){
      const row={id:id(key+':'+index),...(kind==='GeoFeature'?{dataset_id:descriptor.dataset}:{asset_id:descriptor.asset,area_id:descriptor.link_area?(f.properties?.id||f.id):null}),geometry:f.geometry,properties:{...f.properties,upstream_feature_id:f.id??null}};
      const length=Buffer.byteLength(JSON.stringify(row));
      if(batch.length&&(bytes+length>4*1024*1024||batch.length>=size)){yield [kind,batch];batch=[];bytes=0;}
-     batch.push(row);bytes+=length;
+     batch.push(normalize(kind,row));bytes+=length;
     }if(batch.length)yield [kind,batch];
    }
-  }else{const rs=manifest.rows[kind]||[];for(let i=0;i<rs.length;i+=size)yield [kind,rs.slice(i,i+size)];}
+  }else{const rs=manifest.rows[kind]||[];for(let i=0;i<rs.length;i+=size)yield [kind,rs.slice(i,i+size).map(row=>normalize(kind,row))];}
  }
 }
 export async function importReferenceRelease(db,manifest,{root=process.cwd(),onBatch=()=>{}}={}){
@@ -209,14 +229,15 @@ export async function importReferenceRelease(db,manifest,{root=process.cwd(),onB
    counts[kind]=(counts[kind]||0)+n;await onBatch(kind,n);
   }
   for(const [kind,count]of Object.entries(manifest.counts))if((counts[kind]||0)!==count)throw Error('Import count mismatch: '+kind);
-  const release={id:manifest.id,manifest:{...manifest,rows:undefined},counts};
+  const normalize=await rowNormalizer(root);
+  const release=normalize('DatabaseRelease',{id:manifest.id,manifest:{...manifest,rows:undefined},counts});
   await db.query('SELECT finfolk_rpc.import_reference_batch($1,$2::jsonb)',['DatabaseRelease',JSON.stringify([release])]);
   await verifyReferenceDatabase(db,manifest);
   await db.query('COMMIT');return {id:manifest.id,counts,warnings:manifest.warnings};
  }catch(error){await db.query('ROLLBACK');throw error;}
 }
 export async function verifyReferenceDatabase(db,manifest){
- const result=(await db.query('SELECT finfolk_rpc.verify_reference_release($1) AS value',[manifest.id])).rows[0].value;
+ const result=(await db.query('SELECT finfolk_rpc.verify_reference_release($1) AS value',[referenceUUID('DatabaseRelease',manifest.id)])).rows[0].value;
  if(!result)throw Error('Release is not imported into this database');
  for(const [kind,count]of Object.entries(result.actual))if(count!==(manifest.counts[kind]||0))throw Error('Database count mismatch: '+kind);
  if(canonical(result.expected)!==canonical(Object.fromEntries(Object.entries(result.actual).filter(([k,v])=>v||k in result.expected))))throw Error('Stored release counts differ from the database');
@@ -224,7 +245,7 @@ export async function verifyReferenceDatabase(db,manifest){
 }
 export async function installFreshDatabase(db,{root=process.cwd(),manifest}={}){
  if(manifest)await verifyManifest(root,manifest);
- // The generated schema itself refuses existing application objects and requires managed auth.
+ // The generated schema itself refuses existing application objects and provisions its declared runtime role.
  // There is deliberately no DROP, reset, fake auth provisioning or migration replay here.
  await db.query('BEGIN');
  try{

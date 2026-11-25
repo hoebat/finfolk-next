@@ -1,5 +1,8 @@
 # Entity messaging rollout and acceptance
 
+Historical design and acceptance record. For current deployment and identity setup, see
+[Supabase acceptance](SUPABASE_ACCEPTANCE.md) and [API cutover](SUPABASE_API_CUTOVER.md).
+
 > Fresh-rebuild direction: the user requires regeneration from the Clojure
 > definitions, followed by seed and depth/geo/ocean imports. The additive migration
 > proposal is superseded. See [DATABASE_REBUILD.md](DATABASE_REBUILD.md#fresh-rebuild-and-data-import-plan).
@@ -32,7 +35,7 @@ app dashboard; it estimates review initiation within ten working days after
 submission. The intake form was opened, but no application was submitted and no
 review approval is established.
 
-An isolated Neon child branch `finfolk-messaging` (`br-still-haze-a7z7c3m7`) and
+An archived isolated database branch `finfolk-messaging` (`br-still-haze-a7z7c3m7`) and
 fresh database `finfolk_messaging` now exist in the existing FinFolk project. The
 parent is the schema-only test branch, chosen after the root-branch limit blocked
 another schema-only root. The native schema is **not installed**: the supported
@@ -60,7 +63,7 @@ included. Frozen historical SQL artifacts remain byte-identical.
 
 ## Provision a separate native database
 
-1. Create an isolated database with managed `neon_auth."user"` and the required
+1. Create an isolated database with managed `legacy_auth."user"` and the required
    server-side authentication configuration. Provision `finfolk_api NOLOGIN` as
    required by the fresh-schema guard. Use a separate server login for messaging.
 2. Review and explicitly apply `resources/finfolkdb/entity-schema.sql` to that

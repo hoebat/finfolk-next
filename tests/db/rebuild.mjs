@@ -26,7 +26,7 @@ async function fingerprints(){
 }
 try{
  await mkdir(join(root,'resources/finfolkdb'),{recursive:true});
- for(const name of ['entity-schema.sql','rebuild.sql','rebuild-contract.json','messaging-grants.sql','site-notes-grants.sql','shop.sql'])await copyFile('resources/finfolkdb/'+name,join(root,'resources/finfolkdb',name));
+ for(const name of ['entity-catalog.json','entity-schema.sql','rebuild.sql','rebuild-contract.json','messaging-grants.sql','site-notes-grants.sql','shop.sql'])await copyFile('resources/finfolkdb/'+name,join(root,'resources/finfolkdb',name));
  const features={type:'FeatureCollection',features:[{type:'Feature',id:7,geometry:{type:'LineString',coordinates:[[151,-33],[151.1,-33.1]]},properties:{depth_m:10,datum:'unverified'}}]};
  await put('resources/atlas/coastline.geojson',features);
  const geo=JSON.stringify(features),path='datasets/processed/test.geojson';await put(path,geo);
@@ -43,16 +43,12 @@ try{
  await put('.cache/next-site/beaches.json',{area_regions_file:'data/area-regions.json',sources:[],areas:[{id:'test-area',name:'Test region'}],beaches:[beach]});
  const manifest=await prepareReferenceRelease({root});
  assert.equal(manifest.counts.GeoFeature,1);assert.equal(manifest.counts.SiteDepthDataset,1);assert.equal(manifest.rows.DepthDataset[0].status,'staged');
+ assert.match(manifest.rows.Site[0].id,/^[a-f0-9-]{36}$/);assert.equal(manifest.rows.Site[0].key,'test-beach');
  assert.equal(manifest.rows.SiteDepthDataset[0].relationship,'candidate');assert.equal(manifest.rows.DataSource[0].enabled,false);
  assert.deepEqual(await prepareReferenceRelease({root}),manifest,'Preparation is reproducible');
  await put(inspectionPath,{...inspection,sha256:'0'.repeat(64)});await assert.rejects(prepareReferenceRelease({root}),/Native inspection checksum mismatch/);await put(inspectionPath,inspection);
  await assert.rejects(verifyManifest(root,seal({...manifest,implementation:{}})),/implementation changed/);
- // Provisioning managed auth is an external prerequisite. Only this disposable
- // local test uses a fixture table; the actual installer never invents one.
- await assert.rejects(installFreshDatabase(db,{root,manifest}),/Provision finfolk_api and managed authentication first/);
- assert.equal((await db.query("SELECT to_regclass('finfolk.\"Site\"') AS t")).rows[0].t,null);
- await db.query(`DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;
- CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean,email text);`);
+ // The generated schema owns its roles and has no managed-Auth dependency.
  await db.query('CREATE SCHEMA finfolk_shop; CREATE TABLE finfolk_shop.existing(id integer)');
  await assert.rejects(installFreshDatabase(db,{root,manifest}),/empty finfolk_shop/);
  assert.equal((await db.query("SELECT to_regclass('finfolk.\"Site\"') AS t")).rows[0].t,null);
@@ -69,16 +65,17 @@ try{
  const invalid=structuredClone(manifest);invalid.rows.DataAsset[0].kind='unsupported';await assert.rejects(importReferenceRelease(db,seal(invalid),{root}),e=>e.code==='22P02');
  const missing=structuredClone(manifest);missing.rows.DataAsset[0].source_id='missing';await assert.rejects(importReferenceRelease(db,seal(missing),{root}),e=>e.code==='23503');
  const imported=await importReferenceRelease(db,manifest,{root});assert.equal(imported.counts.GeoFeature,1);
- assert.equal((await db.query(`SELECT count(*)::int AS n FROM finfolk."GeoBoundary" WHERE area_id='test-area'`)).rows[0].n,1);
+ assert.equal((await db.query(`SELECT count(*)::int AS n FROM finfolk."GeoBoundary" WHERE area_id=(SELECT id FROM finfolk."GeoArea" WHERE key='test-area')`)).rows[0].n,1);
  assert.ok(manifest.rows.DataAsset.some(a=>a.metadata.attribution==='Test boundary attribution'));
  assert.equal((await db.query(`SELECT metadata->'native_inspections'->0->'raster_headers'->0->>'crs' AS crs FROM finfolk."DepthDataset" WHERE upstream_id='test-native'`)).rows[0].crs,'EPSG:4326');
  const snapshot=await projection();await importReferenceRelease(db,manifest,{root});assert.deepEqual(await projection(),snapshot,'Repeated release has identical semantic rows');
  assert.equal((await db.query('SELECT count(*)::int AS n FROM finfolk."DatabaseRelease"')).rows[0].n,1);
  const conflict=structuredClone(manifest);conflict.rows.Site[0].name='Changed identity';await assert.rejects(importReferenceRelease(db,seal(conflict),{root}),e=>e.code==='23505');assert.deepEqual(await projection(),snapshot);
  const linked=(await db.query(`SELECT b.id,d.status,f.properties->>'depth_m' AS depth FROM finfolk."Site" b JOIN finfolk."SiteLocation" l ON l.site_id=b.id JOIN finfolk."GeoArea" a ON a.id=l.area_id JOIN finfolk."SiteRevision" r ON r.site_id=b.id JOIN finfolk."SiteDepthDataset" sd ON sd.revision_id=r.id JOIN finfolk."DepthDataset" d ON d.id=sd.dataset_id JOIN finfolk."GeoFeature" f ON f.dataset_id=d.id`)).rows;
- assert.deepEqual(linked,[{id:'test-beach',status:'staged',depth:'10'}]);
+ assert.deepEqual(linked,[{id:manifest.rows.Site[0].id,status:'staged',depth:'10'}]);
  assert.equal((await db.query("SELECT has_function_privilege('finfolk_api','finfolk_rpc.import_reference_batch(text,jsonb)','EXECUTE') AS allowed")).rows[0].allowed,false,'Importer is owner-only');
- await db.query('SET ROLE finfolk_api');await assert.rejects(db.query("SELECT finfolk_rpc.import_reference_batch('DataSource','[]')"),e=>e.code==='42501');await db.query('RESET ROLE');
+ await db.query('BEGIN');
+ try{await db.query('GRANT finfolk_api TO CURRENT_USER WITH SET TRUE');await db.query('SET LOCAL ROLE finfolk_api');await assert.rejects(db.query("SELECT finfolk_rpc.import_reference_batch('DataSource','[]')"),e=>e.code==='42501');}finally{await db.query('ROLLBACK');}
  // This explicit destructive reset is restricted by harness.connect to a local
  // randomly named disposable database. Production orchestration has no reset.
  await db.query('DROP SCHEMA finfolk_rpc CASCADE; DROP SCHEMA finfolk CASCADE; DROP SCHEMA IF EXISTS finfolk_shop CASCADE');

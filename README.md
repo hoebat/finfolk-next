@@ -4,11 +4,15 @@ The Clojure-authored database and substrate backbone for [finfolk.com.au](https:
 
 ## Project manager and previews
 
-Run `make manage` and open [FinFolk manager](http://127.0.0.1:8131).
+Run `make manage` and open [FinFolk manager](http://127.0.0.1:8135).
 The Pipeline view covers database contracts, Clojure/XTalk publication, browser
 bundles, site assets, Next.js, the API and integration checks. **Previews** opens
 actual FinFolk routes, including the map, community, logbook, account and review
 screens, with desktop/mobile widths and a separate-tab option.
+
+Open **Environments → Development** to start or stop previews and toggle feature
+flags for their screens. Linked previews update automatically; settings survive
+stop/start. These local controls need no production flag credential.
 
 `make manage-preview` reuses a running Next.js development server or starts one
 on port 3010. The manager discovers its port from Next's local development lock;
@@ -18,7 +22,7 @@ application's existing auth and API configuration.
 
 ```sh
 make manage-preview          # reuse/start the actual Next app
-make manage                  # shared local management UI (port 8131)
+make manage                  # shared local management UI (port 8135)
 make manage-plan             # full target dependency graph
 make manage-check            # compare generated text artifacts with fresh publication
 make manage-build            # generate and run applicable build/integration checks
@@ -47,7 +51,7 @@ checks on a fresh disposable local fixture. See [page verification](docs/APP_MAN
 
 ## Native entity identities
 
-Fresh FinfolkDB entities use UUID IDs and UUID relationships, including addon
+Fresh FinFolkDB entities use UUID IDs and UUID relationships, including addon
 `class-ref` identities. `et/E` supplies generated UUIDs. Provider identifiers,
 slugs and imported source keys remain separate text fields; former text primary
 keys are retained as optional unique `key` fields. SiteCatalog has a UUID ID and
@@ -107,9 +111,9 @@ Public survey sources are stored in Git LFS. The independent [ocean dataset cata
 
 Format Clojure with `lein zprint fix src/finfolkdb test/finfolkdb` (replace `fix` with `check` for CI). Zprint is a development dependency; `.zprintrc` uses a 100-column community style and reflows existing line breaks. Its form mappings are derived from the pinned Foundation clj-kondo `:lint-as` and analyzer-hook classifications, including PostgreSQL definitions, XTalk definitions, scripts and facts. The formatter skips hidden/editor files and symbolic links. Run `lein run -m tooling.format-test` to verify the formatter. After updating Foundation, refresh the mappings with `lein zprint sync-kondo ref/foundation`; this updates local configuration and does not modify the dependency.
 
-`make test` runs Clojure contract/release checks, Python atlas tests, and the existing generated-runtime, SQL/API and desktop/mobile UI tests. Tests cover cache keys, concurrency, invalidation, committed-write refresh failures, authentication changes, navigation/history, public forwarding, member actions and admin restrictions. External Meta messaging remains governed by its existing feature switches.
+`make test` first builds and verifies app.manage’s generated SQL target, then runs Clojure contract/release checks, Python atlas tests, and the generated-runtime, SQL/API and desktop/mobile UI tests. Docker and Supabase CLI 2.122.0 are required for its disposable native PostgreSQL installation check; the local stack starts automatically. Tests cover cache keys, concurrency, invalidation, committed-write refresh failures, authentication changes, navigation/history, public forwarding, member actions and admin restrictions. External Meta messaging remains governed by its existing feature switches.
 
-`make test-db-common` runs every Clojure common namespace in a disposable database on the dedicated local Supabase stack (PostgreSQL 17). Install Supabase CLI 2.122.0 and start Docker first; the runner starts or reuses the stack automatically. `FINFOLK_TEST_POSTGRES_URL` remains an explicit override for a local test server. Select one namespace with `make test-db-common DB_TEST_NAMESPACE=finfolkdb.common.fn-system-util-test`. No Neon account, cloud credentials, or network quota is needed.
+`make test-db-common` runs every Clojure common namespace in a disposable database on the dedicated local Supabase stack (PostgreSQL 17). Install Supabase CLI 2.122.0 and start Docker first; the runner starts or reuses the stack automatically. `FINFOLK_TEST_POSTGRES_URL` remains an explicit override for a local test server. Select one namespace with `make test-db-common DB_TEST_NAMESPACE=finfolkdb.common.fn-system-util-test`. No hosted account, cloud credentials, or network quota is needed.
 
 For editor/REPL testing, run `make test-db-local-up` first, then start `lein repl` and evaluate the test namespace (or run `lein test :only finfolkdb.common.fn-system-util-test`). The local JDBC runtime defaults to `127.0.0.1:55432`, database `finfolk_test_repl`, user `postgres`, password `postgres`. Override it with `FINFOLK_TEST_DATABASE_URL=postgresql://user:password@127.0.0.1:5432/finfolk_test_custom` before starting the REPL. Only local hosts and `finfolk_test_*` databases are accepted; URL query parameters are rejected. Each common namespace uses `l/script-`, typed PostgreSQL calls and `fact:global` hooks that lock the test database and rebuild its application schemas. `make test-db-local-status` shows the local API and Studio URLs. `make test-db-local-down` stops only this stack and retains its volumes; each test namespace still rebuilds its application schemas. Restart existing REPLs after switching runtimes.
 
@@ -117,7 +121,7 @@ For editor/REPL testing, run `make test-db-local-up` first, then start `lein rep
 
 The common suites follow the `statsdb` testing pattern: each namespace declares its JDBC `l/script-` dependencies and owns explicit `l/rt:restart`, `l/rt:teardown`, `l/rt:setup` and `l/rt:stop` hooks. `local/prepare!` and `local/cleanup!` only manage the isolated database schemas and lock. Require the domain modules and fixture operations used by a suite rather than the whole application scaffold. Social suites construct explicit provider workflows, inspect persisted rows, test rejected writes and remove their fixtures with `try`/`finally`. Run a single namespace directly with `lein test :only finfolkdb.common.type-social-account-test` after starting the local stack; the Make target additionally creates and removes a disposable suite database.
 
-`make test-db` uses the local Supabase project `finfolk-tests`, configured in `supabase/config.toml`. Each suite creates an empty `finfolk_test_*` database from `template0` and drops it on success or failure. The stack stays running for subsequent tests and REPL sessions. Supabase's main `postgres` database and managed Auth schemas are not reset or used as test fixtures. Tests continue to reproduce the production API grants and a synthetic Neon Auth table; this does not switch production authentication to Supabase.
+`make test-db` uses the local Supabase project `finfolk-tests`, configured in `supabase/config.toml`. Each suite creates an empty `finfolk_test_*` database from `template0` and drops it on success or failure. The stack stays running for subsequent tests and REPL sessions. Supabase's main `postgres` database and managed Auth schemas are not reset or used as test fixtures. Native suites install the generated schema. Archived compatibility suites use a synthetic `legacy_auth` fixture; they do not access the production identity service.
 
 The API, database, Studio and test-mail ports are 55431, 55432, 55433 and 55434 respectively. Clojure SQL generation remains authoritative: local Supabase migration replay and automatic seeds are disabled, and the suites install their own generated schema or historical migration fixtures into their isolated databases. `FINFOLK_TEST_POSTGRES_URL` overrides must use a local PostgreSQL URL without query parameters. CI installs the same CLI version and runs the same test command. No Supabase account, hosted project link, access token or production credentials are needed. First startup downloads the local service images. Stop the previous plain PostgreSQL test container if it still occupies port 55432.
 
@@ -159,7 +163,7 @@ Portrait uploads are decoded and reduced to a WebP (or JPEG on Safari) thumbnail
 make deploy
 ```
 
-This builds and deploys `finfolk-next-api` and `finfolk-next-site` on `api.finfolk.com.au` and `finfolk.com.au`, retaining the existing isolated Neon branch/database/Auth service and Hyperdrive binding. The current machine's Wrangler login can be reused. GitHub Actions runs generation checks, tests and builds; it does not deploy automatically or need Cloudflare credentials.
+The frontend is hosted on Netlify at `finfolk.com.au`; the Cloudflare API at `api.finfolk.com.au` uses the native Supabase database and Auth service. Follow [frontend publishing](docs/FRONTEND_PUBLISH.md) and [production acceptance](docs/SUPABASE_ACCEPTANCE.md) for the current release workflow.
 
 After deployment check [production health](https://finfolk.com.au/_next/health), public routes, account/profile/check-in behavior and sign-out. Rollback uses the preceding Next Worker versions. The legacy repository must not publish to the production hostname. See [the cutover runbook](docs/MAIN_SITE_CUTOVER.md).
 
@@ -171,7 +175,7 @@ Dive sites use the existing location IDs across check-ins, sessions, posts and t
 
 Members use Account → Dive sites to submit locations or corrections. Verified administrators use Review → Dive site management to edit drafts, review submissions, import CSV/JSON and publish. Imports show errors, existing-ID updates and possible duplicates before publication. Revision conflicts require a new draft from the latest record. Archiving preserves historical records; use a published history entry as a new draft to restore or revise it. Sources describe recorded access requirements, not live permission or conditions.
 
-For a catalog release, obtain dedicated Next and temporary rehearsal direct connection URLs into ignored `.cache/site-next-url` and `.cache/site-rehearsal-url` files. The rehearsal branch creation result belongs in `.cache/site-neon-branch.json`. Build the complete static directory, then run `node scripts/sites_release.mjs rehearse` twice to verify migration/seed idempotency. After checks, `node scripts/sites_release.mjs seed` applies the immutable Next migrations and seeds only missing sites. Reviewed and archived records are preserved. Run the guarded database release command to publish the SQL readiness marker, and build with `SITE_SNAPSHOT_FILE=$PWD/.cache/site-published-snapshot.json make build` before deploying the Next API and site. `node scripts/sites_release.mjs snapshot` refreshes the public fallback without seeding. Credentials are never part of the generated site.
+For a catalog release, obtain dedicated Next and temporary rehearsal direct connection URLs into ignored `.cache/site-next-url` and `.cache/site-rehearsal-url` files. The rehearsal branch creation result belongs in `.cache/site-rehearsal-branch.json`. Build the complete static directory, then run `node scripts/sites_release.mjs rehearse` twice to verify migration/seed idempotency. After checks, `node scripts/sites_release.mjs seed` applies the immutable Next migrations and seeds only missing sites. Reviewed and archived records are preserved. Run the guarded database release command to publish the SQL readiness marker, and build with `SITE_SNAPSHOT_FILE=$PWD/.cache/site-published-snapshot.json make build` before deploying the Next API and site. `node scripts/sites_release.mjs snapshot` refreshes the public fallback without seeding. Credentials are never part of the generated site.
 
 Tagged Instagram photos/Reels and TikTok videos appear in the owner’s private Logbook media inbox. Review their post day and matched location, add notes, and assign them to an existing session or create a private session atomically. Imports do not create check-ins, depth records or completed dive sessions. Unknown/ambiguous locations require confirmation. Day metadata uses the matched beach’s time zone, with UTC as the unknown-location fallback. Repeated collection and assignment retries do not duplicate posts or sessions. Published sessions expose explicitly attached original links; import notes remain private. Removing a session returns attached imports to the inbox.
 
@@ -222,3 +226,20 @@ for its Clojure Supabase scaffold tests under `test/finfolkdb/fn/social`.
 runtime pilot with the actual account backbone and native logbook functions.
 Assertions live in Clojure facts; each run owns a fresh local Supabase database.
 See [application integration](docs/APP_MANAGE_INTEGRATION.md).
+
+## Environment console
+
+Run `make environments` to open the independent environment control plane. Its
+URL is printed at startup; the workbench also links to **Environments**. The tree
+is platform → environment → services. Start/Stop controls
+operate on declared local resources; remote descriptors are health-only.
+Configuration is `config/environments.json`. The console requires Node, but no
+application dependencies, running database, container engine or app build to open.
+Resources survive console closure; restarting reconciles owned process identity.
+Existing healthy external prerequisites are observed without adopting ownership.
+Local stack startup is explicit, may prepare missing demo data, and never resets
+persistent volumes. Dupasupa’s owned demo database remains disposable. Failed
+startup retains successful resources; Start retries missing/unhealthy components.
+
+Environment checkout, version and revision are displayed as environment metadata;
+they do not create a separate tree level. The initial environment is `default`.

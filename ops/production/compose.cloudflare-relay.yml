@@ -1,0 +1,22 @@
+# Apply only after Cloudflare permits arbitrary recipients and the SMTP token
+# has been installed on the server. Never put the token in this file or .env.
+services:
+  postfix:
+    environment:
+      RELAYHOST: '[smtp.mx.cloudflare.net]:465'
+      RELAYHOST_USERNAME: api_token
+      RELAYHOST_PASSWORD_FILE: /run/secrets/cloudflare_smtp_token
+      POSTFIX_smtp_tls_wrappermode: 'yes'
+      POSTFIX_smtp_tls_security_level: verify
+      POSTFIX_smtp_tls_verify_cert_match: hostname
+      POSTFIX_smtp_tls_CAfile: /etc/ssl/certs/ca-certificates.crt
+      POSTFIX_smtp_sasl_security_options: noanonymous
+      POSTFIX_smtp_sasl_tls_security_options: noanonymous
+      # Never bypass the relay by delivering directly if it is unavailable.
+      POSTFIX_smtp_fallback_relay: ''
+    secrets:
+      - cloudflare_smtp_token
+
+secrets:
+  cloudflare_smtp_token:
+    file: /srv/finfolk/secrets/cloudflare-smtp-token

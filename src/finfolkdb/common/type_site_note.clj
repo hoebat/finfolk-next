@@ -1,5 +1,5 @@
 (ns finfolkdb.common.type-site-note
-  "Public site observations and account-scoped helpful votes."
+  "Public site observations and account-scoped helpful and unhelpful votes."
   (:require [lang.core :as l]
             [postgres.entity :as et]
             [finfolkdb.common.type-system-site :as sites]
@@ -26,9 +26,9 @@
   SiteNote
   [:site        {:type :ref :required true
                  :ref {:ns finfolkdb.common.type-system-site/Site}
-                 :sql {:cascade true :index true}}
+                 :sql {:cascade true :index true :unique ["site_author"]}}
    :author      {:type :ref :required true
-                 :ref {:ns finfolkdb.common.type-user/User} :sql {:cascade true :index true}}
+                 :ref {:ns finfolkdb.common.type-user/User} :sql {:cascade true :index true :unique ["site_author"]}}
    :topic       {:type :enum :required true
                  :enum {:ns -/EnumSiteNoteTopic}}
    :body        {:type :text :required true
@@ -54,7 +54,8 @@
            :ref {:ns -/SiteNote} :sql {:cascade true :unique ["entity_key"]}}
    :voter {:type :ref :required true
            :ref {:ns finfolkdb.common.type-user/User}
-           :sql {:cascade true :index true :unique ["entity_key"]}}])
+           :sql {:cascade true :index true :unique ["entity_key"]}}
+   :downvoted {:type :boolean :required true :sql {:default false}}])
 
 (deftype.pg ^{:final true :! (et/E {:class :0d/entry})}
   SiteNoteReport

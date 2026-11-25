@@ -1,2 +1,2 @@
-export const metadata={title:'Your FinFolk',robots:{index:false,follow:false}};
-export default function Page(){return null;}
+import {redirect} from 'next/navigation';
+export default function Page(){redirect('/account/settings/appearance');}

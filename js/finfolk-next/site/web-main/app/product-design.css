@@ -1,0 +1,132 @@
+/* The landing walkthroughs' visual language, scoped to native member/logbook views.
+   Use live theme tokens and real content; legacy references remain independent. */
+:root[data-theme] .ff-logbook,.profile-main[data-product=members],.ff-logbook-dialog {
+ --product-font:Avenir,'Helvetica Neue',Arial,sans-serif;
+ font-family:var(--product-font);
+ color:var(--account-ink);
+ font-size:16px;
+ line-height:1.65;
+}
+.profile-main[data-product=members] {max-width:1180px;width:100%;margin-inline:auto;isolation:isolate}
+.profile-main[data-product=members]::before {display:none}
+.profile-main[data-product=members] :is(h1,h2,h3),:root[data-theme] .ff-logbook :is(h1,h2,h3),.ff-logbook-dialog :is(h2,h3) {
+ color:var(--account-ink);font-family:var(--product-font);font-weight:650;letter-spacing:-.045em;line-height:1.15;
+}
+.profile-main[data-product=members] h1 {font-size:clamp(32px,4.5vw,52px)}
+.profile-main[data-product=members] h2,:root[data-theme] .ff-logbook h2 {font-size:26px}
+.profile-main[data-product=members] :is(.profile-eyebrow,.profile-small,.profile-tags,.profile-socials,.profile-lede,.member-bio,.person-card-bio) {font-size:14px}
+.profile-main[data-product=members] :is(.profile-action,.profile-socials a) {min-height:44px;font-size:14px;display:inline-flex;align-items:center;justify-content:center;border-radius:24px;padding:10px 18px}
+.profile-main[data-product=members] .profile-action.primary {background:var(--account-ink);color:var(--account-bg);border-color:var(--account-ink)}
+.profile-main[data-product=members] .member-hero {grid-template-columns:minmax(220px,.8fr) minmax(0,1.2fr);gap:36px;align-items:center;margin:24px 0 40px}
+.profile-main[data-product=members] .member-hero>.person-portrait {width:100%;aspect-ratio:4/4.5;max-height:440px;border-radius:22px;overflow:hidden}
+.profile-main[data-product=members] .member-hero h1 {margin:10px 0 18px}
+.profile-main[data-product=members] .member-bio {font-size:16px;max-width:42ch;line-height:1.75}
+.profile-main[data-product=members] .profile-eyebrow {font-size:12px;letter-spacing:.12em;margin:20px 0 10px}
+.profile-main[data-product=members] .profile-privacy,.session-visibility {display:inline-flex;align-items:center;min-height:30px;padding:4px 11px;margin:0;border:1px solid var(--account-line);border-radius:20px;font:500 12px/1.5 Avenir,'Helvetica Neue',Arial,sans-serif;background:var(--account-surface);color:var(--account-ink)}
+.profile-main[data-product=members] .profile-action-row {gap:10px;margin-top:22px}
+.profile-main[data-product=members] .profile-section {padding-block:30px;margin:0;border-top:1px solid var(--account-line)}
+.profile-main[data-product=members] .profile-section-heading {align-items:center;gap:16px;margin-bottom:22px}
+.profile-main[data-product=members] .profile-section h2 {margin:0 0 22px}
+.profile-main[data-product=members] .profile-section-heading h2 {margin:0}
+.profile-location-grid {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
+.profile-location-card {display:flex;flex-direction:column;min-width:0;padding:18px;border:1px solid var(--account-line);border-radius:18px;background:var(--account-surface);color:var(--account-ink);text-decoration:none}
+.profile-location-card strong {font-size:19px;line-height:1.3;margin:14px 0 6px;letter-spacing:-.025em}
+.profile-location-card>span {font-size:13px;color:var(--account-muted)}
+.ff-location-art {display:block;width:100%;height:135px;color:var(--account-ink)}
+.ff-location-art path {fill:color-mix(in srgb,var(--account-ink) 12%,var(--account-surface));stroke:var(--account-line);stroke-width:.6}
+.ff-location-art circle {fill:var(--account-ink);stroke:var(--account-surface);stroke-width:2}
+.ff-location-art text {fill:var(--account-muted);font:9px Avenir,Arial,sans-serif;letter-spacing:1px}
+.profile-main[data-product=members] :is(.profile-log,.profile-post-link) {padding:22px;border-radius:18px}
+.profile-main[data-product=members] .profile-log :is(h3,p) {margin:14px 0;font-size:16px}
+.profile-main[data-product=members] .profile-log h3 {font-size:23px}
+.profile-main[data-product=members] .profile-post-link strong {font:650 21px/1.2 var(--product-font);letter-spacing:-.03em}
+.profile-main[data-product=members] .profile-post-link span {font-size:14px}
+.profile-main[data-product=members] .profile-editor legend {font:650 21px/1.2 var(--product-font);letter-spacing:-.03em}
+.profile-main[data-product=members] .profile-editor label {font-size:14px}
+.profile-main[data-product=members] .profile-editor :is(input:not([type=checkbox]),textarea,select) {font-size:16px;min-height:48px;border-radius:13px}
+.profile-main[data-product=members] .profile-editor-preview h2 {font-size:32px}
+.profile-main[data-product=members] .profile-connection-row {padding:14px 0;border-bottom:1px solid var(--account-line)}
+.profile-main[data-product=members] .people-grid {gap:28px 20px}
+.profile-main[data-product=members] .person-card-title h2 {font:500 32px/1.1 Georgia,serif}
+.profile-main[data-product=members] .person-portrait {border-radius:18px}
+
+/* Large values and smaller units mirror the walkthrough session cards.
+   Missing measurements have no placeholder or invented value. */
+.ff-session-metrics {display:flex;flex-wrap:wrap;gap:20px 34px;margin:22px 0;padding-block:18px;border-block:1px solid var(--account-line)}
+.ff-session-metrics>div {display:flex;flex-direction:column-reverse;gap:6px;min-width:0}
+.ff-session-metrics dt {font-size:12px;color:var(--account-muted);line-height:1.5}
+.ff-session-metrics dd {margin:0;font:500 36px/1.1 Avenir,'Helvetica Neue',Arial,sans-serif;letter-spacing:-.045em}
+.ff-session-metrics dd small {font:400 14px/1.4 Avenir,'Helvetica Neue',Arial,sans-serif;letter-spacing:0;margin-left:6px;color:var(--account-muted)}
+
+:root[data-theme] .ff-logbook {background:var(--account-bg);color:var(--account-ink);padding:40px clamp(20px,4vw,64px) calc(var(--nav-height,76px) + 32px)}
+:root[data-theme] .ff-logbook>* {max-width:1040px;margin-inline:auto}
+:root[data-theme] .ff-logbook .logbook-header {align-items:flex-start;padding-bottom:24px;margin-bottom:0;border-bottom:1px solid var(--account-line)}
+:root[data-theme] .ff-logbook .logbook-header h1 {font:650 clamp(32px,4vw,48px)/1.1 var(--product-font);letter-spacing:-.045em;margin:10px 0 0;color:var(--account-ink)}
+:root[data-theme] .ff-logbook .logbook-header .eyebrow {font-size:12px;letter-spacing:.12em;color:var(--account-muted);margin:0}
+:root[data-theme] .ff-logbook .logbook-intro {display:flex;align-items:center;justify-content:space-between;gap:24px;margin-block:28px}
+:root[data-theme] .ff-logbook .logbook-intro>p {margin:0;color:var(--account-muted);font-size:16px}
+:root[data-theme] .ff-logbook :is(button,a),.ff-logbook-dialog :is(button,a) {touch-action:manipulation}
+:root[data-theme] .ff-logbook button,.ff-logbook-dialog button {font:500 14px/1.4 Avenir,'Helvetica Neue',Arial,sans-serif;min-height:44px;padding:11px 18px;border:1px solid var(--account-line);border-radius:24px;background:var(--account-surface);color:var(--account-ink);box-shadow:none}
+:root[data-theme] .ff-logbook button.primary,:root[data-theme] .ff-logbook-dialog button.primary {background:var(--account-ink);color:var(--account-bg);border-color:var(--account-ink)}
+:root[data-theme] .ff-logbook button:disabled,.ff-logbook-dialog button:disabled {opacity:.55;cursor:wait}
+:root[data-theme] .ff-logbook :is(button,a,input,textarea,select):focus-visible,.profile-main[data-product=members] :is(a,button,input,textarea,select):focus-visible,.ff-logbook-dialog button:focus-visible {outline:2px solid var(--account-ink);outline-offset:4px}
+:root[data-theme] .ff-logbook :is(.logbook-card,.session-card) {border:1px solid var(--account-line);border-radius:18px;background:var(--account-surface);color:var(--account-ink);box-shadow:none;backdrop-filter:none}
+:root[data-theme] .ff-logbook .logbook-card {padding:26px;max-width:760px}
+:root[data-theme] .ff-logbook .media-inbox {max-width:1040px}
+:root[data-theme] .ff-logbook .session-card {padding:22px;display:flex;flex-direction:column;align-items:flex-start;transform:none}
+:root[data-theme] .ff-logbook .session-card:hover {transform:none;box-shadow:none}
+:root[data-theme] .ff-logbook .session-card-meta {display:flex;align-items:center;justify-content:space-between;gap:12px;width:100%}
+:root[data-theme] .ff-logbook small {color:var(--account-muted);font-size:12px}
+:root[data-theme] .ff-logbook button.session-title {background:transparent;border:0;border-radius:0;padding:18px 0 0;color:var(--account-ink);font-size:24px;letter-spacing:-.04em;font-weight:650;text-align:left;white-space:normal}
+:root[data-theme] .ff-logbook .session-card .ff-session-metrics {width:100%}
+:root[data-theme] .ff-logbook .session-card .session-notes {font-size:14px;margin:0 0 20px;color:var(--account-muted)}
+:root[data-theme] .ff-logbook .session-card .session-open {margin-top:auto}
+:root[data-theme] .ff-logbook .session-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+:root[data-theme] .ff-logbook .logbook-empty {grid-column:1/-1;border:1px dashed var(--account-line);border-radius:18px;padding:36px 26px;max-width:100%;color:var(--account-muted)}
+:root[data-theme] .ff-logbook .session-form {gap:22px;margin-top:28px}
+:root[data-theme] .ff-logbook .session-form-intro {padding-bottom:18px;border-bottom:1px solid var(--account-line)}
+:root[data-theme] .ff-logbook .session-form-intro p {margin:14px 0 0;color:var(--account-muted)}
+:root[data-theme] .ff-logbook .session-field-pair {display:grid;grid-template-columns:1fr 1fr;gap:16px}
+:root[data-theme] .ff-logbook label {font-size:14px;font-weight:500;min-width:0;gap:8px}
+:root[data-theme] .ff-logbook :is(input,textarea,select) {min-height:48px;max-width:100%;border:1px solid var(--account-line);border-radius:13px;background:var(--account-bg);color:var(--account-ink);padding:12px 14px;font:400 16px/1.5 var(--product-font)}
+:root[data-theme] .ff-logbook .session-form>.logbook-actions:empty {display:none}
+:root[data-theme] .ff-logbook .session-form>.logbook-actions:last-of-type {padding-top:20px;border-top:1px solid var(--account-line)}
+:root[data-theme] .ff-logbook .session-form>p {margin:0;font-size:14px;color:var(--account-muted)}
+:root[data-theme] .ff-logbook .logbook-header .logbook-actions button {font-size:12px;padding-inline:12px}
+:root[data-theme] .ff-logbook .auth-card::before {background:var(--account-ink);mask:url('/finfolk-wordmark.svg') center/contain no-repeat;width:220px;height:80px;margin:0 0 24px;border-radius:0}
+:root[data-theme] .ff-logbook :is(.instagram-profile a,.follow-invitation a,.imported-link a) {color:var(--account-ink)}
+:root[data-theme] .ff-logbook :is(.follow-invitation,.logbook-status) {background:var(--account-surface);color:var(--account-ink);border:1px solid var(--account-line);border-radius:14px}
+.ff-logbook-dialog {background:var(--account-bg);color:var(--account-ink);border:1px solid var(--account-line);border-radius:22px}
+.ff-logbook-dialog::backdrop {background:#07152b99;backdrop-filter:blur(6px)}
+
+@media(max-width:760px) {
+ .profile-main[data-product=members] {padding:24px 20px 40px}
+ .profile-main[data-product=members] .member-hero {grid-template-columns:1fr;gap:22px;margin-top:22px}
+ .profile-main[data-product=members] .member-hero>.person-portrait {max-width:none;max-height:340px;aspect-ratio:4/3}
+ .profile-main[data-product=members] .member-hero>.person-portrait img {object-position:50% 35%}
+ .profile-main[data-product=members] .member-hero h1 {font-size:40px}
+ .profile-main[data-product=members] .member-hero .profile-eyebrow {margin-top:16px}
+ .profile-location-grid {grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+ .profile-location-card {padding:14px}
+ .profile-location-card strong {font-size:17px}
+ .ff-location-art {height:105px}
+ .profile-main[data-product=members] :is(.profile-log-grid,.profile-post-grid) {grid-template-columns:1fr}
+ .profile-main[data-product=members] .profile-editor-preview {grid-row:auto}
+ .profile-main[data-product=members] .profile-editor-preview>.person-portrait {max-height:240px}
+ .profile-main[data-product=members] .profile-section-heading {display:flex;flex-wrap:wrap}
+ :root[data-theme] .ff-logbook .logbook-header {gap:18px}
+ :root[data-theme] .ff-logbook .logbook-intro {align-items:flex-start;flex-direction:column;gap:20px;margin-block:24px}
+ :root[data-theme] .ff-logbook .session-grid {grid-template-columns:minmax(0,1fr)}
+ :root[data-theme] .ff-logbook .logbook-card {padding:20px}
+ :root[data-theme] .ff-logbook .logbook-actions {gap:8px}
+ :root[data-theme] .ff-logbook .session-field-pair {gap:12px}
+ :root[data-theme] .ff-logbook .session-field-pair label {font-size:13px}
+ :root[data-theme] .ff-logbook .session-form>.logbook-actions:last-of-type .primary {flex:1}
+}
+@media(max-width:359px) {
+ .profile-location-grid,:root[data-theme] .ff-logbook .session-field-pair {grid-template-columns:1fr}
+ .profile-main[data-product=members] .profile-action-row>.profile-action {flex:1 1 100%}
+ :root[data-theme] .ff-logbook .logbook-card {padding:16px}
+}
+
+:root[data-theme] .ff-logbook .logbook-header::after,:root[data-theme] .ff-logbook .logbook-header h1::before {display:none}

@@ -7,14 +7,24 @@ export async function nativeNotes({db,users,operation,publicOperation}){
  async function feed(){const response=await publicOperation('publicSiteNotes',{site});assert.equal(response.status,200,await response.clone().text());return response.json();}
  const save={site,id,topic:'access',text:'Use the marked public access path.'};
  try{
-  assert.deepEqual(await feed(),{enabled:true,notes:[],next:null});
+  assert.deepEqual(await feed(),{enabled:true,notes:[],next:null,ownNote:null});
   assert.deepEqual(await call(users[0],'siteNoteSave',save),{id,revision:1});
   assert.deepEqual(await call(users[0],'siteNoteSave',save),{id,revision:1});
   assert.equal((await operation(users[1],'siteNoteSave',save)).status,403);
+  assert.equal((await operation(users[0],'siteNoteSave',{...save,id:randomUUID()})).status,409,'One note per person at a site');
   assert.equal((await operation(users[0],'siteNoteSave',{...save,id:randomUUID(),topic:'conditions'})).status,403);
   const publicNote=(await feed()).notes[0];assert.equal(publicNote.own,false);assert.equal(publicNote.upvoted,false);assert.equal(publicNote.text,save.text);assert.equal(Object.hasOwn(publicNote,'author_id'),false);
   const votes=await Promise.all(Array.from({length:3},()=>operation(users[1],'siteNoteVote',{site,id,upvoted:true})));for(const response of votes)assert.equal(response.status,200,await response.clone().text());
   assert.equal((await feed()).notes[0].score,1);
+  let rated=await call(users[1],'siteNoteVote',{site,id,vote:-1});assert.equal(rated.score,-1);assert.equal(rated.downvoted,true);assert.equal(rated.upvoted,false);
+  assert.equal((await call(users[1],'siteNoteVote',{site,id,vote:-1})).score,-1,'Downvote retries are idempotent');
+  assert.equal((await feed()).notes[0].downvoted,false,'Anonymous readers cannot see the viewer vote');
+  assert.equal((await call(users[1],'siteNotes',{site})).notes[0].downvoted,true);
+  rated=await call(users[1],'siteNoteVote',{site,id,vote:1});assert.equal(rated.score,1);assert.equal(rated.downvoted,false);
+  rated=await call(users[1],'siteNoteVote',{site,id,vote:0});assert.equal(rated.score,0);assert.equal(rated.upvoted,false);assert.equal(rated.downvoted,false);
+  for(const vote of [-2,2,'-1',null])assert.equal((await operation(users[1],'siteNoteVote',{site,id,vote})).status,400);
+  assert.equal((await operation(users[1],'siteNoteVote',{site,id})).status,403);
+  await call(users[1],'siteNoteVote',{site,id,vote:1});
   await db.query('UPDATE finfolk."User" SET email_verified=false WHERE id=$1',[users[1].id]);assert.equal((await feed()).notes[0].score,0);
   await call(users[1],'me',{});assert.equal((await feed()).notes[0].score,1,'Verified getUser state restores native membership');
   await call(users[0],'block',{target:users[1].id});assert.deepEqual((await call(users[1],'siteNotes',{site})).notes,[]);await call(users[0],'unblock',{target:users[1].id});
@@ -26,6 +36,11 @@ export async function nativeNotes({db,users,operation,publicOperation}){
   await db.query('INSERT INTO finfolk."UserRole"(user_id,role) VALUES($1,\'admin\')',[users[0].id]);
   await call(users[0],'siteNoteModerate',{site,id,hidden:true});assert.deepEqual((await feed()).notes,[]);
   await call(users[0],'siteNoteModerate',{site,id,hidden:false});assert.equal((await feed()).notes.length,1);
+  const mine=(await call(users[0],'siteNotes',{site,topic:'wildlife',offset:100})).ownNote;assert.equal(mine.id,id);
+  const edited=await call(users[0],'siteNoteSave',{...save,text:'Updated public access instructions.',revision:mine.revision});assert.equal(edited.revision,mine.revision+1);
+  assert.equal((await feed()).notes.length,1);assert.equal((await feed()).notes[0].text,'Updated public access instructions.');
+  assert.equal((await operation(users[0],'siteNoteSave',{...save,text:'Stale change must not overwrite.',revision:mine.revision})).status,409);
+  const versions=(await db.query('SELECT deltas FROM finfolk."RevLog" WHERE rev_id=(SELECT rev_id FROM finfolk."SiteNote" WHERE id=$1) ORDER BY version',[id])).rows;assert.equal(versions[0].deltas.body,save.text);assert.equal(versions.at(-1).deltas.body,'Updated public access instructions.');
  }finally{
   await db.query('DELETE FROM finfolk."UserRole" WHERE user_id=$1 AND role=\'admin\'',[users[0].id]);
   const notes=(await db.query('DELETE FROM finfolk."SiteNote" WHERE site_id=$1 RETURNING rev_id',[site])).rows;

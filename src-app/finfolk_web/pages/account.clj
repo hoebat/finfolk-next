@@ -6,7 +6,7 @@
          "payload-pick" {"site" (mapv name (keys (:properties site-review/DOCUMENT)))}))
 
 (def AUTH_ACTIONS
-  (into {} (for [[key method] {"google" ["google"] "email" ["email"] "sign-up" ["auth" "signUp" "email"]
+  (into {} (for [[key method] {"google" ["google"] "github" ["github"] "email" ["email"] "sign-up" ["auth" "signUp" "email"]
                                "refresh" ["refresh"] "reset" ["reset"] "reset-password" ["resetPassword"]
                                "verify" ["verify"] "verify-code" ["verifyCode"] "sign-out" ["signOut"]
                                "reauthenticate" ["reauthenticate"] "delete-account" ["deleteAccount"]}]
@@ -23,7 +23,7 @@
    "account-checkin" {"routes" ["/account/checkin"] "area" "member"
                        "models" {"checkins" (seed/read-model "myCheckins")}
                        "actions" {"checkin" (seed/action "checkin") "remove" (seed/action "removeCheckin")}}
-   "account-settings" {"routes" ["/account/settings"] "area" "member" "models" {} "actions" {}
+   "account-settings" {"routes" ["/account/settings" "/account/settings/profile" "/account/settings/privacy" "/account/settings/appearance" "/account/settings/account" "/account/settings/messaging"] "area" "member" "models" {} "actions" {}
                         "adapters" ["theme" "offline-storage" "messaging-settings"]}
    "site-submissions" {"routes" ["/account/sites"] "area" "member"
                         "models" {"submissions" (seed/read-model "mySiteSubmissions")}

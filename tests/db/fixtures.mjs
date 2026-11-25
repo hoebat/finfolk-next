@@ -16,7 +16,7 @@ export const overrides={
 export const valueFor=(type,name)=>type==='uuid'?randomUUID():type==='boolean'?false:type==='jsonb'?{}:type==='date'?'2026-11-01':type==='timestamptz'?'2026-11-01T00:00:00Z':['integer','bigint'].includes(type)?1:'fixture-'+name;
 export async function seed(db,constraints){
  const seeds=new Map(),seeding=new Set();
- await db.query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false),('carol','Carol',false,false),('banned','Banned',true,true)`);
+ await db.query(`INSERT INTO legacy_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false),('carol','Carol',false,false),('banned','Banned',true,true)`);
  async function table(name){
   if(seeds.has(name))return seeds.get(name);
   if(seeding.has(name))throw Error('Required FK fixture cycle: '+name);seeding.add(name);

@@ -38,7 +38,7 @@ try {
     const actor = payload.authorizedBy;
     const active = (
       await db.query(
-        'SELECT 1 FROM neon_auth."user" u JOIN finfolk.members m ON m.user_id=u.id::text WHERE m.user_id=$1 AND u."emailVerified" AND NOT coalesce(u.banned,false) AND NOT m.deleted',
+        'SELECT 1 FROM legacy_auth."user" u JOIN finfolk.members m ON m.user_id=u.id::text WHERE m.user_id=$1 AND u."emailVerified" AND NOT coalesce(u.banned,false) AND NOT m.deleted',
         [actor],
       )
     ).length;

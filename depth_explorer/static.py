@@ -156,13 +156,9 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
         custom_domain = PROJECT / "CNAME"
         if custom_domain.is_file():
             web_files["CNAME"] = custom_domain.read_bytes()
-        neon_bundle = subprocess.run(["node", str(PROJECT / "scripts/bundle_neon.mjs")], check=True, capture_output=True)
-        web_files["neon-client.js"] = neon_bundle.stdout
-        neon_config = json.loads(web_files["neon-config.json"])
-        auth_url = os.environ.get("NEON_AUTH_BASE_URL", neon_config.get("authUrl", ""))
-        api_url = os.environ.get("NEON_API_URL", neon_config.get("apiUrl", ""))
-        neon_config.update(authUrl=auth_url, apiUrl=api_url, enabled=bool(auth_url))
-        web_files["neon-config.json"] = json.dumps(neon_config).encode()
+        account_bundle = subprocess.run(["node", str(PROJECT / "scripts/bundle_account.mjs")], check=True, capture_output=True)
+        web_files["account-client.js"] = account_bundle.stdout
+        web_files["account-config.json"] = json.dumps({"enabled": True, "authProvider": "supabase", "supabaseUrl": os.environ.get("FINFOLK_SUPABASE_URL", "https://supabase.finfolk.com.au"), "apiUrl": "https://finfolk.com.au/", "backbone": True, "googleEnabled": False, "githubEnabled": False}).encode()
         site_snapshot = os.environ.get("SITE_SNAPSHOT_FILE")
         if site_snapshot:
             web_files["sites-snapshot.json"] = Path(site_snapshot).read_bytes()
@@ -261,7 +257,7 @@ def build(store, output, max_zoom=None, budget_mb=850, vendor=None):
             packages[region["id"]] = {"name": region["name"], "files": paths, "bytes": sum(files[path]["bytes"] for path in paths)}
         revision = hashlib.sha256(json.dumps(files, sort_keys=True).encode()).hexdigest()
         write("data/downloads.json", json.dumps({"version": 1, "revision": revision, "files": files, "regions": packages}, separators=(",", ":")).encode())
-        shell = ["./", "./index.html"] + ["./" + name for name in assets.values()] + ["./" + name for name in ("neon-config.json",) if (stage / name).exists()]
+        shell = ["./", "./index.html"] + ["./" + name for name in assets.values()] + ["./" + name for name in ("account-config.json",) if (stage / name).exists()]
         shell += ["./" + name for name in web_files if name.startswith("workers/") and name not in assets]
         shell.append("./workers/finfolk.sharedworker.js?protocol=2")
         worker = (PROJECT / "js/finfolk-next/site/web-main/src/sw-template.js").read_text().replace("__SHELL__", json.dumps(shell)).replace("__VERSION__", digest)

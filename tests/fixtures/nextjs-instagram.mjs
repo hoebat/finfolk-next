@@ -29,4 +29,4 @@ const actions=`
  }
 `;
 export const instagramModule=setup+postsModule.replace(" if(action==='instagramStatus')return {enabled:false,admin:false,total:0,connection:null};",'').replace(" if(action==='instagramCommandStatus')return {enabled:false,admin:false,commands:[]};",'').replace("if(['instagramActions'].includes(action))return [];",'').replace(" throw Error('Unexpected account fixture '+action);",actions+" throw Error('Unexpected account fixture '+action);");
-export async function mockInstagram(page,base){await mockPosts(page,base);await page.route('**/neon-client.js',r=>r.fulfill({contentType:'text/javascript',body:instagramModule}));}
+export async function mockInstagram(page,base){await mockPosts(page,base);await page.route('**/account-client.js',r=>r.fulfill({contentType:'text/javascript',body:instagramModule}));}

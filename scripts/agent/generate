@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+AGENT_ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+exec node "$AGENT_ROOT/.app-manage/agent-runtime.mjs" generate "$@"

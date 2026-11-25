@@ -1,5 +1,8 @@
 # Native FinFolk production cutover handoff
 
+Historical design and acceptance record. For current deployment and identity setup, see
+[Supabase acceptance](SUPABASE_ACCEPTANCE.md) and [API cutover](SUPABASE_API_CUTOVER.md).
+
 ## Status
 
 The migration is **not complete**. This commit contains its native schema/RPC
@@ -63,7 +66,7 @@ local PostgreSQL test connection is required for database suites.
 ## Immediate cloud blocker
 
 At the last check, both production and candidate database connections returned
-Neon HTTP 402, account/project quota exceeded. Production `/health` returned 503.
+the retired provider HTTP 402, account/project quota exceeded. Production `/health` returned 503.
 The candidate also failed using a freshly retrieved connection URI. This was
 observed before any cutover action; credentials should not be replaced blindly.
 Restore project capacity and recheck health. Offline API implementation remains

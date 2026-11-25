@@ -1,0 +1,21 @@
+# Apply after finfolk.com.au is verified in Resend and a sending-only API key
+# restricted to that domain is installed. Keep the key out of Compose and .env.
+services:
+  postfix:
+    environment:
+      RELAYHOST: '[smtp.resend.com]:465'
+      RELAYHOST_USERNAME: resend
+      RELAYHOST_PASSWORD_FILE: /run/secrets/resend_smtp_token
+      POSTFIX_smtp_tls_wrappermode: 'yes'
+      POSTFIX_smtp_tls_security_level: verify
+      POSTFIX_smtp_tls_verify_cert_match: hostname
+      POSTFIX_smtp_tls_CAfile: /etc/ssl/certs/ca-certificates.crt
+      POSTFIX_smtp_sasl_security_options: noanonymous
+      POSTFIX_smtp_sasl_tls_security_options: noanonymous
+      POSTFIX_smtp_fallback_relay: ''
+    secrets:
+      - resend_smtp_token
+
+secrets:
+  resend_smtp_token:
+    file: /srv/finfolk/secrets/resend-smtp-token

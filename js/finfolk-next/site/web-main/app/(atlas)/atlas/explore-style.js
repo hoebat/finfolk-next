@@ -5,11 +5,12 @@ export const DEPTH_SOURCE='ff-ocean-dem';
 export const DEPTH_LAYER='ff-ocean-depth';
 export const LAND_COLOR='#d7dadd';
 export const DEPTH_STOPS=[[-11000,'#182c55'],[-6000,'#223f70'],[-3000,'#2b5b91'],[-1000,'#337faf'],[-200,'#389fc0'],[-50,'#60c3cf'],[-10,'#93d9da'],[0,'#c4ece5']];
+export const DEPTH_GRADIENT='linear-gradient(90deg, '+[...DEPTH_STOPS].reverse().map(([,color])=>color).join(', ')+')';
 export function addDepthShading(map){
  map.addSource(DEPTH_SOURCE,{type:'raster-dem',tiles:[DATASET_PROVIDER_BASE+'terrain/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:8,attribution:'<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles / Mapzen</a> · <a href="https://www.ncei.noaa.gov/products/etopo-global-relief-model/etopo1" target="_blank" rel="noopener">NOAA ETOPO1</a>'});
  // Keep vector labels, roads and FinFolk markers above the depth surface.
  const layers=map.getStyle().layers,water=layers.findIndex(layer=>layer.type==='fill'&&(layer['source-layer']==='water'||layer.id==='water')),before=layers[water>=0?water+1:layers.findIndex(layer=>layer.type!=='background')];
- map.addLayer({id:DEPTH_LAYER,type:'color-relief',maxzoom:10,source:DEPTH_SOURCE,paint:{'color-relief-color':['interpolate',['linear'],['elevation'],...DEPTH_STOPS.flat(),.1,LAND_COLOR],'color-relief-opacity':['interpolate',['linear'],['zoom'],8,1,10,0]}},before?.id);
+ map.addLayer({id:DEPTH_LAYER,type:'color-relief',source:DEPTH_SOURCE,paint:{'color-relief-color':['interpolate',['linear'],['elevation'],...DEPTH_STOPS.flat(),.1,LAND_COLOR],'color-relief-opacity':1}},before?.id);
 }
 export function styleExploreMap(map,appearance){
  const coastal=appearance==='coast';
@@ -26,4 +27,13 @@ export function styleExploreMap(map,appearance){
    map.setPaintProperty(layer.id,'text-color','#48576a');map.setPaintProperty(layer.id,'text-halo-color','#edf0f1');
   }
  }
+}
+
+// Draw state borders explicitly at national zoom; the provider's default hides
+// administrative level 4 until zoom 5. Reuse the dataset-hosted vector source.
+export function addStateBoundaries(map){
+ const style=map.getStyle(),boundary=style.layers.find(layer=>layer['source-layer']==='boundary'&&style.sources?.[layer.source]?.type==='vector');
+ if(!boundary)return false;
+ for(const [id,color,width] of [['ff-state-boundary-halo','#f4f5ef',4],['ff-state-boundaries','#53677f',1.6]])map.addLayer({id,type:'line',source:boundary.source,'source-layer':'boundary',minzoom:0,maxzoom:10,filter:['==',['to-number',['get','admin_level']],4],paint:{'line-color':color,'line-width':width,'line-opacity':['interpolate',['linear'],['zoom'],3,.9,8,.8,10,0]}});
+ return true;
 }

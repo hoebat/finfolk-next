@@ -1,6 +1,6 @@
 # Instagram connections, Actions and invitations
 
-The active implementation uses Neon Postgres, Neon Auth and the `finfolk-community` Cloudflare Worker. Legacy Firebase Instagram functions are not used. The brand account is `@finfolk.com.au`.
+The active implementation uses Supabase Postgres, Supabase Auth and the native Cloudflare API Worker. Legacy Firebase Instagram functions are not used. The brand account is `@finfolk.com.au`.
 
 ## Versioned messaging API
 
@@ -18,7 +18,7 @@ Connect through Instagram: follow @finfolk.com.au, send `/connect`, then enter t
 
 ## Current controls
 
-`INSTAGRAM_ENABLED` gates the legacy action processor; the managed Page connection has its own messaging and comment rollout controls. Member linking uses the DM-first `/connect` workflow above. Manual challenge review and Firebase custom-claim setup are retired. Administrator access uses the verified Neon member IDs in `INSTAGRAM_ADMIN_IDS`.
+`INSTAGRAM_ENABLED` gates the legacy action processor; the managed Page connection has its own messaging and comment rollout controls. Member linking uses the DM-first `/connect` workflow above. Manual challenge review and Firebase custom-claim setup are retired. Administrator access uses the verified account member IDs in `INSTAGRAM_ADMIN_IDS`.
 
 ## Deployment
 
@@ -46,7 +46,7 @@ The initial default rewards the inviter only. These records represent FinFolk in
 
 ## Tests and activation checklist
 
-`npm test` includes Actions UI and animated walkthrough checks. Run `npm run test:instagram-actions` only with the isolated `finfolk-regulars-dev` env file; it tests against actual Postgres rows with synthetic members and no external Instagram messages. `npm run test:neon` checks account/community regression.
+`npm test` includes Actions UI and animated walkthrough checks. Run `npm run test:instagram-actions` only with the isolated `finfolk-regulars-dev` env file; it tests against actual Postgres rows with synthetic members and no external Instagram messages. `npm run test:db` checks account/community regression.
 
 Before activation, use the real brand plus two public test accounts to verify own-post and third-party comment mentions, connection code ownership, private/deleted sources, duplicate deliveries, unknown senders, exact stats consent, private dive logs, admin-only replies, pause/disconnect, points limits, referral attribution and token expiry. Test uncertain-reply reconciliation explicitly. Inspect the Cloudflare dead-letter queue and pending event inbox. Do not advertise automatic Instagram connection, follower gating or universal mention coverage.
 

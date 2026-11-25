@@ -1,6 +1,6 @@
 # Substrate browser route coverage
 
-The Next preview uses one application substrate node with public, application-state and replaceable member spaces. Production keeps the existing client path while `backbone` is false. The existing DOM interface, Neon Auth SDK, HTTP API contracts and server permissions remain in use.
+The application uses one substrate node with public, application-state and replaceable member spaces. The native account adapter uses Supabase Auth and generated API contracts, with server-side permissions. Unsupported legacy operations fail explicitly.
 
 | Area | Model coverage |
 | --- | --- |

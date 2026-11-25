@@ -553,6 +553,7 @@ export var operations = {
             "type":"object",
             "additionalProperties":false,
             "properties":{
+              "downvoted":{"type":"boolean"},
               "site":{"type":"string","format":"uuid"},
               "revision":{"type":"integer"},
               "own":{"type":"boolean"},
@@ -579,13 +580,28 @@ export var operations = {
               "revision",
               "score",
               "own",
-              "upvoted"
+              "upvoted",
+              "downvoted"
             ]
           }
         },
-        "next":{"type":["integer","null"]}
+        "next":{"type":["integer","null"]},
+        "ownNote":{
+          "type":["object","null"],
+          "additionalProperties":false,
+          "properties":{
+            "id":{"type":"string","format":"uuid"},
+            "topic":{"type":"string"},
+            "text":{"type":"string"},
+            "observedOn":{"type":["string","null"]},
+            "revision":{"type":"integer"},
+            "withdrawn":{"type":"boolean"},
+            "hidden":{"type":"boolean"}
+          },
+          "required":["id","topic","text","observedOn","revision","withdrawn","hidden"]
+        }
       },
-      "required":["enabled","notes","next"]
+      "required":["enabled","notes","next","ownNote"]
     },
     "not_found":"Note unavailable.",
     "action":"list",
@@ -621,6 +637,7 @@ export var operations = {
             "type":"object",
             "additionalProperties":false,
             "properties":{
+              "downvoted":{"type":"boolean"},
               "site":{"type":"string","format":"uuid"},
               "revision":{"type":"integer"},
               "own":{"type":"boolean"},
@@ -647,13 +664,28 @@ export var operations = {
               "revision",
               "score",
               "own",
-              "upvoted"
+              "upvoted",
+              "downvoted"
             ]
           }
         },
-        "next":{"type":["integer","null"]}
+        "next":{"type":["integer","null"]},
+        "ownNote":{
+          "type":["object","null"],
+          "additionalProperties":false,
+          "properties":{
+            "id":{"type":"string","format":"uuid"},
+            "topic":{"type":"string"},
+            "text":{"type":"string"},
+            "observedOn":{"type":["string","null"]},
+            "revision":{"type":"integer"},
+            "withdrawn":{"type":"boolean"},
+            "hidden":{"type":"boolean"}
+          },
+          "required":["id","topic","text","observedOn","revision","withdrawn","hidden"]
+        }
       },
-      "required":["enabled","notes","next"]
+      "required":["enabled","notes","next","ownNote"]
     },
     "not_found":"Note unavailable.",
     "action":"public-list",
@@ -1403,9 +1435,11 @@ export var operations = {
       "properties":{
         "site":{"type":"string","format":"uuid"},
         "id":{"type":"string","format":"uuid"},
-        "upvoted":{"type":"boolean"}
+        "upvoted":{"type":"boolean"},
+        "vote":{"type":"integer","enum":[-1,0,1]}
       },
-      "required":["site","id","upvoted"]
+      "required":["site","id"],
+      "anyOf":[{"required":["vote"]},{"required":["upvoted"]}]
     },
     "arguments":["$actor","$verified","$values"],
     "public":false,
@@ -1414,6 +1448,7 @@ export var operations = {
       "type":"object",
       "additionalProperties":false,
       "properties":{
+        "downvoted":{"type":"boolean"},
         "site":{"type":"string","format":"uuid"},
         "revision":{"type":"integer"},
         "own":{"type":"boolean"},
@@ -1440,7 +1475,8 @@ export var operations = {
         "revision",
         "score",
         "own",
-        "upvoted"
+        "upvoted",
+        "downvoted"
       ]
     },
     "not_found":"Note unavailable.",
@@ -2533,6 +2569,7 @@ export var operations = {
       "properties":{
         "site":{"type":"string","format":"uuid"},
         "id":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer","minimum":1},
         "topic":{"type":"string"},
         "text":{"type":"string"},
         "observedOn":{"type":["string","null"]}

@@ -1,6 +1,7 @@
 (ns finfolkbuild.project.management
   "Whole-project management over FinFolk's existing publication and build tools."
   (:require [app.manage :as manage]
+            [finfolkbuild.project.feature-flags :as feature-flags]
             [app.manage.manifest :as manifest]
             [app.manage.make :as make]
             [app.manage.integration :as integration]
@@ -72,6 +73,23 @@
             [(keyword (str/replace (subs path 1) "/" "-"))
              (str/join " · " (map str/capitalize (str/split (subs path 1) #"/"))) path]))))
 
+(def PREVIEW-GROUPS
+  (mapv (fn [[id label]] {:id id :label label})
+        [[:home "Home"] [:explore "Explore"] [:community "Community"]
+         [:events "Events"] [:practice "Practice"] [:you "You"] [:administration "Administration"]]))
+
+(defn preview-group [url]
+  (let [path (.getPath (java.net.URI. url))]
+    (cond
+      (re-find #"^/(account/review|pages/review|shop/manage)(/|$)" path) :administration
+      (= path "/") :home
+      (re-find #"^/(map|discover)(/|$)" path) :explore
+      (re-find #"^/events(/|$)" path) :events
+      (re-find #"^/(practice|logbook)(/|$)" path) :practice
+      (re-find #"^/(you|profile|account)(/|$)" path) :you
+      (re-find #"^/(community|people|members|profiles|directory|pages|shop)(/|$)" path) :community
+      :else nil)))
+
 (defn page-index []
   (mapv (fn [[id page]]
           {:id id :migration (coverage/page-status id) :routes (get page "routes") :area (get page "area") :kind (get page "kind" "screen")
@@ -103,19 +121,22 @@
 (def PROJECT
   (manifest/with-workbench
   {:id 'finfolk
+   :label "FinFolk"
    :root "."
+   :project-panels [feature-flags/PANEL]
    :workbench-ui :legacy
+   :agent-kit {:config "config/agent-kit.json"}
    :http-api {:enabled true
               :operations ["build" "check" "analyse" "verify-definitions" "verify-page" "run-page-cases"]
               :actions {:page-health {:operation "build" :slice "page-health" :stage "browser" :tests true}}
               :artifacts {:page-health-report {:path ".cache/page-health/latest.json" :content-type "application/json"}
                           :page-health-screenshots {:directory ".cache/page-health" :filename-pattern "failure-[0-9]+[.]png"
                                                     :content-type "image/png"}}}
-   :dev-servers [{:id :nextjs :label "Next.js · local Auth & database" :url PREVIEW-ORIGIN
+   :dev-servers [{:id :nextjs :label "Next.js · mock data, no authentication" :url PREVIEW-ORIGIN
                   :env {"PREVIEW_PORT" (str (.getPort (java.net.URI. PREVIEW-ORIGIN)))}
                   :command ["make" "manage-preview"] :stop-timeout-ms 60000
-                  :stop-argument "scripts/native_preview.mjs"}
-                 {:id :native :label "Native Next.js · local Auth & database" :url NATIVE-PREVIEW-ORIGIN
+                  :stop-argument "scripts/mock_preview.mjs"}
+                 {:id :native :label "Native Next.js · mock data, no authentication" :url NATIVE-PREVIEW-ORIGIN
                   :command ["make" "manage-preview-native"] :stop-timeout-ms 60000
                   :stop-argument "scripts/native_preview.mjs"}]
    :test-profiles {:page-health {:label "Page health · workbench failure evidence"
@@ -182,7 +203,7 @@
                       {:id :imports :label "Bulk site imports" :targets [] :blocker "Native bulk import staging and batch review remain pending"}
                       {:id :environment :label "Environmental evidence adapters" :targets [] :blocker "Native environment-provider workflows remain pending"}])
             :site-notes (native-content-slice "Community site notes"
-                          "Native observations, helpful votes, withdrawal, reports and moderation" [])
+                          "One note per person/site, revisioned edits, voting, withdrawal and moderation" [])
             :directory (native-content-slice "Directory & managed pages"
                          "Native publication, claims, ownership and invitation flows"
                          [{:id :discovery :label "Discovery provider, ledger and HTTP failure mocks" :targets [:native-account :page-verifier]
@@ -205,25 +226,30 @@
                       {:id :ui :label "Private logbook browser journey" :targets [:native-account] :checks [:native-account :generated-parity]}
                       {:id :public :label "Public access & publishing" :targets [:native-account :page-verifier] :checks [:native-account :page-model-verification :generated-parity]}
                       {:id :media :label "Imported media & providers" :targets [] :blocker "Native provider, media ownership and cleanup adapters remain to be migrated"}]}}
+   :web-pipeline {:database {:targets [:database-sql]}
+                  :contracts {:targets [:database-json]}
+                  :application {:targets [:publication :application-manifest :logbook-backbone :page-verifier]}
+                  :assets {:steps [{:id :browser-bundles :kind :build :sources ["scripts/bundle_backbone.mjs" (str SITE "/src/site-catalog.js")] :outputs [(str SITE "/src/next-backbone.js") (str SITE "/src/app-backbone.js") (str SITE "/src/workers") (str SITE "/public")] :command ["node" "scripts/bundle_backbone.mjs"] :timeout-ms 120000}
+                                  {:id :static-assets :kind :build :sources ["depth_explorer" "scripts/build_next.mjs" "scripts/build_explore_contours.mjs" "production.environment.json"] :command ["node" "scripts/build_next.mjs"] :env {"FINFOLK_BACKBONE_PREPARED" "1"} :timeout-ms 900000}
+                                  {:id :public-assets :kind :build :sources ["scripts/prepare_nextjs.mjs" "scripts/prepare_netlify_assets.mjs"] :command ["node" "scripts/prepare_nextjs.mjs"] :timeout-ms 300000}]}
+                  :build {:steps [{:id :nextjs :kind :build :sources [(str SITE "/app") (str SITE "/lib") (str SITE "/next.config.mjs") (str SITE "/package.json")] :outputs [(str SITE "/.next/BUILD_ID")] :command ["corepack" "yarn" "workspace" "@finfolk/web-main" "build"] :timeout-ms 900000}
+                                  {:id :api-worker :kind :build :sources ["backend" "wrangler.supabase-api.jsonc"] :outputs [".cache/pipeline/api-worker"] :command ["corepack" "yarn" "wrangler" "deploy" "--dry-run" "--config" "wrangler.supabase-api.jsonc" "--outdir" ".cache/pipeline/api-worker"] :timeout-ms 300000}]}
+                  :verification {:steps [{:id :generated-parity :kind :check :check :generated-parity}
+                                         {:id :native-account :kind :check :check :native-account}
+                                         {:id :page-models :kind :check :check :page-model-verification}
+                                         {:id :api-contracts :kind :check :check :api-contracts}
+                                         {:id :project-tests :kind :check :check :project-tests}]}}
    :default-targets [:web-main :api :integration]
-   :previews (into [{:id :native-account :label "Native · account/privacy" :target :native-account
-                       :url (str NATIVE-PREVIEW-ORIGIN "/account") :command "make manage-preview-native" :server :native}
-                      {:id :native-logbook :label "Native · private/public logbook" :target :native-account
-                       :url (str NATIVE-PREVIEW-ORIGIN "/logbook") :command "make manage-preview-native" :server :native}
-                      {:id :native-profile :label "Native · profile/editing" :target :native-account
-                       :url (str NATIVE-PREVIEW-ORIGIN "/profile") :command "make manage-preview-native" :server :native}
-                      {:id :native-map :label "Native · atlas map & site notes" :target :native-account
-                       :url (str NATIVE-PREVIEW-ORIGIN "/map?site=30000000-0000-0000-0000-000000000003") :command "make manage-preview-native" :server :native}
-                      {:id :native-directory :label "Native · directory & managed pages" :target :native-account
-                       :url (str NATIVE-PREVIEW-ORIGIN "/pages") :command "make manage-preview-native" :server :native}
-                      {:id :native-events :label "Native · events" :target :native-account
-                       :url (str NATIVE-PREVIEW-ORIGIN "/events") :command "make manage-preview-native" :server :native}
-                      {:id :native-people :label "Native · people/check-ins" :target :native-account
-                       :url (str NATIVE-PREVIEW-ORIGIN "/people") :command "make manage-preview-native" :server :native}]
+   :preview-groups PREVIEW-GROUPS
+   :previews (mapv #(assoc % :group (preview-group (:url %))) (into [{:id :sample-member :label "Member detail" :target :web-main :url (str PREVIEW-ORIGIN "/members/bob") :command "make manage-preview" :server :nextjs}
+                     {:id :sample-event :label "Event detail" :target :web-main :url (str PREVIEW-ORIGIN "/events/public-event") :command "make manage-preview" :server :nextjs}
+                     {:id :sample-page :label "Page detail" :target :web-main :url (str PREVIEW-ORIGIN "/directory/school") :command "make manage-preview" :server :nextjs}
+                     {:id :sample-session :label "Session detail" :target :web-main :url (str PREVIEW-ORIGIN "/logbook?session=session-one") :command "make manage-preview" :server :nextjs}
+                     {:id :sample-editor :label "New session" :target :web-main :url (str PREVIEW-ORIGIN "/logbook?new=bondi") :command "make manage-preview" :server :nextjs}]
                     (mapv (fn [[id label route]]
                      {:id id :label label :target :web-main
-                      :url (str PREVIEW-ORIGIN route) :command "make manage-preview" :server :nextjs})
-                   ALL-PREVIEW-ROUTES))
+                      :url (str PREVIEW-ORIGIN route (if (re-find #"review|moderation|shop/manage" route) "?previewActor=admin" (if (= route "/pages") "?previewActor=owner" ""))) :command "make manage-preview" :server :nextjs})
+                   ALL-PREVIEW-ROUTES)))
    :targets
    {:page-health
     {:label "Live page health"
@@ -259,6 +285,7 @@
                               :emit {:code {:label false :link {:path-suffix ".mjs"}}}}]})
     :database-sql (get-in application/PROJECT [:targets :database-sql])
     :database-json (get-in application/PROJECT [:targets :database-json])
+    :native-sql-tests (get-in application/PROJECT [:targets :native-sql-tests])
     :publication
     {:depends [:database-json]
      :sources ["src-app/finfolk_web" "src-app/finfolkbuild" "src/finfolkbuild/db"
@@ -275,7 +302,7 @@
     {:depends [:browser-bundles]
      :sources ["depth_explorer" "scripts/build_next.mjs" "scripts/build_explore_contours.mjs"
                "scripts/prepare_nextjs.mjs" "scripts/prepare_netlify_assets.mjs"
-               "next.environment.json" (str SITE "/src")]
+               "production.environment.json" (str SITE "/src")]
      :outputs [] :render (fn [_] {})}
     :web-main
     {:depends [:site-assets]
@@ -284,11 +311,13 @@
      :outputs [] :render (fn [_] {})}
     :api
     {:depends [:publication]
-     :sources ["backend" "wrangler.next-api.jsonc"] :outputs [] :render (fn [_] {})}
+     :sources ["backend" "wrangler.supabase-api.jsonc"] :outputs [] :render (fn [_] {})}
     :native-account (assoc (get-in application/PROJECT [:targets :native-account]) :depends [:browser-bundles])
     :integration (get-in application/PROJECT [:targets :integration])
+    :feature-flags (get-in application/PROJECT [:targets :feature-flags])
+    :environment-flags (get-in application/PROJECT [:targets :environment-flags])
     :validation
-    {:depends [:web-main :api :integration]
+    {:depends [:web-main :api :integration :native-sql-tests]
      :sources ["tests" "test" "test-app" "Makefile"] :outputs [] :render (fn [_] {})}}
    :checks
    (merge (:checks application/PROJECT)

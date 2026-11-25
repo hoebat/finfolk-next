@@ -16,7 +16,7 @@ generate:
 	node scripts/bundle_backbone.mjs
 check-generated:
 	node scripts/check_generated.mjs
-test:
+test: test-generated-sql
 	node --test tests/test_page_health.mjs tests/test_mapping_data_origin.mjs
 	node --test tests/test_local_supabase.mjs
 	lein run -m finfolkdb.test --application-contracts
@@ -81,15 +81,7 @@ scaffold-db-common:
 test-db-common: check-generated-db
 	node scripts/test_database.mjs --clojure-common $(DB_TEST_NAMESPACE)
 
-.PHONY: neon-test-setup
-neon-test-setup:
-	node scripts/neon_test_setup.mjs
 
-.PHONY: test-finnies test-finnies-neon
-test-finnies: generate-db
-	node scripts/test_database.mjs --finnies
-test-finnies-neon: generate-db
-	FINFOLK_FINNIES_TEST_NEON=1 node tests/db/finnies.mjs
 
 .PHONY: prepare-db-rebuild verify-db-rebuild test-db-rebuild test-db-rebuild-data
 prepare-db-rebuild: check-generated-db
@@ -136,11 +128,11 @@ test-app-integration:
 
 # Whole-project app.manage UI and its existing Next.js application preview.
 LEIN_FLAGS ?=
-MANAGE_PORT ?= 8131
+MANAGE_PORT ?= 8135
 PREVIEW_PORT ?= 3010
 export PREVIEW_PORT
 .PHONY: manage manage-plan manage-check manage-build manage-preview
-manage:
+manage: package-manage-history
 	lein $(LEIN_FLAGS) manage --port $(MANAGE_PORT)
 manage-plan:
 	lein $(LEIN_FLAGS) app plan
@@ -195,3 +187,18 @@ test-native-account: generate
 .PHONY: manage-preview-native
 manage-preview-native: generate
 	lein $(LEIN_FLAGS) run -m finfolkbuild.project.native-preview
+
+.PHONY: environments
+environments:
+	node .app-manage/environments.mjs .
+
+.PHONY: package-manage-history
+package-manage-history:
+	python3 scripts/package_app_manage_history.py
+
+# Install the pinned local prerelease before commands that launch Leiningen.
+generate check-generated test build: package-manage-history
+
+.PHONY: test-generated-sql
+test-generated-sql: package-manage-history
+	lein $(LEIN_FLAGS) run -m clojure.main -e "(require '[app.manage :as m] '[finfolkbuild.project.management :as p]) (let [r (m/build p/PROJECT {:targets [:native-sql-tests] :tests? true})] (prn r) (shutdown-agents) (System/exit (if (= :ok (:status r)) 0 1)))"

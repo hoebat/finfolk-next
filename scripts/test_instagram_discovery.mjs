@@ -1,3 +1,4 @@
+import {legacyTestDatabaseURL} from './lib/legacy_test_database.mjs';
 import { messagingFixture } from "./messaging_fixture.mjs";
 import assert from "node:assert/strict";
 import { randomBytes, randomUUID } from "node:crypto";
@@ -13,9 +14,8 @@ import {
   collectMention,
   collectInstagramSource,
 } from "../backend/instagram-collector.mjs";
-if (process.env.NEON_BRANCH !== "finfolk-regulars-dev")
-  throw Error("Isolated test branch required.");
-const db = database(process.env.DATABASE_URL),
+legacyTestDatabaseURL();
+const db = database(legacyTestDatabaseURL()),
   q = db.query,
   tag = randomBytes(5).toString("hex"),
   uid = randomUUID(),
@@ -56,7 +56,7 @@ async function ingest(caption, extra = {}, source = "tags") {
 try {
   for (const user of [uid, other, admin]) {
     await q(
-      `INSERT INTO neon_auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,'Discovery test',$2,true,now(),now())`,
+      `INSERT INTO legacy_auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,'Discovery test',$2,true,now(),now())`,
       [user, user + "@example.com"],
     );
     await q(
@@ -400,6 +400,6 @@ try {
     [JSON.stringify([uid, other, admin])],
   );
   for (const user of [uid, other, admin])
-    await q('DELETE FROM neon_auth."user" WHERE id=$1', [user]);
+    await q('DELETE FROM legacy_auth."user" WHERE id=$1', [user]);
   await db.pool.end();
 }

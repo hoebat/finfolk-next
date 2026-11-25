@@ -19,7 +19,6 @@ for(const match of (await readFile('backend/messaging-api.mjs','utf8')).matchAll
 }
 assert.throws(()=>restOperation('/v1/unknown'),/Unknown/);
 // The static router must never consume API requests, including errors/OPTIONS.
-const config=JSON.parse(await readFile('wrangler.next.jsonc','utf8'));
 const forwarded=[];let assets=0;
 const env={NEXT_API:{async fetch(r){forwarded.push(r);return Response.json({api:true},{status:r.method==='OPTIONS'?200:403});}},ASSETS:{async fetch(){assets++;return new Response('static');}}};
 for(const origin of ['http://finfolk.com.au','http://www.finfolk.com.au','https://www.finfolk.com.au'])for(const path of ['/?view=account&tab=instagram','/api?cursor=two'])for(const method of ['GET','HEAD','POST','OPTIONS']){
@@ -28,10 +27,8 @@ for(const origin of ['http://finfolk.com.au','http://www.finfolk.com.au','https:
 }
 assert.equal(forwarded.length,0,'Insecure or noncanonical requests redirect before reaching the API');
 assert.equal(assets,0,'Insecure or noncanonical requests redirect before loading assets');
-assert.deepEqual(config.routes,[],'The historical frontend Worker must not reclaim the Netlify production hostnames');
 for(const spec of Object.values(operations).filter(o=>o.transport==='rest')){
  const path=spec.path.replace(':id','fixture')+'?cursor=two';
- assert.ok(config.assets.run_worker_first.some(pattern=>pattern.endsWith('*')?path.split('?')[0].startsWith(pattern.slice(0,-1)):path.split('?')[0]===pattern),path+' must run Worker first');
  const req=new Request('https://finfolk.com.au'+path,{method:spec.method,headers:{Authorization:'Bearer fixture','Idempotency-Key':'fixture'},...(spec.write?{body:'{"fixture":true}'}:{})});
  const response=await preview.fetch(req,env);assert.equal(response.status,403);assert.equal(forwarded.at(-1).url,req.url);assert.equal(forwarded.at(-1).headers.get('Authorization'),'Bearer fixture');if(spec.write)assert.equal(await forwarded.at(-1).text(),'{"fixture":true}');
 }

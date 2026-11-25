@@ -3,7 +3,16 @@ export function accountURL(tab){const url=new URL(location.href);url.pathname=ta
 export function accountReturnDestination(value){
  if(typeof value!=='string'||!value.startsWith('/')||value.startsWith('//')||/[\\\x00-\x1f]/.test(value))return null;
  const url=new URL(value,'https://finfolk.invalid');
- if(url.origin!=='https://finfolk.invalid'||!/^\/(?:pages(?:\/invitation)?|directory\/[^/]+|shop|account\/(?:checkin|posts|instagram|privacy|settings|sites|review))$/.test(url.pathname))return null;
+ if(url.origin!=='https://finfolk.invalid'||!/^\/(?:community|map|pages(?:\/invitation)?|directory\/[^/]+|shop|account\/(?:checkin|posts|instagram|privacy|settings(?:\/(?:profile|privacy|appearance|account|messaging))?|sites|review))$/.test(url.pathname))return null;
  url.searchParams.delete('returnTo');
  return url.pathname+url.search+url.hash;
+}
+
+export function spotSignInURL(site,notes=false){
+ const target=new URL('/map',location.origin);
+ if(location.pathname==='/map')target.search=location.search;
+ target.searchParams.set('site',site);
+ for(const key of ['listing','event','previewActor'])target.searchParams.delete(key);
+ if(notes)target.hash='notes-'+site;
+ return '/account?returnTo='+encodeURIComponent(target.pathname+target.search+target.hash);
 }

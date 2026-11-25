@@ -37,7 +37,7 @@ export function installLogbook({
   getSelectedBeach = () => null,
   loadJSON = (path) =>
     readResource(new URL(path, import.meta.url), { read: "json", cache: "no-cache" }),
-  loadClient = () => import("./neon-client.js"),
+  loadClient = () => import("./account-client.js"),
 } = {}) {
   const root = document.getElementById("logbook-page"),
     nav = document.querySelector('.primary-nav [data-view="logbook"]');
@@ -120,7 +120,7 @@ export function installLogbook({
     message("");
   }
   async function init() {
-    config = await loadJSON("neon-config.json?v=" + encodeURIComponent(new URL(import.meta.url).pathname.split("/").pop()));
+    config = await loadJSON("/api/account-config?v=" + encodeURIComponent(new URL(import.meta.url).pathname.split("/").pop()));
     nav.hidden = true;
     if (!config.enabled) return;
     const module = await loadClient();
@@ -776,7 +776,7 @@ export function installLogbook({
     if (shell.route.view === "logbook") render();
     else editor = null;
   });
-  loadJSON("neon-config.json?v=" + encodeURIComponent(new URL(import.meta.url).pathname.split("/").pop()))
+  loadJSON("/api/account-config?v=" + encodeURIComponent(new URL(import.meta.url).pathname.split("/").pop()))
     .then((value) => {
       config = value;
       nav.hidden = true;
@@ -792,7 +792,7 @@ export function installLogbook({
       return !!config?.enabled;
     },
     async publicInstagramPosts(beachId) {
-      config ||= await loadJSON("neon-config.json");
+      config ||= await loadJSON("/api/account-config");
       if (!config.enabled || !config.apiUrl) return [];
       const discovered=await getInstagramFeed(config.apiUrl,beachId).catch(()=>({posts:[]}));
       const shared=api?.user?await api.instagramPosts({beachId}).catch(()=>[]):[];

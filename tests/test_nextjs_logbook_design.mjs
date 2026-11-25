@@ -4,11 +4,11 @@ import {chromium} from '@playwright/test';import {PNG} from 'pngjs';import pixel
 import {mockLogbook} from './fixtures/nextjs-logbook.mjs';
 const base=process.env.NEXTJS_TEST_URL||'http://localhost:3202';assert.ok(['localhost','127.0.0.1'].includes(new URL(base).hostname));
 const boot=`<script type="module">
-import {installLogbook} from '/logbook.js';import {installNavigation} from '/navigation.js';import {installMapSettings} from '/map-settings.js';import {createLogbookClient} from '/neon-client.js';
+import {installLogbook} from '/logbook.js';import {installNavigation} from '/navigation.js';import {installMapSettings} from '/map-settings.js';import {createLogbookClient} from '/account-client.js';
 for(const section of document.querySelectorAll('#app-main>section'))section.hidden=section.id!=='logbook-page';document.querySelector('.account-entry').hidden=true;
 const native=document.querySelector('button[data-view=logbook]');native.setAttribute('aria-current','page');let listeners=[];const shell={route:{view:'logbook'},subscribe(fn){listeners.push(fn)},navigate(view,{params={}}={}){const url=new URL(location.href);for(const [key,value]of Object.entries(params))value===null?url.searchParams.delete(key):url.searchParams.set(key,value);history.replaceState(null,'',url);for(const fn of listeners)fn();}};
 installMapSettings();const navigation=installNavigation({nav:document.querySelector('.primary-nav'),rail:document.querySelector('.app-rail')});const api=await createLogbookClient();api.observe(user=>navigation.setUser(user));
-const app=installLogbook({shell,getBeaches:()=>[{id:'bondi',name:'Bondi Beach',state:'NSW'}],loadJSON:async()=>await(await fetch('/neon-config.json')).json(),loadClient:async()=>({createLogbookClient:async()=>api})});
+const app=installLogbook({shell,getBeaches:()=>[{id:'bondi',name:'Bondi Beach',state:'NSW'}],loadJSON:async()=>await(await fetch('/account-config.json')).json(),loadClient:async()=>({createLogbookClient:async()=>api})});
 </script>`;
 const html=(await readFile('js/finfolk-next/site/web-main/src/index.html','utf8')).replace('<head>','<head><base href="/">').replace('<script type="module" src="./app.js"></script>',boot);
 const out='.cache/design-parity/logbook';await mkdir(out,{recursive:true});const report=[],browser=await chromium.launch({headless:true});

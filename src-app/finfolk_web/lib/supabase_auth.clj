@@ -11,7 +11,7 @@
     (throw (new Error "Invalid Supabase Auth origin")))
   (var response (await (fetch (new URL "/auth/v1/user" base)
     {"headers" {"apikey" config.publishableKey "Authorization" authorization}
-     "redirect" "error" "signal" (AbortSignal.timeout 10000)})))
+     "redirect" "manual" "signal" (AbortSignal.timeout 10000)})))
   (when (not response.ok)
     (throw (Object.assign (new Error "Your sign-in expired. Please sign in again.") {"status" (:? (. [401 403] (includes response.status)) 401 503)})))
   (var user (await (response.json)))

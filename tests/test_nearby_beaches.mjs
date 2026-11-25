@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';
+import {nearbyBeaches,beachDistance} from '../js/finfolk-next/site/web-main/app/(atlas)/atlas/nearby-beaches.js';
+const row=(id,point=[151,-34],site={waterbody:'ocean',access_mode:'shore'})=>({id,sourceId:id,kind:'spot',point,name:id+' Beach',site});
+const rows=[row('match'),row('near',[151.01,-34]),row('further',[151.1,-34]),row('far',[153,-34]),row('inland',[151,-34],{waterbody:'lake'}),row('boat',[151,-34],{waterbody:'ocean',access_mode:'boat_only'}),{...row('business'),kind:'business'},row('missing',null)];
+assert.deepEqual(nearbyBeaches(rows,[rows[0]],{origin:[151,-34]}).map(x=>x.id),['near','further']);
+assert.deepEqual(nearbyBeaches(rows,Array(5).fill(rows[0]),{origin:[151,-34]}),[]);
+assert.deepEqual(nearbyBeaches(rows,[],{origin:null}),[]);
+assert.ok(beachDistance([151,-34],[151.1,-34])>9&&beachDistance([151,-34],[151.1,-34])<10);
+assert.equal(nearbyBeaches([rows[1],rows[1]],[],{origin:[151,-34]}).length,1);
+assert.ok(!nearbyBeaches(rows,[],{origin:[151,-34],selectedID:'near'}).some(x=>x.id==='near'));
+assert.equal(nearbyBeaches(Array.from({length:8},(_,i)=>row('site'+i,[151+i*.01,-34])),[],{origin:[151,-34]}).length,5);
+console.log('NEARBY_BEACHES_PASS: threshold, distance order/radius, duplicate and selected exclusions, inland/boat/unmapped exclusion and cap.');

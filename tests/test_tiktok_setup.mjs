@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import worker from '../backend/next-api-worker.mjs';
+import worker from '../backend/supabase-api-worker.mjs';
 import {createAPI} from '../backend/api.mjs';
 
 const path='/v1/integrations/tiktok/oauth/callback';
@@ -11,7 +11,7 @@ const routes=[
 ];
 for(const response of routes){
   assert.equal(response.status,503,'Unapproved TikTok authorization is explicitly unavailable');
-  assert.equal(response.headers.get('Cache-Control'),'private, no-store');
+  assert.deepEqual(new Set(response.headers.get('Cache-Control').split(',').map(value=>value.trim())),new Set(['private','no-store']));
   assert.equal(response.headers.get('Referrer-Policy'),'no-referrer');
   assert.match(response.headers.get('Content-Security-Policy'),/default-src 'none'/);
   assert.equal(response.headers.get('Location'),null,'Incoming redirect URLs are never followed');

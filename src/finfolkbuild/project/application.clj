@@ -16,12 +16,29 @@
    :root "."
    :default-targets [:integration]
    :project-sources ["src/finfolkbuild/project/application.clj"]
-   :targets {:database-sql
+   :targets {:environment-flags
+             {:label "Environment preview flags" :depends [:database-json]
+              :sources ["config/environments.json" "scripts/lib/environment_feature_flags.mjs"
+                        "scripts/mock_preview.mjs" "scripts/native_preview.mjs" "backend/feature-flags.mjs" "backend/api.mjs"
+                        "js/finfolk-next/site/web-main/app/feature-flags.jsx"
+                        "tests/test_environment_feature_flags.mjs" "tests/test_environment_preview_flags.mjs"
+                        "ref/foundation/resources/assets/app.manage/environments/controller.mjs"
+                        "ref/foundation/src/app/manage/environments.clj" "ref/foundation/src/app/manage/server.clj" "ref/foundation/src/app/manage/ui.clj"
+                        "ref/foundation/src/app/manage/workspace.clj"]
+              :outputs [] :render (fn [_] {})}
+             :feature-flags {:depends [:database-json] :sources ["scripts/configure_feature_flags.mjs" "tests/test_feature_flags_configuration.mjs" "backend/feature-flags.mjs" "tests/test_feature_flags.mjs" "tests/test_feature_flags_workbench.mjs" "config/feature-flags-panel" "src/finfolkbuild/project/feature_flags.clj"] :outputs [] :render (fn [_] {})}
+             :database-sql
              {:label "Database SQL" :sources ["src/finfolkdb"] :outputs database/SQL-OUTPUTS
               :render (fn [_] (database/sql-artifacts))}
              :database-json
              {:label "Database JSON" :depends [:database-sql] :sources ["src/finfolkdb"] :outputs database/JSON-OUTPUTS
               :render (fn [_] (database/json-artifacts))}
+             :native-sql-tests
+             {:label "Generated SQL integration" :depends [:database-json]
+              :sources ["tests/fixtures/native-sql.mjs" "tests/test_backbone.mjs" "tests/test_directory.mjs"
+                        "tests/db/native_install.mjs" "scripts/test_database.mjs" "backend/native-rpc.mjs"
+                        "test/finfolkdb/build_test.clj"]
+              :outputs [] :render (fn [_] {})}
              :native-account {:depends [:database-json]
                            :sources ["src-app/finfolk_web" "test-app/finfolk_web/integration"
                                      "test/finfolkbuild/project/native_account_test.clj"
@@ -45,9 +62,19 @@
                                      "js/finfolk-next/site/web-main/package.json" "yarn.lock"]
                            :outputs []
                            :render (fn [_] {})}
-             :integration {:depends [:database-json :native-account]
+             :integration {:depends [:database-json :native-account :native-sql-tests]
                            :sources ["test-app/finfolk_web/integration"] :outputs [] :render (fn [_] {})}}
-   :checks {:native-account (isolated-check [:native-account]
+   :checks {:database-publication (integration/check {:targets [:database-json] :namespaces ['finfolkdb.build-test]})
+            :native-sql-tests {:targets [:native-sql-tests] :timeout-ms 120000
+                               :command ["node" "--test" "tests/test_backbone.mjs" "tests/test_directory.mjs"]}
+            :native-install {:targets [:native-sql-tests] :timeout-ms 120000
+                             :command ["node" "scripts/test_database.mjs" "--native-install"]}
+            :environment-flags {:targets [:environment-flags] :timeout-ms 600000
+                                :command ["corepack" "yarn" "test:environment-flags"]}
+            :feature-flags-contracts (integration/check {:targets [:feature-flags] :namespaces ['finfolkbuild.project.feature-flags-test]})
+            :feature-flags {:targets [:feature-flags] :timeout-ms 300000
+                             :command ["corepack" "yarn" "test:feature-flags"]}
+            :native-account (isolated-check [:native-account]
                                                '[finfolkbuild.project.native-account-test
                                                  finfolkdb.schema.account-contracts-test])
             :integration (integration/check {:targets [:integration]

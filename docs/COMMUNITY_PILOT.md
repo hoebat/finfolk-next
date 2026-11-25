@@ -1,5 +1,8 @@
 # FinFolk community pilot
 
+Historical design and acceptance record. For current deployment and identity setup, see
+[Supabase acceptance](SUPABASE_ACCEPTANCE.md) and [API cutover](SUPABASE_API_CUTOVER.md).
+
 FinFolk connects Sydney freedivers and snorkellers through shared beaches, recent regulars and reviewed public Instagram/TikTok posts. Social interactions remain on their original platforms. Maps and private logbooks support the experience. Check-ins never advertise live presence or expose exact visit dates to other members.
 
 ## First release
@@ -45,4 +48,4 @@ This release includes followed-beach discovery, shareable post links and reuse o
 
 Desktop and a 390 × 844 viewport were inspected in Dia using local test data. Tab navigation, submission/consent layout, Night Swim contrast and saved-theme reload were checked. Visual QA fixed account-header/System contrast and radio placement. Real-account sign-in, reviewer actions and real external embeds remain launch checks. Local OAuth callbacks must use an explicitly permitted development origin; production trusted origins remain unchanged.
 
-The account client uses the installed Neon SDK's session JWT before requesting `/token`, preserving OAuth verifier sessions in browsers that restrict cross-site cookies. Missing tokens return the account to sign-in. Regression checks cover session JWTs, opaque-token rejection, fallback and expiry.
+The earlier account client used SDK session JWTs and a token endpoint. Current clients use Supabase access tokens through the native account adapter; missing or invalid tokens return the account to sign-in.

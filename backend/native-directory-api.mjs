@@ -5,7 +5,7 @@ export function createNativeDirectoryAPI({db,verify,releaseId,origins=[]}){
  if(!/^[a-f0-9]{64}$/.test(releaseId||''))throw Error('Pin the expected native DatabaseRelease before creating the directory API.');
  const nativeDb={transaction:work=>db.transaction(async query=>{
   let release;
-  try{release=(await query('SELECT EXISTS(SELECT 1 FROM finfolk."DatabaseRelease" WHERE id=$1) AS matched',[releaseId]))[0]?.matched;}
+  try{release=(await query('SELECT EXISTS(SELECT 1 FROM finfolk."DatabaseRelease" WHERE key=$1) AS matched',[releaseId]))[0]?.matched;}
   catch(error){if(error.code!=='42P01')throw error;}
   if(!release)throw Object.assign(Error('The native directory release is not ready.'),{status:503});
   return work(query);
@@ -27,7 +27,7 @@ export function createNativeDirectoryAPI({db,verify,releaseId,origins=[]}){
   try{if(!token?.startsWith('Bearer '))throw Error();claims=await verify(token.slice(7));if(typeof claims?.sub!=='string'||!claims.sub)throw Error();}
   catch{return c.json({error:'Sign in to continue.'},401);}
   // The database rechecks verified/banned/deleted state for each operation.
-  c.set('messagingIdentity',{uid:claims.sub,verified:true});await next();
+  c.set('messagingIdentity',{uid:claims.sub,verified:claims.email_verified===true});await next();
  });
  registerDirectoryPrivate(app,{db:nativeDb,fetcher:async()=>{throw Object.assign(Error('Discovery is not enabled on this native candidate.'),{status:503});}});
  return app;

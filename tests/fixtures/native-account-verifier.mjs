@@ -7,6 +7,7 @@ import {serve} from '@hono/node-server';
 import {AuthClient} from '@supabase/auth-js';
 import {database} from '../../backend/db.mjs';
 import {createAPI} from '../../backend/api.mjs';
+import {flagDefinitions} from '../../backend/feature-flags.mjs';
 import {supabase} from '../../scripts/lib/local_supabase.mjs';
 import {createApplicationBackbone} from '../../js/finfolk-next/packages/edge/application.js';
 import {createAccountClient} from '../../js/finfolk-next/packages/edge/supabase-client.js';
@@ -26,7 +27,10 @@ async function auth(path,body,admin=false,method='POST'){
 }
 try{
  if(!['127.0.0.1','localhost'].includes(new URL(url).hostname))throw Error('Native verifier requires local Auth');
- const api=createAPI({db,directorySearch:mockDirectorySearch,eventDelivery:mockEventDelivery,deliveryKey,invitationOrigin:'http://127.0.0.1:3011',verify:async()=>{throw Error('Legacy identity is unavailable in this fixture');}});
+ // Saved feature scenarios run against their isolated fixture with features enabled.
+ // Interactive previews continue to use the environment controller's choices.
+ const previewFeatureFlags=async()=>({flags:Object.fromEntries(flagDefinitions.map(({id})=>[id,true])),revision:0,preview:true});
+ const api=createAPI({db,previewFeatureFlags,directorySearch:mockDirectorySearch,eventDelivery:mockEventDelivery,deliveryKey,invitationOrigin:'http://127.0.0.1:3011',verify:async()=>{throw Error('Legacy identity is unavailable in this fixture');}});
  const origin=await new Promise(resolve=>{server=serve({fetch:request=>api.fetch(request,{SUPABASE_URL:url,SUPABASE_PUBLISHABLE_KEY:key}),hostname:'127.0.0.1',port:0},info=>resolve('http://127.0.0.1:'+info.port));});
  const context={async clientFor(actor){
   if(!['alice','bob','guest','admin'].includes(actor))throw Error('Unknown fixture actor');

@@ -1,7 +1,7 @@
 (ns finfolk-web.pages.atlas
   (:require [finfolk-web.lib.seed :as seed]))
 (def DEFINITIONS
- {"community-hub" {"routes" ["/community"] "area" "public" "models" {} "actions" {}}
+ {"community-hub" {"routes" ["/community"] "area" "public" "models" {"listings" (seed/read-model "publicDirectory") "events" (seed/read-model "publicEvents") "popular" (seed/read-model "discoverPopular") "catalog" (seed/read-model "siteCatalog") "trips" (seed/read-model "publicTrips")} "actions" {}}
   "practice-hub" {"routes" ["/practice"] "area" "public" "models" {} "actions" {}}
   "you-hub" {"routes" ["/you"] "area" "public" "models" {} "actions" {}}
   "home" {"routes" ["/"] "area" "public" "models" {} "actions" {}

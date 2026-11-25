@@ -1,6 +1,6 @@
-# Finfolk Coop
+# FinFolk Coop
 
-Finfolk Coop is at `/shop`. Verified members can spend Finnies on published outlet rewards and retrieve their claim codes in **Your rewards**. Members confirm the price before a purchase. A successful purchase creates a receipt with the original title, outlet, instructions and price; later offer edits do not change it.
+FinFolk Coop is at `/shop`. Verified members can spend Finnies on published outlet rewards and retrieve their claim codes in **Your rewards**. Members confirm the price before a purchase. A successful purchase creates a receipt with the original title, outlet, instructions and price; later offer edits do not change it.
 
 Existing participation points and verified referral rewards carry over at 1:1. The wallet imports changes under a per-member lock, so repeated reads cannot award the same points again. Reversed earnings reduce the balance; any debt is settled before subsequent earnings become spendable. Finnies purchases are separate from the existing Stripe cash checkout.
 
@@ -16,10 +16,6 @@ The same screen lets administrators award Finnies to an existing member, with a 
 
 ## Verification
 
-- `make test-finnies` runs the application service and ownership checks against disposable local PostgreSQL, including earned points carry-over/reversal, concurrent purchases, last-item stock races, immutable receipts, refunds and account erasure.
-- `make test-finnies-neon` runs the same core transaction scenarios directly against the isolated `finfolkdb-test` Neon database configured by `make neon-test-setup`. It temporarily recreates only `finfolk_shop` there and removes it after the run; do not point it at an application database.
-- `corepack yarn test:nextjs-finnies` runs browser flow checks against a native Next.js server on localhost:3218 (override `NEXTJS_TEST_URL`). Authentication and catalogue fixtures are local; transaction behavior is covered by the database suite.
-
-The browser suite also checks that signing out hides claim codes and that the shop fits a narrow mobile viewport. Full repository checks remain `make generate`, `make check-generated`, `make test` and `make build-netlify`.
+The dedicated Finnies database and browser suites are removed for now. Full repository checks remain `make generate`, `make check-generated`, `make test` and `make build-netlify`.
 
 Finnies use a round, spiky pufferfish face with round goggles and crooked teeth. The SVG is colocated with the native shop screen as `finnie-symbol.svg`. It follows the theme colour beside balances and prices; the visible Finnies label remains, and screen readers ignore the decorative mark.

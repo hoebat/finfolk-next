@@ -15,13 +15,16 @@ export async function nativeAtlasBrowser({browser,page,origin,siteId}){
  const calls=[];page.on('request',request=>{if(request.method()==='POST'&&new URL(request.url()).pathname==='/v1/native/account'){const body=request.postDataJSON();calls.push(body.operation);}});
  await page.goto(origin+'/map?site='+siteId);
  const notes=page.locator('.fm-detail .fn-notes');
- await notes.getByRole('button',{name:'+ Add note',exact:true}).waitFor();
- await notes.getByRole('button',{name:'+ Add note',exact:true}).click();
+ await notes.getByRole('button',{name:'Add note',exact:true}).waitFor();
+ await notes.getByRole('button',{name:'Add note',exact:true}).click();
  await notes.getByLabel('Your note',{exact:true}).fill('Browser native map access note.');
  await notes.getByRole('button',{name:'Publish note',exact:true}).click();
  await notes.getByRole('status').filter({hasText:'Your note is published.'}).waitFor();
  await notes.locator('.fn-note-text').filter({hasText:'Browser native map access note.'}).waitFor();
  await page.reload();await notes.locator('.fn-note-text').filter({hasText:'Browser native map access note.'}).waitFor();
+ await notes.locator('.fn-note-downvote').click();await notes.locator('.fn-note-downvote[aria-pressed=true]').waitFor();
+ await page.reload();await notes.locator('.fn-note-downvote[aria-pressed=true]').waitFor();assert.match(await notes.locator('.fn-note-upvote').innerText(),/-1/);
+ await notes.locator('.fn-note-downvote').click();await notes.locator('.fn-note-downvote[aria-pressed=false]').waitFor();
  const context=await browser.newContext({serviceWorkers:'block'});
  let guest;
  try{

@@ -28,9 +28,9 @@ async function call(action,values={},uid='alice'){
 }
 const callback=async(url,cookie)=>app.fetch(new Request(url,{headers:cookie?{Cookie:cookie}:{}}),env);
 try{
- await pg.exec('DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);');
- for(const file of(await readdir('backend/migrations')).filter(f=>f.endsWith('.sql')).sort())await pg.exec(await readFile('backend/migrations/'+file,'utf8'));
- await query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false)`);
+ await pg.exec('DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);');
+ for(const file of(await readdir('backend/migrations')).filter(f=>f.endsWith('.sql')).sort())await pg.exec((await readFile('backend/migrations/'+file,'utf8')).replaceAll('neon_auth','legacy_auth'));
+ await query(`INSERT INTO legacy_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false)`);
  await query("INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi Beach','Australia/Sydney')");
  await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA finfolk TO finfolk_api; GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA finfolk TO finfolk_api;');
  await pg.exec('SET ROLE finfolk_api;');
@@ -54,9 +54,9 @@ try{
  const other=inbox.items.find(i=>i.id!==item.id);
  await assert.rejects(()=>call('assignImportedMedia',{id:other.id,key:randomUUID(),sessionId:saved.id}),e=>e.status===409);
  if(!process.env.FINFOLK_TEST_DATABASE_URL){
-  await pg.exec('RESET ROLE');await query(`UPDATE neon_auth."user" SET "emailVerified"=false WHERE id='alice'`);await pg.exec('SET ROLE finfolk_api;');
+  await pg.exec('RESET ROLE');await query(`UPDATE legacy_auth."user" SET "emailVerified"=false WHERE id='alice'`);await pg.exec('SET ROLE finfolk_api;');
   await assert.rejects(()=>call('assignImportedMedia',{id:other.id,key:randomUUID(),sessionId:saved.id,publicConsent:true}),e=>e.status===403);
-  await pg.exec('RESET ROLE');await query(`UPDATE neon_auth."user" SET "emailVerified"=true WHERE id='alice'`);await pg.exec('SET ROLE finfolk_api;');
+  await pg.exec('RESET ROLE');await query(`UPDATE legacy_auth."user" SET "emailVerified"=true WHERE id='alice'`);await pg.exec('SET ROLE finfolk_api;');
  }
  await call('assignImportedMedia',{id:other.id,key:randomUUID(),sessionId:saved.id,publicConsent:true});
  await assert.rejects(()=>call('assignImportedMedia',{id:other.id,key:randomUUID(),values}),e=>e.status===409);

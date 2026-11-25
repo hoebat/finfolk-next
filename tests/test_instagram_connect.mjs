@@ -36,11 +36,11 @@ const fetcher=async(url,options={})=>{
   return {ok:true,json:async()=>({id:sender,username:'diver'+sender,is_user_follow_business:follows})};
 };
 try {
-  await pg.exec('CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user" (id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; GRANT USAGE ON SCHEMA neon_auth TO finfolk_api; GRANT SELECT ON neon_auth."user" TO finfolk_api;');
+  await pg.exec('CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user" (id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; GRANT USAGE ON SCHEMA legacy_auth TO finfolk_api; GRANT SELECT ON legacy_auth."user" TO finfolk_api;');
   for(const name of (await readdir('backend/migrations')).filter(n=>n.endsWith('.sql')).sort())
-    await pg.exec(await readFile('backend/migrations/'+name,'utf8'));
+    await pg.exec((await readFile('backend/migrations/'+name,'utf8')).replaceAll('neon_auth','legacy_auth'));
   await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api');
-  await query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false),('unverified','Unverified',false,false),('carol','Carol',true,false),('dave','Dave',true,false)`);
+  await query(`INSERT INTO legacy_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false),('unverified','Unverified',false,false),('carol','Carol',true,false),('dave','Dave',true,false)`);
   await query(`INSERT INTO finfolk.members(user_id) VALUES('alice'),('bob'),('unverified'),('carol'),('dave')`);
   await query("INSERT INTO finfolk.invitation_joins(invitee_id,inviter_id) VALUES('alice','carol')");
   await query(`UPDATE finfolk.messaging_accounts SET account_id='900',mode='live',enabled_commands='["help","ping","connect"]',checks='{"authorization":true,"subscription":true,"followLookup":true}',provider_scope=$1,credential_ciphertext=$2 WHERE id='instagram'`,[scope,seal({accessToken:'fixture'},env,scope)]);

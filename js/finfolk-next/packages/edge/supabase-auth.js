@@ -9,7 +9,7 @@ export async function verifiedIdentity(config,authorization){
   }
   let response = await fetch(new URL("/auth/v1/user",base),{
     "headers":{"apikey":config.publishableKey,"Authorization":authorization},
-    "redirect":"error",
+    "redirect":"manual",
     "signal":AbortSignal.timeout(10000)
   });
   if(!response.ok){

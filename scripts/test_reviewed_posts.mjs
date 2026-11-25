@@ -4,15 +4,13 @@ import { execFileSync } from 'node:child_process';
 import { randomUUID } from 'node:crypto';
 import { database } from '../backend/db.mjs';
 import { createAPI } from '../backend/api.mjs';
-const branch='finfolk-community-pilot-test', project='odd-voice-85400108';
-const url=execFileSync('neon',['connection-string',branch,'--project-id',project],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
-const host=new URL(url).hostname;
-if(!host.startsWith('ep-little-thunder-a7s1soji')) throw Error('Unexpected database endpoint. Refusing integration test.');
-execFileSync(process.execPath,['scripts/migrate_neon.mjs'],{env:{...process.env,DATABASE_URL_UNPOOLED:url},stdio:['ignore','pipe','pipe']});
+import {legacyTestDatabaseURL,legacyTestRuntimeURL} from './lib/legacy_test_database.mjs';
+const url=legacyTestDatabaseURL();
+execFileSync(process.execPath,['scripts/migrate_legacy_fixtures.mjs'],{env:process.env,stdio:['ignore','pipe','pipe']});
 const db=database(url),q=db.query;
 const admin=randomUUID(), owner=randomUUID(), viewer=randomUUID(), unverified=randomUUID(),ids=[admin,owner,viewer,unverified];
 const env={COMMUNITY_POSTS_ENABLED:'true',INSTAGRAM_ADMIN_IDS:admin};
-const runtimeURL=execFileSync('neon',['connection-string',branch,'--project-id',project,'--role-name','finfolk_api'],{encoding:'utf8',stdio:['ignore','pipe','pipe']}).trim();
+const runtimeURL=legacyTestRuntimeURL();
 if(new URL(runtimeURL).hostname!==host)throw Error('Unexpected runtime database endpoint.');
 const runtimeDB=database(runtimeURL);
 const app=createAPI({db:runtimeDB,verify:async token=>{if(!ids.includes(token))throw Error('Invalid test token');return {sub:token};}});
@@ -23,7 +21,7 @@ async function call(uid,action,data={},expected=200){
 async function feed(cursor='',settings=env,postId=''){const response=await app.request('http://localhost/community/posts?beachId=bondi&cursor='+encodeURIComponent(cursor)+'&postId='+postId,{},settings);assert.equal(response.status,200);return response.json();}
 const submission={beachId:'bondi',url:'https://www.instagram.com/p/FinfolkPilotTest/',creatorHandle:'test.diver',ownPost:true,tagged:true,publicConsent:true};
 try {
- for(const uid of ids)await q(`INSERT INTO neon_auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,'Pilot test',$2,$3,now(),now())`,[uid,uid+'@example.com',uid!==unverified]);
+ for(const uid of ids)await q(`INSERT INTO legacy_auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,'Pilot test',$2,$3,now(),now())`,[uid,uid+'@example.com',uid!==unverified]);
  for(const uid of ids)await call(uid,'me');
  await call(null,'reviewPosts',{},401);
  await call(viewer,'reviewPosts',{},403);
@@ -72,7 +70,7 @@ try {
  assert.equal((await feed()).posts.length,0);
  console.log('Reviewed posts integration passed: migrated isolated branch, verified submissions, consent, moderation, admin access, public/Closed separation, blocking, reports, withdrawal races, microsecond pagination, metrics and account deletion.');
 }finally{
- for(const uid of ids){await q('DELETE FROM finfolk.members WHERE user_id=$1',[uid]);await q('DELETE FROM neon_auth."user" WHERE id::text=$1',[uid]);}
+ for(const uid of ids){await q('DELETE FROM finfolk.members WHERE user_id=$1',[uid]);await q('DELETE FROM legacy_auth."user" WHERE id::text=$1',[uid]);}
  await runtimeDB.pool.end();
  await db.pool.end();
 }

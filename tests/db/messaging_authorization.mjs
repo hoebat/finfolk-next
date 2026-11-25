@@ -1,3 +1,4 @@
+import {applicationId,accountId,seedMessaging} from './fixtures/messaging.mjs';
 import assert from 'node:assert/strict';
 import {randomBytes} from 'node:crypto';
 import pg from 'pg';
@@ -13,19 +14,17 @@ const encryptionEnv={MESSAGING_ENCRYPTION_KEY:randomBytes(32).toString('base64')
 const expiry=()=>new Date(Date.now()+3600000).toISOString();
 const token=(value='FIRST',authMethod='instagram-facebook')=>({token:value,authMethod});
 const query=(sql,args)=>pool.query(sql,args);
-const account=async id=>(await db.query(`SELECT * FROM finfolk."MessagingAccount" WHERE id=$1`,[id])).rows[0];
-const store=id=>createMessagingAuthorizationStore({db:apiDatabase(pool),application:'finfolk',account:id,encryptionEnv});
+const account=async id=>(await db.query(`SELECT * FROM finfolk."MessagingAccount" WHERE id=$1`,[accountId(id)])).rows[0];
+const store=id=>createMessagingAuthorizationStore({db:apiDatabase(pool),application:applicationId('finfolk'),account:accountId(id),encryptionEnv});
 const verify=async(credential,connection)=>({provider:connection.provider,accountId:connection.accountId,authorized:true,subscribed:true});
 try{
  await installEntities(db);
- await db.query(`INSERT INTO finfolk."MessagingApplication"(id,name) VALUES('finfolk','FinFolk'),('other','Other');
- INSERT INTO finfolk."MessagingAccount"(id,application_id,provider,account_id)
- VALUES('ig','finfolk','instagram','123'),('tt','finfolk','tiktok','tt-business'),('second','finfolk','instagram','456'),('foreign','other','instagram','123'),('app','finfolk','app','app');`);
+ await seedMessaging(db,['finfolk','other'],[['ig','finfolk','instagram','123'],['tt','finfolk','tiktok','tt-business'],['second','finfolk','instagram','456'],['foreign','other','instagram','123'],['app','finfolk','app','app']]);
  const ig=store('ig');
  assert.equal((await ig.connection()).mode,'disabled');assert.equal('credential_ciphertext' in await ig.connection(),false);
  await assert.rejects(ig.accessToken(),/missing/);
  let verificationAttempted=false;
- const missingKey=createMessagingAuthorizationStore({db:apiDatabase(pool),application:'finfolk',account:'ig',encryptionEnv:{}});
+ const missingKey=createMessagingAuthorizationStore({db:apiDatabase(pool),application:applicationId('finfolk'),account:accountId('ig'),encryptionEnv:{}});
  await assert.rejects(missingKey.install({credential:token(),expiresAt:expiry(),verify:async(...args)=>{verificationAttempted=true;return verify(...args);}}));
  assert.equal(verificationAttempted,false,'Missing encrypted storage fails before provider setup calls');
  const installed=await ig.install({credential:token(),expiresAt:expiry(),verify});assert.equal(installed.generation,2);assert.equal(installed.mode,'disabled');
@@ -38,10 +37,10 @@ try{
  await assert.rejects(ig.activate({generation:1,mode:'live'}),MessagingAuthorizationChanged);
  await assert.rejects(ig.activate({generation:2,senders:[123]}),/Invalid messaging activation/);
  // Ciphertexts bind application, local account, provider and external account.
- await db.query(`UPDATE finfolk."MessagingAccount" SET credential_ciphertext=$1,token_expires_at=$2 WHERE id='second'`,[first.credential_ciphertext,first.token_expires_at]);
+ await db.query(`UPDATE finfolk."MessagingAccount" SET credential_ciphertext=$1,token_expires_at=$2 WHERE id='${accountId('second')}'`,[first.credential_ciphertext,first.token_expires_at]);
  await assert.rejects(store('second').accessToken(),/decrypt|credential|Credential|authorization/i);
  await assert.rejects(store('foreign').connection(),/outside application scope/);
- const badKey=createMessagingAuthorizationStore({db:apiDatabase(pool),application:'finfolk',account:'ig',encryptionEnv:{MESSAGING_ENCRYPTION_KEY:randomBytes(32).toString('base64')}});
+ const badKey=createMessagingAuthorizationStore({db:apiDatabase(pool),application:applicationId('finfolk'),account:accountId('ig'),encryptionEnv:{MESSAGING_ENCRYPTION_KEY:randomBytes(32).toString('base64')}});
  await assert.rejects(badKey.accessToken());
  // Refresh preserves active mode/generation and uses a short independently
  // committed lease rather than holding a transaction over provider HTTP.
@@ -75,9 +74,9 @@ try{
  await ig.install({credential:token('PERMANENT','instagram-facebook'),expiresAt:null,verify:async(c,a)=>({...await verify(c,a),nonExpiring:true})});assert.equal(await ig.accessToken(),'PERMANENT');
  await assert.rejects(ig.install({credential:token(),expiresAt:'2000-01-01',verify}),/expired/);
  // Native proof validation fails closed on missing IDs and string booleans.
- await assert.rejects(db.query(`SELECT finfolk_rpc.set_messaging_authorization('finfolk','ig',6,'bad',now()+interval '1 hour','{"authorized":true,"subscribed":true}')`),/Invalid verified/);
- await assert.rejects(db.query(`SELECT finfolk_rpc.set_messaging_authorization('finfolk','ig',6,'bad',now()+interval '1 hour','{"provider":"instagram","accountId":"123","authorized":"true","subscribed":true}')`),/Invalid verified/);
- await db.query(`INSERT INTO finfolk."MessagingAccount"(id,application_id,provider,account_id) VALUES('provider-ig','finfolk','instagram','789'),('provider-tt','finfolk','tiktok','business')`);
+ await assert.rejects(db.query(`SELECT finfolk_rpc.set_messaging_authorization('${applicationId('finfolk')}','${accountId('ig')}',6,'bad',(extract(epoch from now())*1000000)::bigint+3600000000,'{"authorized":true,"subscribed":true}')`),/Invalid verified/);
+ await assert.rejects(db.query(`SELECT finfolk_rpc.set_messaging_authorization('${applicationId('finfolk')}','${accountId('ig')}',6,'bad',(extract(epoch from now())*1000000)::bigint+3600000000,'{"provider":"instagram","accountId":"123","authorized":"true","subscribed":true}')`),/Invalid verified/);
+ await seedMessaging(db,[],[['provider-ig','finfolk','instagram','789'],['provider-tt','finfolk','tiktok','business']]);
  const providerStore=store('provider-ig');
  const graph=new InstagramProvider({provider:'instagram-facebook',accountId:'789',pageId:'321',appId:'999',metaAppId:'999',clientSecret:'SECRET',token:'VERIFIED',graphVersion:'v26.0'},async url=>{
   const path=new URL(url).pathname;
@@ -89,7 +88,7 @@ try{
  const verifiedExpiry=new Date(Date.now()+300000).toISOString();
  await providerStore.install({credential:token('VERIFIED'),expiresAt:expiry(),verify:async()=>({...await verifyInstagramMessagingAuthorization(graph,{accountId:'789'}),expiresAt:verifiedExpiry})});
  assert.equal(await providerStore.accessToken({appId:'999'}),'VERIFIED');await assert.rejects(providerStore.accessToken({appId:'other'}),/app changed/);
- assert.equal(new Date((await account('provider-ig')).token_expires_at).toISOString(),verifiedExpiry,'Provider data-access expiry clamps the stored lifetime');
+ assert.equal(new Date(Number((await account('provider-ig')).token_expires_at)/1000).toISOString(),verifiedExpiry,'Provider data-access expiry clamps the stored lifetime');
  const business=createTikTokMessagingAuthorization({appId:'app',appSecret:'SECRET',accountId:'business',callbackURL:'https://api.example.test/webhook',fetcher:async url=>{
   const path=new URL(url).pathname;
   if(path.endsWith('/token_info/get/'))return Response.json({code:0,data:{app_id:'app',creator_id:'business',scope:'message.list.manage,message.list.send,user.account.type'}});

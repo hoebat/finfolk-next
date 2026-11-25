@@ -148,7 +148,14 @@ export var pages = {
     }
   },
   "account-settings":{
-    "routes":["/account/settings"],
+    "routes":[
+      "/account/settings",
+      "/account/settings/profile",
+      "/account/settings/privacy",
+      "/account/settings/appearance",
+      "/account/settings/account",
+      "/account/settings/messaging"
+    ],
     "area":"member",
     "models":{},
     "actions":{},
@@ -207,6 +214,7 @@ export var pages = {
     },
     "auth-actions":{
       "google":{"method":["google"],"check-error":false},
+      "github":{"method":["github"],"check-error":false},
       "sign-up":{"method":["auth","signUp","email"],"check-error":true},
       "email":{"method":["email"],"check-error":false},
       "reset":{"method":["reset"],"check-error":false},
@@ -495,6 +503,7 @@ export var pages = {
     },
     "auth-actions":{
       "google":{"method":["google"],"check-error":false},
+      "github":{"method":["github"],"check-error":false},
       "sign-up":{"method":["auth","signUp","email"],"check-error":true},
       "email":{"method":["email"],"check-error":false},
       "reset":{"method":["reset"],"check-error":false},
@@ -719,6 +728,7 @@ export var pages = {
     "actions":{},
     "auth-actions":{
       "google":{"method":["google"],"check-error":false},
+      "github":{"method":["github"],"check-error":false},
       "sign-up":{"method":["auth","signUp","email"],"check-error":true},
       "email":{"method":["email"],"check-error":false},
       "reset":{"method":["reset"],"check-error":false},
@@ -1010,7 +1020,13 @@ export var pages = {
   "community-hub":{
     "routes":["/community"],
     "area":"public",
-    "models":{},
+    "models":{
+      "listings":{"operation":"publicDirectory","bindings":{}},
+      "events":{"operation":"publicEvents","bindings":{}},
+      "popular":{"operation":"discoverPopular","bindings":{}},
+      "catalog":{"operation":"siteCatalog","bindings":{}},
+      "trips":{"operation":"publicTrips","bindings":{}}
+    },
     "actions":{}
   }
 };

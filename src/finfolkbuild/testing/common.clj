@@ -1,5 +1,5 @@
 (ns finfolkbuild.testing.common
-  "Common declaration contracts against the disposable Neon-compatible database."
+  "Common declaration contracts against the disposable PostgreSQL-compatible database."
   (:require [clojure.set :as set]
             [finfolkbuild.testing.jdbc :as jdbc]
             [finfolkdb.schema.entity-catalog :as catalog]

@@ -31,4 +31,4 @@ const actions=`
  if(action==='tripReview'){if(value.decision==='approve'&&(!value.ownershipChecked||!value.beachChecked))throw Error('Check ownership and beach first.');tripReviews=tripReviews.filter(t=>t.id!==value.id);tripReports=tripReports.filter(t=>t.id!==value.id);return {};}
 `;
 export const sitesModule=setup+postsModule.replace("admin:false,enabled:!sessionStorage", "admin:!sessionStorage.getItem('fixture:ordinary'),enabled:!sessionStorage").replace("if(path==='/v1/me/site-submissions')return {submissions:[]};",requests).replace(" throw Error('Unexpected account fixture '+action);",actions+" throw Error('Unexpected account fixture '+action);");
-export async function mockSites(page,base){await mockPosts(page,base);await page.route('**/neon-client.js',r=>r.fulfill({contentType:'text/javascript',body:sitesModule}));}
+export async function mockSites(page,base){await mockPosts(page,base);await page.route('**/account-client.js',r=>r.fulfill({contentType:'text/javascript',body:sitesModule}));}

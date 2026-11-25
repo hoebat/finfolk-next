@@ -1,5 +1,5 @@
 (ns finfolkbuild.project.preview
-  "Reuses the local native preview or starts its owned Auth/database fixture."
+  "Reuses or starts the local mock-backed preview without authentication."
   (:require [clojure.data.json :as json]
             [clojure.java.io :as io]))
 
@@ -7,7 +7,7 @@
 
 (defn running-server
   [site]
-  (let [native-lock (io/file site (str ".cache/native-preview-" (or (System/getenv "PREVIEW_PORT") "3010") "/dev/lock"))]
+  (let [native-lock (io/file site (str ".cache/mock-preview-" (or (System/getenv "PREVIEW_PORT") "3010") "/dev/lock"))]
     (some (fn [[lock native?]]
             (when (.isFile lock)
               (try
@@ -27,9 +27,10 @@
 (defn -main [& _]
   (if-let [running (running-server SITE)]
     (if (:native running)
-      (println "FinFolk native preview is already running:" (:origin running))
-      (throw (ex-info "A legacy Next preview is running. Stop it, then restart the local native preview."
+      (println "FinFolk mock preview is already running:" (:origin running))
+      (throw (ex-info "A legacy Next preview is running. Stop it, then restart the mock preview."
                      {:origin (:origin running)})))
-    ((requiring-resolve 'finfolkbuild.project.native-preview/-main)
-      (or (System/getenv "PREVIEW_PORT") "3010")))
+    (let [p (.start (doto (ProcessBuilder. ^java.util.List ["node" "scripts/mock_preview.mjs"]) (.inheritIO)))]
+      (.addShutdownHook (Runtime/getRuntime) (Thread. ^Runnable (fn [] (.destroy p))))
+      (.waitFor p)))
   (shutdown-agents))

@@ -13,7 +13,7 @@ try{
  await page.waitForFunction(()=>!!navigator.serviceWorker.controller,null,{timeout:60000});
  const shell=await page.evaluate(async()=>{const names=(await caches.keys()).filter(name=>name.startsWith('finfolk-next-shell-'));return {names,paths:await Promise.all(names.map(async name=>(await(await caches.open(name)).keys()).map(request=>new URL(request.url).pathname)))};});
  assert.equal(shell.names.length,1);assert.ok(shell.paths[0].includes('/offline/map.json'));assert.ok(shell.paths[0].some(path=>path.startsWith('/_next/static/')));
- assert.ok(shell.paths[0].includes('/neon-config.json'));
+ assert.ok(shell.paths[0].includes('/account-config.json'));
  assert.ok(shell.paths[0].every(path=>!path.startsWith('/v1/')&&!path.startsWith('/api/')&&!path.startsWith('/data/')&&!path.startsWith('/auth/')));
  const settings=page.getByRole('dialog',{name:'Settings',exact:true});
  await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('link',{name:'Settings',exact:true}).click();

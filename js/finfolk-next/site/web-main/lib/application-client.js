@@ -2,7 +2,7 @@
 // its existing cache namespace, including public SQLite data from the old app.
 export async function nativeApplicationBackbone(){
  const mode=await(await fetch('/api/account-config',{cache:'no-store'})).json();
- if(mode.authProvider==='supabase'){
+ if(['supabase','preview'].includes(mode.authProvider)){
   const {browserClient}=await import('./browser-client.js');
   return (await browserClient()).application;
  }

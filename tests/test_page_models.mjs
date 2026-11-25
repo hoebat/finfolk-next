@@ -20,13 +20,13 @@ test('declared actions use SDK requests and route identity',async()=>{
  await assert.rejects(()=>runAction(client,'listing','delete',{id:'a'},{}),/Undeclared page action/);
  assert.equal(calls.length,1);
 });
-test('public SSR loads declared reads without executing member operations',async()=>{
+test('public SSR loads the listing and defers gated events to the browser',async()=>{
  const {loadPublicPage}=await import('../js/finfolk-next/site/web-main/lib/public-page.js');
  const previous=globalThis.fetch,calls=[];
  globalThis.fetch=async url=>{calls.push(String(url));return {ok:true,status:200,json:async()=>({ok:true})};};
  try{
-  assert.deepEqual(await loadPublicPage('listing',{id:'abc'}),{listing:{ok:true},events:{ok:true}});
-  assert.equal(calls.length,2);assert.ok(calls.every(url=>!url.includes('/me/')));
+  assert.deepEqual(await loadPublicPage('listing',{id:'abc'}),{listing:{ok:true},events:{events:[]}});
+  assert.equal(calls.length,1);assert.ok(calls.every(url=>!url.includes('/me/')&&!url.includes('/events')));
  }finally{globalThis.fetch=previous;}
 });
 

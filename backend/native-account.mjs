@@ -12,17 +12,19 @@ async function readInput(request){
  finally {reader.releaseLock();}
  try{return JSON.parse(text);}catch{throw Object.assign(Error('Invalid request'),{status:400});}
 }
-export function createNativeAccount({query, transaction, supabaseUrl, publishableKey, serviceRoleKey, adminFetch, directorySearch, eventDelivery, deliveryKey, invitationOrigin}) {
+export function createNativeAccount({assertFeature,query, transaction, supabaseUrl, publishableKey, serviceRoleKey, adminFetch, directorySearch, eventDelivery, deliveryKey, invitationOrigin}) {
  if(typeof transaction!=='function')throw Error('Native accounts require a transaction-capable database');
  return async request=>{
-  let requestSpec;
+  let requestSpec,stage='input';
   try {
    if(!['GET','POST'].includes(request.method))return Response.json({error:'Method not allowed'},{status:405});
    const input=request.method==='GET'?{operation:'me',values:{}}:await readInput(request);
    if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(k=>!['operation','values'].includes(k))||!Object.hasOwn(operations,input.operation))
     throw Object.assign(Error('Unknown account operation'),{status:400});
+   await assertFeature?.(input.operation,request);
    const spec=operations[input.operation];requestSpec=spec;const values=input.values??{};
    // Public entrypoints are always anonymous, including when a bearer is sent.
+   stage='identity';
    const identity=spec.public?null:await verifiedIdentity({supabaseUrl,publishableKey},request.headers.get('Authorization'));
    try{validate(spec.request,values);}catch(error){throw Object.assign(error,{status:400});}
    const args=spec.arguments.map(key=>key==='$values'?values:key==='$actor'?(identity?.id??null):key==='$verified'?(identity?.verified??false):key==='$email'?(identity?.email??null):key==='$true'?true:key==='$false'?false:values[key]);
@@ -32,6 +34,7 @@ export function createNativeAccount({query, transaction, supabaseUrl, publishabl
     if(!serviceRoleKey)throw Object.assign(Error('Auth account cleanup is not configured'),{status:503});
     await verifyDeletionPassword({supabaseUrl,publishableKey},identity,values.password);
    }
+   stage='transaction';
    let result=await transaction(async query=>{
     const call=createNativeRPC(query);
     // Provisioning holds the actor lock until this operation commits.
@@ -54,9 +57,13 @@ export function createNativeAccount({query, transaction, supabaseUrl, publishabl
     catch{await createNativeRPC(query)('record_account_deletion_failure',[identity.id]).catch(()=>{});return Response.json({error:'Your FinFolk data was removed; sign-in cleanup is pending.',code:'account_deletion_pending',dataDeleted:true},{status:503,headers:{'Cache-Control':'no-store'}});}
    }
    if(input.operation==='me')result={...result,verified:identity.verified};
+   stage='response';
    validate(spec.result,result,'result');
    return Response.json(result,{headers:{'Cache-Control':'no-store'}});
   } catch(error) {
+   if(!error.status&&!['22003','22023','22007','22008','22P02','23503','40001','23505','P0001','42501','P0002'].includes(error.code))
+    console.error(JSON.stringify({service:'native-account',stage,code:error.code||error.name||'unavailable'}));
+   if(error.code==='feature_disabled')return Response.json({error:'Feature unavailable.',code:'feature_disabled'},{status:403,headers:{'Cache-Control':'no-store'}});
    const status=[400,401,413].includes(error.status)?error.status:
     ['40001','23505'].includes(error.code)?409:
     ['22003','22023','22007','22008','22P02','23503'].includes(error.code)?400:error.code==='P0002'?404:

@@ -1,6 +1,7 @@
 (ns finfolkdb.build-test
   (:require [finfolkdb.build :as build]
             [finfolkdb.shop :as shop]
+            [finfolkdb.schema.enums :as enums]
             [clojure.string :as str])
   (:use code.test))
 
@@ -26,3 +27,11 @@
   (let [artifacts (build/json-artifacts)]
     [(set (keys artifacts)) (every? #(str/ends-with? % ".json") (keys artifacts))])
   => [(set build/JSON-OUTPUTS) true])
+
+^{:refer finfolkdb.schema.enums/contracts :added "0.1"}
+(fact "social enums are included in metadata and SQL validation"
+  (let [contracts (into {} (map (juxt :name :values) (enums/contracts)))]
+    [(get contracts "EnumSocialProvider")
+     (get contracts "EnumSocialConnectionStatus")
+     (boolean (re-find #"Enum declaration mismatch: EnumSocialProvider" (enums/sql)))])
+  => [["instagram" "tiktok" "mock"] ["pending" "active" "expired" "revoked" "failed"] true])

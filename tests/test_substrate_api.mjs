@@ -13,9 +13,9 @@ const member=uid=>createBackbone(uid,async(name,value,options)=>{
  const body=await response.json();if(!response.ok)throw Object.assign(Error(body.error?.message||body.error),{status:response.status});return body.data;
 });
 try {
- await pg.exec('DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);');
- for(const name of (await readdir('backend/migrations')).filter(n=>n.endsWith('.sql')).sort())await pg.exec(await readFile('backend/migrations/'+name,'utf8'));
- await query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false)`);
+ await pg.exec('DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$; CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean);');
+ for(const name of (await readdir('backend/migrations')).filter(n=>n.endsWith('.sql')).sort())await pg.exec((await readFile('backend/migrations/'+name,'utf8')).replaceAll('neon_auth','legacy_auth'));
+ await query(`INSERT INTO legacy_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false)`);
  await query("INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney')");
  await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; GRANT SELECT,INSERT,UPDATE,DELETE ON ALL TABLES IN SCHEMA finfolk TO finfolk_api; GRANT USAGE,SELECT ON ALL SEQUENCES IN SCHEMA finfolk TO finfolk_api; SET ROLE finfolk_api;');
  app=createAPI({db,verify:async sub=>({sub}),origins:['https://finfolk.com.au']});

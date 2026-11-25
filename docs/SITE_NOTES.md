@@ -5,15 +5,23 @@ Dive-site notes are authored in `src/finfolkdb/common/type_site_note.clj` and
 entities and server-only RPCs in the fresh entity schema. Historical migrations
 and the deployed legacy database remain unchanged.
 
-`SiteNote` belongs to a Site and its author. Topics are access, facilities,
+`SiteNote` belongs to a Site and its author, with a database unique constraint
+on `(site_id, author_id)`, including withdrawn and hidden notes. A person edits
+the same note instead of creating another one. Topics are access, facilities,
 wildlife and conditions. Text is bounded to 10–1,000 characters. Conditions
 require an observation date; future dates are rejected in the site's timezone.
 `SiteNoteVote` permits one upvote per member per note. Clients submit the desired
-vote state, making retries safe. UUID note creation is also retry safe.
+vote state, making retries safe. UUID note creation is also retry safe. Distinct create IDs for the same author
+and site are rejected, including concurrent requests. Edits send the current
+`revision`; stale edits return 409 without overwriting the newer version.
+An identical retry of the completed edit does not add a revision.
 `SiteNoteReport` accepts one report per member per note.
 
 Public reads expose only the note, display name, dates and helpfulness count.
-Member reads include ownership and their vote state. Contributions require an
+Member reads include ownership, their vote state, and `ownNote` independently
+of the feed topic, pagination or withdrawal status. Public reads set `ownNote`
+to null. The editor loads that note, including withdrawn notes, and republishing
+updates its original identity. Editing never clears an administrator hide. Contributions require an
 active, verified, unbanned managed-auth member and a native User with the same
 subject ID. Deleted/unverified/banned authors and votes are excluded. Member
 reads honor blocks in either direction. Draft and archived sites are excluded.
@@ -56,7 +64,10 @@ the site's community panel; anonymous visitors can read and sign in to contribut
 
 ## Verification
 
-`make test-db-notes` exercises the generated schema and RPCs in disposable local
+`node scripts/test_database.mjs --note-revisions` exercises current native
+uniqueness, concurrent creation and edits, saved content versions, authorization,
+withdrawal/republication, rollback and server grants in a disposable database.
+The historical `make test-db-notes` suite exercises the generated schema and RPCs in disposable local
 PostgreSQL, including concurrent retries and authorization. `yarn test:site-notes`
 checks generated page bindings and Worker connection gates. Run
 `NEXTJS_TEST_URL=http://localhost:3220 yarn test:nextjs-site-notes` against a
@@ -71,7 +82,7 @@ The native location entity is `Site`; related native columns use `site_id`.
 identity and operation/time tracking. Votes and reports use normal `:0d/entry`
 defaults. There is no local note `revision` column: the HTTP `revision` value is
 projected from its scoped `Rev.index`. Creation initializes version 1 and its
-`RevLog`; withdrawal and moderation append snapshots in the same transaction as
+`RevLog`; content edits, withdrawal and moderation append snapshots in the same transaction as
 the note change. Repeating an already satisfied state does not add a revision.
 Stale versions fail, and rollback removes both the note mutation and history.
 

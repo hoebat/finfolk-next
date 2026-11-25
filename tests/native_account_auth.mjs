@@ -38,11 +38,11 @@ const deliveryKey=randomUUID()+randomUUID();
 const servers=[],browserAPIs=[];
 async function startBrowserAPI(origin){
  const api=createAPI({db:accountDatabase,directorySearch:mockDirectorySearch,eventDelivery:mockEventDelivery,deliveryKey,invitationOrigin:origin,origins:[origin],verify:async()=>{throw Error('Legacy auth is unavailable in the native fixture');}});
- return new Promise(resolve=>{const server=serve({fetch:request=>api.fetch(request,{SUPABASE_URL:url,SUPABASE_PUBLISHABLE_KEY:key,SUPABASE_SERVICE_ROLE_KEY:secret}),hostname:'127.0.0.1',port:0},info=>resolve('http://127.0.0.1:'+info.port));browserAPIs.push(server);});
+ return new Promise(resolve=>{const server=serve({fetch:request=>api.fetch(request,{FINFOLK_FEATURE_ENVIRONMENT:'development',FINFOLK_FEATURE_FLAGS_DEFAULT:'everyone',SUPABASE_URL:url,SUPABASE_PUBLISHABLE_KEY:key,SUPABASE_SERVICE_ROLE_KEY:secret}),hostname:'127.0.0.1',port:0},info=>resolve('http://127.0.0.1:'+info.port));browserAPIs.push(server);});
 }
 async function startServer(allowedOrigin){
  const serverURL=new URL(database.href);serverURL.searchParams.set('options','-c role=finfolk_account');
- const child=spawn(process.execPath,['backend/server.mjs'],{env:{...process.env,DATABASE_URL:serverURL.href,PORT:'0',FINFOLK_ALLOWED_ORIGINS:allowedOrigin||'',SUPABASE_URL:url,SUPABASE_PUBLISHABLE_KEY:key,SUPABASE_SERVICE_ROLE_KEY:secret,FINFOLK_ACCOUNT_CLEANUP_ENABLED:'false',NEON_AUTH_BASE_URL:'',NEON_AUTH_JWKS_URL:''},stdio:['ignore','pipe','pipe']});
+ const child=spawn(process.execPath,['backend/server.mjs'],{env:{...process.env,DATABASE_URL:serverURL.href,PORT:'0',FINFOLK_ALLOWED_ORIGINS:allowedOrigin||'',SUPABASE_URL:url,SUPABASE_PUBLISHABLE_KEY:key,SUPABASE_SERVICE_ROLE_KEY:secret,FINFOLK_FEATURE_ENVIRONMENT:'development',FINFOLK_FEATURE_FLAGS_DEFAULT:'everyone',FINFOLK_ACCOUNT_CLEANUP_ENABLED:'false'},stdio:['ignore','pipe','pipe']});
  servers.push(child);
  return new Promise((resolve,reject)=>{
   const timer=setTimeout(()=>reject(Error('Native API startup timed out')),20000);

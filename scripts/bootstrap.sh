@@ -9,11 +9,14 @@ if [[ -d '/Applications/GitHub Desktop.app/Contents/Resources/app/git/libexec/gi
   ln -sf "/Applications/GitHub Desktop.app/Contents/Resources/app/git/libexec/git-core/git-lfs" .cache/tools/git-lfs
   export PATH="$PWD/.cache/tools:$PATH"
 fi
+foundation_commit=$(sed -n 's/^FOUNDATION_COMMIT=//p' project.version)
+[[ "$foundation_commit" =~ ^[0-9a-f]{40}$ ]] || { echo 'Invalid Foundation commit in project.version' >&2; exit 1; }
 git submodule update --init ref/foundation
-[[ "$(git -C ref/foundation rev-parse HEAD)" == f60ecc0c30247190fd3a1ea86973563c8f9501ac ]] || { echo 'Foundation revision differs from project.version' >&2; exit 1; }
+[[ "$(git -C ref/foundation rev-parse HEAD)" == "$foundation_commit" ]] || { echo 'Foundation revision differs from project.version' >&2; exit 1; }
 git lfs install --local
 if git rev-parse --verify HEAD >/dev/null 2>&1; then git lfs pull; fi
 (cd ref/foundation && lein with-profile -dev run -m clojure.main ../../scripts/bootstrap_foundation.clj)
+python3 scripts/package_app_manage_history.py
 lein deps
 lein generate
 corepack yarn install --immutable

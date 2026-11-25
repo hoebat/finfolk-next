@@ -206,12 +206,7 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch, registe
       !/^[A-Za-z0-9_-]{1,128}$/.test(claims.sub)
     )
       fail("unauthenticated", "Account unavailable.", 401);
-    const identity = c.env?.DB_BACKBONE_ENABLED==='true' ? await lookupIdentity(db.query,claims.sub) : (
-      await db.query(
-        'SELECT id::text,name,"emailVerified" AS verified FROM neon_auth."user" WHERE id::text=$1 AND NOT coalesce(banned,false)',
-        [claims.sub],
-      )
-    )[0];
+    const identity = await lookupIdentity(db.query,claims.sub);
     if (!identity) fail("unauthenticated", "Account unavailable.", 401);
     const member = (
       await db.query(
@@ -732,7 +727,7 @@ export function registerMessagingAPI(app, { db, verify, fetcher = fetch, registe
       fail("invalid_oauth_state", "Authorization state is invalid or expired.");
     const active = (
       await db.query(
-        env.DB_BACKBONE_ENABLED==='true' ? "SELECT 1 FROM finfolk.members m WHERE m.user_id=$1 AND NOT m.deleted AND (finfolk_rpc.auth_identity($1)->>'verified')::boolean" : 'SELECT 1 FROM neon_auth."user" u JOIN finfolk.members m ON m.user_id=u.id::text WHERE m.user_id=$1 AND u."emailVerified" AND NOT coalesce(u.banned,false) AND NOT m.deleted',
+        "SELECT 1 FROM finfolk.members m WHERE m.user_id=$1 AND NOT m.deleted AND (finfolk_rpc.auth_identity($1)->>'verified')::boolean",
         [intent.user_id],
       )
     ).length;

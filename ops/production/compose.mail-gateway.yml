@@ -1,0 +1,44 @@
+name: finfolk-mail-gateway
+services:
+  mail-gateway:
+    image: ${PYTHON_IMAGE:?Set tested Python image digest}
+    user: '10001:10001'
+    restart: unless-stopped
+    read_only: true
+    cap_drop: [ALL]
+    security_opt: [no-new-privileges:true]
+    command: [python, -u, /app/mail_gateway.py]
+    environment:
+      PYTHONDONTWRITEBYTECODE: '1'
+      SMTP_HOST: postfix
+      MAIL_GATEWAY_TOKEN_FILE: /run/secrets/mail-token
+      MAIL_RECEIPTS_DB: /data/receipts.sqlite
+    volumes:
+      - ./mail_gateway.py:/app/mail_gateway.py:ro
+      - /srv/finfolk/mail-gateway/token:/run/secrets/mail-token:ro
+      - /srv/finfolk/mail-gateway/data:/data
+    networks: [finfolk_edge, finfolk_supabase]
+    healthcheck:
+      test: [CMD, python, -c, "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health',timeout=2)"]
+      interval: 15s
+      timeout: 3s
+      retries: 3
+    labels:
+      traefik.enable: 'true'
+      traefik.docker.network: finfolk_edge
+      traefik.http.routers.finfolk-mail.rule: Host(`mail.finfolk.com.au`) && Path(`/v1/send`)
+      traefik.http.routers.finfolk-mail.entrypoints: websecure
+      traefik.http.routers.finfolk-mail.tls.certresolver: letsencrypt
+      traefik.http.routers.finfolk-mail.middlewares: finfolk-mail-limit
+      traefik.http.middlewares.finfolk-mail-limit.ratelimit.average: '5'
+      traefik.http.middlewares.finfolk-mail-limit.ratelimit.period: 1m
+      traefik.http.middlewares.finfolk-mail-limit.ratelimit.burst: '5'
+      traefik.http.services.finfolk-mail.loadbalancer.server.port: '8080'
+    logging:
+      driver: json-file
+      options: {max-size: 10m, max-file: '5'}
+networks:
+  finfolk_edge:
+    external: true
+  finfolk_supabase:
+    external: true

@@ -5,6 +5,7 @@
 (l/script :postgres
   {:require [[finfolkdb.common.type-messaging-delivery :as delivery]
              [postgres.core :as pg]
+             [finfolkdb.common.type-user :as users]
              [finfolkdb.common.type-messaging-base :as tmb]
              [finfolkdb.common.type-system-seed :as tss]
              [finfolkdb.common.type-social-account :as social]]
@@ -14,6 +15,12 @@
 ;;
 ;; Account Scope and Audit
 ;;
+
+(defn.pg ^{:- [:boolean]} is-messaging-member
+  "Trusted messaging authorization reads the native synchronized identity flag."
+  [:uuid i-user]
+  (let [(:boolean v-allowed) (pg/t:exists users/User {:where {:id i-user :deleted false :email-verified true}})]
+    (return v-allowed)))
 
 (defn.pg ret-messaging-account
   "Internal scope check. Never expose its credential fields to chat clients."
@@ -223,9 +230,7 @@
                              :single true
                              :where {:id (:uuid (:->> o-receipt "id"))}})]
             (return nil)))
-        (let [o-linked (pg/t:get social/SocialConnection
-                       {:where {:account (:uuid (:->> o-participant "social_account_id")) :status "active"}})
-              (:uuid v-user) nil
+        (let [(:uuid v-user) nil
               o-claim (pg/t:update tmb/MessagingReceipt
                         {:set {:status "processing"
                                :lease (pg/uuid-generate-v4)
@@ -235,7 +240,11 @@
                          :where {:id (:uuid (:->> o-receipt "id"))}})]
           (if (== (:->> o-account "provider") "app")
             (:= v-user (:uuid (:->> o-participant "user_id")))
-            (:= v-user (:uuid (:->> o-linked "user_id"))))
+            (let [o-linked (pg/t:get social/SocialConnection
+                              {:where {:account (:uuid (:->> o-participant "social_account_id"))
+                                       :status "active"}
+                               :returning #{:user}})]
+              (:= v-user (:uuid (:->> o-linked "user_id")))))
           (return (pg/jsonb-build-object "receipt" o-claim
                                          "message" o-message
                                          "provider" (:->> o-account "provider")
@@ -300,7 +309,7 @@
                     {:set {:status "failed"
                            :lease nil
                            :lease-until nil
-                           :next-attempt-at (+ (pg/time-us) (* i-delay 1000000))}
+                           :next-attempt-at (+ (pg/time-us) (* (:bigint i-delay) 1000000))}
                      :single true
                      :where {:id i-receipt
                              :account i-account
@@ -405,7 +414,7 @@
                                 :lease-until nil
                                 :time-updated (pg/time-us)
                                 :next-attempt-at (+ (pg/time-us)
-                                                    (* (pg/coalesce i-delay 1) 1000000))}
+                                                    (* (:bigint (pg/coalesce i-delay 1)) 1000000))}
                           :single true
                           :where {:id i-delivery}})
             o-audit (-/record-messaging-audit i-application

@@ -27,7 +27,7 @@ class DatasetReleaseTest(unittest.TestCase):
                    "contour_file": "data/contours/pilot.geojson", "contours": {"count": 1}, "tiles": {}}]}
         bodies = {"data/catalog.json": json.dumps(catalog).encode(),
                   "data/contours/pilot.geojson": b'{"type":"FeatureCollection","features":[]}',
-                  "guides.json": b'{}', "neon-config.json": b'{"apiUrl":"app-only"}'}
+                  "guides.json": b'{}', "account-config.json": b'{"apiUrl":"app-only"}'}
         files = {}
         for name, body in bodies.items():
             (site / name).write_bytes(body)
@@ -43,7 +43,7 @@ class DatasetReleaseTest(unittest.TestCase):
             release = package(site, root / "out")
             target = root / "out" / release["id"]
             self.assertEqual(package(site, root / "out"), release)
-            self.assertNotIn("neon-config.json", release["files"])
+            self.assertNotIn("account-config.json", release["files"])
             for name, meta in release["files"].items():
                 stored = (target / "files" / meta["storage"]["path"]).read_bytes()
                 self.assertEqual(hashlib.sha256(stored).hexdigest(), meta["storage"]["hash"])
@@ -53,7 +53,7 @@ class DatasetReleaseTest(unittest.TestCase):
                 if name != "data/downloads.json":
                     self.assertEqual(body, (site / name).read_bytes())
             downloads = json.loads(gzip.decompress((target / "files/data/downloads.json.gz").read_bytes()))
-            self.assertNotIn("neon-config.json", downloads["regions"]["pilot"]["files"])
+            self.assertNotIn("account-config.json", downloads["regions"]["pilot"]["files"])
             self.assertEqual(downloads["regions"]["pilot"]["bytes"], sum(downloads["files"][p]["bytes"] for p in downloads["regions"]["pilot"]["files"]))
 
     def test_tampered_build_is_rejected(self):

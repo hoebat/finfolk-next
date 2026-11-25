@@ -16,31 +16,11 @@ import {
 import { messagingConfig, digest, unseal, idempotent } from "../backend/messaging-config.mjs";
 import { followRequiredReply } from '../backend/instagram-dm-commands.mjs';
 import { completeMessagingAuthorization } from "../backend/messaging-authorization.mjs";
-const project = "odd-voice-85400108",
-  branch = "finfolk-community-pilot-test";
-const connection = (role) =>
-  execFileSync(
-    "neon",
-    [
-      "connection-string",
-      branch,
-      "--project-id",
-      project,
-      ...(role ? ["--role-name", role] : []),
-    ],
-    { encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] },
-  ).trim();
-const url = connection();
-assert.ok(
-  new URL(url).hostname.startsWith("ep-little-thunder-a7s1soji"),
-  "Refusing non-test endpoint",
-);
-execFileSync(process.execPath, ["scripts/migrate_neon.mjs"], {
-  env: { ...process.env, DATABASE_URL_UNPOOLED: url },
-  stdio: ["ignore", "pipe", "pipe"],
-});
+import {legacyTestDatabaseURL,legacyTestRuntimeURL} from './lib/legacy_test_database.mjs';
+const url=legacyTestDatabaseURL();
+execFileSync(process.execPath,['scripts/migrate_legacy_fixtures.mjs'],{env:process.env,stdio:['ignore','pipe','pipe']});
 const db = database(url),
-  runtime = database(connection("finfolk_api")),
+  runtime = database(legacyTestRuntimeURL()),
   q = db.query;
 const original = (
   await q("SELECT * FROM finfolk.messaging_accounts WHERE id='instagram'")
@@ -301,7 +281,7 @@ try {
   );
   for (const uid of users) {
     await q(
-      'INSERT INTO neon_auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$2,$3,$4,now(),now())',
+      'INSERT INTO legacy_auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,$2,$3,$4,now(),now())',
       [uid, "Messaging fixture", uid + "@example.com", uid !== unverified],
     );
     await legacy(uid, "me");
@@ -899,7 +879,7 @@ try {
     await q("DELETE FROM finfolk.instagram_dm_events WHERE owner_id=$1", [uid]);
     await q("DELETE FROM finfolk.messaging_audit WHERE actor=$1", [uid]);
     await q("DELETE FROM finfolk.members WHERE user_id=$1", [uid]);
-    await q('DELETE FROM neon_auth."user" WHERE id=$1', [uid]);
+    await q('DELETE FROM legacy_auth."user" WHERE id=$1', [uid]);
   }
   for (const who of [sender, otherSender, stranger]) {
     await q("DELETE FROM finfolk.instagram_dm_events WHERE sender_id=$1", [

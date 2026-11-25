@@ -1,5 +1,9 @@
 # Main-site production ownership
 
+The API moved to the native SSDNodes Supabase backend on 25 November 2026.
+See [API cutover status](SUPABASE_API_CUTOVER.md) for verified scope and remaining
+identity/frontend migration. The frontend release below remains on Netlify.
+
 ## Current frontend hosting (7 November 2026)
 
 The native Next frontend is published on Netlify project `finfolk`
@@ -8,6 +12,10 @@ DNS provider and hosts `api.finfolk.com.au`; frontend publishing does not deploy
 the API or install SQL. The apex uses a DNS-only flattened CNAME to
 `apex-loadbalancer.netlify.com`; `www` uses a DNS-only CNAME to
 `finfolk.netlify.app`. Netlify owns frontend HTTPS and the www redirect.
+
+For a manual GitHub Actions publish, use **Publish FinFolk frontend → Run workflow**
+on `main`. See [the publishing guide](FRONTEND_PUBLISH.md) for checks and credentials.
+Pushes and pull requests do not publish.
 
 For a local frontend publish, run from this repository:
 
@@ -64,7 +72,7 @@ Check Google sign-in, Instagram connection status, account isolation, check-ins/
 
 `hoebat/finfolk-app` publishes its static frontend through GitHub Pages at `old.finfolk.com.au`. Its root CNAME and workflow guard must only permit that hostname. Cloudflare holds a DNS-only CNAME from `old` to `hoebat.github.io`; GitHub Pages owns the custom-domain certificate. The main site continues to use the same Worker, Static Assets and API service binding previously used by the Next preview.
 
-The legacy frontend uses its existing shared Next Better Auth realm and `api.finfolk.com.au` configuration. Add `https://old.finfolk.com.au` to managed-auth trusted origins and the Next API CORS allowlist; do not restore the retired legacy backend or database. Verify the legacy config at `/neon-config.json`, API preflight responses and sign-in return URL separately from the main site.
+The legacy frontend is not part of the native account deployment. Do not restore its retired identity service or backend configuration; verify any separately maintained legacy host independently of the main site.
 
 ## Rollback
 

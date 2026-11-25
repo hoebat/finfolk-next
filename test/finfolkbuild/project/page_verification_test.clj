@@ -22,7 +22,7 @@
            ["logbook-ownership" [:passed :passed :passed :passed :passed]]
            ["logbook-public" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]
            ["model-contracts" [:passed :passed :passed]]
-           ["site-notes-native" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]
+           ["site-notes-native" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]
            ["site-review-native" [:passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed :passed]]]])
 
 ^{:refer app.manage.verify/definitions! :id all-page-contracts :added "0.1"}

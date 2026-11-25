@@ -6,7 +6,7 @@ const owner=await connect();
 const pool=new pg.Pool({connectionString:process.env.FINFOLK_TEST_DATABASE_URL,max:4,options:'-c role=finfolk_api'}),db=apiDatabase(pool);
 try{
  await migrate(owner);
- await owner.query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',false,false),('banned','Banned',true,true);
+ await owner.query(`INSERT INTO legacy_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',false,false),('banned','Banned',true,true);
  INSERT INTO finfolk.members(user_id,profile) VALUES('alice','{"displayName":"Alice"}'),('bob','{"displayName":"Bob"}'),('banned','{}');
  INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney'),('future','East','Pacific/Kiritimati'),('past','West','Etc/GMT+12');`);
  const functions=(await owner.query(`SELECT p.proname,p.prosecdef,p.proconfig FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' ORDER BY p.proname`)).rows;

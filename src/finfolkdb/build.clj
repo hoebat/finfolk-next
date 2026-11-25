@@ -13,16 +13,17 @@
             [finfolkdb.schema.namespaces :as namespaces]
             [finfolkdb.schema.rpc-catalog :as rpc]
             [std.json :as json]
+            [finfolkdb.schema.feature-flags :as flags]
             [finfolkdb.shop :as shop]))
 
 (def SQL-OUTPUTS
-  ["resources/finfolkdb/entity-schema.sql" "resources/finfolkdb/enums.sql"
+  ["resources/finfolkdb/feature-flags.sql" "resources/finfolkdb/entity-schema.sql" "resources/finfolkdb/enums.sql"
    "resources/finfolkdb/rebuild.sql" "resources/finfolkdb/shop.sql"
    "resources/finfolkdb/messaging-grants.sql" "resources/finfolkdb/site-notes-grants.sql"
    "resources/finfolkdb/social-grants.sql" "resources/finfolkdb/account-grants.sql"])
 
 (def JSON-OUTPUTS
-  ["resources/finfolkdb/entity-catalog.json" "resources/finfolkdb/entity-coverage.json"
+  ["resources/finfolkdb/feature-flags.json" "resources/finfolkdb/entity-catalog.json" "resources/finfolkdb/entity-coverage.json"
    "resources/finfolkdb/enums.json" "resources/finfolkdb/rebuild-contract.json"
    "resources/finfolkdb/rpc-catalog.json" "resources/finfolkdb/type-namespaces.json"])
 
@@ -31,6 +32,7 @@
   []
   (namespaces/load-all!)
   (sorted-map
+   "resources/finfolkdb/feature-flags.sql" (flags/sql)
    "resources/finfolkdb/account-grants.sql" (account-access/grants-sql)
    "resources/finfolkdb/entity-schema.sql" (entity/sql)
    "resources/finfolkdb/enums.sql" (enums/sql)
@@ -45,6 +47,7 @@
   []
   (namespaces/load-all!)
   (sorted-map
+   "resources/finfolkdb/feature-flags.json" (flags/json-artifact)
    "resources/finfolkdb/entity-catalog.json" (str (json/write (catalog/portable (catalog/declarations))) "\n")
    "resources/finfolkdb/entity-coverage.json" (str (json/write (coverage/current)) "\n")
    "resources/finfolkdb/enums.json" (str (json/write (enums/contracts)) "\n")

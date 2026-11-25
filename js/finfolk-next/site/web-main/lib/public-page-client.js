@@ -1,3 +1,5 @@
+import {featureForOperation,assertFeatureEnabled} from './feature-flags.js';
+import {publicFeatureFetch} from './browser-client.js';
 import {requestValues} from '@finfolk/edge/page-models.js';
 import {operations} from '@finfolk/edge/operations.js';
 import {bindPageClient,resolveModel,definition,pageActions,runPage} from './page-models.js';
@@ -5,9 +7,11 @@ import {nativeApplicationBackbone} from './application-client.js';
 import {readInstagramFeed} from './instagram-feed.js';
 export async function publicPageClient(page='place-public'){
  const path='/app-backbone.js',module=await import(/* webpackIgnore: true */ path);
- const app=await nativeApplicationBackbone(),config=app?.authProvider==='supabase'?app.configuration:await module.appConfiguration();
+ const app=await nativeApplicationBackbone(),config=['supabase','preview'].includes(app?.authProvider)?app.configuration:await module.appConfiguration();
  const client=bindPageClient(page,app?.public||{call:(name,values,options)=>module.httpOperation({...config,apiUrl:location.origin+'/'},name,values,options)});
  return {call(name,values,options={}){
+  const flag=featureForOperation(name);assertFeatureEnabled(flag);
+  if(flag&&!['supabase','preview'].includes(app?.authProvider)){const path=requestValues(operations[name],values).path;return publicFeatureFetch(path,options).then(async response=>{if(!response.ok)throw Error('Feature unavailable.');return response.json();});}
   const signal=options.signal||(name==='publicInstagram'?AbortSignal.timeout(12000):undefined);
   const read=()=>client.call(name,values,{...options,...(signal?{signal}:{})});
   return name==='publicInstagram'?readInstagramFeed(requestValues(operations[name],values).path,read):read();

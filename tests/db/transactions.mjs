@@ -6,7 +6,7 @@ import {createAPI} from '../../backend/api.mjs';
 const owner=await connect(),pool=new pg.Pool({connectionString:process.env.FINFOLK_TEST_DATABASE_URL,max:4,options:'-c role=finfolk_api'}),db=apiDatabase(pool);
 try{
  await migrate(owner);
- await owner.query(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false);
+ await owner.query(`INSERT INTO legacy_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false);
  INSERT INTO finfolk.members(user_id,profile) VALUES('alice','{"displayName":"Alice"}'),('bob','{"displayName":"Bob"}');
  INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi','Australia/Sydney');`);
  const results=await Promise.all(Array.from({length:24},(_,i)=>withActor(db,i%2?'alice':'bob',async q=>{

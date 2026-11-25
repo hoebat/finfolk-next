@@ -1,11 +1,11 @@
+import {legacyTestDatabaseURL} from './lib/legacy_test_database.mjs';
 import assert from "node:assert/strict";
 import { randomBytes } from "node:crypto";
 import { database } from "../backend/db.mjs";
 import { tripAction, publicTrip, publicTrips } from "../backend/trips.mjs";
 import { createAPI } from "../backend/api.mjs";
-if (process.env.NEON_BRANCH !== "finfolk-regulars-dev")
-  throw Error("Isolated test branch required");
-const db = database(process.env.DATABASE_URL),
+legacyTestDatabaseURL();
+const db = database(legacyTestDatabaseURL()),
   q = db.query,
   tag = randomBytes(5).toString("hex"),
   owner = "trip_" + tag,

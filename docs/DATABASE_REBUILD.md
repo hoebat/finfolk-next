@@ -1,5 +1,8 @@
 # FinFolkDB
 
+Historical design and acceptance record. For current deployment and identity setup, see
+[Supabase acceptance](SUPABASE_ACCEPTANCE.md) and [API cutover](SUPABASE_API_CUTOVER.md).
+
 ## Production cutover implementation — in progress
 
 The approved production direction is a native-only application database, with
@@ -27,7 +30,7 @@ checks function names and arity against that artifact and parameterizes values.
 It is not a public arbitrary-function dispatcher. The live PostgreSQL regression
 executes generated user creation and rejects unknown calls before database access.
 
-Cloud validation is currently blocked: the native candidate returns Neon HTTP
+Cloud validation is currently blocked: the native candidate returns the retired provider HTTP
 402 (account/project quota exceeded), including with a freshly retrieved connection
 URI. Restore project capacity before cloud inspection or promotion. This does not
 remove the separate requirement to complete the API/worker port; the source audit
@@ -188,14 +191,14 @@ itself never opens a database connection.
    an unpinned side effect of rebuilding.
 3. **Prepare a clean candidate.** Provision a new isolated database/application
    schema target and its managed-auth dependency. An isolated auth-aware branch
-   may retain its provider-owned `neon_auth` schema while application schemas are
+   may retain its provider-owned `legacy_auth` schema while application schemas are
    recreated from scratch. Verify branch/endpoint/database identity before any
    candidate reset. Never drop or reset the serving database. Do not generate or
    mock authentication-provider tables to bypass installation guards.
 4. **Install and seed.** Apply the generated fresh release explicitly and
    transactionally, then seed required system records and reviewed application
    identity references. Keep external integrations disabled. Do not invoke
-   `migrate_neon.mjs`, `release_next_db.mjs`, or the current migration-backed site
+   `migrate_legacy_fixtures.mjs`, `release_next_db.mjs`, or the current migration-backed site
    release command in this pipeline.
 5. **Import reference data in dependency order.** Load source/provenance records,
    geographic/site references, asset and dataset versions, environmental records,
@@ -327,7 +330,7 @@ these pinned inputs; none is fabricated. These are an inspected input release,
 not a claim of complete Australian coverage.
 
 To install on a separately provisioned, **empty candidate** with real managed
-`neon_auth."user"` and `finfolk_api` already available:
+`legacy_auth."user"` and `finfolk_api` already available:
 
 ```sh
 # Set these in the shell without checking credentials into a file or git.
@@ -369,7 +372,7 @@ database. Like statsdb, each test namespace declares its own dependencies and
 explicit runtime lifecycle; common entity tests do not load the full application
 scaffold or its managed-auth-dependent site-note RPCs. The SQL/API integration
 suites separately provision a disposable auth fixture for those RPCs. No fake
-managed-auth table is installed on Neon to bypass a deployment prerequisite.
+managed-auth table is installed on the legacy service to bypass a deployment prerequisite.
 
 ### Isolated cloud rollout
 
@@ -380,13 +383,11 @@ It uses its own endpoint and managed Auth service. The database remains named
 identity and endpoint are checked independently of that database name.
 
 Foundation's `xt.substrate` owns the application's node/page/model backbone.
-Its Neon session integration lives in `xt.db.system.impl-neon-session`,
-`xt.net.addon-neon`, and the `scaffold.neon` / `src-js/neon-bridge` setup. The
-Foundation scaffold targets its own project, so FinFolk follows its managed SDK
-and auth-aware branching pattern without running that project-specific setup.
+The earlier provider-specific session scaffold is retired. FinFolk now uses the
+native Supabase account adapter and generated account contracts.
 
 The candidate has the fresh native schema and retains its cloned managed users.
-Administrative cloud scripts use Neon's WebSocket driver over HTTPS for an
+Administrative cloud scripts use the retired provider’s WebSocket driver over HTTPS for an
 interactive transaction; `FINFOLK_CLOUD_TRANSPORT=tcp` selects the direct TLS
 Postgres path when available. Branch and endpoint checks apply to both paths.
 A real SDK acceptance flow exercises sign-up, sign-in, session restoration,

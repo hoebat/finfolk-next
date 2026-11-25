@@ -10,7 +10,7 @@ Map the date and at least a depth or duration column. Explicitly select ISO, day
 
 Preview the full date range and first ten private records. Repeated source dive IDs or exact timestamps need acknowledgement; equal depth/duration alone does not imply a duplicate. Confirm replacement if a dataset already exists. Upload batches remain below the existing API request-size limit and can be retried. Confirmation activates the complete import atomically; partial imports never replace the old dataset. Identical imports do not duplicate dives. Superseded completed imports are removed after replacement; incomplete uploads expire when the owner starts a new upload after a day.
 
-Normalized records and original CSV columns are private in Neon. The private record viewer pages through all records, 100 at a time. The original CSV file itself is not retained. Imports do not create logbook sessions, check-ins, points or Regulars credit.
+Normalized records and original CSV columns are private in the legacy database. The private record viewer pages through all records, 100 at a time. The original CSV file itself is not retained. Imports do not create logbook sessions, check-ins, points or Regulars credit.
 
 ## Summary calculations
 

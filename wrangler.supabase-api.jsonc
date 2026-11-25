@@ -1,0 +1,29 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "finfolk-supabase-api",
+  "main": "backend/supabase-api-worker.mjs",
+  "account_id": "b048221dbe18365ea667373f6fda1f73",
+  "compatibility_date": "2026-11-25",
+  "compatibility_flags": [
+    "nodejs_compat"
+  ],
+  "workers_dev": true,
+  "hyperdrive": [
+    {
+      "binding": "SUPABASE_DB",
+      "id": "e1d8eb9dc02548a38ba611488bbae711"
+    }
+  ],
+  "vars": {
+    "ENVIRONMENT": "production",
+    "SUPABASE_URL": "https://supabase.finfolk.com.au",
+    "NATIVE_SCHEMA_SHA": "9a30d41c91362c39f84b878ff21e68a07b18cbf5103075ffcfd5f58710574886",
+    "FINFOLK_FEATURE_ENVIRONMENT": "production"
+  },
+  "routes": [
+    {
+      "pattern": "api.finfolk.com.au",
+      "custom_domain": true
+    }
+  ]
+}

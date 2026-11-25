@@ -19,14 +19,14 @@ const incoming=async(text,{sender='100',at=clock+=100,mid=randomUUID()}={})=>{
 const visits=()=>q("SELECT *,visit_day::text AS day FROM finfolk.checkins WHERE user_id='alice' ORDER BY visit_day,beach_id");
 const originalLog=console.log;console.log=()=>{};
 try{
- await pg.exec('CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;');
+ await pg.exec('CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); DO $$ BEGIN CREATE ROLE finfolk_api NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$;');
  for(const file of(await readdir('backend/migrations')).filter(n=>n.endsWith('.sql')).sort()){
   if(file==='0029_instagram_visit_times.sql')await q(`UPDATE finfolk.messaging_accounts SET mode='pilot',generation=7,pilot_sender_ids='["100"]',enabled_commands='["help","checkin"]'`);
-  await pg.exec(await readFile('backend/migrations/'+file,'utf8'));
+  await pg.exec((await readFile('backend/migrations/'+file,'utf8')).replaceAll('neon_auth','legacy_auth'));
  }
  const migrated=(await q('SELECT mode,generation,pilot_sender_ids,enabled_commands FROM finfolk.messaging_accounts'))[0];
  assert.deepEqual(migrated,{mode:'pilot',generation:7,pilot_sender_ids:['100'],enabled_commands:['help','in','out']});
- await pg.exec(`INSERT INTO neon_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false);INSERT INTO finfolk.members(user_id) VALUES('alice'),('bob');`);
+ await pg.exec(`INSERT INTO legacy_auth."user" VALUES('alice','Alice',true,false),('bob','Bob',true,false);INSERT INTO finfolk.members(user_id) VALUES('alice'),('bob');`);
  await q(`INSERT INTO finfolk.beaches(id,name,timezone,area_name,state) VALUES('brighton','Brighton Beach','Australia/Melbourne','Port Phillip Bay','VIC'),('brighton-wa','Brighton Beach','Australia/Perth','Perth','WA'),('portsea','Portsea Beach','Australia/Melbourne','Port Phillip Bay','VIC');`);
  await q(`INSERT INTO finfolk.instagram_connections(user_id,handle,sender_id,status,provider_scope) VALUES('alice','diver100','100','connected',$1),('bob','diver200','200','connected',$1)`,[scope]);
  await q(`UPDATE finfolk.messaging_accounts SET mode='live',enabled_commands='["help","in","out"]',account_id='900',provider_scope=$1,credential_ciphertext=$2,checks='{"authorization":true,"subscription":true,"followLookup":true}'`,[scope,seal({accessToken:'test'},env,scope)]);

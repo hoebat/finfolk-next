@@ -1,9 +1,9 @@
+import {legacyTestDatabaseURL} from './lib/legacy_test_database.mjs';
 // Isolated-database fixture only. Provider calls remain mocked; no production tokens.
 import { randomBytes } from "node:crypto";
 import { seal } from "../backend/messaging-config.mjs";
 export async function messagingFixture(db, env, { senderId, handle }) {
-  if (process.env.NEON_BRANCH !== "finfolk-regulars-dev")
-    throw Error("Isolated test branch required.");
+  legacyTestDatabaseURL();
   const original = (
     await db.query(
       "SELECT * FROM finfolk.messaging_accounts WHERE id='instagram'",

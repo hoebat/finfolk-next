@@ -179,7 +179,7 @@ Official references: [mentioned comments](https://developers.facebook.com/docs/i
 ```
 node tests/test_instagram_commands.mjs
 node tests/test_instagram_commands_ui.mjs
-node --env-file=.env.test.local scripts/migrate_neon.mjs
+node --env-file=.env.test.local scripts/migrate_legacy_fixtures.mjs
 npm run test:instagram-commands
 npm test
 npm run build

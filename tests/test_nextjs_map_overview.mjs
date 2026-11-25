@@ -1,0 +1,23 @@
+import assert from 'node:assert/strict';
+import {mkdir} from 'node:fs/promises';
+import {chromium} from '@playwright/test';
+import {PNG} from 'pngjs';
+import {overviewViewport} from '../js/finfolk-next/site/web-main/app/(atlas)/atlas/map-overview.js';
+const base=process.env.NEXTJS_TEST_URL||'http://127.0.0.1:3010';
+assert.ok(['127.0.0.1','localhost'].includes(new URL(base).hostname));
+const wide=overviewViewport([110,-45,155,-9]),close=overviewViewport([151,-34,152,-33]);assert.ok(close.width<wide.width&&close.height<wide.height);assert.equal(overviewViewport([NaN,0,1,2]),null);assert.equal(overviewViewport([-5,40,5,50]).outside,true);
+const tile=new PNG({width:256,height:256});for(let i=0;i<tile.data.length;i+=4)tile.data.set([127,255,0,255],i);
+const browser=await chromium.launch();await mkdir('.cache/map-overview',{recursive:true});
+try{const page=await browser.newPage({viewport:{width:1440,height:1000},serviceWorkers:'block',reducedMotion:'reduce'}),errors=[];page.on('pageerror',e=>errors.push(e.message));
+await page.route('**/openfreemap/styles/liberty',r=>r.fulfill({json:{version:8,sources:{},layers:[{id:'background',type:'background',paint:{'background-color':'#b7dce5'}}]}}));
+await page.route('**/terrain/**',r=>r.fulfill({body:PNG.sync.write(tile),contentType:'image/png'}));
+await page.goto(base+'/map');const overview=page.getByRole('figure',{name:'Map overview: current view within Australia',exact:true});await overview.waitFor();const rect=page.locator('[data-overview-viewport]');await rect.waitFor();
+const canvas=page.locator('.maplibregl-canvas').first();await canvas.waitFor();
+await page.getByRole('button',{name:'Show Australia',exact:true}).focus();await page.keyboard.press('Enter');await page.waitForTimeout(300);const initial=Number(await rect.getAttribute('width'));
+await page.getByRole('button',{name:'Zoom in',exact:true}).click();await page.waitForFunction(w=>Number(document.querySelector('[data-overview-viewport]')?.getAttribute('width'))<w,initial);const zoomed=await rect.getAttribute('x');
+const box=await canvas.boundingBox();await page.mouse.move(box.x+box.width*.6,box.y+box.height*.5);await page.mouse.down();await page.mouse.move(box.x+box.width*.6+80,box.y+box.height*.5+30,{steps:8});await page.mouse.up();await page.waitForFunction(x=>document.querySelector('[data-overview-viewport]')?.getAttribute('x')!==x,zoomed);
+await page.screenshot({path:'.cache/map-overview/desktop.png'});
+await page.setViewportSize({width:390,height:844});assert.equal(await overview.isVisible(),false);
+await page.setViewportSize({width:1440,height:1000});assert.equal(await overview.isVisible(),true);assert.deepEqual(errors,[]);
+console.log('MAP_OVERVIEW_PASS: national projection, live zoom and pan tracking, desktop-only visibility and resize.');
+}finally{await browser.close();}

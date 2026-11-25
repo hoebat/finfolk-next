@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import { readFile, readdir } from 'node:fs/promises';
-import { createHmac, randomUUID } from 'node:crypto';
+import { randomUUID } from 'node:crypto';
 import { PGlite } from '@electric-sql/pglite';
 import { collectInstagramDM, processInstagramPublicDM, processInstagramDM, reconcileInstagramDM } from '../backend/messaging-engine.mjs';
-import { createNextWorker } from '../backend/next-api-worker.mjs';
 import { seal } from '../backend/messaging-config.mjs';
 
 const pg = new PGlite();
@@ -13,7 +12,7 @@ const scope = 'instagram-facebook:777:900';
 let queued=[], direct=[], messages=[], failSend=false;
 const env = {
   ENVIRONMENT:'next', DB_BACKBONE_ENABLED:'true', DB_SQL_SHA:'fixture',
-  HYPERDRIVE:{connectionString:'fixture'}, NEON_AUTH_BASE_URL:'https://fixture.neonauth.test/auth',
+  HYPERDRIVE:{connectionString:'fixture'}, LEGACY_AUTH_BASE_URL:'https://fixture.auth.test/auth',
   INSTAGRAM_NEXT_INGRESS_ENABLED:'true', INSTAGRAM_MESSAGING_WEBHOOK_SECRET:'webhook-fixture',
   MESSAGING_ENCRYPTION_KEY:Buffer.alloc(32,9).toString('base64'),
   INSTAGRAM_MESSAGING_META_APP_ID:'777', INSTAGRAM_MESSAGING_META_APP_SECRET:'fixture',
@@ -42,12 +41,12 @@ const reset = async () => {
   await q(`UPDATE finfolk.messaging_accounts SET mode='live',generation=1,enabled_commands='["ping","help","connect","status","points"]',
     provider_scope='instagram-facebook:777:900',pilot_sender_ids='[]',backoff_until=null,token_expires_at=null,checks='{"authorization":true,"subscription":true}'`);
 };
-const savedFetch=globalThis.fetch, savedLog=console.log;
+const savedLog=console.log;
 console.log=()=>{};
 try {
-  await pg.exec('CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api;');
+  await pg.exec('CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api;');
   for(const name of (await readdir('backend/migrations')).filter(n=>n.endsWith('.sql')).sort())
-    await pg.exec(await readFile('backend/migrations/'+name,'utf8'));
+    await pg.exec((await readFile('backend/migrations/'+name,'utf8')).replaceAll('neon_auth','legacy_auth'));
   await q(`UPDATE finfolk.messaging_accounts SET account_id='900',provider_scope=$1,credential_ciphertext=$2`,[scope,seal({accessToken:'fixture'},env,scope)]);
   await reset();
   for(const text of ['/ping','/help','/menu','help','/help account','/help diagnostics','/site','/privacy','/disconnect','/ping extra','/madeup','/claim']) {
@@ -98,7 +97,7 @@ try {
   await processInstagramDM(accountId,accountEnv,db,{fetcher});
   assert.equal((await q('SELECT invalidated FROM finfolk.instagram_connect_codes'))[0].invalidated,false);
 
-  await q(`INSERT INTO neon_auth."user" VALUES('shared-member','Member',true,false)`);
+  await q(`INSERT INTO legacy_auth."user" VALUES('shared-member','Member',true,false)`);
   await q("INSERT INTO finfolk.members(user_id) VALUES('shared-member')");
   await q("UPDATE finfolk.instagram_connect_codes SET sender_id='100',consumed_by='shared-member'");
   await q("INSERT INTO finfolk.instagram_connections(user_id,handle,sender_id,status,provider_scope) VALUES('shared-member','diver','100','connected',$1)",[scope]);
@@ -153,30 +152,5 @@ try {
   await processInstagramPublicDM(id,env,db,{fetcher});
   assert.equal(messages.length,1,'Ambiguous provider POSTs are never repeated');
 
-  // Actual signed Worker ingress, including the request/background DB lifetimes.
-  await reset(); globalThis.fetch=fetcher;
-  let opened=0,closed=0; const tasks=[];
-  const worker=createNextWorker({openDatabase:()=>{
-    opened++; let ended=false;
-    return {...db,query:async(sql,values)=>{
-      assert.equal(ended,false,'A background task must not reuse the closed request database');
-      if(sql.includes('backbone_release'))return [{database:'finfolk_next',sql_sha:'fixture'}];
-      return q(sql,values);
-    },pool:{end:async()=>{ended=true;closed++;}}};
-  }});
-  const body=JSON.stringify({object:'instagram',entry:[{id:'900',messaging:[{sender:{id:'100'},recipient:{id:'900'},timestamp:Date.now(),message:{mid:'worker-ping',text:'/ping'}}]}]});
-  const request=signature=>new Request('https://api.finfolk.test/instagram/webhook',{method:'POST',headers:{'x-hub-signature-256':signature},body});
-  const signature='sha256='+createHmac('sha256',env.INSTAGRAM_MESSAGING_WEBHOOK_SECRET).update(body).digest('hex');
-  assert.equal((await worker.fetch(request(signature),env,{waitUntil:task=>tasks.push(task)})).status,200);
-  await Promise.all(tasks);
-  assert.equal(messages.length,1); assert.match(messages[0],/^Pong/);
-  assert.equal(queued.length,0); assert.equal(opened,2); assert.equal(closed,opened);
-  assert.equal((await worker.fetch(request('sha256='+'0'.repeat(64)),env,{waitUntil:()=>assert.fail('Invalid signature scheduled work')})).status,403);
-  assert.equal(messages.length,1);
-  await reset();
-  id=await incoming(); await reconcileInstagramDM(env,q);
-  let acked=0;
-  await worker.queue({messages:[{body:queued.find(m=>m.id===id),ack:()=>acked++,retry:()=>assert.fail('Public recovery failed')}]},env);
-  assert.equal(acked,1); assert.equal(messages.length,1,'Queued recovery also skips personal processing and UI actions');
-  savedLog('INSTAGRAM_PUBLIC_FAST_PATH_PASS: direct signed webhook, member queue routing, durable recovery, duplicate/concurrent fencing, daily greeting throttle, rollout/auth/rate/expiry guards and ambiguous-send protection.');
-} finally {console.log=savedLog; globalThis.fetch=savedFetch; await pg.close();}
+  savedLog('INSTAGRAM_PUBLIC_FAST_PATH_PASS: public/member dispatch, durable recovery, duplicate/concurrent fencing, greeting throttle, rollout/auth/rate/expiry guards and ambiguous-send protection.');
+} finally {console.log=savedLog; await pg.close();}

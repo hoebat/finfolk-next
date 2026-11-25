@@ -29,8 +29,8 @@ export async function createLogbookClient(){return api;}
 `;
 export async function mockAdministration(page,base){
  await page.route('**/v1/sites/catalog',r=>r.fulfill({json:{beaches:[{id:'bondi',name:'Bondi Beach',state:'NSW',state_id:'NSW'}]}}));
- await page.route('**/neon-config.json*',r=>r.fulfill({json:{enabled:true,backbone:true,apiUrl:base+'/',authUrl:'https://auth.invalid'}}));
- await page.route('**/neon-client.js',r=>r.fulfill({contentType:'text/javascript',body:administrationModule}));
+ await page.route(/\/(?:account-config\.json|api\/account-config)(?:\?|$)/,r=>r.fulfill({json:{enabled:true,authProvider:'supabase',supabaseUrl:'https://supabase.finfolk.com.au',publishableKey:'sb_publishable_fixture',backbone:true,apiUrl:base+'/',authUrl:'https://auth.invalid'}}));
+ await page.route('**/account-client.js',r=>r.fulfill({contentType:'text/javascript',body:administrationModule}));
  await page.route(/\/v1\/directory(?:\/|\?|$)/,r=>r.fulfill({json:publicListing}));
  await page.route(/\/v1\/events(?:\/|\?|$)/,r=>r.fulfill({json:r.request().url().includes('/events/')?event:{events:[event]}}));
 }

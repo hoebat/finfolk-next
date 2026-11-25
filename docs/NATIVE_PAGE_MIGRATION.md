@@ -18,7 +18,7 @@ Existing logbook verification remains available. The account/privacy slice now r
 ## Remaining implementation, in dependency order
 
 1. Native RPC request/result schemas, validators, generated UI types and shared DTO adapters. Generate the allowlisted Worker dispatch from the same source; bind actor from verified auth rather than request payloads.
-2. Real local Supabase Auth email/password/OTP flows, native UUID user provisioning and fixtures that own/clean up their Auth users. Replace Neon session wiring; retain database authorization and actor/environment cache isolation.
+2. Real local Supabase Auth email/password/OTP flows, native UUID user provisioning and fixtures that own/clean up their Auth users. Replace the retired provider session wiring; retain database authorization and actor/environment cache isolation.
 3. Reuse native messaging/provider mocks and generalize the fixture runtime and Next.js preview. The application and verifier must share clients/adapters; remove the logbook-only verifier SDK shim after parity checks pass.
 4. Migrate account → community → logbook → directory → events → atlas/sites → posts/trips → social/messaging → finnies → shells/compatibility. For each group: DB rules, RPC contracts, generated backbone/types, saved scenarios, actual screen wiring, browser acceptance, then removal of replaced legacy paths.
 5. Expand app.manage with capability-driven execution, group filters and independent contract/RPC/backbone/browser/provider evidence. Missing coverage stays blocked/unverified; edits invalidate evidence.
@@ -231,7 +231,7 @@ use the same lock order. Invitation email comes from verified Supabase identity;
 request fields cannot override it. Local links are available; external invitation
 delivery and directory discovery providers remain pending.
 
-Site notes now use native verified account state instead of a Neon Auth table.
+Site notes now use native verified account state instead of a Supabase Auth table.
 The trusted transport synchronizes `User.email_verified` from Supabase `getUser`
 responses. User-editable metadata and profile payloads cannot set it. Notes,
 votes, withdrawal/restore, reporting, moderation, blocks and public DTO isolation
@@ -243,7 +243,7 @@ notes, alongside the previous 72. They execute real local Auth/native DB flows
 through emitted clients/backbones. Directory/event screen creation, publication
 and cancellation are also exercised in Chromium. The integration suite additionally
 installs the published entity schema and account grants on an empty database;
-no historical SQL or `neon_auth` schema is needed.
+no historical SQL or `legacy_auth` schema is needed.
 
 The native preview at `http://127.0.0.1:3011` now creates Alice, Bob and an
 administrator demo account. The administrator role is seeded only in the owned

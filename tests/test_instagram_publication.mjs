@@ -47,7 +47,7 @@ const reset = async () => {
   await q('DELETE FROM finfolk.instagram_suppressed_sources');
   await q('DELETE FROM finfolk.instagram_connections');
   await q('UPDATE finfolk.members SET deleted=false');
-  await root(() => q('UPDATE neon_auth."user" SET "emailVerified"=true,banned=false'));
+  await root(() => q('UPDATE legacy_auth."user" SET "emailVerified"=true,banned=false'));
   await q(`UPDATE finfolk.messaging_accounts SET mode='pilot',pilot_sender_ids='["100"]',provider_scope=$1,
     checks='{"authorization":true,"subscription":true,"liveDelivery":true}',credential_ciphertext=$2,token_expires_at=now()+interval '1 day'`, [scope, seal({ accessToken: 'fixture' }, env, scope)]);
   await q(`INSERT INTO finfolk.instagram_connections(user_id,handle,sender_id,status,provider_scope,media_owner_id,share_posts)
@@ -61,11 +61,11 @@ const pendingDiscovery = () => ingestInstagramMedia(media(), 'tags', env, q, { f
 const approveDiscovery = id => discovery('instagramReviewPost', { id, beachId: 'bondi', mode: 'approve' }, 'admin');
 
 try {
-  await pg.exec('CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api; GRANT USAGE ON SCHEMA neon_auth TO finfolk_api; GRANT SELECT ON neon_auth."user" TO finfolk_api;');
+  await pg.exec('CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api; GRANT USAGE ON SCHEMA legacy_auth TO finfolk_api; GRANT SELECT ON legacy_auth."user" TO finfolk_api;');
   for (const name of (await readdir('backend/migrations')).filter(n => n.endsWith('.sql')).sort())
     await pg.exec(await readFile('backend/migrations/' + name, 'utf8'));
-  await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; REVOKE ALL ON SCHEMA neon_auth FROM finfolk_api');
-  await q(`INSERT INTO neon_auth."user" VALUES('owner','Owner',true,false),('admin','Admin',true,false),('other','Other',true,false)`);
+  await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; REVOKE ALL ON SCHEMA legacy_auth FROM finfolk_api');
+  await q(`INSERT INTO legacy_auth."user" VALUES('owner','Owner',true,false),('admin','Admin',true,false),('other','Other',true,false)`);
   await q(`INSERT INTO finfolk.members(user_id) VALUES('owner'),('admin'),('other')`);
   await q("INSERT INTO finfolk.beaches(id,name,timezone) VALUES('bondi','Bondi Beach','Australia/Sydney')");
   await pg.exec('SET ROLE finfolk_api');
@@ -96,8 +96,8 @@ try {
     if (state === 'unknown') missingFollow = true;
     if (state === 'provider-failure') failure = true;
     if (state === 'disconnected') await q("UPDATE finfolk.instagram_connections SET status='disconnected'");
-    if (state === 'unverified') await root(() => q('UPDATE neon_auth."user" SET "emailVerified"=false WHERE id=\'owner\''));
-    if (state === 'banned') await root(() => q('UPDATE neon_auth."user" SET banned=true WHERE id=\'owner\''));
+    if (state === 'unverified') await root(() => q('UPDATE legacy_auth."user" SET "emailVerified"=false WHERE id=\'owner\''));
+    if (state === 'banned') await root(() => q('UPDATE legacy_auth."user" SET banned=true WHERE id=\'owner\''));
     if (state === 'deleted') await q("UPDATE finfolk.members SET deleted=true WHERE user_id='owner'");
     await assert.rejects(post('post', submission), e => [403, 503].includes(e.status), state + ' submission');
     await assert.rejects(post('reviewPost', approval(candidate.id), 'admin'), e => [403, 503].includes(e.status), state + ' admin approval');
@@ -134,7 +134,7 @@ try {
     () => q("UPDATE finfolk.posts SET creator_handle='someone_else'"),
     () => q("UPDATE finfolk.posts SET platform='tiktok'"),
     () => q("UPDATE finfolk.posts SET owner_id='other'"),
-    () => root(() => q('UPDATE neon_auth."user" SET banned=true WHERE id=\'owner\'')),
+    () => root(() => q('UPDATE legacy_auth."user" SET banned=true WHERE id=\'owner\'')),
   ]) {
     await reset();
     const candidate = await pendingPost();

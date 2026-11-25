@@ -66,12 +66,12 @@ const result = async id => (await q('SELECT * FROM finfolk.messaging_outbox WHER
 const logs = [], originalLog = console.log;
 console.log = (...args) => logs.push(args.map(String).join(' '));
 try {
-  await pg.exec('CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api; GRANT USAGE ON SCHEMA neon_auth TO finfolk_api; GRANT SELECT ON neon_auth."user" TO finfolk_api;');
+  await pg.exec('CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api; GRANT USAGE ON SCHEMA legacy_auth TO finfolk_api; GRANT SELECT ON legacy_auth."user" TO finfolk_api;');
   for (const name of (await readdir('backend/migrations')).filter(n => n.endsWith('.sql')).sort())
     await pg.exec(await readFile('backend/migrations/' + name, 'utf8'));
-  await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; REVOKE ALL ON SCHEMA neon_auth FROM finfolk_api');
+  await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; REVOKE ALL ON SCHEMA legacy_auth FROM finfolk_api');
   await q(`UPDATE finfolk.messaging_accounts SET account_id='900',provider_scope=$1,credential_ciphertext=$2`,[scope,seal({ accessToken: 'fixture' },env,scope)]);
-  await q(`INSERT INTO neon_auth."user" VALUES('admin','Admin',true,false)`);
+  await q(`INSERT INTO legacy_auth."user" VALUES('admin','Admin',true,false)`);
   await q("INSERT INTO finfolk.members(user_id) VALUES('admin')");
   await pg.exec('SET ROLE finfolk_api');
   await reset();

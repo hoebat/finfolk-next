@@ -33,9 +33,15 @@
     (await (page.goBack))
     (await (. (page.locator "[data-preview='first'][aria-pressed='true']") (waitFor)))
     (var restored (await (frame.getAttribute "src")))
+    (await (. (page.locator "[data-preview-group='extra']") (click)))
+    (await (. (page.locator "[data-preview='third']") (waitFor)))
+    (var filtered (== (await (. (page.locator "[data-preview='first']") (count))) 0))
+    (await (. (page.locator "[data-preview-group='main']") (click)))
+    (await (. (page.locator "[data-preview='first'][aria-pressed='true']") (waitFor)))
+    (var remembered (await (frame.getAttribute "src")))
     (var link (await (. (page.getByRole "link" {"name" "Preview link" "exact" true}) (getAttribute "href"))))
     (return {"direct" direct "reload" reload "clicked" clicked "preserved" preserved
-             "back" back "forward" forward "leaving" leaving "restored" restored "link" link "errors" errors})
+             "back" back "forward" forward "leaving" leaving "restored" restored "link" link "filtered" filtered "remembered" remembered "errors" errors})
     (catch error
       (throw (new Error (+ error.message " · " (JSON.stringify errors) " · " (await (. (page.locator "body") (innerText))))) ))
     (finally (await (browser.close)))))
@@ -49,8 +55,10 @@
             (let [file (io/file root "generated" (str name ".html"))]
               (io/make-parents file) (spit file (str "<!doctype html><title>" name "</title>"))))
         p {:id 'preview-routes :root (str root) :targets {:sample {:sources [] :outputs ["generated"] :render (fn [_] {})}}
-           :previews [{:id "first" :label "First preview" :target :sample :path "generated/first.html"}
-                      {:id "second preview" :label "Second preview" :target :sample :path "generated/second.html"}]}
+           :preview-groups [{:id :main :label "Primary"} {:id :extra :label "Custom"} {:id :empty :label "Empty"}]
+           :previews [{:group :main :id "first" :label "First preview" :target :sample :path "generated/first.html"}
+                      {:group :main :id "second preview" :label "Second preview" :target :sample :path "generated/second.html"}
+                      {:group :extra :id "third" :label "Third preview" :target :sample :path "generated/first.html"}]}
         s (server/start! (constantly p) {:port 0})]
     (try
       (doseq [[path content] (make/render-sections {:root (.getCanonicalFile (io/file "."))}
@@ -67,4 +75,4 @@
                (doseq [file (reverse (file-seq root))] (.delete file)))))
   => {:direct "/preview/generated/second.html" :reload "/preview/generated/second.html" :clicked "#/previews/first" :preserved "yes"
       :back "/preview/generated/second.html" :forward "/preview/generated/first.html" :leaving "#/pages" :restored "/preview/generated/first.html"
-      :link "#/previews/first" :errors []})
+      :link "#/previews/first" :filtered true :remembered "/preview/generated/first.html" :errors []})

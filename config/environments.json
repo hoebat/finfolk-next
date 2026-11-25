@@ -1,0 +1,115 @@
+{
+  "platform": "FinFolk",
+  "port": 18131,
+  "versions": [
+    {
+      "id": "checkout",
+      "label": "Current checkout",
+      "path": "."
+    }
+  ],
+  "resources": [
+    {
+      "id": "database",
+      "start": [
+        "make",
+        "test-db-local-up"
+      ],
+      "stop": [
+        "make",
+        "test-db-local-down"
+      ],
+      "identity": [
+        "docker",
+        "inspect",
+        "--format",
+        "{{.Id}}",
+        "supabase_db_finfolk-tests"
+      ],
+      "probes": [
+        {
+          "type": "tcp",
+          "port": 55432
+        }
+      ],
+      "timeout_ms": 300000
+    },
+    {
+      "id": "native",
+      "start": [
+        "make",
+        "manage-preview-native"
+      ],
+      "depends": [
+        "database"
+      ],
+      "probes": [
+        {
+          "type": "http",
+          "url": "http://127.0.0.1:3011/",
+          "timeout_ms": 3000
+        }
+      ],
+      "ready_timeout_ms": 180000
+    },
+    {
+      "id": "mock",
+      "label": "Mock Next.js preview",
+      "url": "http://127.0.0.1:3010",
+      "start": [
+        "node",
+        "scripts/mock_preview.mjs",
+        "--port",
+        "3010"
+      ],
+      "probes": [
+        {
+          "type": "http",
+          "url": "http://127.0.0.1:3010/"
+        }
+      ],
+      "ready_timeout_ms": 120000
+    }
+  ],
+  "environments": [
+    {
+      "id": "default",
+      "label": "Development",
+      "kind": "local",
+      "version": "checkout",
+      "resources": [
+        "native",
+        "mock"
+      ],
+      "probes": [
+        {
+          "name": "Application readiness",
+          "type": "http",
+          "url": "http://127.0.0.1:3011/"
+        }
+      ],
+      "legacy_ids": [
+        "dev"
+      ],
+      "feature_flags": {
+        "resources": [
+          "native",
+          "mock"
+        ],
+        "defaults": {
+          "shop": false,
+          "events": false,
+          "practice.progress": false,
+          "practice.breathing": false,
+          "practice.watch-imports": false,
+          "practice.breath-check": false
+        }
+      }
+    }
+  ],
+  "workbench_url": "http://127.0.0.1:8135",
+  "default_environment": "default",
+  "feature_flags": {
+    "definitions_file": "resources/finfolkdb/feature-flags.json"
+  }
+}

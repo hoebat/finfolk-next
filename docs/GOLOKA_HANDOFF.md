@@ -54,7 +54,7 @@ The original branches remain available for recovery.
 
 ## Local configuration and recovery
 
-Credentials, `.env` files, `.neon`, `.wrangler`, dependencies and build caches are
+Credentials, `.env` files, `.wrangler`, dependencies and build caches are
 not committed. Configure Goloka independently; private local configuration from
 retired worktrees is preserved only in restricted local recovery archives.
 

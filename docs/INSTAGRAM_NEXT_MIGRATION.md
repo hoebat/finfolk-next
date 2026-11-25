@@ -1,5 +1,8 @@
 # Instagram on FinFolk Next
 
+Historical design and acceptance record. For current deployment and identity setup, see
+[Supabase acceptance](SUPABASE_ACCEPTANCE.md) and [API cutover](SUPABASE_API_CUTOVER.md).
+
 Next owns its own PostgreSQL database, Better Auth service, Hyperdrive binding and Instagram queue/dead-letter queue. Member accounts, sessions, links and historical messages are not copied from the legacy database. Members sign in with Google or email on Next and connect Instagram again with `/connect`.
 
 The API Worker runs HTTP, queue processing and recovery schedules behind the same database-name and immutable SQL-release guard. Instagram identity checks use the existing protected `finfolk_rpc.auth_identity` function; the runtime role does not receive direct auth-table access. Browser operation declarations remain authored in Clojure/XTalk. No database migration or release-hash change is required.
@@ -14,7 +17,7 @@ For Facebook Page authorization, seen/typing actions target the Page's `/message
 
 The API also preserves the existing public privacy/deletion pages and the disabled TikTok registration callback. The callback still does not exchange authorization codes or enable TikTok messaging.
 
-Google uses the existing managed Better Auth provider through the Neon SDK. Its button is enabled in the source and build configuration; the Next and FinFolk domains are trusted callback origins. Never put OAuth secrets in browser configuration.
+The earlier release used managed Better Auth. That provider configuration is retired; current OAuth providers require separately verified Supabase configuration. Never put OAuth secrets in browser configuration.
 
 ## Handover
 

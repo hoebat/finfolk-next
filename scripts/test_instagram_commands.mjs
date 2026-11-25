@@ -1,3 +1,4 @@
+import {legacyTestDatabaseURL} from './lib/legacy_test_database.mjs';
 import { completeInstagramClaim } from "../backend/instagram-claims.mjs";
 import { messagingFixture } from "./messaging_fixture.mjs";
 import assert from "node:assert/strict";
@@ -15,9 +16,8 @@ import {
   processInstagramEvent,
 } from "../backend/instagram-webhook.mjs";
 import { windowFor } from "../backend/community-core.mjs";
-if (process.env.NEON_BRANCH !== "finfolk-regulars-dev")
-  throw Error("Isolated test branch required.");
-const db = database(process.env.DATABASE_URL),
+legacyTestDatabaseURL();
+const db = database(legacyTestDatabaseURL()),
   q = db.query,
   tag = randomBytes(5).toString("hex"),
   uid = randomUUID(),
@@ -96,7 +96,7 @@ const run = async (text, who = actor, extra = {}) => {
 try {
   for (const id of [uid, other]) {
     await q(
-      `INSERT INTO neon_auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,'Comment test',$2,true,now(),now())`,
+      `INSERT INTO legacy_auth."user"(id,name,email,"emailVerified","createdAt","updatedAt") VALUES($1,'Comment test',$2,true,now(),now())`,
       [id, id + "@example.com"],
     );
     await q("INSERT INTO finfolk.members(user_id) VALUES($1)", [id]);
@@ -543,7 +543,7 @@ try {
   );
   for (const id of [uid, other]) {
     await q("DELETE FROM finfolk.members WHERE user_id=$1", [id]);
-    await q('DELETE FROM neon_auth."user" WHERE id=$1', [id]);
+    await q('DELETE FROM legacy_auth."user" WHERE id=$1', [id]);
   }
   await db.pool.end();
 }

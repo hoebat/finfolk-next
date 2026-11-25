@@ -1,3 +1,4 @@
+import {createMessagingRPC} from './messaging-rpc.mjs';
 import {createHash} from 'node:crypto';
 import {createMessagingDatabase} from './messaging-database.mjs';
 import {createMessagingAuthorizationStore,MessagingAuthorizationChanged} from './messaging-authorization-store.mjs';
@@ -31,8 +32,7 @@ export function createMessagingGateway({db,enabled=false,expectedDatabase,apiOri
   appMap.set(app.key,{...app,connections:[]});
  }
  async function call(name,args){
-  const result=await db.query(`SELECT finfolk_rpc.${name}(${args.map((_,i)=>'$'+(i+1))}) AS value`,args);
-  return (Array.isArray(result)?result:result.rows)[0].value;
+  return createMessagingRPC((sql,values)=>db.query(sql,values))(name,args);
  }
  for(const config of connections){
   const app=appMap.get(config.providerApp),provider=config.provider||app?.provider;
@@ -158,7 +158,7 @@ export function createMessagingGateway({db,enabled=false,expectedDatabase,apiOri
      if(current.mode==='disabled')fail(503,'Chat is not enabled.');
      if(request.method==='GET'){
       const history=await call('ret_chat_history',[connection.application,connection.account,user.id]);
-      return json({messages:history.map(message=>({id:message.id,direction:message.direction,body:message.body,sentAt:message.sent_at,createdAt:message.created_at}))},200,headers);
+      return json({messages:history.map(message=>({id:message.id,direction:message.direction,body:message.body,sentAt:message.sent_at,createdAt:message.time_created}))},200,headers);
      }
      if(request.method!=='POST')fail(405,'Method is not supported.');browserMutation(request);
      const input=await body(request,['text']),idempotency=request.headers.get('Idempotency-Key');

@@ -1,3 +1,4 @@
+import {legacyTestDatabaseURL} from './lib/legacy_test_database.mjs';
 import assert from "node:assert/strict";
 import { randomBytes, createHmac, createHash } from "node:crypto";
 import { database } from "../backend/db.mjs";
@@ -11,9 +12,8 @@ import {
   processInstagramEvent,
 } from "../backend/instagram-webhook.mjs";
 import { invitationAction } from "../backend/invitations.mjs";
-if (process.env.NEON_BRANCH !== "finfolk-regulars-dev")
-  throw Error("Isolated branch required");
-const db = database(process.env.DATABASE_URL),
+legacyTestDatabaseURL();
+const db = database(legacyTestDatabaseURL()),
   q = db.query,
   tag = randomBytes(6).toString("hex"),
   owner = "igtest_" + tag,

@@ -14,7 +14,7 @@ There are uncommitted changes, including formatter/tooling and other database fi
 
 ## User decisions to preserve
 
-- Finfolkdb is the database source of truth; author under `src/finfolkdb` and regenerate artifacts.
+- FinFolkdb is the database source of truth; author under `src/finfolkdb` and regenerate artifacts.
 - Use configured `et/E` identity/tracking behavior. Do not use `:id/none`.
 - Native entity identifiers and references are UUIDs, not text or integers. Provider external identifiers remain text.
 - Tracking fields use long values, not `timestamptz`; retain the established microsecond convention and `time-created` / `time-updated` naming.

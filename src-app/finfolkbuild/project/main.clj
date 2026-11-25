@@ -21,6 +21,7 @@
             [finfolk-web.lib.application]
             [finfolk-web.lib.supabase-auth]
             [finfolk-web.lib.supabase-client]
+            [finfolk-web.lib.preview-client]
             [finfolk-web.lib.native-account-contracts]
             [finfolk-web.lib.directory-discovery]
             [finfolk-web.lib.browser]
@@ -103,7 +104,7 @@
             (str "// Generated from finfolk-web.pages.routes; do not edit.\nexport const pageRoutes = " (json/write data) ";\n")))
   (generate-xtalk! root)
   (write! root (str EDGE "/native-account.d.ts") (account-contracts/typescript))
-  (doseq [[module file] [['finfolk-web.lib.directory-discovery "directory-discovery.js"] ['finfolk-web.lib.native-account-contracts "native-account-contracts.js"] ['finfolk-web.lib.supabase-client "supabase-client.js"] ['finfolk-web.lib.supabase-auth "supabase-auth.js"] ['finfolk-web.lib.atlas-pages "atlas-pages.js"] ['finfolk-web.lib.logbook-pages "logbook-pages.js"] ['finfolk-web.lib.account-pages "account-pages.js"] ['finfolk-web.lib.community-pages "community-pages.js"] ['finfolk-web.lib.page-models "page-models.js"] ['finfolk-web.lib.operations "operations.js"] ['finfolk-web.lib.backbone "backbone.js"]
+  (doseq [[module file] [['finfolk-web.lib.directory-discovery "directory-discovery.js"] ['finfolk-web.lib.native-account-contracts "native-account-contracts.js"] ['finfolk-web.lib.supabase-client "supabase-client.js"] ['finfolk-web.lib.preview-client "preview-client.js"] ['finfolk-web.lib.supabase-auth "supabase-auth.js"] ['finfolk-web.lib.atlas-pages "atlas-pages.js"] ['finfolk-web.lib.logbook-pages "logbook-pages.js"] ['finfolk-web.lib.account-pages "account-pages.js"] ['finfolk-web.lib.community-pages "community-pages.js"] ['finfolk-web.lib.page-models "page-models.js"] ['finfolk-web.lib.operations "operations.js"] ['finfolk-web.lib.backbone "backbone.js"]
                          ['finfolk-web.lib.application "application.js"] ['finfolk-web.lib.browser "browser.js"]
                          ['finfolk-web.lib.sqlite "sqlite.js"] ['finfolk-web.lib.kernel "kernel.js"]
                          ['finfolk-web.lib.sharedworker "sharedworker.js"] ['finfolk-web.lib.worker-bridge "worker-bridge.js"]]]

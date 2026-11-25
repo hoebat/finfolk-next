@@ -1,3 +1,4 @@
+import {createNativeRPC} from './native-rpc.mjs';
 import {createMessagingGateway} from './messaging-gateway.mjs';
 import {createFinFolkMessagingHandler,createFinFolkMessagingIdentityPolicy} from './messaging-handlers.mjs';
 
@@ -5,20 +6,19 @@ const rows=result=>Array.isArray(result)?result:result.rows;
 // JWT verification is supplied by the managed issuer verifier. Membership and
 // operator authority are checked again against current database/configuration.
 export function createMessagingAccessPolicy({db,verify,applications}){
+ const call=createNativeRPC((sql,values)=>db.query(sql,values));
  const permissions=new Map(applications.map(app=>[app.id,new Set(app.administrators)]));
  async function allowed(id,scope){
   const admins=permissions.get(scope.application);
   if(!admins||scope.action==='admin'&&!admins.has(id))return false;
-  const result=await db.query(`SELECT u.id FROM finfolk."User" u JOIN neon_auth."user" a ON a.id::text=u.id
-   WHERE u.id=$1 AND NOT u.deleted AND coalesce(a.banned,false)=false AND a."emailVerified"=true`,[id]);
-  return rows(result).length===1;
+  return await call('is_messaging_member',[id])===true;
  }
  return {
   async authorize(request,scope){
    const header=request.headers.get('Authorization')||'';
    if(!header.startsWith('Bearer ')||header.length>16384)return null;
    let claims;try{claims=await verify(header.slice(7));}catch{return null;}
-   if(typeof claims.sub!=='string'||!claims.sub||claims.sub.length>500||!await allowed(claims.sub,scope))return null;
+   if(typeof claims.sub!=='string'||!/^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$/i.test(claims.sub)||!await allowed(claims.sub,scope))return null;
    return {id:claims.sub};
   },
   authorizeCallback:(id,scope)=>allowed(id,{...scope,action:'admin'}),

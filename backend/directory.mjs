@@ -14,7 +14,7 @@ function link(s){if(!s)return '';if(typeof s!=='string'||s.length>2048)fail(400,
 export async function directoryRPC(db,uid,admin,op,value={}){
  try{return await db.transaction(async q=>{
  if(op==='owner-create'&&!(await q("SELECT to_regclass('finfolk.\"DirectoryListing\"') IS NOT NULL AS native"))[0].native)fail(503,'Page creation is being prepared. Please try again later.');
- await q("SELECT set_config('finfolk.actor_id',$1,true),set_config('finfolk.directory_admin',$2,true)",[uid||'',admin?'true':'false']);
+ await q("SELECT set_config('finfolk.actor_id',$1,true),set_config('finfolk.directory_admin',$2,true),set_config('finfolk.directory_verified',$3,true)",[uid||'',admin?'true':'false',uid?'true':'false']);
  return (await q('SELECT finfolk_rpc.directory_operation($1,$2::jsonb) AS value',[op,JSON.stringify(value)]))[0].value;
  });}catch(e){if(['42P01','42883'].includes(e.code))fail(503,'Page creation is being prepared. Please try again later.');const status=({'23505':409,'42501':403,'40001':409,'22023':400,'22P02':400,'P0002':404})[e.code];if(status)fail(status,e.message);throw e;}
 }

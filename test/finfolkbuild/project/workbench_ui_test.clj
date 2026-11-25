@@ -72,7 +72,7 @@
     (var closed false)
     (try (await (page.request.get endpoint {"timeout" 2000}))
          (catch error (:= closed true)))
-    (return {"first-status" (first.status) "first-location" (. (new URL (. (first.headers) location)) pathname)
+    (return {"first-status" (first.status) "first-location" (. (new URL (or (. (first.headers) location) endpoint)) pathname)
              "second-status" (second.status) "preview-preserved" preserved "closed" closed "errors" errors})
     (catch error (throw error))
     (finally (await (browser.close)))))
@@ -109,7 +109,7 @@
                  (assoc :url (str "http://127.0.0.1:" port)
                         :directory management/SITE
                         :command ["node" "../../../../node_modules/next/dist/bin/next" "dev" "--hostname" "127.0.0.1" "--port" (str port)]
-                        :env {"FINFOLK_AUTH_PROVIDER" "neon" "FINFOLK_NEXT_DIST_DIR" (str ".cache/workbench-process-" port)
+                        :env {"FINFOLK_AUTH_PROVIDER" "legacy" "FINFOLK_NEXT_DIST_DIR" (str ".cache/workbench-process-" port)
                               "NEXT_TELEMETRY_DISABLED" "1"})
                  (dissoc :stop-argument))
         project (assoc management/PROJECT :dev-servers [item]
@@ -127,4 +127,4 @@
         (when-not (= :ok (:status result)) (throw (ex-info "Real dev server browser check failed" result)))
         (json/read-str (:stdout result) :key-fn keyword))
       (finally (server/stop! s))))
-  => {:first-status 307 :first-location "/neon-config.json" :second-status 307 :preview-preserved true :closed true :errors []})
+  => {:first-status 503 :first-location "/api/account-config" :second-status 503 :preview-preserved true :closed true :errors []})

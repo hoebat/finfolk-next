@@ -8,6 +8,7 @@ const plugin={name:'generated-workspaces',setup(b){b.onResolve({filter:/^@(finfo
 });}};
 await build({entryPoints:[resolve(base,'packages/edge/index.js')],outfile:resolve(site,'next-backbone.js'),bundle:true,format:'esm',target:'es2022',minify:true,legalComments:'inline',plugins:[plugin]});
 await build({entryPoints:[resolve(base,'packages/edge/browser.js')],outfile:resolve(site,'app-backbone.js'),bundle:true,format:'esm',target:'es2022',minify:true,legalComments:'inline',external:['./next-backbone.js'],plugins:[plugin]});
+await build({entryPoints:[resolve(base,'packages/edge/preview-client.js')],outfile:resolve(site,'preview-client.js'),bundle:true,format:'esm',target:'es2022',minify:true,legalComments:'inline',plugins:[plugin]});
 await mkdir(resolve(site,'workers'),{recursive:true});
 for(const [entry,name] of [['kernel','kernel'],['sharedworker','finfolk.sharedworker']])
  await build({entryPoints:[resolve(base,'packages/edge',entry+'.js')],outfile:resolve(site,'workers',name+'.js'),bundle:true,format:'esm',target:'es2022',minify:true,legalComments:'inline',plugins:[plugin]});
@@ -16,7 +17,7 @@ await copyFile(resolve('node_modules/@sqlite.org/sqlite-wasm/dist/sqlite3.wasm')
 // runtime synchronized without rebuilding unrelated atlas/reference assets.
 const publicRuntime=resolve(base,'site/web-main/public');
 await mkdir(resolve(publicRuntime,'workers'),{recursive:true});
-for(const file of ['next-backbone.js','app-backbone.js','workers/kernel.js','workers/finfolk.sharedworker.js','workers/sqlite3.wasm'])
+for(const file of ['next-backbone.js','app-backbone.js','preview-client.js','workers/kernel.js','workers/finfolk.sharedworker.js','workers/sqlite3.wasm'])
  await copyFile(resolve(site,file),resolve(publicRuntime,file));
 console.log('Bundled the Clojure-generated FinFolk backbone and browser adapter.');
 

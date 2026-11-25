@@ -1,3 +1,4 @@
+import {createNativeRPC} from './native-rpc.mjs';
 // Registry entries and command implementations are trusted application code.
 // Incoming text chooses only explicitly registered commands, never executable SQL.
 export function createFinFolkMessagingHandler({commands={},authorizePersonal=async()=>null,helpText}={}){
@@ -22,6 +23,7 @@ export function createFinFolkMessagingHandler({commands={},authorizePersonal=asy
 // The social-provider callback must enforce the channel's current eligibility
 // policy (including Instagram follow requirements), using trusted credentials.
 export function createFinFolkMessagingIdentityPolicy({db,verifyProviderEligibility=async()=>false}){
+ const call=createNativeRPC((sql,values)=>db.query(sql,values));
  return async context=>{
   const external=context.provider!=='app';
   let userId=context.senderId;
@@ -30,9 +32,7 @@ export function createFinFolkMessagingIdentityPolicy({db,verifyProviderEligibili
    userId=(Array.isArray(value)?value:value.rows)[0]?.identity?.userId;
   }
   if(!userId)return null;
-  const output=await db.query(`SELECT u.id FROM finfolk."User" u JOIN neon_auth."user" a ON a.id::text=u.id::text
-   WHERE u.id=$1 AND NOT u.deleted AND coalesce(a.banned,false)=false AND a."emailVerified"=true`,[userId]);
-  if(!(Array.isArray(output)?output:output.rows).length)return null;
+  if(!await call('is_messaging_member',[userId]))return null;
   const eligible=external?await verifyProviderEligibility({...context,userId})===true:true;
   return {userId,active:true,verified:true,eligible};
  };

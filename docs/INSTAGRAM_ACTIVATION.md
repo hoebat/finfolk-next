@@ -8,9 +8,9 @@ Use the DM-first `/connect` workflow described in [Instagram commands](INSTAGRAM
 
 ## Operator configuration
 
-Use the permissions-restricted, ignored `.env.local` as the canonical operator configuration. Preserve the existing `MESSAGING_ENCRYPTION_KEY`; never regenerate it during deployment. Keep encrypted backups verified. Store static messaging client/signature secrets and the encryption key in Worker secrets and protected GitHub Actions secrets. The messaging credential remains encrypted in Neon. The Page token is validated against its configured app, Page and linked Instagram account; reconnect when revoked or expired.
+Use the permissions-restricted, ignored `.env.local` as the canonical operator configuration. Preserve the existing `MESSAGING_ENCRYPTION_KEY`; never regenerate it during deployment. Keep encrypted backups verified. Store static messaging client/signature secrets and the encryption key in Worker secrets and protected GitHub Actions secrets. The messaging credential remains encrypted in the legacy database. The Page token is validated against its configured app, Page and linked Instagram account; reconnect when revoked or expired.
 
-Resolve the owner’s actual verified Neon member ID from their signed-in FinFolk account before configuring `INSTAGRAM_ADMIN_IDS`. Use the sole `instagram-facebook` provider. The callback is `https://api.finfolk.com.au/v1/integrations/instagram/oauth/callback`; the stable webhook is `https://api.finfolk.com.au/instagram/webhook`.
+Resolve the owner’s actual verified account member ID from their signed-in FinFolk account before configuring `INSTAGRAM_ADMIN_IDS`. Use the sole `instagram-facebook` provider. The callback is `https://api.finfolk.com.au/v1/integrations/instagram/oauth/callback`; the stable webhook is `https://api.finfolk.com.au/instagram/webhook`.
 
 In Settings, authorize only `@finfolk.com.au`. Verify the actual account, app-level webhook configuration and brand subscription. Keep processing paused until these checks succeed. Account recovery, required security verification, Meta app access/review and real-user testing cannot be replaced by database flags or synthetic evidence.
 
@@ -72,7 +72,7 @@ The dialog demonstrates following @finfolk.com.au, sending `/connect` and receiv
 
 A new `/connect` replaces the sender’s unused code. Duplicate receipts reuse the persisted reply; uncertain deliveries are not automatically resent. Code replies are encrypted in the durable outbox; only hashes are stored in challenge records. Administrative event views and logs omit codes. Issuance is limited to three per sender per ten-minute window; redemption to ten attempts per member and trusted Cloudflare client IP per fifteen-minute window. The scheduled reconciler removes challenge records and expired rate buckets after a day. Codes are not stored in browser storage.
 
-Run `npm run test:connect` for the isolated Postgres/WASM and dialog tests; these do not access Neon, live Instagram or production data. Before public activation, verify actual delivery, pasting on mobile, a nonfollower’s guidance/no-code response, follow rechecks, and disconnect/reconnect using consenting test accounts. The local Postgres/WASM harness serializes database transactions; use the existing isolated Neon integration environment for true multi-connection lock contention checks. Disabling `connect` blocks issuance and redemption while preserving connected accounts.
+Run `npm run test:connect` for the isolated Postgres/WASM and dialog tests; these do not access live Instagram or production data. Before public activation, verify actual delivery, pasting on mobile, a nonfollower’s guidance/no-code response, follow rechecks, and disconnect/reconnect using consenting test accounts. The local Postgres/WASM harness serializes database transactions; use a disposable local PostgreSQL database for multi-connection lock contention checks. Disabling `connect` blocks issuance and redemption while preserving connected accounts.
 
 ## Single-path release — 8 November 2026
 

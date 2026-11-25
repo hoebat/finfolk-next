@@ -1,11 +1,14 @@
 'use client';
-import {useState,useRef} from 'react';
+import {useState,useRef,useEffect} from 'react';
+import {readPublicPageModel} from '../../../../lib/public-page-client.js';
 import {useSession} from '../../../../lib/use-session.js';
 import {usePageData} from '../../../../lib/use-page-data.js';
 import {EventNavigation,EventGate,useEventAction} from '../tools.jsx';
 export default function EventDetail({id,publicEvent}){
  const session=useSession(),{record,refresh}=usePageData(session,'event',{id});
- const data=session.user?record?.data:{event:publicEvent};
+ const [publicRecord,setPublicRecord]=useState(publicEvent);
+ useEffect(()=>{let alive=true;if(!session.user)readPublicPageModel('event-public','event',{},undefined,{id}).then(value=>alive&&setPublicRecord(value)).catch(()=>alive&&setPublicRecord(null));return()=>{alive=false;};},[id,session.user?.uid]);
+ const data=session.user?record?.data:{event:publicRecord};
  return <>{data?.event?<Detail key={session.user?.uid||'guest'} session={session} {...data} refresh={refresh}/>:<><h1>Events</h1><EventNavigation/>{session.user||session.status==='loading'?<EventGate session={session} record={record} retry={refresh}/>:<><p>This event is unavailable. Private events require an invitation and the invited account.</p><a className="profile-action" href="/account">Sign in</a></>}</>}</>;
 }
 function Detail({session,event:e,roster,refresh}){

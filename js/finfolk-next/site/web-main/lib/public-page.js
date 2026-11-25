@@ -11,6 +11,8 @@ export async function loadPublicPage(key,inputs={}){
  const {definition}=await import('./page-models.js');
  const entries=Object.keys(definition(key).models).map(name=>[name,resolveModel(key,name,inputs)]).filter(([,m])=>!m.spec.auth);
  return Object.fromEntries(await Promise.all(entries.map(async([name,m])=>{
+  // Event collections are loaded after browser flag/session resolution.
+  if(key==='listing'&&m.name==='publicEvents')return [name,{events:[]}];
   const nativeCatalog=process.env.FINFOLK_AUTH_PROVIDER==='supabase'&&m.name==='siteCatalog';
   const nativeRPC=process.env.FINFOLK_AUTH_PROVIDER==='supabase'&&m.spec['native-rpc'];
   const path=nativeRPC?'/v1/native/account':nativeCatalog?'/v1/native/sites/catalog':m.spec.path.replace(/:([a-z]+)/g,(_,k)=>encodeURIComponent(m.values[k]));

@@ -59,7 +59,7 @@ and verifies that its land segment is hidden and cannot be selected.
 The Atelier menu structure is shared by the native atlas and community layouts:
 Explore, Community, Events, Practice and You. Explore opens the map; its Browse
 places link retains the detailed Discover filters. Community groups People,
-Groups & outlets and Finfolk Coop. Practice provides Sessions and explicitly
+Groups & outlets and FinFolk Coop. Practice provides Sessions and explicitly
 marks prototype-only tools as unavailable. You groups profile, connections,
 pages, settings and the existing account walkthrough. Both layouts share the
 same utility menu, focus handling, Escape dismissal and active-section rules.

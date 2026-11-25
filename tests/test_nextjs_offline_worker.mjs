@@ -40,7 +40,7 @@ await assert.rejects(restarted.request('/workers/sqlite3.wasm',{clientId:'untrus
 assert.equal(await(await restarted.request('/_next/static/chunks/app.js?dpl=fixture-deployment')).text(),'export {}','deployment-tagged chunks from the saved build remain available offline');
 assert.equal(await restarted.request('/_next/static/chunks/app.js?dpl=another-deployment'),undefined);
 assert.equal(await restarted.request('/_next/static/chunks/app.js?dpl=fixture-deployment&other=1'),undefined);
-for(const path of ['/api','/v1/profile','/neon-config.json','/data/catalog.json','/map?_rsc=private','/map.js?other=1'])assert.equal(await fresh.request(path),undefined,path+' must bypass cache');
+for(const path of ['/api','/v1/profile','/account-config.json','/data/catalog.json','/map?_rsc=private','/map.js?other=1'])assert.equal(await fresh.request(path),undefined,path+' must bypass cache');
 assert.equal(await fresh.request('/map',{method:'POST'}),undefined);await assert.rejects(fresh.request('/account',{mode:'navigate'}),/Offline/);
 await assert.rejects(fresh.request('/map.js',{clientId:'other-build'}),/Offline/);
 console.log('NEXT_OFFLINE_WORKER_PASS: exact-asset integrity, redirect rejection, failed-install rollback, legacy/native upgrade boundaries, protocol-versioned coordinator and inherited worker build fences, fresh map and other static native document fallbacks and API/auth/RSC/dataset bypass.');

@@ -4,7 +4,7 @@ import {readFile,readdir,stat} from 'node:fs/promises';import {createHash} from 
 const site=new URL('../js/finfolk-next/site/web-main/',import.meta.url),output=new URL('.netlify/',site),staticRoot=new URL('static/',output);
 const json=async path=>JSON.parse(await readFile(new URL(path,site),'utf8'));
 const routes=await json('.next/routes-manifest.json');assert.equal(routes.rewrites.fallback.length,0,'Netlify must use CDN compressed-file rules instead of unsupported public-file rewrites');assert.ok(!routes.rewrites.beforeFiles.some(rule=>rule.destination.startsWith('/legacy/')));
-assert.ok((await readFile(new URL('.next/server/app/app.body',site),'utf8')).includes('<base href="/">'),'staged /app must be prerendered independently of unsupported rewrites');
+assert.ok(!Object.hasOwn(JSON.parse(await readFile(new URL('.next/prerender-manifest.json',site),'utf8')).routes,'/app'),'The retired shell must redirect to the native map');
 const worker=await readFile(new URL('sw.js',staticRoot),'utf8'),manifest=JSON.parse(worker.match(/^const manifest=(.*),CACHE=/m)[1]);
 assert.equal(manifest.buildId,(await readFile(new URL('.next/BUILD_ID',site),'utf8')).trim(),'Offline assets must come from this Next build');
 assert.ok(manifest.assets.some(asset=>asset.path==='/vendor/proj4.js'),'Numeric raster projection library must be available after an offline reload');

@@ -1,9 +1,9 @@
+import {applicationId,accountId,userId,seedMessaging} from './fixtures/messaging.mjs';
 import assert from 'node:assert/strict';
 import {createHmac,randomBytes} from 'node:crypto';
 import pg from 'pg';
 import {readFile} from 'node:fs/promises';
 import {generateKeyPair,SignJWT,jwtVerify} from 'jose';
-import {createNextWorker} from '../../backend/next-api-worker.mjs';
 import {createWorkerMessaging} from '../../backend/messaging-worker.mjs';
 import {messagingPreflight} from '../../scripts/messaging_preflight.mjs';
 import {connect,apiDatabase} from './harness.mjs';
@@ -16,20 +16,20 @@ const api='https://api.example.test',frontend='https://finfolk.example',expected
 const encryptionEnv={MESSAGING_ENCRYPTION_KEY:randomBytes(32).toString('base64')};
 const apps=[{key:'igapp',provider:'instagram',appId:'999',appSecret:'IG_SECRET',verifyToken:'VERIFY'},{key:'ttapp',provider:'tiktok',appId:'tt-app',appSecret:'TT_SECRET'}];
 const connections=[
- {key:'ig',application:'finfolk',account:'ig',providerApp:'igapp',accountId:'12345',authMethod:'instagram-facebook',pageId:'321',graphVersion:'v26.0',replyWindowSeconds:3600,handler:'finfolk',returnURL:frontend+'/account'},
- {key:'ig2',application:'finfolk',account:'ig2',providerApp:'igapp',accountId:'12346',authMethod:'instagram-facebook',pageId:'321',graphVersion:'v26.0',replyWindowSeconds:3600,handler:'finfolk',returnURL:frontend+'/account'},
- {key:'tt',application:'finfolk',account:'tt',providerApp:'ttapp',accountId:'tt-business',handler:'finfolk',returnURL:frontend+'/account',accountAuthorizationURL:'https://www.tiktok.com/v2/auth/authorize?client_key=tt-app'},
- {key:'chat',application:'finfolk',account:'chat',provider:'app',accountId:'chat',handler:'finfolk'},
- {key:'other',application:'other',account:'other',provider:'app',accountId:'other',handler:'finfolk'},
+ {key:'ig',application:applicationId('finfolk'),account:accountId('ig'),providerApp:'igapp',accountId:'12345',authMethod:'instagram-facebook',pageId:'321',graphVersion:'v26.0',replyWindowSeconds:3600,handler:'finfolk',returnURL:frontend+'/account'},
+ {key:'ig2',application:applicationId('finfolk'),account:accountId('ig2'),providerApp:'igapp',accountId:'12346',authMethod:'instagram-facebook',pageId:'321',graphVersion:'v26.0',replyWindowSeconds:3600,handler:'finfolk',returnURL:frontend+'/account'},
+ {key:'tt',application:applicationId('finfolk'),account:accountId('tt'),providerApp:'ttapp',accountId:'tt-business',handler:'finfolk',returnURL:frontend+'/account',accountAuthorizationURL:'https://www.tiktok.com/v2/auth/authorize?client_key=tt-app'},
+ {key:'chat',application:applicationId('finfolk'),account:accountId('chat'),provider:'app',accountId:'chat',handler:'finfolk'},
+ {key:'other',application:applicationId('other'),account:accountId('other'),provider:'app',accountId:'other',handler:'finfolk'},
 ];
 let adminAllowed=true,exchanges=0,sends=[],wakes=[],providerRequests=[];
 async function authorize(request,scope){
- const id=request.headers.get('Authorization')?.replace(/^Bearer /,'');if(!['admin','alice','bob'].includes(id))return null;
- const valid=(await db.query(`SELECT id FROM neon_auth."user" WHERE id=$1 AND NOT coalesce(banned,false)`,[id])).rows.length;
- if(!valid||scope.application!=='finfolk'||scope.action==='admin'&&(id!=='admin'||!adminAllowed))return null;return {id};
+ const id=request.headers.get('Authorization')?.replace(/^Bearer /,'');if(!['admin','alice','bob'].map(userId).includes(id))return null;
+ const valid=(await db.query(`SELECT id FROM finfolk."User" WHERE id=$1 AND NOT deleted`,[id])).rows.length;
+ if(!valid||scope.application!==applicationId('finfolk')||scope.action==='admin'&&(id!==userId('admin')||!adminAllowed))return null;return {id};
 }
-const authorizeCallback=async(id,scope)=>id==='admin'&&adminAllowed&&scope.application==='finfolk';
-const request=(key,action,{method='POST',actor='admin',body={},origin=frontend,headers={}}={})=>new Request(`${api}/v1/messaging/connections/${key}/${action}`,{method,headers:{Authorization:'Bearer '+actor,...(origin?{Origin:origin}:{}),...(method==='POST'?{'Content-Type':'application/json'}:{}),...headers},...(method==='POST'?{body:JSON.stringify(body)}:{})});
+const authorizeCallback=async(id,scope)=>id===userId('admin')&&adminAllowed&&scope.application===applicationId('finfolk');
+const request=(key,action,{method='POST',actor='admin',body={},origin=frontend,headers={}}={})=>new Request(`${api}/v1/messaging/connections/${key}/${action}`,{method,headers:{Authorization:'Bearer '+userId(actor),...(origin?{Origin:origin}:{}),...(method==='POST'?{'Content-Type':'application/json'}:{}),...headers},...(method==='POST'?{body:JSON.stringify(body)}:{})});
 const fetcher=async(url,init={})=>{
  const parsed=new URL(url),path=parsed.pathname;
  providerRequests.push({host:parsed.hostname,path,method:init.method||'GET'});
@@ -52,12 +52,11 @@ const fetcher=async(url,init={})=>{
  throw Error('Unexpected provider request');
 };
 try{
- await installEntities(db);for(const id of ['admin','alice','bob'])await user(db,id);
- await db.query(`INSERT INTO finfolk."MessagingApplication"(id,name) VALUES('finfolk','FinFolk'),('other','Other');
- INSERT INTO finfolk."MessagingAccount"(id,application_id,provider,account_id) VALUES('ig','finfolk','instagram','12345'),('ig2','finfolk','instagram','12346'),('tt','finfolk','tiktok','tt-business'),('chat','finfolk','app','chat'),('other','other','app','other')`);
+ await installEntities(db);for(const id of ['admin','alice','bob'])await user(db,userId(id));
+ await seedMessaging(db,['finfolk','other'],[['ig','finfolk','instagram','12345'],['ig2','finfolk','instagram','12346'],['tt','finfolk','tiktok','tt-business'],['chat','finfolk','app','chat'],['other','other','app','other']]);
  const policy=createFinFolkMessagingIdentityPolicy({db:database});
  const handler=createFinFolkMessagingHandler({authorizePersonal:policy,commands:{test:async({userId,args})=>({reply:'For '+userId,apply:async query=>{
-  await query(`INSERT INTO finfolk."UserRequestLimit"(user_id,minute,count) VALUES($1,now(),1) ON CONFLICT(user_id) DO UPDATE SET count=finfolk."UserRequestLimit".count+1`,[userId]);return {owner:userId,args};
+  await query(`INSERT INTO finfolk."UserRequestLimit"(user_id,minute,count) VALUES($1,1,1) ON CONFLICT(user_id) DO UPDATE SET count=finfolk."UserRequestLimit".count+1`,[userId]);return {owner:userId,args};
  }})}});
  const config={db:database,enabled:true,expectedDatabase,apiOrigin:api,apps,connections,handlers:{finfolk:handler},authorize,authorizeCallback,allowedOrigins:[frontend],encryptionEnv,fetcher,wake:async key=>{wakes.push(key);}};
  const gateway=createMessagingGateway(config);
@@ -76,8 +75,8 @@ try{
  const aliceHistory=await (await gateway.fetch(request('chat','messages',{method:'GET',actor:'alice'}))).json();assert.equal(aliceHistory.messages.length,2);assert.ok(aliceHistory.messages.some(row=>row.body==='Pong.'));assert.equal('account_id' in aliceHistory.messages[0],false);
  const bobHistory=await (await gateway.fetch(request('chat','messages',{method:'GET',actor:'bob'}))).json();assert.ok(!bobHistory.messages.some(row=>row.body==='Pong.'));
  await gateway.fetch(request('chat','messages',{actor:'alice',body:{text:'/test owner=bob'},headers:{'Idempotency-Key':'personal'}}));await gateway.drain({connectionKeys:['chat']});
- assert.equal((await db.query(`SELECT user_id FROM finfolk."UserRequestLimit"`)).rows[0].user_id,'alice','Registered action gets the verified owner, never a body-supplied owner');
- await db.query(`UPDATE neon_auth."user" SET "emailVerified"=false WHERE id='bob'`);
+ assert.equal((await db.query(`SELECT user_id FROM finfolk."UserRequestLimit"`)).rows[0].user_id,userId('alice'),'Registered action gets the verified owner, never a body-supplied owner');
+ await db.query(`UPDATE finfolk."User" SET email_verified=false WHERE id='${userId("bob")}'`);
  await gateway.fetch(request('chat','messages',{actor:'bob',body:{text:'/test owner=alice'},headers:{'Idempotency-Key':'personal'}}));await gateway.drain({connectionKeys:['chat']});
  assert.equal((await db.query(`SELECT count(*)::int AS n FROM finfolk."UserRequestLimit"`)).rows[0].n,1,'Unverified personal commands have no mutation');
  // OAuth: cookie, operator, connection, flow, generation and single consumption.
@@ -128,67 +127,65 @@ try{
  let interruptedProbe=false;
  const racingProbe=createMessagingGateway({...config,fetcher:async(...args)=>{
   const response=await fetcher(...args);
-  if(!interruptedProbe){interruptedProbe=true;const generation=(await db.query(`SELECT generation FROM finfolk."MessagingAccount" WHERE id='ig'`)).rows[0].generation;
+  if(!interruptedProbe){interruptedProbe=true;const generation=(await db.query(`SELECT generation FROM finfolk."MessagingAccount" WHERE id='${accountId('ig')}'`)).rows[0].generation;
    assert.equal((await gateway.fetch(request('ig','pause',{body:{generation}}))).status,200);}
   return response;
  }});
  assert.equal((await racingProbe.preflight({connectionKeys:['ig'],verifyProviders:true})).results[0].status,'unavailable','Concurrent account transitions invalidate an in-flight provider proof');
 
- // Exercise the actual Worker registration with signed JWTs and restricted runtime privileges.
+ // Exercise the independent messaging gateway with signed JWTs and restricted runtime privileges.
  await db.query(await readFile('resources/finfolkdb/messaging-grants.sql','utf8'));
- assert.equal((await db.query(`SELECT has_function_privilege('finfolk_api','finfolk_rpc.receive_chat_message(text,text,text,text,text,integer)','EXECUTE') AS allowed`)).rows[0].allowed,false);
+ const socialPrivileges=(await db.query(`SELECT has_column_privilege('finfolk_messaging','finfolk."SocialConnection"','user_id','SELECT') AS member,has_column_privilege('finfolk_messaging','finfolk."SocialConnection"','credential_ciphertext','SELECT') AS credential`)).rows[0];
+ assert.deepEqual(socialPrivileges,{member:true,credential:false},'Messaging can resolve linked members without reading social credentials');
+ assert.equal((await db.query(`SELECT has_function_privilege('finfolk_api','finfolk_rpc.receive_chat_message(uuid,uuid,text,text,text,integer)','EXECUTE') AS allowed`)).rows[0].allowed,false);
+ const hadRole=(await db.query("SELECT pg_has_role(current_user,'finfolk_messaging','SET') AS allowed")).rows[0].allowed;
+ if(!hadRole)await db.query('GRANT finfolk_messaging TO CURRENT_USER WITH SET TRUE');
  const restrictedPool=new pg.Pool({connectionString:process.env.FINFOLK_TEST_DATABASE_URL,max:5,options:'-c role=finfolk_messaging'});
  const restrictedDatabase=apiDatabase(restrictedPool);
  try{
  const {privateKey,publicKey}=await generateKeyPair('EdDSA');
  const issuer='https://native-auth.example',nativeWakes=[];
- const sign=(id,options={})=>new SignJWT({}).setProtectedHeader({alg:'EdDSA'}).setSubject(id).setIssuer(options.issuer||issuer).setIssuedAt().setExpirationTime(options.expiry||'5m').sign(privateKey);
+ const sign=(id,options={})=>new SignJWT({}).setProtectedHeader({alg:'EdDSA'}).setSubject(userId(id)).setIssuer(options.issuer||issuer).setIssuedAt().setExpirationTime(options.expiry||'5m').sign(privateKey);
  const aliceToken=await sign('alice'),adminToken=await sign('admin');
- const workerEnv={...encryptionEnv,IG_SECRET:'IG_SECRET',IG_VERIFY:'VERIFY',ENTITY_MESSAGING_ENABLED:'true',ENTITY_MESSAGING_HYPERDRIVE:{connectionString:'native-fixture'},
+ const gatewayEnv={...encryptionEnv,IG_SECRET:'IG_SECRET',IG_VERIFY:'VERIFY',ENTITY_MESSAGING_ENABLED:'true',ENTITY_MESSAGING_HYPERDRIVE:{connectionString:'native-fixture'},
   ENTITY_MESSAGING_DATABASE_NAME:expectedDatabase,ENTITY_MESSAGING_API_ORIGIN:api,
   ENTITY_MESSAGING_AUTH_BASE_URL:issuer+'/auth',ENTITY_MESSAGING_AUTH_JWKS_URL:issuer+'/jwks',
-  ENTITY_MESSAGING_CONFIG:JSON.stringify({applications:[{id:'finfolk',administrators:['admin']}],apps:[{key:'igapp',provider:'instagram',appId:'999',secretEnv:'IG_SECRET',verifyTokenEnv:'IG_VERIFY'}],connections:[connections[0],connections[3]],allowedOrigins:[frontend]}),
+  ENTITY_MESSAGING_CONFIG:JSON.stringify({applications:[{id:applicationId('finfolk'),administrators:[userId('admin')]}],apps:[{key:'igapp',provider:'instagram',appId:'999',secretEnv:'IG_SECRET',verifyTokenEnv:'IG_VERIFY'}],connections:[connections[0],connections[3]],allowedOrigins:[frontend]}),
   ENTITY_MESSAGING_QUEUE:{send:async body=>nativeWakes.push(body)}};
- let nativeOpens=0,nativeCloses=0;
- const worker=createNextWorker({openDatabase:connectionString=>{assert.equal(connectionString,'native-fixture');nativeOpens++;return {...restrictedDatabase,pool:{end:async()=>nativeCloses++}};},
-  messagingFactory:input=>createWorkerMessaging({...input,fetcher}),
-  verifierFactory:env=>{assert.equal(env.NEON_AUTH_BASE_URL,issuer+'/auth');return async token=>(await jwtVerify(token,publicKey,{issuer,algorithms:['EdDSA']})).payload;}});
- const workerRequest=(action,token,method='GET',text='/ping')=>new Request(`${api}/v1/messaging/connections/chat/${action}`,{method,headers:{Authorization:'Bearer '+token,Origin:frontend,'Idempotency-Key':'worker-jwt','Content-Type':'application/json'},...(method==='POST'?{body:JSON.stringify({text})}:{})});
- assert.equal((await worker.fetch(workerRequest('messages',aliceToken),{})).status,503);assert.equal(nativeOpens,0);
- assert.equal((await worker.fetch(workerRequest('messages',await sign('alice',{issuer:'https://attacker.example'})),workerEnv)).status,403);
- assert.equal((await worker.fetch(workerRequest('messages',await sign('alice',{expiry:1})),workerEnv)).status,403);
- assert.equal((await worker.fetch(workerRequest('status',aliceToken),workerEnv)).status,403);
- assert.equal((await worker.fetch(workerRequest('status',adminToken),workerEnv)).status,200);
+ const registeredGateway=createWorkerMessaging({db:restrictedDatabase,env:gatewayEnv,fetcher,verify:async token=>(await jwtVerify(token,publicKey,{issuer,algorithms:['EdDSA']})).payload});
+ const authenticatedRequest=(action,token,method='GET',text='/ping')=>new Request(`${api}/v1/messaging/connections/chat/${action}`,{method,headers:{Authorization:'Bearer '+token,Origin:frontend,'Idempotency-Key':'gateway-jwt','Content-Type':'application/json'},...(method==='POST'?{body:JSON.stringify({text})}:{})});
+ assert.equal((await registeredGateway.fetch(authenticatedRequest('messages',await sign('alice',{issuer:'https://attacker.example'})))).status,403);
+ assert.equal((await registeredGateway.fetch(authenticatedRequest('messages',await sign('alice',{expiry:1})))).status,403);
+ assert.equal((await registeredGateway.fetch(authenticatedRequest('status',aliceToken))).status,403);
+ assert.equal((await registeredGateway.fetch(authenticatedRequest('status',adminToken))).status,200);
  const wrongKeys=await generateKeyPair('EdDSA');
- const forged=await new SignJWT({}).setProtectedHeader({alg:'EdDSA'}).setSubject('admin').setIssuer(issuer).setExpirationTime('5m').sign(wrongKeys.privateKey);
- assert.equal((await worker.fetch(workerRequest('status',forged),workerEnv)).status,403);
- const restrictedBegin=await worker.fetch(new Request(`${api}/v1/messaging/connections/ig/authorization`,{method:'POST',headers:{Authorization:'Bearer '+adminToken,Origin:frontend,'Content-Type':'application/json'},body:'{}'}),workerEnv);
+ const forged=await new SignJWT({}).setProtectedHeader({alg:'EdDSA'}).setSubject(userId('admin')).setIssuer(issuer).setExpirationTime('5m').sign(wrongKeys.privateKey);
+ assert.equal((await registeredGateway.fetch(authenticatedRequest('status',forged))).status,403);
+ const restrictedBegin=await registeredGateway.fetch(new Request(`${api}/v1/messaging/connections/ig/authorization`,{method:'POST',headers:{Authorization:'Bearer '+adminToken,Origin:frontend,'Content-Type':'application/json'},body:'{}'}));
  assert.equal(restrictedBegin.status,200);
  const restrictedIntent=await restrictedBegin.json(),restrictedCookie=restrictedBegin.headers.get('set-cookie').split(';')[0];
  const restrictedState=new URL(restrictedIntent.authorizationURL).searchParams.get('state');
- assert.equal((await worker.fetch(new Request(`${api}/v1/messaging/connections/ig/oauth/callback?state=${restrictedState}&code=CODE`,{headers:{Cookie:restrictedCookie}}),workerEnv)).status,303,'OAuth lifecycle operates with restricted native grants');
- const cliProbe=await messagingPreflight({env:{...workerEnv,ENTITY_MESSAGING_DATABASE_URL:process.env.FINFOLK_TEST_DATABASE_URL},args:['--connection=ig','--verify-providers'],
+ assert.equal((await registeredGateway.fetch(new Request(`${api}/v1/messaging/connections/ig/oauth/callback?state=${restrictedState}&code=CODE`,{headers:{Cookie:restrictedCookie}}))).status,303,'OAuth lifecycle operates with restricted native grants');
+ const cliProbe=await messagingPreflight({env:{...gatewayEnv,ENTITY_MESSAGING_DATABASE_URL:process.env.FINFOLK_TEST_DATABASE_URL},args:['--connection=ig','--verify-providers'],
   openDatabase:()=>({...restrictedDatabase,pool:{end:async()=>{}}}),createGateway:input=>createWorkerMessaging({...input,fetcher})});
  assert.equal(cliProbe.exitCode,0);assert.equal(cliProbe.report.results[0].status,'provider_verified');assert.equal(cliProbe.report.liveDeliveryVerified,false);
 
 
- assert.equal((await worker.fetch(workerRequest('messages',aliceToken,'POST'),workerEnv)).status,202);
+ assert.equal((await registeredGateway.fetch(authenticatedRequest('messages',aliceToken,'POST'))).status,202);
  assert.deepEqual(nativeWakes,[{kind:'entity-messaging',connectionKey:'chat'}]);
- let acknowledged=0,retried=0;
- await worker.queue({messages:[{body:nativeWakes[0],ack:()=>acknowledged++,retry:()=>retried++}]},workerEnv);
- assert.equal(acknowledged,1);assert.equal(retried,0);
- const workerHistory=await (await worker.fetch(workerRequest('messages',aliceToken),workerEnv)).json();
- assert.ok(workerHistory.messages.filter(row=>row.body==='Pong.').length>=2);
- await worker.queue({messages:[{body:{kind:'entity-messaging',connectionKey:'unregistered'},ack:()=>acknowledged++,retry:()=>retried++}]},workerEnv);
- assert.equal(retried,1,'Unregistered dispatch is retried without executing a handler');
- await db.query(`UPDATE neon_auth."user" SET banned=true WHERE id='alice'`);
- assert.equal((await worker.fetch(workerRequest('messages',aliceToken),workerEnv)).status,403);
- await db.query(`UPDATE neon_auth."user" SET banned=false WHERE id='alice'`);
- // Lost wakeups remain durable; cron recovers using only registered connections.
- await worker.fetch(new Request(`${api}/v1/messaging/connections/chat/messages`,{method:'POST',headers:{Authorization:'Bearer '+aliceToken,Origin:frontend,'Idempotency-Key':'lost-worker-wakeup','Content-Type':'application/json'},body:JSON.stringify({text:'/ping'})}),{...workerEnv,ENTITY_MESSAGING_QUEUE:{send:async()=>{throw Error('offline');}}});
- await worker.scheduled({cron:'* * * * *'},workerEnv);
- assert.equal((await db.query(`SELECT count(*)::int n FROM finfolk."MessagingReceipt" WHERE account_id='chat' AND status='received'`)).rows[0].n,0);
- assert.equal(nativeCloses,nativeOpens,'Every native HTTP/queue/cron connection closes');
- }finally{await restrictedPool.end();}
- console.log('MESSAGING_GATEWAY_PASS: opt-in native readiness, authenticated subject-scoped chat, allowlisted FinFolk actions, browser/operator/generation-bound single-use OAuth, app-level signed routing, provider delivery and worker recovery.');
+ const drained=await registeredGateway.drain({connectionKeys:[nativeWakes[0].connectionKey]});
+ assert.equal(drained[0].status,'ready');
+ const gatewayHistory=await (await registeredGateway.fetch(authenticatedRequest('messages',aliceToken))).json();
+ assert.ok(gatewayHistory.messages.filter(row=>row.body==='Pong.').length>=2);
+ await assert.rejects(registeredGateway.drain({connectionKeys:['unregistered']}),/Unknown configured messaging connection/);
+ await db.query(`UPDATE finfolk."User" SET deleted=true WHERE id='${userId("alice")}'`);
+ assert.equal((await registeredGateway.fetch(authenticatedRequest('messages',aliceToken))).status,403);
+ await db.query(`UPDATE finfolk."User" SET deleted=false WHERE id='${userId("alice")}'`);
+ // A failed wakeup leaves durable work for a later explicit drain.
+ const offlineWake=createWorkerMessaging({db:restrictedDatabase,env:{...gatewayEnv,ENTITY_MESSAGING_QUEUE:{send:async()=>{throw Error('offline');}}},fetcher,verify:async token=>(await jwtVerify(token,publicKey,{issuer,algorithms:['EdDSA']})).payload});
+ await offlineWake.fetch(new Request(`${api}/v1/messaging/connections/chat/messages`,{method:'POST',headers:{Authorization:'Bearer '+aliceToken,Origin:frontend,'Idempotency-Key':'lost-gateway-wakeup','Content-Type':'application/json'},body:JSON.stringify({text:'/ping'})}));
+ assert.equal((await registeredGateway.drain({connectionKeys:['chat']}))[0].status,'ready');
+ assert.equal((await db.query(`SELECT count(*)::int n FROM finfolk."MessagingReceipt" WHERE account_id='${accountId('chat')}' AND status='received'`)).rows[0].n,0);
+ }finally{await restrictedPool.end();if(!hadRole)await db.query('REVOKE finfolk_messaging FROM CURRENT_USER');}
+ console.log('MESSAGING_GATEWAY_PASS: opt-in native readiness, authenticated subject-scoped chat, allowlisted FinFolk actions, browser/operator/generation-bound single-use OAuth, app-level signed routing, provider delivery, restricted grants and durable gateway recovery.');
 }finally{await pool.end();await db.end();}

@@ -14,4 +14,4 @@ api.call=async(action,values={})=>{
  return previousIntegrationCall(action,values);
 };
 `;
-export async function mockAccountIntegration(page,base){await mockAtlas(page,base);await page.route('**/neon-client.js',route=>route.fulfill({contentType:'text/javascript',body:postsModule+extension}));}
+export async function mockAccountIntegration(page,base){await mockAtlas(page,base);await page.route('**/account-client.js',route=>route.fulfill({contentType:'text/javascript',body:postsModule+extension}));}

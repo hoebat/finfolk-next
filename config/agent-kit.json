@@ -1,0 +1,105 @@
+{
+  "label": "FinFolk",
+  "launcher": [
+    "lein"
+  ],
+  "project": "finfolkbuild.project.management/PROJECT",
+  "workbench": {
+    "url": "http://127.0.0.1:8135",
+    "start": "make manage"
+  },
+  "scopes": [
+    "src/finfolkdb",
+    "src-app",
+    "js/finfolk-next/site/web-main/app"
+  ],
+  "guides": [
+    "README.md",
+    "docs/FRESH_SCHEMA.md"
+  ],
+  "layers": [
+    {
+      "name": "database",
+      "sources": [
+        "src/finfolkdb"
+      ],
+      "capability": "implemented"
+    },
+    {
+      "name": "backbone",
+      "sources": [
+        "src-app/finfolk_web"
+      ],
+      "capability": "implemented"
+    },
+    {
+      "name": "ui",
+      "sources": [
+        "js/finfolk-next/site/web-main/app"
+      ],
+      "capability": "implemented"
+    }
+  ],
+  "actions": {
+    "generate": {
+      "kind": "generation",
+      "request": {
+        "operation": "generate"
+      }
+    },
+    "parity": {
+      "kind": "parity",
+      "request": {
+        "operation": "check"
+      }
+    },
+    "tests": {
+      "kind": "test",
+      "request": {
+        "operation": "test"
+      }
+    },
+    "build": {
+      "kind": "build",
+      "request": {
+        "operation": "build",
+        "tests": true
+      }
+    },
+    "feature-flags": {
+      "kind": "test",
+      "timeout_ms": 600000,
+      "request": {
+        "operation": "build",
+        "target": "feature-flags",
+        "tests": true
+      }
+    },
+    "environment-flags": {
+      "kind": "test",
+      "timeout_ms": 600000,
+      "request": {
+        "operation": "build",
+        "target": "environment-flags",
+        "tests": true
+      }
+    }
+  },
+  "workflows": {
+    "generate": [
+      "generate"
+    ],
+    "test": [
+      "tests"
+    ],
+    "verify": [
+      "parity",
+      "tests",
+      "build"
+    ]
+  },
+  "generated": [
+    "generated",
+    "resources/generated-files.json"
+  ]
+}

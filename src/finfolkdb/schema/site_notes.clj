@@ -3,8 +3,8 @@
   (:require [clojure.string :as str]))
 (def FUNCTIONS
   ["site_note_version" "insert_site_note" "record_site_note_revision" "is_site_note_member"
-   "require_site_note_member" "is_site_note_site" "site_note_score" "ret_site_note" "ret_site_notes"
-   "save_site_note" "set_site_note_vote" "set_site_note_withdrawn" "report_site_note"
+   "require_site_note_member" "is_site_note_site" "site_note_score" "ret_site_note" "ret_owned_site_note" "ret_site_notes"
+   "save_site_note" "set_site_note_vote" "set_site_note_rating" "set_site_note_withdrawn" "report_site_note"
    "moderate_site_note"])
 (defn grants-sql
   []

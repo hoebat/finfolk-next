@@ -1,6 +1,6 @@
-# Finfolk database design
+# FinFolk database design
 
-FinfolkDB is a PostgreSQL database authored in Clojure, organised around people,
+FinFolkDB is a PostgreSQL database authored in Clojure, organised around people,
 places, and their activities. Reusable infrastructure—revision history,
 auditing, access, and social identities—is attached through `et/E`.
 
@@ -94,7 +94,7 @@ whole creation back.
 Timestamps use Unix epoch microseconds stored as `BIGINT`. Calendar values such
 as trip dates remain PostgreSQL `DATE`s.
 
-There is still a consistency issue in Finfolk's declarations: several tables
+There is still a consistency issue in FinFolk's declarations: several tables
 explicitly disable tracking with `:track/none` and declare their own time
 fields. Other entries use the generated tracking convention.
 

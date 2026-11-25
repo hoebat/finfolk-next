@@ -8,7 +8,7 @@
    "MessagingOauthState"])
 
 (def FUNCTIONS
-  ["ret_messaging_account" "record_messaging_audit" "is_messaging_participant_allowed"
+  ["is_messaging_member" "ret_messaging_account" "record_messaging_audit" "is_messaging_participant_allowed"
    "receive_message" "reconcile_messaging_work" "claim_message" "complete_message" "retry_message"
    "claim_delivery" "record_delivery_result" "ret_messaging_history" "begin_messaging_oauth"
    "ret_messaging_oauth_intent" "consume_messaging_oauth" "receive_chat_message" "ret_chat_history"
@@ -22,8 +22,9 @@
    "DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='finfolk_messaging') THEN CREATE ROLE finfolk_messaging NOLOGIN NOINHERIT; END IF; END $$;\n"
    "GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_messaging;\n"
    "GRANT SELECT,INSERT,UPDATE ON " (str/join "," (map #(str "finfolk.\"" % "\"") TABLES))
-   " TO finfolk_messaging;\n" "GRANT SELECT(id,deleted) ON finfolk.\"User\" TO finfolk_messaging;\n"
-   "GRANT EXECUTE ON FUNCTION finfolk.as_jsonb(jsonb) TO finfolk_messaging;\n"
+   " TO finfolk_messaging;\n" "GRANT SELECT(id,deleted,email_verified) ON finfolk.\"User\" TO finfolk_messaging;\n"
+   "GRANT SELECT(account_id,status,user_id) ON finfolk.\"SocialConnection\" TO finfolk_messaging;\n"
+   "GRANT EXECUTE ON FUNCTION finfolk.as_jsonb(jsonb),finfolk.as_bounded_text(text,integer,integer),finfolk.as_bounded_integer(integer,integer,integer) TO finfolk_messaging;\n"
    "DO $$ DECLARE f record; BEGIN FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' AND p.proname IN ("
    (str/join "," (map #(str "'" % "'") FUNCTIONS))
    ") LOOP EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO finfolk_messaging',f.signature); END LOOP; END $$;\n"

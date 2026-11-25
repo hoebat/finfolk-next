@@ -12,7 +12,6 @@ __pycache__/
 .env
 .env.*
 !.env.example
-.neon
 .wrangler/
 test-results/
 .yarn/install-state.gz
@@ -32,3 +31,16 @@ js/finfolk-next/site/web-main/public/
 /generated/slices/
 
 /generated/verification/
+
+# Agent workflow evidence
+.cache/app.manage/agent/
+
+# Independent environment controller state
+.cache/app.manage/environments/
+
+# Private server-side feature flag connection; never publish credentials.
+config/feature-flags.local.json
+config/feature-flags.local.json.*.tmp
+
+# Durable local workbench history (contains private execution logs).
+.app-manage/state/

@@ -11,10 +11,10 @@ const types={'.html':'text/html','.js':'text/javascript','.wasm':'application/wa
 const server=createServer(async(req,res)=>{
  try {
   const path=decodeURIComponent(new URL(req.url,'http://localhost').pathname),name=path==='/'?'/index.html':path==='/profiles'?'/profiles.html':directoryRoute(new URL(req.url,'http://localhost'))?(path.startsWith('/events')?'/events.html':'/directory.html'):path;
-  if(name==='/neon-client.js'){
-   res.writeHead(200,{'Content-Type':'text/javascript','Cache-Control':'no-store'});res.end(execFileSync(process.execPath,['scripts/bundle_neon.mjs']));return;
+  if(name==='/account-client.js'){
+   res.writeHead(200,{'Content-Type':'text/javascript','Cache-Control':'no-store'});res.end(execFileSync(process.execPath,['scripts/bundle_account.mjs']));return;
   }
-  const first=/\.(?:js|css|html|svg|jpeg|png|webp)$/.test(name)||name==='/neon-config.json'?source:built;
+  const first=/\.(?:js|css|html|svg|jpeg|png|webp)$/.test(name)||name==='/account-config.json'?source:built;
   for(const base of [first,first===source?built:source]){
    const file=resolve(base,'.'+name);if(!file.startsWith(base+'/'))continue;
    try {if(!(await stat(file)).isFile())continue;res.writeHead(200,{'Content-Type':types[extname(file)]||'application/octet-stream','Cache-Control':'no-store'});res.end(await readFile(file));return;}catch{}

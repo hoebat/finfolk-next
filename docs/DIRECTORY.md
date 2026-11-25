@@ -33,7 +33,7 @@ also retains duplicate detection.
 Copy the invitation message into a manually sent social message or email, and
 update outreach status. Claim links are public entry points, not ownership
 credentials. A verified member requests a seven-day challenge and sends it
-from the listed social account to Finfolk. Administrators inspect the actual
+from the listed social account to FinFolk. Administrators inspect the actual
 message and sender, record evidence, then approve or reject. Never approve
 based solely on a submitted handle or possession of an invitation link.
 Ownership can be revoked from the listing editor. Owners edit listing copy and
@@ -58,8 +58,8 @@ then deploy the matching API and frontend with the updated SQL hash.
 
 ## Pages and access
 
-A listing is a Finfolk page representing a person, business or group. Claiming
-assigns ownership of the Finfolk page; linked Instagram/TikTok accounts provide
+A listing is a FinFolk page representing a person, business or group. Claiming
+assigns ownership of the FinFolk page; linked Instagram/TikTok accounts provide
 verification evidence. A member may own multiple pages. The Freediver category
 supports personal athlete/creator pages, including international locations.
 
@@ -69,7 +69,7 @@ owner creates/revokes admin invitations or removes admins. Verified social
 identity changes retain the superadmin review requirement. Invitations expire in
 seven days, are single-use, and store only a token hash. Owners share links
 manually; no messages are sent automatically. Redeeming requires a verified
-Finfolk account. Revoking ownership also clears delegated access and invitations.
+FinFolk account. Revoking ownership also clears delegated access and invitations.
 
 Release the new page functionality with migrations 0024–0026, then deploy the
 matching API and frontend. These changes have not been installed in production.

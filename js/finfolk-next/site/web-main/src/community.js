@@ -28,11 +28,11 @@ export function installCommunity({
   getBeaches = () => [],
   getSelectedBeach = () => null,
   loadConfig = () =>
-    readResource(new URL('./neon-config.json?v=' + encodeURIComponent(new URL(import.meta.url).pathname.split('/').pop()), import.meta.url), {
+    readResource(new URL('/api/account-config?v=' + encodeURIComponent(new URL(import.meta.url).pathname.split('/').pop()), import.meta.url), {
       read: 'json',
       cache: 'no-cache',
     }),
-  loadClient = () => import('./neon-client.js'),
+  loadClient = () => import('./account-client.js'),
 } = {}) {
   const root = document.getElementById('account-page');
   const requestedAccountTab = () => { const tab = new URL(location.href).searchParams.get('tab'); return ['checkin', 'posts', 'instagram', 'profile', 'settings', 'sites', 'admin'].includes(tab) ? tab : 'checkin'; };

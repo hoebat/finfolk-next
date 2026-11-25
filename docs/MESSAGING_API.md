@@ -8,7 +8,7 @@ The API contract is [OpenAPI 3.0](openapi/messaging.yaml). The command bot serve
 
 ## Authentication and interfaces
 
-All `/v1/me/instagram` routes require a Neon Auth bearer JWT and enforce member ownership. Redeeming connection codes requires verified email. `/v1/admin/messaging` additionally requires verified email and membership in server-only `INSTAGRAM_ADMIN_IDS`. OAuth callbacks authenticate the initiating administrator through single-use, ten-minute state plus a fresh server-side account/role check.
+All `/v1/me/instagram` routes require a Supabase Auth bearer JWT and enforce member ownership. Redeeming connection codes requires verified email. `/v1/admin/messaging` additionally requires verified email and membership in server-only `INSTAGRAM_ADMIN_IDS`. OAuth callbacks authenticate the initiating administrator through single-use, ten-minute state plus a fresh server-side account/role check.
 
 Mutating REST calls require `Idempotency-Key` (8–128 letters, digits, underscores or hyphens). The same actor/key/method/path/body returns the original response for 24 hours. Changed input returns `409 idempotency_conflict`; expired keys return `409 idempotency_expired`. Authorization URLs in replay responses are encrypted with AES-256-GCM, bound to actor/key through authenticated additional data. Response ciphertext is erased at expiry; non-secret tombstones expire after 30 days. Keep the same key when retrying a lost response.
 
@@ -37,7 +37,7 @@ Open Settings → Instagram messaging → Authorize @finfolk.com.au. The Faceboo
 
 ## Receipt → command → reply
 
-`GET /instagram/webhook` returns the exact challenge after token verification and does not need Neon/Auth to be available. `POST` accepts only a valid HMAC over the exact raw bytes, bounded to 262144 bytes. It validates the account recipient and persists normalized, minimal records before returning `200`. Persistence failure returns a retryable `503`. Queue publication failure does not lose the persisted event: the independent recovery job publishes it later.
+`GET /instagram/webhook` returns the exact challenge after token verification and does not need the account service to be available. `POST` accepts only a valid HMAC over the exact raw bytes, bounded to 262144 bytes. It validates the account recipient and persists normalized, minimal records before returning `200`. Persistence failure returns a retryable `503`. Queue publication failure does not lose the persisted event: the independent recovery job publishes it later.
 
 Message text is not retained as a conversation archive. Only command type, bounded check-in arguments, scoped sender/recipient, timestamps, attribution and diagnostic state are retained. Echoes are ignored; unsupported message types with an ID are recorded as ignored. Malformed timestamps are never replaced with the current time. Disabled mode records paused receipts without executing or queuing them.
 

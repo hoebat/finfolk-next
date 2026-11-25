@@ -1,4 +1,4 @@
-// Neon injects the API JWT into getSession().data.session.token, including
+// legacy provider injects the API JWT into getSession().data.session.token, including
 // OAuth verifier sessions where cross-site cookies cannot serve /token.
 export async function accountToken(auth) {
   const session = await auth.getSession();

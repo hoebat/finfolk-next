@@ -99,3 +99,17 @@ headers, bounded image exports, invalid paths, redirects and failed upstreams.
 parent-tile caching, projection/rendering and activity labels. Against a local Next
 server, `NEXTJS_TEST_URL=http://localhost:3032 node tests/test_mapping_data_network.mjs`
 uses the live dataset service and rejects direct third-party mapping requests.
+
+## Restoring the bounded VCDEM test fixtures
+
+A checkout made with LFS smudging disabled contains pointer text, not the reviewed
+binary fixtures. Hydrate the review inputs before running `test_vcdem_review.py`:
+
+```sh
+git lfs pull --include='datasets/ocean/provenance/vcdem-package-review/**,datasets/processed/vcdem-coastal-500m/00b1f37e30c8611b16b946ae.tif,datasets/runtime/releases/eb24dd8f4af55847ee3972be950b4946441c672a5cc5bde7b723826041feb6b9/files/data/catalog.json.gz,datasets/runtime/releases/eb24dd8f4af55847ee3972be950b4946441c672a5cc5bde7b723826041feb6b9/files/data/grids/port-phillip-*/**' --exclude=''
+.venv/bin/python -m unittest discover -s tests -p 'test_vcdem_review.py' -v
+```
+
+This fetch is restricted to the frozen review's metadata archive, source raster,
+runtime catalogue and Port Phillip grid. The tests retain their exact checksum,
+mask, grid and depth-value assertions; no fixtures are regenerated to satisfy them.

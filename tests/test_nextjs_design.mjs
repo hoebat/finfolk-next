@@ -15,7 +15,7 @@ try{for(const [screen,query,expected]of [['list','','Melbourne Freedivers'],['fi
  const context=await browser.newContext({serviceWorkers:'block',viewport,reducedMotion:'reduce'});await context.addInitScript(theme=>localStorage.setItem('finfolk-theme',theme),theme);
  const page=await context.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));
  await page.route('**/v1/directory**',route=>route.fulfill({json:directoryResponse(new URL(route.request().url()).searchParams)}));
- await page.route('**/neon-config.json*',route=>route.fulfill({json:{enabled:false,backbone:true,apiUrl:base+'/',authUrl:'https://auth.invalid'}}));
+ await page.route(/\/(?:account-config\.json|api\/account-config)(?:\?|$)/,route=>route.fulfill({json:{enabled:false,backbone:true,apiUrl:base+'/',authUrl:'https://auth.invalid'}}));
  await page.route('**/__original-directory*',route=>route.fulfill({contentType:'text/html',body:directoryHTML}));
  await page.goto(base+'/__original-directory'+(query?query+'&':'?')+'screen=directory');await page.getByText(expected,{exact:true}).waitFor();await page.screenshot({path:`${output}/reference-directory-${screen}-${theme}-${size}.png`,fullPage:true});
  await page.goto(base+'/directory'+query);await page.getByText(expected,{exact:true}).waitFor();assert.equal(await page.locator('html').getAttribute('data-theme'),theme);await page.locator('.profile-topbar select').selectOption(theme);await page.getByRole('link',{name:'Skip to content'}).count();assert.equal(await page.locator('.profile-footer').count(),1);assert.ok(await page.locator('.ff-nav-item svg').count()>=2);assert.equal(await page.locator('.profile-topbar-actions').count(),1);

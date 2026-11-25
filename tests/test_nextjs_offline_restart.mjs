@@ -9,7 +9,7 @@ try{
  context=await chromium.launchPersistentContext(profile,{headless:true});
  await context.addInitScript(()=>localStorage.setItem('finfolk:welcome','1'));
  const page=await context.newPage();page.setDefaultTimeout(20000);
- await mockOfflineNavigation(page,base);const config=JSON.parse(await readFile('js/finfolk-next/site/web-main/public/neon-config.json','utf8'));await page.route('**/neon-config.json*',route=>route.fulfill({json:config}));await page.goto(base+'/map');
+ await mockOfflineNavigation(page,base);const config=JSON.parse(await readFile('js/finfolk-next/site/web-main/public/account-config.json','utf8'));await page.route(/\/(?:account-config\.json|api\/account-config)(?:\?|$)/,route=>route.fulfill({json:config}));await page.goto(base+'/map');
  await page.waitForFunction(()=>!!navigator.serviceWorker.controller,null,{timeout:60000});
  await page.getByRole('button',{name:'Open menu',exact:true}).click();await page.getByRole('link',{name:'Settings',exact:true}).click();
  const settings=page.getByRole('dialog',{name:'Settings',exact:true});await settings.getByText('2 published contours',{exact:true}).waitFor();

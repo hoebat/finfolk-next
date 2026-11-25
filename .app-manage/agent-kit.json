@@ -1,0 +1,29 @@
+{
+  "version": "1.0.0",
+  "config": "config/agent-kit.json",
+  "files": {
+    ".app-manage/agent-runtime.mjs": "a01dc63bc65404639c52cfe1010f78b4992151578012d53cc1d99dc7884d7ce0",
+    ".app-manage/config.json": "7e84361cae928394557613659ef3fdb0409d476943bab8e1de4b896a01da74bc",
+    ".app-manage/workflows/orientation.md": "efdf115ac069dc3496677bcd3e852eeb939cb42c99473c6a7c87086ef2b683a2",
+    ".app-manage/workflows/feature.md": "15c07d7e4e46401fa3ef61ea5e592207aa0402791aad53483430e6496d02799e",
+    ".app-manage/workflows/repair.md": "c0870cd693050be331204afdc3e8dc1f2eff1e0943762e22235dd205ffd72683",
+    ".app-manage/workflows/database.md": "379b798eb65c9f933e74d164cd9e83e51e138ecf7579b48772f79481ddcd81e0",
+    ".app-manage/workflows/backbone.md": "363c9d882f20af28cca15a91a451a1a7c72d8042b1f2f28bf1d98fcd804f581c",
+    ".app-manage/workflows/ui.md": "d4886a4679b5b120a151ce9546b44b3052274701b37f414bdb68b3961990af36",
+    ".app-manage/workflows/verification.md": "4905c2fbe5e7e0d3934a921e62d5cc2c8784d59502a4eb107f74924137b5a47d",
+    "scripts/agent/doctor": "dcd9e831b17f090a1ae9dd7fabdd48d87fa6170e28ea3b1a6b7e84e1888a6c4f",
+    "scripts/agent/context": "05b69067d2dbfd9f148b1cff8976d3508eb5f47f7bd4a0babba055f5dcc154eb",
+    "scripts/agent/plan": "bb781d75ccb3c0386d830832d9c8d8ab87ee0f8068e46bf01626d844fce2d09e",
+    "scripts/agent/generate": "186f02c28f2824d8378608b28777c53f24a1fe2c3aded14b8556916bec17efa4",
+    "scripts/agent/test": "f88e4e179e0971851fcec195924245c8e541417699df33a8d9780d6b4f796471",
+    "scripts/agent/verify": "37cc217ec676ea581a8127d3ce20a171dd1ce1dc704109651b6593afc9f0ca43",
+    "scripts/agent/report": "72e8f8f39ca888cce39e9b11d70e7113fce1c2de2969a2e54c58ea9d0e13c78e",
+    "scripts/agent/task": "d9bf368fed3da8dd17701f247bb4e1ddc349208dd5df5e279122d0dfe0eb8954"
+  },
+  "blocks": {
+    "AGENTS.md": "839b4efb7edddd3b9a19794b47b258364a9efe82f93f8089bfe97ec1dc012737",
+    "src/finfolkdb/AGENTS.md": "6298cd34ed2ecfefd168462331ef05237ee5930a75c913a64354846079a8fa44",
+    "src-app/AGENTS.md": "734c50fe054350fc36278239675240ee72b03e10ff12034dcd2beaab27597aa1",
+    "js/finfolk-next/site/web-main/app/AGENTS.md": "ca43532a625e3ee41d7076ce264f651bbe0c0225c58f325bd4a5be5c7ffe8f75"
+  }
+}

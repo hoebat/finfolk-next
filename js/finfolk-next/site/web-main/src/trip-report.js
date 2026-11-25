@@ -200,7 +200,7 @@ export function installTripPage({ shell, loadJSON }) {
       const id = new URL(location.href).searchParams.get("trip");
       if (!/^[a-f0-9-]{36}$/.test(id || ""))
         throw Error("Choose a valid trip report.");
-      const config = await loadJSON('neon-config.json');
+      const config = await loadJSON('/api/account-config');
       const report=await publicOperation('publicTrip',{id},config.apiUrl,async()=>{
         const response=await fetch(new URL('trips/'+id,config.apiUrl),{cache:'no-store',signal:AbortSignal.timeout(12000)});
         const body=await response.json();if(!response.ok)throw Error(body.error||'Trip report unavailable.');return body;

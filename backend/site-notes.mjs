@@ -16,6 +16,7 @@ export function siteNotesService(db){
   });}catch(error){
    if(error.status)throw error;
    if(['42P01','42883'].includes(error.code))fail(503,'Community notes are being prepared.','site_notes_unavailable');
+   if(['40001','23505'].includes(error.code))fail(409,'You have a note at this site or it changed. Reload your note before editing.');
    if(error.code==='P0001'){
     const message=error.message||'';
     if(/Verified|Administrator/.test(message))fail(403,'Verified member or administrator access required.');
@@ -28,9 +29,9 @@ export function siteNotesService(db){
   }
  }
  return {
-  async list(id,values={},identity){const key=site(id),sort=values.sort||'helpful',topic=values.topic||'all',offset=Number(values.offset||0);if(!['helpful','newest'].includes(sort)||!TOPICS.includes(topic)||!Number.isSafeInteger(offset)||offset<0||offset>10000)fail(400,'Choose valid note filters.');if(!db)return {enabled:false,notes:[],next:null};return {enabled:true,...await call('ret_site_notes',[key,sort,topic,offset,!!identity],identity)};},
-  save(id,value,identity){const body=typeof value.text==='string'?value.text.trim():'';if(body.length<10||body.length>1000||!TOPICS.slice(1).includes(value.topic))fail(400,'Write 10–1,000 characters and choose a topic.');const observed=value.observedOn||null;if(observed&&(typeof observed!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(observed)||!Number.isFinite(Date.parse(observed))||new Date(observed+'T12:00:00Z').toISOString().slice(0,10)!==observed))fail(400,'Use a valid observation date.');if(value.topic==='conditions'&&!observed)fail(400,'Add the date you observed these conditions.');return call('save_site_note',[site(id),note(value.id),value.topic,body,observed],identity);},
-  vote:(id,value,identity)=>call('set_site_note_vote',[site(id),note(value.id),bool(value.upvoted)],identity),
+  async list(id,values={},identity){const key=site(id),sort=values.sort||'helpful',topic=values.topic||'all',offset=Number(values.offset||0);if(!['helpful','newest'].includes(sort)||!TOPICS.includes(topic)||!Number.isSafeInteger(offset)||offset<0||offset>10000)fail(400,'Choose valid note filters.');if(!db)return {enabled:false,notes:[],next:null,ownNote:null};return {enabled:true,...await call('ret_site_notes',[key,sort,topic,offset,!!identity],identity)};},
+  save(id,value,identity){const body=typeof value.text==='string'?value.text.trim():'';if(body.length<10||body.length>1000||!TOPICS.slice(1).includes(value.topic))fail(400,'Write 10–1,000 characters and choose a topic.');const observed=value.observedOn||null;if(observed&&(typeof observed!=='string'||!/^\d{4}-\d{2}-\d{2}$/.test(observed)||!Number.isFinite(Date.parse(observed))||new Date(observed+'T12:00:00Z').toISOString().slice(0,10)!==observed))fail(400,'Use a valid observation date.');if(value.topic==='conditions'&&!observed)fail(400,'Add the date you observed these conditions.');return call('save_site_note',[site(id),note(value.id),value.topic,body,observed,value.revision===undefined?null:rev(value.revision)],identity);},
+  vote(id,value,identity){if(value.vote!==undefined){if(!Number.isInteger(value.vote)||![-1,0,1].includes(value.vote))fail(400,'Choose a valid note vote.');return call('set_site_note_rating',[site(id),note(value.id),value.vote],identity);}return call('set_site_note_vote',[site(id),note(value.id),bool(value.upvoted)],identity);},
   withdraw:(id,value,identity)=>call('set_site_note_withdrawn',[site(id),note(value.id),rev(value.revision),bool(value.withdrawn)],identity),
   report(id,value,identity){const reason=typeof value.reason==='string'?value.reason.trim():'';if(!reason||reason.length>1000)fail(400,'Provide a report reason of up to 1,000 characters.');return call('report_site_note',[site(id),note(value.id),reason],identity);},
   moderate:(id,value,identity)=>call('moderate_site_note',[site(id),note(value.id),bool(value.hidden)],identity),

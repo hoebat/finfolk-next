@@ -1,0 +1,70 @@
+name: Promote FinFolk preview
+run-name: Promote FinFolk preview ${{ inputs.deploy_id }}
+
+on:
+  workflow_dispatch:
+    inputs:
+      deploy_id:
+        description: Ready, never-published Netlify preview deploy ID
+        required: true
+        type: string
+      expected_production_deploy_id:
+        description: Current production deploy ID (fails if production has changed)
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: finfolk-frontend-production
+  cancel-in-progress: false
+
+jobs:
+  promote:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    environment:
+      name: production
+      url: https://finfolk.com.au
+    env:
+      DEPLOY_ID: ${{ inputs.deploy_id }}
+      EXPECTED_PRODUCTION_DEPLOY_ID: ${{ inputs.expected_production_deploy_id }}
+    steps:
+      - name: Require main and valid deploy IDs
+        env:
+          SELECTED_REF: ${{ github.ref }}
+        run: |
+          test "$SELECTED_REF" = refs/heads/main
+          [[ "$DEPLOY_ID" =~ ^[a-f0-9]{24}$ ]]
+          [[ "$EXPECTED_PRODUCTION_DEPLOY_ID" =~ ^[a-f0-9]{24}$ ]]
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+          lfs: false
+          sparse-checkout: |
+            scripts/promote_frontend_preview.mjs
+            scripts/check_frontend_release.mjs
+            tests/test_promote_frontend_preview.mjs
+          sparse-checkout-cone-mode: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Test promotion guards
+        run: node --test tests/test_promote_frontend_preview.mjs
+      - name: Validate candidate and current production
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: node scripts/promote_frontend_preview.mjs --check
+      - name: Install isolated browser test tools
+        run: |
+          npm install --prefix .cache/promotion-tools --no-audit --no-fund --ignore-scripts playwright@1.58.2
+          node .cache/promotion-tools/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Check preview UI and disabled features
+        run: node scripts/check_frontend_release.mjs "https://${DEPLOY_ID}--finfolk.netlify.app"
+      - name: Promote the existing artifact
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: node scripts/promote_frontend_preview.mjs --publish
+      - name: Verify production UI and disabled features
+        run: node scripts/check_frontend_release.mjs https://finfolk.com.au

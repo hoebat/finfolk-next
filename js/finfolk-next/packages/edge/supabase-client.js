@@ -64,7 +64,7 @@ export function createAccountClient(auth,config,app){
     "model":null,
     "listeners":new Set(),
     "closed":false,
-    "recovery":false,
+    "recovery":config.passwordRecovery == true,
     "notice":""
   };
   let transition = function (session,event = null){
@@ -177,12 +177,22 @@ export function createAccountClient(auth,config,app){
         }
         return app.public.call(operation,values || {});
       },
+    "github":async function (){
+        return checked(await auth.signInWithOAuth({
+          "provider":"github",
+          "options":{"redirectTo":config.authRedirectTo}
+        }));
+      },
     "deleteSession":function (id){
         return client.call("deleteSession",{"id":id});
       },
     "ensureProfile":async function (){
         let me = await client.call("me",{});
         return Object.assign({},me.profile,{"id":me.id,"uid":me.id});
+      },
+    "featureHeaders":async function (){
+        let session = checked(await auth.getSession()).session;
+        return session ? {"Authorization":"Bearer " + session.access_token} : {};
       },
     "verifyCode":async function (code){
         if(!ctx.user){
@@ -198,7 +208,10 @@ export function createAccountClient(auth,config,app){
                 let response = await auth.signUp({
                   "email":input.email,
                   "password":input.password,
-                  "options":{"data":{"displayName":input.name}}
+                  "options":{
+                        "data":{"displayName":input.name},
+                        "emailRedirectTo":config.authRedirectTo
+                      }
                 });
                 return Object.assign({},response,{
                   "confirmationRequired":!response.error && !response.data.session
@@ -280,6 +293,23 @@ export function createAccountClient(auth,config,app){
     "supports":function (operation){
         return !!contracts.operations[operation];
       },
+    "featureFlags":async function (){
+        let response = await auth.getSession();
+        let session = checked(response).session;
+        let headers = {};
+        if(session){
+          headers.Authorization = ("Bearer " + session.access_token);
+        }
+        let result = await fetch(new URL("/v1/features",config.apiUrl),{
+          "headers":headers,
+          "cache":"no-store",
+          "signal":AbortSignal.timeout(10000)
+        });
+        if(!result.ok){
+          throw new Error("Feature settings unavailable");
+        }
+        return await result.json();
+      },
     "signOut":async function (){
         let result = checked(await auth.signOut());
         transition(null);
@@ -314,7 +344,7 @@ export function createAccountClient(auth,config,app){
       }
   };
   app.setPublicTransport(function (operation,values){
-    return requestAccount(config,operation,values,null,function (){
+    return requestAccount(config,operation,values,ctx.session,function (){
       if(ctx.closed){
         throw new Error("Client closed.");
       }

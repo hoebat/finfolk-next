@@ -65,13 +65,13 @@
   => "PASS: generated account types compile and reject invalid preference patches\n")
 
 ^{:id standalone-native-install :timeout 120000 :added "0.1"}
-(fact "published SQL installs on an empty native database without historical or Neon schemas"
+(fact "published SQL installs on an empty native database without historical or legacy provider schemas"
   (let [database (db/database {:label "native_install" :admin-url "postgresql://postgres:postgres@127.0.0.1:55432/postgres"})]
     (try
       (db/start! database)
       (db/execute! database (slurp "resources/finfolkdb/entity-schema.sql"))
       (db/execute! database (slurp "resources/finfolkdb/account-grants.sql"))
-      (db/execute! database "DO $$ BEGIN IF to_regprocedure('finfolk_rpc.native_site_review_submit(uuid,boolean,jsonb)') IS NULL OR to_regprocedure('finfolk_rpc.event_delivery_claim(uuid,uuid,uuid,text,uuid)') IS NULL OR to_regprocedure('finfolk_rpc.native_public_site_catalog()') IS NULL OR to_regprocedure('finfolk_rpc.native_directory_discovery_finish(uuid,boolean,jsonb)') IS NULL OR to_regprocedure('finfolk_rpc.native_events_save(uuid,boolean,text,jsonb)') IS NULL OR to_regprocedure('finfolk_rpc.native_directory_merge(uuid,boolean,jsonb)') IS NULL THEN RAISE EXCEPTION 'Published native RPCs missing'; END IF; IF has_table_privilege('finfolk_account','finfolk.\"UserRole\"','UPDATE') THEN RAISE EXCEPTION 'Account role can escalate privileges'; END IF; IF has_table_privilege('anon','finfolk.\"EventInviteDelivery\"','SELECT') OR has_function_privilege('anon','finfolk_rpc.event_delivery_claim(uuid,uuid,uuid,text,uuid)','EXECUTE') THEN RAISE EXCEPTION 'Anonymous roles can access delivery work'; END IF; IF EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='neon_auth') THEN RAISE EXCEPTION 'Unexpected legacy Auth dependency'; END IF; END $$;")
+      (db/execute! database "DO $$ BEGIN IF to_regprocedure('finfolk_rpc.native_site_review_submit(uuid,boolean,jsonb)') IS NULL OR to_regprocedure('finfolk_rpc.event_delivery_claim(uuid,uuid,uuid,text,uuid)') IS NULL OR to_regprocedure('finfolk_rpc.native_public_site_catalog()') IS NULL OR to_regprocedure('finfolk_rpc.native_directory_discovery_finish(uuid,boolean,jsonb)') IS NULL OR to_regprocedure('finfolk_rpc.native_events_save(uuid,boolean,text,jsonb)') IS NULL OR to_regprocedure('finfolk_rpc.native_directory_merge(uuid,boolean,jsonb)') IS NULL THEN RAISE EXCEPTION 'Published native RPCs missing'; END IF; IF has_table_privilege('finfolk_account','finfolk.\"UserRole\"','UPDATE') THEN RAISE EXCEPTION 'Account role can escalate privileges'; END IF; IF has_table_privilege('anon','finfolk.\"EventInviteDelivery\"','SELECT') OR has_function_privilege('anon','finfolk_rpc.event_delivery_claim(uuid,uuid,uuid,text,uuid)','EXECUTE') THEN RAISE EXCEPTION 'Anonymous roles can access delivery work'; END IF; IF EXISTS(SELECT 1 FROM pg_namespace WHERE nspname='legacy_auth') THEN RAISE EXCEPTION 'Unexpected legacy Auth dependency'; END IF; END $$;")
       :ok
       (finally (db/stop! database))))
   => :ok)

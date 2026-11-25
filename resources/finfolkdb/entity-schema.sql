@@ -795,6 +795,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SiteNote" (
   "op_updated" UUID,
   "time_created" BIGINT,
   "time_updated" BIGINT,
+  UNIQUE ("site_id","author_id"),
   UNIQUE ("rev_id"),
   CONSTRAINT observation_required CHECK (("topic" != 'conditions') OR "observed_on" IS NOT NULL),
   CONSTRAINT fk_site_note_rev FOREIGN KEY (class_table,class_context,rev_id) REFERENCES "finfolk"."Rev"(class_table,class_context,id)
@@ -807,6 +808,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."SiteNoteVote" (
   "id" UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
   "note_id" UUID NOT NULL REFERENCES "finfolk"."SiteNote"("id") ON DELETE CASCADE,
   "voter_id" UUID NOT NULL REFERENCES "finfolk"."User"("id") ON DELETE CASCADE,
+  "downvoted" BOOLEAN NOT NULL DEFAULT false,
   "op_created" UUID,
   "op_updated" UUID,
   "time_created" BIGINT,
@@ -3062,7 +3064,9 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".site_note_score(
   i_note UUID
 ) RETURNS BIGINT AS $$
 
-  SELECT count(*) FROM "finfolk"."SiteNoteVote" AS "v" INNER JOIN "finfolk"."User" AS "u" ON "v"."voter_id" = "u"."id" WHERE ("v"."note_id" = i_note) AND NOT "u"."deleted" AND "u"."email_verified";
+  SELECT coalesce(sum(CASE WHEN "v"."downvoted" THEN -1
+  WHEN true THEN 1
+  END),0) FROM "finfolk"."SiteNoteVote" AS "v" INNER JOIN "finfolk"."User" AS "u" ON "v"."voter_id" = "u"."id" WHERE ("v"."note_id" = i_note) AND NOT "u"."deleted" AND "u"."email_verified";
 
 $$ LANGUAGE 'sql';
 
@@ -3077,6 +3081,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
     o_raw JSONB;
     o_user JSONB;
     v_author UUID;
+    v_downvoted BOOLEAN;
     v_upvoted BOOLEAN;
   BEGIN
     WITH j_ret AS (  
@@ -3106,7 +3111,9 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_user;
     SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteVote"
-    WHERE "note_id" = i_note AND "voter_id" = i_viewer) INTO v_upvoted;
+    WHERE "note_id" = i_note AND "voter_id" = i_viewer AND "downvoted" = false) INTO v_upvoted;
+    SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteVote"
+    WHERE "note_id" = i_note AND "voter_id" = i_viewer AND "downvoted" = true) INTO v_downvoted;
     IF o_note IS NULL OR NOT "finfolk_rpc".is_site_note_site((o_note ->> 'site_id')::UUID) OR NOT "finfolk_rpc".is_site_note_member(v_author) OR "finfolk".is_user_blocked(i_viewer,v_author) THEN
       RETURN null;
     END IF;
@@ -3132,7 +3139,60 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_note(
       'own',
       coalesce(v_author = i_viewer,false),
       'upvoted',
-      v_upvoted
+      v_upvoted,
+      'downvoted',
+      v_downvoted
+    );
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/ret-owned-site-note 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_owned_site_note(
+  i_site UUID,
+  i_viewer UUID
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_note JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "site_id",
+        "author_id",
+        "topic",
+        "body",
+        "observed_on",
+        "withdrawn",
+        "hidden",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SiteNote"
+      WHERE "site_id" = i_site AND "author_id" = i_viewer
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
+    IF o_note IS NULL OR NOT "finfolk_rpc".is_site_note_site(i_site) THEN
+      RETURN null;
+    END IF;
+    RETURN jsonb_build_object(
+      'id',
+      o_note ->> 'id',
+      'topic',
+      o_note ->> 'topic',
+      'text',
+      o_note ->> 'body',
+      'observedOn',
+      o_note ->> 'observed_on',
+      'revision',
+      "finfolk_rpc".site_note_version((o_note ->> 'rev_id')::UUID) -> 'revision',
+      'withdrawn',
+      o_note -> 'withdrawn',
+      'hidden',
+      o_note -> 'hidden'
     );
   END;
 
@@ -3166,7 +3226,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_site_notes(
         0 - "time_created",
         "id"
       LIMIT 21 OFFSET i_offset) AS "selected_notes" INTO o_rows;
-    RETURN jsonb_build_object('notes',CASE WHEN jsonb_array_length(o_rows) > 20 THEN o_rows - 20
+    RETURN jsonb_build_object('ownNote',"finfolk_rpc".ret_owned_site_note(i_site,v_viewer),'notes',CASE WHEN jsonb_array_length(o_rows) > 20 THEN o_rows - 20
     WHEN true THEN o_rows
     END,'next',CASE WHEN jsonb_array_length(o_rows) > 20 THEN i_offset + 20
     WHEN true THEN null
@@ -3181,7 +3241,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
   i_id UUID,
   i_topic TEXT,
   i_body TEXT,
-  i_observed DATE
+  i_observed DATE,
+  i_revision INTEGER
 ) RETURNS JSONB AS $$
 
   DECLARE
@@ -3190,9 +3251,12 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
     o_op := "finfolk".op_fn('save-site-note',v_user,('{}')::JSONB);
-    PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_id)::TEXT,0));
+    PERFORM "pg_advisory_xact_lock"(
+      "hashtextextended"("concat"((i_site)::TEXT,':',(v_user)::TEXT),0)
+    );
     DECLARE
       o_existing JSONB;
+      o_own JSONB;
       o_site JSONB;
       v_body TEXT;
     BEGIN
@@ -3219,8 +3283,28 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
           "time_updated"
         FROM "finfolk"."SiteNote"
         WHERE "id" = i_id
-        LIMIT 1)
+        LIMIT 1
+        FOR UPDATE)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_existing;
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "site_id",
+          "author_id",
+          "topic",
+          "body",
+          "observed_on",
+          "withdrawn",
+          "hidden",
+          "rev_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."SiteNote"
+        WHERE "site_id" = i_site AND "author_id" = v_user
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_own;
       IF i_id IS NULL OR NOT "finfolk_rpc".is_site_note_site(i_site) OR (length(v_body) < 10) OR (length(v_body) > 1000) OR i_topic IS NULL OR NOT ((i_topic = 'access') OR (i_topic = 'facilities') OR (i_topic = 'wildlife') OR (i_topic = 'conditions')) OR ((i_topic = 'conditions') AND i_observed IS NULL) OR (i_observed IS NOT NULL AND (NOT "isfinite"(i_observed) OR (i_observed > ("timezone"(
         o_site ->> 'timezone',
         to_timestamp((1000000 * extract(epoch FROM now()))::BIGINT / 1000000.0)
@@ -3228,15 +3312,68 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
         RAISE EXCEPTION 'Check the site, topic, note length and observation date';
       END IF;
       IF o_existing is not null  THEN
-        IF ((o_existing ->> 'author_id')::UUID != v_user) OR ((o_existing ->> 'site_id')::UUID != i_site) OR ((o_existing ->> 'topic') != i_topic) OR ((o_existing ->> 'body') != v_body) OR (coalesce(o_existing ->> 'observed_on','') != coalesce((i_observed)::TEXT,'')) THEN
-          RAISE EXCEPTION 'This note identifier was already used';
+        IF ((o_existing ->> 'author_id')::UUID != v_user) OR ((o_existing ->> 'site_id')::UUID != i_site) THEN
+          RAISE EXCEPTION 'That note is unavailable';
         END IF;
-        RETURN jsonb_build_object(
-          'id',
-          i_id,
-          'revision',
-          ("finfolk_rpc".site_note_version((o_existing ->> 'rev_id')::UUID) ->> 'revision')::INTEGER
-        );
+        DECLARE
+        v_same BOOLEAN;
+          v_version INTEGER;
+      BEGIN
+        v_version := ("finfolk_rpc".site_note_version((o_existing ->> 'rev_id')::UUID) ->> 'revision')::INTEGER;
+          v_same := (((o_existing ->> 'topic') = i_topic) AND ((o_existing ->> 'body') = v_body) AND (coalesce(o_existing ->> 'observed_on','') = coalesce((i_observed)::TEXT,'')));
+          IF v_same AND NOT (o_existing ->> 'withdrawn')::BOOLEAN AND (i_revision IS NULL OR (i_revision = v_version) OR ((i_revision + 1) = v_version)) THEN
+            RETURN jsonb_build_object('id',i_id,'revision',v_version);
+          END IF;
+          IF i_revision IS NULL OR (i_revision != v_version) THEN
+            RAISE EXCEPTION USING
+              errcode = '40001',
+              message = 'This note changed; reload it before trying again'
+            ;
+          END IF;
+          DECLARE
+            o_saved JSONB;
+            o_version JSONB;
+          BEGIN
+            WITH j_ret AS (  
+              UPDATE "finfolk"."SiteNote" SET
+                "topic" = (i_topic)::"finfolk"."EnumSiteNoteTopic",
+                "body" = "finfolk".as_bounded_text((v_body)::TEXT,10,1000),
+                "observed_on" = "finfolk".as_finite_date((i_observed)::DATE),
+                "withdrawn" = (false)::BOOLEAN,
+                "op_updated" = (o_op ->> 'id')::UUID,
+                "time_updated" = (o_op ->> 'time')::BIGINT
+              WHERE "id" = i_id
+              RETURNING
+                "id",
+                "site_id",
+                "author_id",
+                "topic",
+                "body",
+                "observed_on",
+                "withdrawn",
+                "hidden",
+                "rev_id",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated")
+            SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+            o_version := "finfolk_rpc".record_site_note_revision(i_id,o_op);
+            RETURN jsonb_build_object('id',i_id,'revision',o_version -> 'revision');
+          END;
+      END;
+      END IF;
+      IF o_own is not null  THEN
+        RAISE EXCEPTION USING
+          errcode = '40001',
+          message = 'You already have a note for this site; edit it instead'
+        ;
+      END IF;
+      IF i_revision is not null  THEN
+        RAISE EXCEPTION USING
+          errcode = '40001',
+          message = 'This note changed; reload it before trying again'
+        ;
       END IF;
       DECLARE
         o_note JSONB;
@@ -3249,11 +3386,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".save_site_note(
 
 $$ LANGUAGE 'plpgsql';
 
--- finfolkdb.fn.site.site-notes/set-site-note-vote 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
+-- finfolkdb.fn.site.site-notes/set-site-note-rating 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_rating(
   i_site UUID,
   i_note UUID,
-  i_upvoted BOOLEAN
+  i_vote INTEGER
 ) RETURNS JSONB AS $$
 
   DECLARE
@@ -3263,7 +3400,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
     v_voted BOOLEAN;
   BEGIN
     v_user := "finfolk_rpc".require_site_note_member();
-    o_op := "finfolk".op_fn('set-site-note-vote',v_user,('{}')::JSONB);
+    o_op := "finfolk".op_fn('set-site-note-rating',v_user,('{}')::JSONB);
     WITH j_ret AS (  
       SELECT
         "id",
@@ -3286,42 +3423,13 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_note;
     SELECT exists(SELECT 1 FROM "finfolk"."SiteNoteVote"
     WHERE "note_id" = i_note AND "voter_id" = v_user) INTO v_voted;
-    IF i_upvoted IS NULL OR o_note IS NULL OR "finfolk_rpc".ret_site_note(i_note,v_user) IS NULL THEN
+    IF o_note IS NULL OR "finfolk_rpc".ret_site_note(i_note,v_user) IS NULL THEN
       RAISE EXCEPTION 'That note is unavailable';
     END IF;
-    IF i_upvoted THEN
-      IF NOT v_voted THEN
-        DECLARE
-      o_write JSONB;
-    BEGIN
-      WITH j_ret AS (  
-            INSERT INTO "finfolk"."SiteNoteVote" (
-              "note_id",
-              "voter_id",
-              "op_created",
-              "op_updated",
-              "time_created",
-              "time_updated"
-            ) VALUES (
-              (i_note)::UUID,
-              (v_user)::UUID,
-              (o_op ->> 'id')::UUID,
-              (o_op ->> 'id')::UUID,
-              (o_op ->> 'time')::BIGINT,
-              (o_op ->> 'time')::BIGINT
-            ) RETURNING
-              "id",
-              "note_id",
-              "voter_id",
-              "op_created",
-              "op_updated",
-              "time_created",
-              "time_updated")
-          SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
-          null;
-    END;
-      END IF;
-    ELSE
+    IF i_vote IS NULL OR (i_vote < -1) OR (i_vote > 1) THEN
+      RAISE EXCEPTION 'Choose a valid note vote';
+    END IF;
+    IF i_vote = 0 THEN
       DECLARE
       o_write JSONB;
     BEGIN
@@ -3331,6 +3439,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
             "id",
             "note_id",
             "voter_id",
+            "downvoted",
             "op_created",
             "op_updated",
             "time_created",
@@ -3338,10 +3447,81 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
         SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
         null;
     END;
+    ELSIF v_voted THEN
+      DECLARE
+      o_write JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          UPDATE "finfolk"."SiteNoteVote" SET
+            "downvoted" = (i_vote = -1)::BOOLEAN,
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "note_id" = i_note AND "voter_id" = v_user
+          RETURNING
+            "id",
+            "note_id",
+            "voter_id",
+            "downvoted",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_write;
+        null;
+    END;
+    ELSE
+      DECLARE
+      o_write JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          INSERT INTO "finfolk"."SiteNoteVote" (
+            "note_id",
+            "voter_id",
+            "downvoted",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          ) VALUES (
+            (i_note)::UUID,
+            (v_user)::UUID,
+            (i_vote = -1)::BOOLEAN,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'time')::BIGINT,
+            (o_op ->> 'time')::BIGINT
+          ) RETURNING
+            "id",
+            "note_id",
+            "voter_id",
+            "downvoted",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_write;
+        null;
+    END;
     END IF;
     RETURN "finfolk_rpc".ret_site_note(i_note,v_user);
   END;
 
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.site.site-notes/set-site-note-vote 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".set_site_note_vote(
+  i_site UUID,
+  i_note UUID,
+  i_upvoted BOOLEAN
+) RETURNS JSONB AS $$
+BEGIN
+  IF i_upvoted is null  THEN
+    RAISE EXCEPTION 'Choose a valid note vote';
+  END IF;
+  RETURN "finfolk_rpc".set_site_note_rating(i_site,i_note,CASE WHEN i_upvoted THEN 1
+  WHEN true THEN 0
+  END);
+END;
 $$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.site.site-notes/set-site-note-withdrawn 
@@ -3725,10 +3905,13 @@ BEGIN
         v_id,
         i_values ->> 'topic',
         i_values ->> 'text',
-        (nullif(i_values ->> 'observedOn',''))::DATE
+        (nullif(i_values ->> 'observedOn',''))::DATE,
+        (i_values ->> 'revision')::INTEGER
       );
     ELSIF i_operation = 'vote' THEN
-      RETURN "finfolk_rpc".set_site_note_vote(v_site,v_id,(i_values ->> 'upvoted')::BOOLEAN);
+      RETURN CASE WHEN i_values ->> 'vote' IS NOT NULL THEN "finfolk_rpc".set_site_note_rating(v_site,v_id,(i_values ->> 'vote')::INTEGER)
+    WHEN true THEN "finfolk_rpc".set_site_note_vote(v_site,v_id,(i_values ->> 'upvoted')::BOOLEAN)
+    END;
     ELSIF i_operation = 'withdraw' THEN
       RETURN "finfolk_rpc".set_site_note_withdrawn(
         v_site,
@@ -4237,6 +4420,21 @@ CREATE INDEX ON "finfolk"."MessagingOutbox" ("account_id");
 
 -- finfolkdb.common.type-messaging-delivery/__delivery_indexes__ 
 CREATE INDEX IF NOT EXISTS "MessagingOutbox_ready" ON "finfolk"."MessagingOutbox" ("account_id","state","next_attempt_at");
+
+-- finfolkdb.fn.messaging.messaging-manage/is-messaging-member 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".is_messaging_member(
+  i_user UUID
+) RETURNS BOOLEAN AS $$
+
+  DECLARE
+    v_allowed BOOLEAN;
+  BEGIN
+    SELECT exists(SELECT 1 FROM "finfolk"."User"
+    WHERE "id" = i_user AND "deleted" = false AND "email_verified" = true) INTO v_allowed;
+    RETURN v_allowed;
+  END;
+
+$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.messaging.messaging-manage/ret-messaging-account 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_messaging_account(
@@ -4923,41 +5121,8 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
         END IF;
         DECLARE
           o_claim JSONB;
-          o_linked JSONB;
           v_user UUID;
         BEGIN
-          WITH j_ret AS (  
-            SELECT
-              "id",
-              "user_id",
-              "account_id",
-              "status",
-              "identity_version",
-              "generation",
-              "credential_ciphertext",
-              "access_expires_at",
-              "refresh_expires_at",
-              "credential_lease",
-              "lease_until",
-              "share_posts",
-              "public_points",
-              "capabilities",
-              "granted_scopes",
-              "cursor",
-              "last_success",
-              "next_at",
-              "failures",
-              "provider_data",
-              "audit_id",
-              "op_created",
-              "op_updated",
-              "time_created",
-              "time_updated"
-            FROM "finfolk"."SocialConnection"
-            WHERE "account_id" = (o_participant ->> 'social_account_id')::UUID
-            AND "status" = ('active')::"finfolk"."EnumSocialConnectionStatus"
-            LIMIT 1)
-          SELECT to_jsonb(j_ret) FROM j_ret INTO o_linked;
           v_user := null;
           WITH j_ret AS (  
             UPDATE "finfolk"."MessagingReceipt" SET
@@ -4985,7 +5150,17 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_message(
           IF (o_account ->> 'provider') = 'app' THEN
             v_user := (o_participant ->> 'user_id')::UUID;
           ELSE
-            v_user := (o_linked ->> 'user_id')::UUID;
+            DECLARE
+            o_linked JSONB;
+          BEGIN
+            WITH j_ret AS (  
+                SELECT "user_id" FROM "finfolk"."SocialConnection"
+                WHERE "account_id" = (o_participant ->> 'social_account_id')::UUID
+                AND "status" = ('active')::"finfolk"."EnumSocialConnectionStatus"
+                LIMIT 1)
+              SELECT to_jsonb(j_ret) FROM j_ret INTO o_linked;
+              v_user := (o_linked ->> 'user_id')::UUID;
+          END;
           END IF;
           RETURN jsonb_build_object(
             'receipt',
@@ -5211,7 +5386,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".retry_message(
           "status" = ('failed')::"finfolk"."EnumMessagingReceiptStatus",
           "lease" = (null)::UUID,
           "lease_until" = (null)::BIGINT,
-          "next_attempt_at" = ((1000000 * extract(epoch FROM now()))::BIGINT + (i_delay * 1000000))::BIGINT
+          "next_attempt_at" = ((1000000 * extract(epoch FROM now()))::BIGINT + ((i_delay)::BIGINT * 1000000))::BIGINT
         WHERE "id" = i_receipt
         AND "account_id" = i_account
         AND "status" = ('processing')::"finfolk"."EnumMessagingReceiptStatus"
@@ -5522,7 +5697,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".record_delivery_result(
             "state" = (v_state)::"finfolk"."EnumMessagingOutboxStatus",
             "lease" = (null)::UUID,
             "lease_until" = (null)::BIGINT,
-            "next_attempt_at" = ((1000000 * extract(epoch FROM now()))::BIGINT + (coalesce(i_delay,1) * 1000000))::BIGINT,
+            "next_attempt_at" = ((1000000 * extract(epoch FROM now()))::BIGINT + ((coalesce(i_delay,1))::BIGINT * 1000000))::BIGINT,
             "provider_message_id" = (i_provider_message)::TEXT,
             "time_updated" = ((1000000 * extract(epoch FROM now()))::BIGINT)::BIGINT
           WHERE "id" = i_delivery
@@ -12459,7 +12634,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_chat_message(
       );
       v_deadline := coalesce(
         (o_receipt ->> 'deadline')::BIGINT,
-        v_sent + (i_window * 1000000)
+        v_sent + ((i_window)::BIGINT * 1000000)
       );
       RETURN "finfolk_rpc".receive_message(i_application,i_account,jsonb_build_object(
         'eventId',
@@ -17989,5 +18164,6 @@ GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_api;
 DO $$ BEGIN IF NOT EXISTS(SELECT 1 FROM pg_roles WHERE rolname='finfolk_directory') THEN CREATE ROLE finfolk_directory NOLOGIN NOINHERIT; END IF; END $$;
 GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_directory;
 GRANT SELECT,INSERT,UPDATE ON finfolk."DirectoryRun",finfolk."DirectoryListing",finfolk."DirectoryReport",finfolk."Access",finfolk."AccessRole",finfolk."AccessRequest",finfolk."AccessInviteExternal",finfolk."Rev",finfolk."RevLog",finfolk."Audit",finfolk."AuditLog",finfolk."Social",finfolk."Op",finfolk."User",finfolk."Activity",finfolk."ActivityLog" TO finfolk_directory;
+GRANT SELECT(key) ON finfolk."DatabaseRelease" TO finfolk_directory;
 GRANT EXECUTE ON FUNCTION finfolk.auth_uid(),finfolk.as_jsonb(jsonb),finfolk.op_fn(text,uuid,jsonb),finfolk.insert_base_addons(text,uuid,jsonb,jsonb),finfolk.ret_social_url(text),finfolk.ret_social_urls(jsonb),finfolk_rpc.insert_user(uuid,jsonb,jsonb),finfolk_rpc.insert_directory_listing(jsonb,jsonb),finfolk_rpc.ret_directory_public(uuid),finfolk_rpc.account_portrait(text),finfolk_rpc.account_link(text,text),finfolk_rpc.directory_socials(jsonb),finfolk_rpc.directory_document(jsonb),finfolk_rpc.directory_owner_row(finfolk."DirectoryListing"),finfolk_rpc.directory_operation(text,jsonb) TO finfolk_directory;
 COMMIT;

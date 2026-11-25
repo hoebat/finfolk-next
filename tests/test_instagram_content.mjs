@@ -62,7 +62,7 @@ const q = async (sql, values = []) => (await pg.query(sql, values)).rows;
 const db = { query: q, transaction: fn => pg.transaction(tx => fn(async (sql, values = []) => (await tx.query(sql, values)).rows)) };
 const originalFetch = globalThis.fetch;
 try {
-  await pg.exec('CREATE SCHEMA neon_auth; CREATE TABLE neon_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api; GRANT USAGE ON SCHEMA neon_auth TO finfolk_api; GRANT SELECT ON neon_auth."user" TO finfolk_api;');
+  await pg.exec('CREATE SCHEMA legacy_auth; CREATE TABLE legacy_auth."user"(id text PRIMARY KEY,name text,"emailVerified" boolean,banned boolean); CREATE ROLE finfolk_api; GRANT USAGE ON SCHEMA legacy_auth TO finfolk_api; GRANT SELECT ON legacy_auth."user" TO finfolk_api;');
   for (const name of (await readdir('backend/migrations')).filter(n => n.endsWith('.sql')).sort())
     await pg.exec(await readFile('backend/migrations/' + name, 'utf8'));
   await pg.exec('GRANT USAGE ON SCHEMA finfolk TO finfolk_api; SET ROLE finfolk_api');

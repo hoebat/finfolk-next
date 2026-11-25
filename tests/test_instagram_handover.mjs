@@ -1,0 +1,11 @@
+import assert from 'node:assert/strict';
+import {isBrowserAPIPath} from '../backend/browser-routes.mjs';
+import {instagramAccountURL} from '../backend/instagram-urls.mjs';
+import {collectInstagramDM} from '../backend/messaging-engine.mjs';
+assert.ok(isBrowserAPIPath('/instagram/webhook'));
+assert.equal(instagramAccountURL({}),'https://finfolk.com.au/?view=account&tab=instagram');
+let writes=0;
+const q=async sql=>{if(sql.startsWith('SELECT'))return[{account_id:'900',checks:{},enabled_commands:['help'],pilot_sender_ids:[]}];writes++;return[]};
+await collectInstagramDM({sender:{id:'100'},recipient:{id:'900'},timestamp:Date.parse('2026-01-01'),message:{mid:'old',text:'/help'}},{INSTAGRAM_CUTOVER_AT:'2026-02-01T00:00:00Z'},q);
+assert.equal(writes,0,'Historical provider retries do not create work in the new database');
+console.log('INSTAGRAM_HANDOVER_PASS: configured account URL and historical retries create no messaging work.');

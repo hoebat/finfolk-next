@@ -1,3 +1,4 @@
+import {createMessagingRPC} from './messaging-rpc.mjs';
 // Trusted server bridge to the Clojure-authored messaging database protocol.
 // application/account come from authorized server configuration, never message text.
 const calls={
@@ -13,9 +14,7 @@ export function createMessagingDatabase({db,application,account}){
  if(!db?.query||!db?.transaction||typeof application!=='string'||!application||typeof account!=='string'||!account)
   throw Error('Messaging requires a transactional database and trusted application/account configuration.');
  async function call(operation,args=[],query=(sql,values)=>db.query(sql,values)){
-  const values=[application,account,...args];
-  const output=await query(`SELECT finfolk_rpc.${calls[operation]}(${values.map((_,i)=>'$'+(i+1)).join(',')}) AS value`,values);
-  return (Array.isArray(output)?output:output.rows)[0].value;
+  return createMessagingRPC(query)(calls[operation],[application,account,...args]);
  }
  async function retry(receipt){
   return call('retry',[receipt.id,receipt.lease,delay(receipt.attempts)]);

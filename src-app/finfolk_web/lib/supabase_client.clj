@@ -28,7 +28,7 @@
 (defn.js createAccountClient [auth config app]
   (when (not app) (throw (new Error "An application backbone is required")))
   (:= app.authProvider "supabase") (:= app.configuration config)
-  (var ctx {"revision" 0 "user" nil "session" nil "model" nil "listeners" (new Set) "closed" false "recovery" false "notice" ""})
+  (var ctx {"revision" 0 "user" nil "session" nil "model" nil "listeners" (new Set) "closed" false "recovery" (== config.passwordRecovery true) "notice" ""})
   (var transition (fn [session (:= event nil)]
     (when ctx.closed (return nil))
     (:= ctx.revision (+ ctx.revision 1))
@@ -50,6 +50,17 @@
     (var data (-/checked response))
     (when (== ctx.revision 0) (transition data.session))))))
   (var client {"supports" (fn [operation] (return (not (not (. contracts/operations [operation])))))
+    "featureHeaders" (async (fn []
+      (var session (. (-/checked (await (auth.getSession))) session))
+      (return (:? session {"Authorization" (+ "Bearer " session.access_token)} {}))))
+    "featureFlags" (async (fn []
+      (var response (await (auth.getSession)))
+      (var session (. (-/checked response) session))
+      (var headers {})
+      (when session (:= headers.Authorization (+ "Bearer " session.access_token)))
+      (var result (await (fetch (new URL "/v1/features" config.apiUrl) {"headers" headers "cache" "no-store" "signal" (AbortSignal.timeout 10000)})))
+      (when (not result.ok) (throw (new Error "Feature settings unavailable")))
+      (return (await (result.json)))))
     "ready" ready "authProvider" "supabase" "application" app
     "observe" (fn [listener]
       (. ctx.listeners (add listener))
@@ -89,9 +100,10 @@
     "deleteSession" (fn [id] (return (client.call "deleteSession" {"id" id})))
     "email" (async (fn [email password] (return (-/checked (await (auth.signInWithPassword {"email" email "password" password}))))))
     "auth" {"signUp" {"email" (async (fn [input]
-      (var response (await (auth.signUp {"email" input.email "password" input.password "options" {"data" {"displayName" input.name}}})))
+      (var response (await (auth.signUp {"email" input.email "password" input.password "options" {"data" {"displayName" input.name} "emailRedirectTo" config.authRedirectTo}})))
       (return (Object.assign {} response {"confirmationRequired" (and (not response.error) (not response.data.session))}))))}}
     "google" (async (fn [] (return (-/checked (await (auth.signInWithOAuth {"provider" "google" "options" {"redirectTo" config.authRedirectTo}}))))))
+    "github" (async (fn [] (return (-/checked (await (auth.signInWithOAuth {"provider" "github" "options" {"redirectTo" config.authRedirectTo}}))))))
     "verify" (async (fn []
       (when (not ctx.user) (throw (new Error "Sign in first.")))
       (return (-/checked (await (auth.resend {"type" "signup" "email" ctx.user.email}))))))
@@ -129,7 +141,7 @@
       (transition nil) (:= ctx.closed true) (. ctx.listeners (clear))
       (registration.data.subscription.unsubscribe))})
   (app.setPublicTransport (fn [operation values]
-    (return (-/requestAccount config operation values nil
+    (return (-/requestAccount config operation values ctx.session
       (fn [] (when ctx.closed (throw (new Error "Client closed."))))))))
   (Object.defineProperty client "notice" {"get" (fn [] (return ctx.notice))})
   (Object.defineProperty client "user" {"get" (fn [] (return ctx.user))})

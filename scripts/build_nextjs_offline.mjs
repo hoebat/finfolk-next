@@ -14,8 +14,8 @@ await collect(new URL('.next/static/',site),'/_next/static/',()=>true);
 await collect(publicRoot,'/',path=>!path.startsWith('/offline/')&&path!=='/sw.js'&&(path==='/vendor/proj4.js'||/^\/[^/]+\.(?:js|css|svg|woff2?)$/.test(path)||/^\/workers\/[^/]+\.(?:js|wasm)$/.test(path)||/^\/(?:demo|scene|animal|habitat|freediver)-[^.]+\.webp$/.test(path)));
 // This is a build-authored public binding (also shipped in the legacy shell),
 // never a session/token response. Accounts still verify their session normally.
-const config=await readFile(new URL('neon-config.json',publicRoot));
-assets.push({path:'/neon-config.json',hash:digest(config)});
+const config=await readFile(new URL('account-config.json',publicRoot));
+assets.push({path:'/account-config.json',hash:digest(config)});
 const buildId=(await readFile(new URL('.next/BUILD_ID',site),'utf8')).trim();
 const prerender=JSON.parse(await readFile(new URL('.next/prerender-manifest.json',site),'utf8'));
 const documents={},documentPatterns={};
