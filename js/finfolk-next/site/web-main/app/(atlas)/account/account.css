@@ -96,3 +96,5 @@
 .ff-account-workspace .actions-panel>.acct-card-topline .eyebrow {font:600 10px/1.5 Avenir,Arial,sans-serif;letter-spacing:.16em;color:var(--account-muted)}
 :root[data-theme] .ff-account-workspace #account-sites>.acct-submissions {margin-top:30px}
 .ff-account-workspace .acct-submissions>h3 {padding-bottom:16px;border-bottom:1px solid var(--account-line)}
+
+.ff-account-workspace :is(#account-checkin,#account-sites) {padding-top:28px}
