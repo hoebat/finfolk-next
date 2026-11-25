@@ -4,3 +4,41 @@
 :root[data-theme] .ff-settings header{display:block}:root[data-theme] .ff-settings legend{font:650 18px/1.4 Avenir,Arial,sans-serif}:root[data-theme] .ff-settings .profile-editor-actions{position:static;inset:auto;order:initial;background:transparent;padding:0;box-shadow:none}:root[data-theme] .ff-settings .settings-layout>nav a{color:var(--account-ink)}:root[data-theme] .ff-settings .settings-layout>nav a[aria-current]{color:var(--account-bg)}
 
 :root[data-theme] .ff-settings .settings-portrait .person-portrait{width:72px;height:72px;aspect-ratio:1;border-radius:50%;overflow:hidden;margin:8px 0 20px}:root[data-theme] .ff-settings .settings-portrait img{width:100%;height:100%;object-fit:cover}
+
+/* Member settings share the calm account workspace and its editorial hierarchy. */
+:root[data-theme] .ff-account-workspace .ff-settings{max-width:1160px;padding:0 0 40px}
+.ff-account-workspace .ff-settings .settings-back{display:inline-flex;align-items:center;gap:10px;margin-bottom:28px;font-size:12px;text-decoration:none;color:var(--account-muted)}
+:root[data-theme] .ff-account-workspace .ff-settings>header{padding-bottom:30px;margin-bottom:32px}
+.ff-account-workspace .ff-settings .settings-eyebrow{font-size:10px;font-weight:600;letter-spacing:.17em;color:var(--account-muted);margin:0 0 10px}
+:root[data-theme] .ff-account-workspace .ff-settings h1{font:400 clamp(40px,4.5vw,58px)/1.1 Georgia,serif;letter-spacing:-.05em;margin:10px 0 15px}
+.ff-account-workspace .ff-settings>header>p:last-child{font-size:14px;color:var(--account-muted);margin:0}
+.ff-account-workspace .settings-layout{grid-template-columns:230px minmax(0,1fr);gap:48px}
+:root[data-theme] .ff-account-workspace .settings-layout>nav a{display:flex;align-items:center;gap:11px;min-height:50px;border-radius:12px;padding:12px 14px;font-size:13px;line-height:1.5}
+.ff-account-workspace .settings-nav-index{font-size:10px;font-weight:500;opacity:.5;letter-spacing:.03em}
+.ff-account-workspace .settings-layout>nav .settings-nav-label{opacity:1;flex:1}
+.ff-account-workspace .settings-layout>nav .acct-icon{width:15px;height:15px;opacity:.6}
+.ff-account-workspace .settings-content>h2{font:400 32px/1.2 Georgia,serif;letter-spacing:-.035em;margin:0 0 10px}
+.ff-account-workspace .settings-description{font-size:14px;max-width:50ch;margin:0 0 28px}
+:root[data-theme] .ff-account-workspace .ff-settings :is(.account-card,.profile-editor fieldset){padding:28px;border-radius:20px;background:var(--account-surface);box-shadow:0 4px 20px color-mix(in srgb,var(--account-ink) 3%,transparent)}
+:root[data-theme] .ff-account-workspace .ff-settings .theme-swatch{height:116px;position:relative;overflow:hidden;border:1px solid var(--account-line)}
+.ff-account-workspace .theme-swatch:after{content:'Aa';position:absolute;left:15px;bottom:8px;font:italic 38px/1 Georgia,serif;color:var(--account-ink);mix-blend-mode:normal}
+:root[data-theme] .ff-account-workspace .ff-settings .theme-choice{padding:14px;gap:10px;border-radius:15px}
+:root[data-theme] .ff-account-workspace .ff-settings .theme-choice strong{font-size:14px}
+:root[data-theme] .ff-account-workspace .ff-settings .theme-choice small{font-size:12px;line-height:1.6}
+:root[data-theme] .ff-account-workspace .ff-settings .profile-editor-actions{padding:20px 0;border-top:1px solid var(--account-line);margin-top:4px}
+:root[data-theme] .ff-account-workspace .ff-settings button.primary{background:var(--account-ink);color:var(--account-surface);border-color:var(--account-ink)}
+@media(max-width:1000px){.ff-account-workspace .settings-layout{grid-template-columns:190px minmax(0,1fr);gap:28px}}
+@media(max-width:900px){.ff-account-workspace .settings-layout{grid-template-columns:1fr;gap:28px}.ff-account-workspace .settings-layout>nav{display:flex;overflow:auto;gap:7px}.ff-account-workspace .settings-layout>nav a{flex:none;white-space:nowrap}.ff-account-workspace .settings-layout>nav .settings-nav-label{display:inline}.ff-account-workspace .settings-layout>nav :is(.settings-nav-index,.acct-icon){display:none}:root[data-theme] .ff-account-workspace .ff-settings :is(.account-card,.profile-editor fieldset){padding:22px}.ff-account-workspace .ff-settings .settings-back{margin-bottom:22px}}
+:root[data-theme] .ff-account-workspace .ff-settings .settings-back {color:var(--account-muted)}
+:root[data-theme] .ff-account-workspace .ff-settings #settings-title:focus {outline:none}
+:root[data-theme] .ff-account-workspace .ff-settings .theme-choice {grid-template-columns:minmax(0,1fr) 20px;align-items:center}
+:root[data-theme] .ff-account-workspace .ff-settings .theme-choice .theme-swatch {grid-row:1;grid-column:1/-1}
+:root[data-theme] .ff-account-workspace .ff-settings .theme-choice input {grid-row:2;grid-column:2;margin:0}
+:root[data-theme] .ff-account-workspace .ff-settings .theme-choice strong {grid-row:2;grid-column:1;white-space:nowrap}
+:root[data-theme] .ff-account-workspace .ff-settings .theme-choice small {grid-row:3;grid-column:1/-1}
+.ff-account-workspace .ff-settings .theme-swatch:after {color:inherit}
+:root[data-theme] .ff-account-workspace .ff-settings .profile-editor :is(input:not([type=checkbox]):not([type=radio]),textarea,select) {font:400 15px/1.5 Avenir,Arial,sans-serif;min-height:48px;background:color-mix(in srgb,var(--account-ink) 3%,var(--account-surface));padding:12px 14px;border-radius:11px}
+:root[data-theme] .ff-account-workspace .ff-settings .profile-editor label {font-size:13px;gap:9px;margin:14px 0;font-weight:500}
+:root[data-theme] .ff-account-workspace .ff-settings .profile-editor textarea {min-height:100px}
+.ff-account-workspace .ff-settings input[type=file]::file-selector-button {font:500 12px Avenir,Arial,sans-serif;padding:8px 13px;margin-right:12px;border:0;border-radius:20px;background:var(--account-ink);color:var(--account-surface);cursor:pointer}
+@media(max-width:520px){:root[data-theme] .ff-account-workspace .ff-settings .theme-choices{grid-template-columns:1fr}:root[data-theme] .ff-account-workspace .ff-settings .theme-swatch{height:106px}}

@@ -1,0 +1,98 @@
+/* Shared member workspace. Guest authentication keeps its independent layout. */
+:root[data-theme] .account-page.ff-account-workspace {
+  width:100%;max-width:none;min-height:100dvh;box-sizing:border-box;
+  padding:44px clamp(22px,4.4vw,72px) 88px;
+  background:color-mix(in srgb,var(--account-bg) 10%,var(--account-surface));
+  color:var(--account-ink);font:15px/1.65 Avenir,'Helvetica Neue',Arial,sans-serif;
+}
+.ff-account-workspace>* {max-width:1160px;margin-inline:auto;box-sizing:border-box}
+.ff-account-workspace .acct-icon {width:20px;height:20px;flex:none;vertical-align:middle}
+.ff-account-workspace .acct-eyebrow {font:600 10px/1.5 Avenir,Arial,sans-serif;letter-spacing:.17em;margin:0;color:var(--account-muted)}
+.ff-account-workspace .acct-header {display:flex;align-items:center;justify-content:space-between;gap:28px;padding:0 0 32px;border-bottom:1px solid var(--account-line)}
+:root[data-theme] .ff-account-workspace .acct-header h1 {font:500 clamp(40px,4.4vw,62px)/1.12 Avenir,Arial,sans-serif;letter-spacing:-.055em;margin:13px 0 14px;color:inherit}
+.ff-account-workspace .acct-header h1 em {font-family:Georgia,'Times New Roman',serif;font-weight:400;letter-spacing:-.055em}
+.ff-account-workspace .acct-header .account-intro {margin:0;font-size:15px;color:var(--account-muted)}
+.ff-account-workspace .acct-header-side {display:flex;flex-direction:column;align-items:flex-end;gap:11px;flex:none}
+:root[data-theme] .ff-account-workspace .acct-header button {display:inline-flex;align-items:center;justify-content:center;gap:16px;margin:0;font:500 13px/1.4 Avenir,Arial,sans-serif;min-height:44px;padding:12px 21px;border:1px solid var(--account-line);border-radius:28px;box-shadow:none}
+:root[data-theme] .ff-account-workspace .acct-header .acct-session-link {background:var(--account-ink);color:var(--account-surface);border-color:var(--account-ink)}
+:root[data-theme] .ff-account-workspace .acct-header .acct-help-link {gap:7px;min-height:36px;padding:4px 0;background:transparent;border-color:transparent;color:var(--account-muted);font-size:12px}
+:root[data-theme] .ff-account-workspace .account-tabs {display:flex;gap:5px;max-width:1160px;width:100%;margin:24px auto 28px;padding:6px;box-sizing:border-box;border:1px solid var(--account-line);border-radius:18px;background:var(--account-surface);overflow-x:auto;scrollbar-width:thin;box-shadow:none}
+:root[data-theme] .ff-account-workspace .account-tabs .account-tab {display:flex;align-items:center;justify-content:center;gap:9px;flex:1 0 auto;min-height:48px;padding:12px 14px;margin:0;border:0;border-radius:12px;background:transparent;color:var(--account-muted);font:500 13px/1.4 Avenir,Arial,sans-serif;white-space:nowrap;box-shadow:none}
+.ff-account-workspace .account-tab .acct-icon {width:18px;height:18px}
+:root[data-theme] .ff-account-workspace .account-tabs .account-tab[aria-selected=true] {background:var(--account-ink);color:var(--account-surface)}
+:root[data-theme] .ff-account-workspace .account-tabs .account-tab:hover:not([aria-selected=true]) {background:color-mix(in srgb,var(--account-ink) 6%,transparent);color:var(--account-ink)}
+.ff-account-workspace .acct-panel {min-width:0;animation:acct-enter .2s ease-out}
+:root[data-theme] .ff-account-workspace .acct-panel :is(.account-card,.social-menu) {max-width:none;margin:0 0 22px;padding:30px;border:1px solid var(--account-line);border-radius:22px;background:var(--account-surface);box-shadow:0 4px 20px color-mix(in srgb,var(--account-ink) 3%,transparent);backdrop-filter:none}
+.ff-account-workspace .acct-panel h2 {font:400 30px/1.2 Georgia,'Times New Roman',serif;letter-spacing:-.035em;margin:0 0 14px;color:inherit}
+.ff-account-workspace .acct-panel h3 {font:600 19px/1.3 Avenir,Arial,sans-serif;letter-spacing:-.025em;color:inherit}
+.ff-account-workspace .acct-panel :is(p,small) {overflow-wrap:anywhere}
+.ff-account-workspace .acct-panel p {margin:12px 0;color:var(--account-muted)}
+.ff-account-workspace .acct-panel small {display:block;font-size:12px;line-height:1.7;color:var(--account-muted)}
+.ff-account-workspace .acct-panel label {display:grid;gap:8px;margin:16px 0;font-size:13px;font-weight:600;color:var(--account-ink);min-width:0}
+:root[data-theme] .ff-account-workspace .acct-panel :is(input:not([type=checkbox]):not([type=radio]),select,textarea) {width:100%;max-width:100%;box-sizing:border-box;min-height:48px;padding:12px 14px;margin:0;border:1px solid var(--account-line);border-radius:11px;background:color-mix(in srgb,var(--account-bg) 5%,var(--account-surface));color:var(--account-ink);font:400 15px/1.5 Avenir,Arial,sans-serif;box-shadow:none}
+.ff-account-workspace .acct-panel textarea {min-height:110px;resize:vertical}
+.ff-account-workspace .acct-panel label:has(>input[type=checkbox]) {display:flex;align-items:center;gap:12px;font-weight:400}
+.ff-account-workspace .acct-panel input:is([type=checkbox],[type=radio]) {width:18px;height:18px;flex:none;accent-color:var(--account-ink)}
+:root[data-theme] .ff-account-workspace .acct-panel button {min-height:44px;padding:11px 18px;margin:6px 8px 6px 0;border:1px solid var(--account-line);border-radius:24px;background:var(--account-surface);color:var(--account-ink);box-shadow:none;font:500 13px/1.5 Avenir,Arial,sans-serif;cursor:pointer}
+:root[data-theme] .ff-account-workspace .acct-panel button.primary,:root[data-theme] .ff-account-workspace .acct-panel button[type=submit] {background:var(--account-ink);color:var(--account-surface);border-color:var(--account-ink)}
+.ff-account-workspace .acct-panel button:disabled {opacity:.5;cursor:wait}
+.ff-account-workspace .acct-panel :is(a,button) {touch-action:manipulation}
+.ff-account-workspace .acct-panel a {color:var(--account-ink);text-underline-offset:4px}
+.ff-account-workspace .acct-panel :is(input,select,textarea,button,a):focus-visible {outline:2px solid var(--account-ink);outline-offset:4px}
+.ff-account-workspace .acct-panel fieldset {min-width:0;border:1px solid var(--account-line);border-radius:16px;padding:20px;margin:24px 0}
+.ff-account-workspace .acct-panel legend {font:600 14px/1.5 Avenir,Arial,sans-serif;padding:0 8px;color:var(--account-ink)}
+.ff-account-workspace .acct-panel details {border:1px solid var(--account-line);border-radius:14px;margin:18px 0;padding:18px 20px;background:var(--account-surface)}
+.ff-account-workspace .acct-panel summary {font-size:14px;font-weight:600;cursor:pointer;min-height:24px}
+.ff-account-workspace .acct-panel [role=status]:empty {display:none}
+.ff-account-workspace .acct-panel [role=status]:not(:empty) {font-size:13px}
+.ff-account-workspace .acct-panel .buddy-card {padding:20px;border:1px solid var(--account-line);border-radius:14px;box-shadow:none;background:color-mix(in srgb,var(--account-bg) 5%,var(--account-surface));margin:16px 0}
+.ff-account-workspace .acct-checkin-layout {display:grid;grid-template-columns:minmax(0,1.4fr) minmax(290px,.9fr);gap:24px;align-items:start}
+:root[data-theme] .ff-account-workspace .acct-checkin-layout>.account-card {margin:0}
+.ff-account-workspace .acct-card-topline {display:flex;align-items:center;justify-content:space-between;gap:20px;margin-bottom:26px}
+.ff-account-workspace .acct-card-topline>.acct-icon {width:28px;height:28px;color:var(--account-muted)}
+:root[data-theme] .ff-account-workspace .checkin-card h2 {font:400 clamp(30px,2.8vw,39px)/1.16 Georgia,serif;letter-spacing:-.04em;max-width:15ch;margin:0 0 17px}
+.ff-account-workspace .checkin-card>p {max-width:43ch}
+.ff-account-workspace .checkin-card form {margin:26px 0 22px;padding-top:10px;border-top:1px solid var(--account-line)}
+.ff-account-workspace .checkin-card form>.primary {display:block;width:100%;margin:22px 0 0;padding:14px;min-height:50px}
+.ff-account-workspace .checkin-card>small {padding-top:18px;border-top:1px solid var(--account-line)}
+.ff-account-workspace .acct-card-heading {display:flex;align-items:center;justify-content:space-between;gap:16px;padding-bottom:19px;border-bottom:1px solid var(--account-line)}
+.ff-account-workspace .acct-card-heading h2 {font:600 18px/1.4 Avenir,Arial,sans-serif;letter-spacing:-.025em;margin:0}
+.ff-account-workspace .acct-count {display:grid;place-items:center;min-width:27px;height:27px;padding:0 6px;border:1px solid var(--account-line);border-radius:30px;font:500 11px Avenir,Arial,sans-serif;box-sizing:border-box}
+.ff-account-workspace .acct-empty {display:flex;flex-direction:column;align-items:center;text-align:center;padding:34px 8px 16px}
+.ff-account-workspace .acct-empty-icon {display:grid;place-items:center;width:64px;height:64px;border-radius:50%;border:1px solid var(--account-line);background:color-mix(in srgb,var(--account-bg) 22%,var(--account-surface));margin-bottom:24px;box-shadow:0 0 0 8px color-mix(in srgb,var(--account-ink) 2%,transparent)}
+.ff-account-workspace .acct-empty-icon .acct-icon {width:26px;height:26px}
+.ff-account-workspace .acct-empty h3 {font:400 25px/1.25 Georgia,serif;max-width:15ch;margin:0 auto 8px;letter-spacing:-.025em}
+.ff-account-workspace .acct-empty p {font-size:13px;line-height:1.8;max-width:29ch;margin:12px auto}
+.ff-account-workspace .acct-text-link {display:inline-flex;align-items:center;gap:14px;font:600 12px/1.5 Avenir,Arial,sans-serif;text-decoration:none;padding:12px 0}
+.ff-account-workspace .acct-text-link .acct-icon {width:18px;height:18px}
+.ff-account-workspace .acct-checkin-row {display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px;border-bottom:1px solid var(--account-line);font-size:13px}
+.ff-account-workspace .acct-routine-note {grid-column:1/-1;display:grid;grid-template-columns:1fr 1.6fr auto;align-items:center;gap:24px;padding:27px 6px;border-block:1px solid var(--account-line)}
+.ff-account-workspace .acct-routine-note p {font-size:14px;margin:0}
+.ff-account-workspace .acct-panel .site-editor {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px;padding:30px;border:1px solid var(--account-line);border-radius:22px;background:var(--account-surface);margin-top:24px}
+.ff-account-workspace .site-editor>:is(fieldset,div,[role=status]) {grid-column:1/-1}
+.ff-account-workspace .site-editor fieldset {margin:16px 0}
+.ff-account-workspace .site-editor>label:has(textarea) {grid-column:1/-1}
+.ff-account-workspace .acct-panel .social-menu {padding:30px;background:var(--account-ink);color:var(--account-surface)}
+.ff-account-workspace .social-menu p {color:inherit;opacity:.75}
+.ff-account-workspace .social-menu a {color:inherit}
+.ff-account-workspace .social-menu-actions {display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-block:24px}
+:root[data-theme] .ff-account-workspace .social-menu .social-menu-action {margin:0;display:flex;align-items:center;justify-content:center;text-align:center;min-height:48px;padding:12px;border:1px solid color-mix(in srgb,var(--account-surface) 30%,transparent);border-radius:12px;background:transparent;color:inherit;font:500 13px/1.5 Avenir,Arial,sans-serif;text-decoration:none}
+@keyframes acct-enter {from{opacity:.6;transform:translateY(4px)}to{opacity:1;transform:none}}
+@media(min-width:1250px){.ff-account-workspace #account-posts{display:grid;grid-template-columns:1fr 1fr;gap:24px;align-items:start}.ff-account-workspace #account-posts>.instagram-discovery{grid-column:1/-1}}
+@media(max-width:1100px){.ff-account-workspace .acct-checkin-layout{grid-template-columns:minmax(0,1.1fr) minmax(260px,.9fr)}.ff-account-workspace .acct-routine-note{grid-template-columns:1fr auto}.ff-account-workspace .acct-routine-note>.acct-eyebrow{grid-column:1/-1}}
+@media(max-width:760px){:root[data-theme] .account-page.ff-account-workspace{padding:28px 18px calc(var(--nav-height,76px) + 36px)}.ff-account-workspace .acct-header{align-items:flex-start;gap:18px;padding-bottom:25px}.ff-account-workspace .acct-header h1{font-size:42px}.ff-account-workspace .acct-header-side{gap:5px}.ff-account-workspace .acct-header .acct-session-link{padding:11px 15px;font-size:12px}.ff-account-workspace .acct-header .acct-session-link .acct-icon{display:none}.ff-account-workspace .acct-header .acct-help-link{font-size:11px}.ff-account-workspace .acct-header .account-intro{max-width:24ch;font-size:13px}.ff-account-workspace .acct-checkin-layout{grid-template-columns:1fr;gap:18px}:root[data-theme] .ff-account-workspace .account-tabs{margin:20px auto;padding:5px;border-radius:15px}:root[data-theme] .ff-account-workspace .account-tabs .account-tab{min-height:44px;padding:11px 13px;font-size:12px;flex-grow:0}:root[data-theme] .ff-account-workspace .acct-panel :is(.account-card,.social-menu){padding:23px;border-radius:18px}.ff-account-workspace .acct-routine-note{grid-template-columns:1fr;gap:9px;padding:22px 4px}.ff-account-workspace .acct-routine-note>.acct-eyebrow{grid-column:auto}.ff-account-workspace .acct-empty{padding:30px 4px 12px}.ff-account-workspace .acct-panel .site-editor{grid-template-columns:1fr;padding:22px;gap:0}.ff-account-workspace .social-menu-actions{grid-template-columns:1fr 1fr}.ff-account-workspace .site-editor>*{grid-column:1!important}}
+@media(max-width:420px){.ff-account-workspace .acct-header{flex-direction:column}.ff-account-workspace .acct-header-side{flex-direction:row;align-items:center;gap:18px}.ff-account-workspace .acct-header .account-intro{max-width:none}.ff-account-workspace .acct-header h1{font-size:44px}.ff-account-workspace .social-menu-actions{grid-template-columns:1fr}}
+@media(prefers-reduced-motion:reduce){.ff-account-workspace .acct-panel{animation:none}}
+:root[data-theme] .ff-account-workspace .acct-panel .acct-text-link {color:var(--account-ink)}
+:root[data-theme] .ff-account-workspace .checkin-card form>button.primary {margin:22px 0 0;padding:14px;min-height:50px}
+:root[data-theme] .ff-account-workspace .acct-panel .site-editor {padding:0;background:transparent;border:0;box-shadow:none;gap:18px 24px}
+.ff-account-workspace .site-editor>.acct-form-group {margin:0;padding:24px;background:var(--account-surface);border-radius:18px}
+.ff-account-workspace .site-editor .acct-field-grid {display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;min-width:0}
+.ff-account-workspace .site-editor .acct-field-grid label {margin:10px 0}
+.ff-account-workspace .acct-field-grid>label:has(:is(textarea,input[name=timezone],input[name=source])) {grid-column:1/-1}
+@media(min-width:1250px){.ff-account-workspace #account-posts{align-items:stretch}.ff-account-workspace #account-posts>.trip-manager{grid-column:1/-1}}
+@media(max-width:760px){.ff-account-workspace .site-editor .acct-field-grid{grid-template-columns:1fr}.ff-account-workspace .site-editor .acct-field-grid>*{grid-column:1!important}.ff-account-workspace .site-editor>.acct-form-group{padding:20px}}
+:root[data-theme] .ff-account-workspace .acct-panel .social-menu>a {color:var(--account-surface)}
+.ff-account-workspace .actions-panel>.acct-card-topline .eyebrow {font:600 10px/1.5 Avenir,Arial,sans-serif;letter-spacing:.16em;color:var(--account-muted)}
+:root[data-theme] .ff-account-workspace #account-sites>.acct-submissions {margin-top:30px}
+.ff-account-workspace .acct-submissions>h3 {padding-bottom:16px;border-bottom:1px solid var(--account-line)}
