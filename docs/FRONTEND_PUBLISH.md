@@ -30,3 +30,24 @@ Netlify's existing production environment remains the configuration source.
 The CLI is pinned to `27.16.2`. The workflow must be on the repository's default
 branch before GitHub displays its **Run workflow** button. No release is
 triggered merely by adding this workflow.
+
+## Promote a reviewed preview without rebuilding
+
+Open [Actions → Promote FinFolk preview](https://github.com/hoebat/finfolk-next/actions/workflows/promote-preview.yml),
+choose **Run workflow** on **main**, and enter the reviewed Netlify deploy ID and
+the current production deploy ID from Netlify. This publishes that exact existing
+artifact. Uncommitted local files and later source changes are not included.
+
+The action only accepts a ready preview belonging to FinFolk that is newer than
+production and has never been published. It rechecks the production pointer before
+publishing, and shares the publishing action's production concurrency group.
+It checks the map, Sessions, real account configuration, absence of mock/local
+requests and browser errors, and that all six currently disabled features remain
+hidden (shop, events, progress, breathing, watch imports and breath check).
+These feature expectations must be updated when intentionally enabling them.
+
+The same browser checks run on production afterward. A failed post-publication
+check reports failure; it does not automatically revert or publish another deploy.
+These frontend checks do not establish backend readiness: the existing API 503
+is a separate issue, and authentication and data writes remain unverified.
+The action makes no API deployment, database, authentication or DNS changes.
