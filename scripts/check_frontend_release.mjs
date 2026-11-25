@@ -14,6 +14,13 @@ try{
  const page=await browser.newPage({viewport:{width:1440,height:1000}});page.setDefaultTimeout(30000);page.on('pageerror',e=>errors.push({url:page.url(),message:e.message}));page.on('request',r=>requests.push(r.url()));
  await page.goto(base+'/map',{waitUntil:'domcontentloaded'});await page.getByRole('region',{name:'Explore map',exact:true}).waitFor();await page.locator('.fm-map-canvas canvas').waitFor();
  const main=page.getByRole('navigation',{name:'Main navigation'});await main.waitFor();assert.equal(await main.getByRole('link',{name:'Events',exact:true}).count(),0);
+ await page.goto(base+'/community',{waitUntil:'domcontentloaded'});await page.getByRole('region',{name:'Join the community'}).waitFor();
+ await page.waitForFunction(()=>!document.querySelector('.cf-popular [role="status"]'));
+ await page.getByText('Finding good things from the community…',{exact:true}).waitFor({state:'hidden'});
+ assert.equal(await page.getByText(/couldn’t load/).count(),0,'Public community reads must settle successfully');
+ const guestNavigation=await main.innerText();assert(!guestNavigation.includes('You')&&!guestNavigation.includes('Practice'),'Guest sidebar must contain public navigation');
+ const signInBox=await page.locator('.ff-signin').boundingBox();assert.equal(signInBox.width,172);assert.equal(signInBox.height,64);
+
  for(const path of ['/shop','/events','/practice/progress','/practice/breathing','/practice/watch-imports','/practice/breath-check']){
   const r=await page.goto(base+path,{waitUntil:'domcontentloaded'});if(path.startsWith('/practice/')&&r.status()===404)continue;await page.getByRole('heading',{name:'Feature unavailable',exact:true}).waitFor();
  }
@@ -21,6 +28,6 @@ try{
  for(const name of ['Progress','Breathing practice','Watch imports','Breath check'])assert.equal(await page.getByRole('heading',{name,exact:true}).count(),0);
  assert(!requests.some(u=>['localhost','127.0.0.1','[::1]'].includes(new URL(u).hostname)||new URL(u).pathname.startsWith('/api/preview/')||new URL(u).pathname.startsWith('/__preview/')),'Mock/local request escaped into the production build');
  assert.deepEqual(errors,[]);
- const report={passed:true,url:base,checkedAt:new Date().toISOString(),mockAccountConfig:false,localRequests:false,disabledFlags:['shop','events','practice.progress','practice.breathing','practice.watch-imports','practice.breath-check'],directRoutesClosed:true,practiceSessionsAvailable:true,mapRendered:true,browserErrors:0,apiHttpStatus:backendStatus,liveBackendReadiness:'Authentication and data writes are outside this frontend check'};
+ const report={passed:true,url:base,checkedAt:new Date().toISOString(),mockAccountConfig:false,localRequests:false,disabledFlags:['shop','events','practice.progress','practice.breathing','practice.watch-imports','practice.breath-check'],directRoutesClosed:true,practiceSessionsAvailable:true,mapRendered:true,communityFeedLoaded:true,guestSignup:true,fixedSidebarWidget:true,browserErrors:0,apiHttpStatus:backendStatus,liveBackendReadiness:'Authentication and data writes are outside this frontend check'};
  console.log(JSON.stringify(report));
 }finally{await browser.close()}

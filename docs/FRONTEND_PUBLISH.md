@@ -48,8 +48,9 @@ These feature expectations must be updated when intentionally enabling them.
 
 The same browser checks run on production afterward. A failed post-publication
 check reports failure; it does not automatically revert or publish another deploy.
-These frontend checks do not establish authenticated browser readiness. The
-native Supabase API now passes health and hosted account checks; existing-user
-identity migration and the frontend Auth configuration remain separate work.
+These frontend checks cover the guest community feed, fixed sign-in widget, map
+and closed feature routes. Authenticated browser acceptance is separate; GitHub
+PKCE and persistent native accounts have passed in Brave. The fresh Supabase
+release intentionally does not import legacy users.
 See [Supabase API status](SUPABASE_API_CUTOVER.md).
 The action makes no API deployment, database, authentication or DNS changes.

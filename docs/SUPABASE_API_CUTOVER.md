@@ -12,7 +12,8 @@ Hyperdrive query caching is disabled. Auspo's database is separate.
 
 The public Supabase origin is `https://supabase.finfolk.com.au`. All seven
 FinFolk Supabase services are running with pinned image digests. Application
-schemas are private, and signup remains closed pending identity migration.
+schemas are private. New users sign up through Supabase with email confirmation;
+legacy users are not imported. See the fresh-user decision in the acceptance guide.
 
 ## Release and verification
 
@@ -38,7 +39,7 @@ schemas are private, and signup remains closed pending identity migration.
   rejected without forwarding credentials to a redirect target.
 
 Schema fingerprint:
-`9a30d41c91362c39f84b878ff21e68a07b18cbf5103075ffcfd5f58710574886`.
+`b9f3ae8a0142cc4954fa37af9e317c57f9038a17d75f2c3410a16cab1f9d0cd5`.
 
 The production configuration and evidence are retained in ignored
 `.cache/supabase-api-release` and `.cache/supabase-api-*-verification.json`.
