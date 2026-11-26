@@ -29,7 +29,7 @@ try{for(const width of [1440,390]){
  await page.getByRole('button',{name:'Victoria: 1 dive spots. Zoom in',exact:true}).click();
  await page.screenshot({path:out+'/hierarchy-'+width+'.png'});
  await page.locator('.fm-geography[data-level=region]').first().waitFor();
- await page.locator('.fm-geography[data-group="VIC:example-area"]').dispatchEvent('click');
+ await page.locator('.fm-geography[data-level=region]').first().dispatchEvent('click');
  await page.waitForFunction(()=>!document.querySelector('.fm-geography'));
  await page.getByRole('button',{name:'Show Australia',exact:true}).click();
  assert.equal(await page.getByRole('complementary',{name:'Map results'}).isVisible(),false,'Map opens without a results panel');

@@ -4,6 +4,7 @@ import {createContourLayers} from './explore-contours.js';
 import {addDepthShading,styleExploreMap,addStateBoundaries,DEPTH_STOPS,LAND_COLOR} from './explore-style.js';
 import {mapPointCollection,mapGeographyGroups,MAP_CATEGORIES,validPoint} from './explore-model.js';
 import {registerDepthRaster} from './explore-depth-raster.js';
+import {clusterRegionMarkers} from './geography-markers.js';
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function markerImage(kind){const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const c=canvas.getContext('2d');c.strokeStyle='#fff';c.lineWidth=4;c.lineCap='round';c.lineJoin='round';c.beginPath();
  if(kind==='spot'){for(const y of [23,33,43]){c.moveTo(15,y);c.bezierCurveTo(23,y-10,31,y+10,39,y);c.bezierCurveTo(43,y-5,46,y-5,50,y);}}
@@ -33,7 +34,7 @@ export async function createExploreMap(container,{rows=[],onSelect,onViewport,on
  let geographyMarkers=[],geographyKey='';
  function updateGeography(){
   if(!ready)return;
-  const zoom=map.getZoom(),level=zoom<5.2?'state':zoom<8?'region':null,groups=level?mapGeographyGroups(latestRows,level):[],summarized=groups.length>0;
+  const zoom=map.getZoom(),level=zoom<5.2?'state':zoom<8?'region':null,allGroups=level?mapGeographyGroups(latestRows,level):[],groups=level==='region'?clusterRegionMarkers(allGroups,point=>map.project(point),{width:container.clientWidth,height:container.clientHeight}):allGroups,summarized=allGroups.length>0;
   for(const id of ['ff-clusters','ff-cluster-count','ff-points','ff-icons','ff-shared','ff-labels'])map.setLayoutProperty(id,'visibility',summarized?'none':'visible');
   const key=JSON.stringify([level,groups.map(g=>[g.id,g.count,g.point,g.points])]);if(key===geographyKey)return;geographyKey=key;
   geographyMarkers.forEach(marker=>marker.remove());geographyMarkers=[];
@@ -50,7 +51,7 @@ export async function createExploreMap(container,{rows=[],onSelect,onViewport,on
  function publishCamera(){if(!onCamera||overviewFrame||!alive)return;overviewFrame=requestAnimationFrame(()=>{overviewFrame=0;if(!alive)return;const b=map.getBounds();onCamera([b.getWest(),b.getSouth(),b.getEast(),b.getNorth()]);});}
  map.on('move',publishCamera);map.on('resize',publishCamera);publishCamera();
  map.on('zoomend',updateGeography);
- map.on('moveend',()=>{if(ready)onViewport?.(map.getBounds());try{sessionStorage.setItem('finfolk:explore-camera',JSON.stringify({center:map.getCenter().toArray(),zoom:map.getZoom()}));}catch{}});
+ map.on('moveend',()=>{updateGeography();if(ready)onViewport?.(map.getBounds());try{sessionStorage.setItem('finfolk:explore-camera',JSON.stringify({center:map.getCenter().toArray(),zoom:map.getZoom()}));}catch{}});
  map.on('error',event=>{if(event.sourceId?.startsWith('ff-contour-'))return;if(alive)onStatus?.('Some map imagery could not load. Results remain available; try again when online.');});
  map.once('style.load',()=>{if(!alive)return;ready=true;clearTimeout(timer);addDepthShading(map);coastMask=createCoastMask(map);map.addSource('finfolk',{type:'geojson',data:mapPointCollection(latestRows),cluster:true,clusterRadius:45,clusterMaxZoom:13,clusterProperties:{entities:['+',['get','count']]}});
   const color=['match',['get','kind'],...Object.entries(MAP_CATEGORIES).flatMap(([key,v])=>[key,v.color]),'#172440'];
@@ -71,6 +72,6 @@ export async function createExploreMap(container,{rows=[],onSelect,onViewport,on
   map.on('click','ff-clusters',async event=>{const f=event.features[0];try{const zoom=await map.getSource('finfolk').getClusterExpansionZoom(f.properties.cluster_id);if(alive)map.easeTo({center:f.geometry.coordinates,zoom,duration:reduced()?0:550});}catch{if(alive)onStatus?.('Could not expand that cluster. Try zooming in.');}});
   for(const layer of ['ff-points','ff-clusters']){map.on('mouseenter',layer,()=>map.getCanvas().style.cursor='pointer');map.on('mouseleave',layer,()=>map.getCanvas().style.cursor='');}
  });
- const resize=new ResizeObserver(()=>{if(alive&&container.clientWidth&&container.clientHeight){map.resize();if(highlight)focus(highlight);}});resize.observe(container);
+ const resize=new ResizeObserver(()=>{if(alive&&container.clientWidth&&container.clientHeight){map.resize();updateGeography();if(highlight)focus(highlight);}});resize.observe(container);
  return {setRows,focus,style,zoomIn(){map.zoomIn({duration:reduced()?0:300});},zoomOut(){map.zoomOut({duration:reduced()?0:300});},setContours(value){contourVisibility=value;contours?.setEnabled(value);},retryContours(){contours?.retry();},setAppearance(value){appearance=value;style();},resize:()=>map.resize(),bounds:()=>map.getBounds(),showAll(points){if(!points.length)return;const bounds=new lib.LngLatBounds();points.forEach(p=>bounds.extend(p));const mobile=matchMedia('(max-width:900px)').matches;map.fitBounds(bounds,{padding:{top:140,bottom:mobile?container.clientHeight*.35:55,left:55,right:55},maxZoom:13,duration:reduced()?0:650});},reset(){map.easeTo({center:[134,-27],zoom:3.6,padding:0,duration:reduced()?0:650});},destroy(){alive=false;hideSiteTooltip();window.removeEventListener('keydown',dismissTooltip);cancelAnimationFrame(overviewFrame);geographyMarkers.forEach(marker=>marker.remove());contours?.destroy();coastMask?.destroy();resize.disconnect();clearTimeout(timer);map.remove();}};
 }

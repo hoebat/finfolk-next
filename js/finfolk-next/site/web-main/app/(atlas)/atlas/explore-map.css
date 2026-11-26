@@ -68,8 +68,7 @@
 @media(min-width:901px){.fm-map-region:has(.fm-overview) .fm-map-status{bottom:248px}}
 @media(max-width:900px){.fm-overview{display:none}}
 
-/* State summaries stay compact at the national zoom; regional cards retain
-   their existing detail. Keep a 44px touch target on phones. */
+/* Compact state summaries at the national zoom. */
 .fm-explore .fm-geography[data-level=state]{min-width:64px;min-height:44px;padding:6px 10px;gap:1px;border-width:1px;border-radius:13px;font-size:11px;line-height:1.2;box-shadow:0 2px 8px #17244030}
 :root[data-theme] .fm-explore .fm-geography[data-level=state] strong{font-size:18px;line-height:1.1}
 .fm-explore .fm-geography[data-level=state] span{max-width:115px}
@@ -119,3 +118,11 @@
  .fm-toolbar .fm-search .fm-show-results,.fm-toolbar .fm-map-actions button,.fm-toolbar .fm-map-actions button:has(span){width:36px;height:44px;min-height:44px;padding:7px;border-radius:18px}
  .fm-toolbar .fm-layers,.fm-explore[data-panel=closed] .fm-toolbar .fm-layers{max-height:calc(100dvh - 180px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
 }
+
+/* Area summaries stay small; names appear only for the area being inspected. */
+:root[data-theme] .fm-explore .fm-geography[data-level=region]{position:relative;display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;box-sizing:border-box;padding:0;border:1px solid #fffaf0;border-radius:50%;background:#172440;color:#fffaf0;box-shadow:0 1px 5px #17244024;cursor:pointer}
+:root[data-theme] .fm-explore .fm-geography[data-level=region] strong{font:600 13px/1 Avenir,Arial,sans-serif;color:inherit}
+.fm-explore .fm-geography[data-level=region] span{display:none;position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);width:max-content;max-width:210px;padding:7px 10px;border:1px solid var(--account-line);border-radius:8px;background:var(--account-surface);color:var(--account-ink);font:500 11px/1.4 Avenir,Arial,sans-serif;white-space:normal;box-shadow:0 2px 8px #17244018;pointer-events:none}
+.fm-explore .fm-geography[data-level=region]:is(:hover,:focus-visible) span{display:block}
+.fm-explore .fm-geography[data-level=region]:focus-visible{outline:2px solid var(--account-ink);outline-offset:3px}
+.fm-explore .maplibregl-marker:has(.fm-geography:is(:hover,:focus-visible)){z-index:2}
