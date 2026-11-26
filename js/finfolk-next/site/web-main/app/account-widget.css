@@ -1,31 +1,33 @@
-
-:root[data-theme] .ff-menu-toggle>.ff-account-desktop{display:flex;align-items:center;gap:10px;width:100%;min-width:0}
-:root[data-theme] .ff-account-desktop .person-portrait{width:38px;height:38px;aspect-ratio:1;flex:0 0 38px;border-radius:50%;overflow:hidden;margin:0}
-:root[data-theme] .ff-account-desktop img{width:100%;height:100%;object-fit:cover}
+/* A stable outline with independent profile and account-menu targets. */
+:root[data-theme] :is(.ff-account-widget,.ff-signin,.ff-auth-loading){box-sizing:border-box;width:172px;min-width:172px;max-width:172px;height:64px;min-height:64px;max-height:64px;flex-shrink:0}
+:root[data-theme] .ff-account-widget{display:flex;align-items:stretch;border:1px solid var(--account-line);border-radius:18px;background:var(--account-surface);color:var(--account-ink)}
+:root[data-theme] .ff-account-profile{display:flex;align-items:center;gap:8px;flex:1;min-width:0;padding:10px 8px;text-decoration:none;color:inherit;border-radius:17px 0 0 17px}
+:root[data-theme] .ff-account-profile .person-portrait{width:34px;height:34px;aspect-ratio:1;flex:0 0 34px;border-radius:50%;overflow:hidden;margin:0}
+:root[data-theme] .ff-account-profile img{width:100%;height:100%;object-fit:cover}
 :root[data-theme] .ff-account-copy{display:grid;gap:4px;min-width:0;flex:1;text-align:left}
 :root[data-theme] .ff-account-copy strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:600 12px/1.3 Avenir,Arial,sans-serif}
-:root[data-theme] .ff-account-copy small{font:400 11px/1.3 Avenir,Arial,sans-serif;color:var(--account-muted)}
-:root[data-theme] .ff-menu-toggle>.ff-account-mobile{display:none}
-@media(max-width:900px){:root[data-theme] .ff-menu-toggle>.ff-account-desktop{display:none}:root[data-theme] .ff-menu-toggle>.ff-account-mobile{display:flex}}
-@media(min-width:901px){:root[data-theme] .finfolk-explore-map.finfolk-navigation-enabled .ff-utility-menu{display:grid}}
-
-/* Keep the outline independent of the current account content. */
-:root[data-theme] :is(#local-menu-toggle.ff-menu-toggle,.ff-signin,.ff-auth-loading){
- box-sizing:border-box;
- width:172px;min-width:172px;max-width:172px;
- height:64px;min-height:64px;max-height:64px;
- flex-shrink:0;
-}
-@media(max-width:900px){
- :root[data-theme] :is(#local-menu-toggle.ff-menu-toggle,.ff-signin,.ff-auth-loading){
-  width:44px;min-width:44px;max-width:44px;
-  height:44px;min-height:44px;max-height:44px;
- }
-}
-
+:root[data-theme] .ff-account-copy small{font:400 10px/1.3 Avenir,Arial,sans-serif;color:var(--account-muted)}
+:root[data-theme] .ff-account-widget #local-menu-toggle{width:36px;min-width:36px;max-width:36px;height:100%;min-height:0;padding:7px;justify-content:center;border:0;border-left:1px solid var(--account-line);border-radius:0 17px 17px 0;background:transparent}
+:root[data-theme] :is(.ff-account-profile,#local-menu-toggle):hover{background:var(--account-bg)}
+:root[data-theme] :is(.ff-account-profile,#local-menu-toggle):focus-visible{outline:3px solid var(--account-accent);outline-offset:3px}
+:root[data-theme] .ff-account-widget:has([aria-expanded=true]){border-color:var(--account-ink)}
+:root[data-theme] nav.ff-menu-panel>button{display:block;width:100%;min-height:44px;padding:12px 14px;border:0;border-radius:12px;background:transparent;text-align:left;font:600 12px/1.5 Avenir,Arial,sans-serif;color:inherit;cursor:pointer;box-shadow:none}
+:root[data-theme] nav.ff-menu-panel>button:hover{background:var(--account-ink);color:var(--account-bg)}
+:root[data-theme] nav.ff-menu-panel>button:focus-visible{outline:3px solid var(--account-accent);outline-offset:0}
+:root[data-theme] nav.ff-menu-panel>button:disabled{opacity:.6;cursor:wait}
+:root[data-theme] nav.ff-menu-panel>.ff-mobile-profile{display:none}
+:root[data-theme] .ff-menu-error{padding:0 14px;font-size:12px}
 :root[data-theme] .ff-signin{display:flex;align-items:center;justify-content:center;gap:10px;text-decoration:none;color:var(--account-ink)}
 :root[data-theme] .ff-signin svg{width:21px;height:21px;flex:none}
+:root[data-theme] .ff-auth-loading{display:flex;align-items:center;padding:12px 14px}
+@media(min-width:901px){:root[data-theme] .finfolk-explore-map.finfolk-navigation-enabled .ff-utility-menu{display:grid}}
 @media(max-width:900px){
+ :root[data-theme] :is(.ff-account-widget,.ff-signin,.ff-auth-loading){width:44px;min-width:44px;max-width:44px;height:44px;min-height:44px;max-height:44px}
+ :root[data-theme] .ff-account-widget{border-radius:14px}
+ :root[data-theme] .ff-account-profile{display:none}
+ :root[data-theme] .ff-account-widget #local-menu-toggle{width:100%;min-width:100%;max-width:100%;border:0;border-radius:13px;padding:10px}
+ :root[data-theme] nav.ff-menu-panel>.ff-mobile-profile{display:block}
+ :root[data-theme] .ff-auth-loading{overflow:hidden;padding:6px;font-size:9px}
  :root[data-theme] .ff-signin>span{display:none}
  :root[data-theme] .finfolk-navigation-enabled nav.ff-primary-nav{grid-template-columns:repeat(var(--nav-count,5),minmax(0,1fr))}
  :root[data-theme] .ff-guest-account{width:44px;display:grid}
