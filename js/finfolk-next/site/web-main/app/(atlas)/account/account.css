@@ -138,3 +138,10 @@
 .ff-account-workspace .checkin-composer-footnote {justify-content:flex-start;text-align:left}
 .ff-account-workspace .checkin-composer-footnote small {flex:1}
 :root[data-theme] .ff-account-workspace .checkin-sharing a {color:var(--account-ink)}
+
+.ff-account-workspace .checkin-autocomplete label{margin-top:0}
+.ff-account-workspace .checkin-site-options{list-style:none;max-height:240px;overflow:auto;margin:8px 0 0;padding:4px;border:1px solid var(--account-line);border-radius:12px;background:var(--account-surface);overscroll-behavior:contain}
+.ff-account-workspace .checkin-site-options li{display:grid;gap:3px;padding:11px 10px;border-radius:8px;cursor:pointer}
+.ff-account-workspace .checkin-site-options li[aria-selected=true]{background:color-mix(in srgb,var(--account-ink) 8%,transparent)}
+.ff-account-workspace .checkin-site-options strong{font-size:13px;line-height:1.4}
+.ff-account-workspace .checkin-site-options small{font-size:11px;line-height:1.4}

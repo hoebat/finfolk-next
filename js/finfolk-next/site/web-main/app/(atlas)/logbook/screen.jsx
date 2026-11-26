@@ -2,6 +2,7 @@
 import {useAppRouter as useRouter} from '../../../lib/use-app-router.js';
 import {useEffect,useRef,useState} from 'react';
 
+import {usePublishedSites} from '../../../lib/use-published-sites.js';
 import {useSession} from '../../../lib/use-session.js';
 import {useConfiguredPageData,usePageRead} from '../../../lib/use-page-data.js';
 import {pageActions,pageAuthActions} from '../../../lib/page-models.js';
@@ -11,7 +12,7 @@ import Inbox from './inbox.jsx';
 import {instagramURL} from '../../../src/logbook-model.js';
 import {SessionMetrics} from '../../product-components.jsx';
 import PublicExtras from './public-extras.jsx';
-export default function Logbook({sites,values}){const session=useSession();return <section id="logbook-page" className="logbook-page ff-logbook" aria-label="Freediving logbook"><LogbookBody key={(session.user?.uid||'guest')+':'+JSON.stringify(values)} session={session} sites={sites} values={values}/></section>;}
+export default function Logbook({values}){const session=useSession(),directory=usePublishedSites(),sites=directory.directory?.beaches||[];return <section id="logbook-page" className="logbook-page ff-logbook" aria-label="Freediving logbook"><LogbookBody key={(session.user?.uid||'guest')+':'+JSON.stringify(values)} session={session} sites={sites} values={values}/></section>;}
 function LogbookBody({session,sites,values}){
  const router=useRouter(),[editor,setEditor]=useState(()=>session.user&&values.create?{beach:sites.find(b=>b.id===values.create)}:null),{run,busy,message,notify}=useLogbookAction(session),{record,refresh}=useConfiguredPageData(session,'logbook',values,{allowGuest:true});
  const open=id=>{setEditor(null);if((id||'')===values.session&&!values.profile)refresh();else router.push('/logbook'+(id?'?session='+encodeURIComponent(id):''));},title=editor?(editor.imported?'Create session from imported media':editor.entry?.id?'Edit session':'Log a session'):record?.data?.entry?.locationName||record?.data?.profile?.displayName||(values.profile&&record?.data?'Diver':session.user?'Sessions':'Logbook');

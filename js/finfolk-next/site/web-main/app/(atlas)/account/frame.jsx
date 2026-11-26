@@ -9,6 +9,7 @@ import {useSession} from '../../../lib/use-session.js';
 import {usePageData} from '../../../lib/use-page-data.js';
 import {Button} from '../logbook/tools.jsx';
 import Checkin from './checkin/screen.jsx';
+import CheckinAccount from './checkin/page-content.jsx';
 import Posts from './posts/screen.jsx';
 import InstagramTools from './instagram/screen.jsx';
 import SiteSubmissions from './sites/screen.jsx';
@@ -23,9 +24,11 @@ import PasswordRecovery from './recovery.jsx';
 import AccountFailure from './failure.jsx';
 import {accountURL,accountReturnDestination} from './routing.js';
 import {useAtlas} from '../atlas/runtime.jsx';
+import {usePublishedSites} from '../../../lib/use-published-sites.js';
 export const accountTabs=[['posts','Your posts'],['instagram','Instagram tools'],['profile','Profile & buddies'],['settings','Settings']];
 
-export default function AccountFrame({sites,children}){
+export default function AccountFrame({children}){
+ const directory=usePublishedSites(),sites=directory.directory?.beaches||[];
  const session=useSession(),path=usePathname(),query=useSearchParams(),router=useRouter();
  const target=accountReturnDestination(query.get('returnTo'));
  const tab=path.startsWith('/account/settings')?'settings':path.endsWith('/instagram')?'instagram':path.endsWith('/review')?'admin':path.endsWith('/sites')?'sites':path.endsWith('/posts')?'posts':path.endsWith('/privacy')?'profile':path.includes('/settings')?'settings':'checkin',site=query.get('site')||'';
@@ -34,7 +37,8 @@ export default function AccountFrame({sites,children}){
  if(session.user?.recovery)return <PasswordRecovery session={session}/>;
  return <section id="account-page" className={'account-page'+(session.status==='ready'&&!session.user?' account-page-guest':' ff-account-workspace')} tabIndex={-1} aria-label="Your FinFolk account"><AccountBody key={session.user?.uid||'guest'} session={session} tab={tab} sites={sites} site={site} requestTour={query.get('tour')==='1'}/>{children}</section>;
 }
-function AccountBody({session,tab:requested,sites,site,requestTour}){const {activateAccountIntegration,revokeAccountIntegration}=useAtlas();const router=useRouter(),requestedTour=useRef(false),focusTab=useRef(false),[hydrated,setHydrated]=useState(false);useEffect(()=>setHydrated(true),[]);const {record,refresh}=usePageData(session,'account'),[tour,setTour]=useState(false),tab=requested==='admin'&&record?.data&&!record.data.status.admin?'checkin':requested,tabs=record?.data?.status.admin?[...accountTabs,['admin','Review']]:accountTabs,panels=[['checkin','Check in'],['sites','Dive sites'],...tabs];
+function AccountBody(props){return props.tab==='checkin'?<CheckinAccount {...props}/>:<AccountWorkspace {...props}/>;}
+function AccountWorkspace({session,tab:requested,sites,site,requestTour}){const {activateAccountIntegration,revokeAccountIntegration}=useAtlas();const router=useRouter(),requestedTour=useRef(false),focusTab=useRef(false),[hydrated,setHydrated]=useState(false);useEffect(()=>setHydrated(true),[]);const {record,refresh}=usePageData(session,'account'),[tour,setTour]=useState(false),tab=requested==='admin'&&record?.data&&!record.data.status.admin?'checkin':requested,tabs=record?.data?.status.admin?[...accountTabs,['admin','Review']]:accountTabs,panels=[['checkin','Check in'],['sites','Dive sites'],...tabs];
  useEffect(()=>{if(!session.user)return;if(record?.data)activateAccountIntegration(session.user);else if(record?.error&&(record.error.status===401||record.error.status===403||record.error.message==='Account has been deleted.'))revokeAccountIntegration(session.user);},[session.user,record?.data,record?.error,activateAccountIntegration,revokeAccountIntegration]);
  useEffect(()=>{if(!session.user||!record?.data)return;if(requestTour&&!requestedTour.current){requestedTour.current=true;setTour(true);return;}const key='finfolk:member-tour:3:'+session.user.uid;let seen=false;try{seen=!!localStorage.getItem(key);}catch{}if(!seen&&!tourSeen.has(key))setTour(true);},[session.user?.uid,!!record?.data,requestTour]);
  useEffect(()=>{if(focusTab.current){document.getElementById('account-tab-'+tab)?.focus();focusTab.current=false;}},[tab]);

@@ -1,3 +1,2 @@
-import {publicAPI} from '../../../lib/public-api.js';
 import AccountFrame from './frame.jsx';
-export default async function AccountLayout({children}){const catalog=await publicAPI(process.env.FINFOLK_AUTH_PROVIDER==='supabase'?'native/sites/catalog':'sites/catalog');return <AccountFrame sites={catalog.beaches||[]}>{children}</AccountFrame>}
+export default function AccountLayout({children}){return <AccountFrame>{children}</AccountFrame>}
