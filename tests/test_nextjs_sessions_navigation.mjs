@@ -12,7 +12,7 @@ try{
    const originalSignOut=api.signOut;api.signOut=async()=>{if(window.failSignOut)throw Error('Could not log out. Please try again.');return originalSignOut()};` }));
   await page.goto(base+'/logbook');await page.getByRole('heading',{name:'Sessions',exact:true}).waitFor();await page.getByRole('button',{name:'Bondi',exact:true}).waitFor();
   assert.equal(await page.locator('.media-inbox').count(),0);assert.equal(await page.evaluate(()=>window.logbookCalls.some(x=>['mediaInbox','tiktokStatus'].includes(x.action))),false);
-  const primary=page.getByRole('navigation',{name:'Main navigation',exact:true});assert.equal(await primary.getByRole('link',{name:'Pages',exact:true}).getAttribute('href'),'/pages');
+  const primary=page.getByRole('navigation',{name:'Main navigation',exact:true});assert.equal(await primary.getByRole('link',{name:'Pages',exact:true}).count(),0);
   if(width>900){const widget=page.locator('.ff-account-widget');assert.deepEqual(await widget.evaluate(el=>({w:el.offsetWidth,h:el.offsetHeight})),{w:172,h:64});assert.equal(await widget.getByRole('link',{name:'View profile',exact:true}).getAttribute('href'),'/profile');}
   const toggle=page.getByRole('button',{name:'Open menu',exact:true});await toggle.click();const menu=page.getByRole('navigation',{name:'Account and settings',exact:true});await menu.getByRole('link',{name:'Settings',exact:true}).waitFor();
   for(const name of ['Edit profile','My pages','Suggest a dive site','My sessions'])assert.equal(await menu.getByRole('link',{name,exact:true}).count(),0);
@@ -22,5 +22,5 @@ try{
   await page.evaluate(()=>window.failSignOut=true);await page.getByRole('button',{name:'Open menu',exact:true}).click();await menu.getByRole('button',{name:'Log out',exact:true}).click();await menu.getByRole('status').waitFor();await page.evaluate(()=>window.failSignOut=false);await menu.getByRole('button',{name:'Log out',exact:true}).click();await page.locator('.ff-signin').waitFor();await page.getByRole('heading',{name:'Sessions',exact:true}).waitFor();assert.equal(await primary.getByRole('link',{name:'Pages',exact:true}).count(),0);assert.equal(await page.locator('.media-inbox').count(),0);
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);await page.close();
  }
- console.log('SESSIONS_NAVIGATION_PASS: capability-gated inbox, retry for real failures, Sessions naming, split profile/menu, Pages navigation, keyboard dismissal and logout success/failure at desktop and mobile widths.');
+ console.log('SESSIONS_NAVIGATION_PASS: capability-gated inbox, retry for real failures, Sessions naming, split profile/menu, community-owned page navigation, keyboard dismissal and logout success/failure at desktop and mobile widths.');
 }finally{await browser.close()}

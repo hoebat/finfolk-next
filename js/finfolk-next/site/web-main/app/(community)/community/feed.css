@@ -28,3 +28,6 @@
 @media(max-width:700px){.community-feed{padding:0 0 40px}.cf-heading{display:block;padding:8px 0 24px}.cf-heading>.cf-button{display:none}.cf-heading h1 br{display:block}.cf-invitation{grid-template-columns:1fr}.cf-invitation-art{display:none}.cf-invitation>div:first-child{padding:24px}.cf-invitation h2 br{display:none}.cf-actions{gap:15px}.cf-layout{display:flex;flex-direction:column}.cf-aside{position:static;order:-1}.cf-popular{padding:22px}.cf-popular .cf-place{padding:14px 0}.cf-membership{display:none}.cf-recommendations{gap:12px}.cf-recommendation{padding:18px}.cf-recommendation h3{font-size:19px}.cf-recommendation-index{margin-bottom:18px}.cf-section-heading>span{display:none}.cf-post{padding:20px}.cf-post h3{font-size:23px}.cf-post header time{font-size:10px}.cf-shortcuts{gap:8px 24px;margin-bottom:24px}.cf-heading>div>p:last-child{font-size:13px}}
 
 @media(max-width:700px){:root[data-theme] .community-feed .cf-heading>.cf-button{display:none}}
+
+.cf-page-tools{padding:26px;border:1px solid var(--account-line);border-radius:22px;background:var(--account-surface)}
+.cf-page-tools h2{font-size:24px;margin:0 0 12px}.cf-page-tools p:not(.cf-eyebrow){font-size:13px;color:var(--account-muted);margin:0 0 20px}.cf-page-tools .cf-text-link{display:block;margin-top:16px}

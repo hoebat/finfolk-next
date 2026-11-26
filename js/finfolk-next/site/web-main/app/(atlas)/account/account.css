@@ -65,7 +65,8 @@
 .ff-account-workspace .acct-empty p {font-size:13px;line-height:1.8;max-width:29ch;margin:12px auto}
 .ff-account-workspace .acct-text-link {display:inline-flex;align-items:center;gap:14px;font:600 12px/1.5 Avenir,Arial,sans-serif;text-decoration:none;padding:12px 0}
 .ff-account-workspace .acct-text-link .acct-icon {width:18px;height:18px}
-.ff-account-workspace .acct-checkin-row {display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px;border-bottom:1px solid var(--account-line);font-size:13px}
+.ff-account-workspace .acct-checkin-row {display:flex;align-items:center;justify-content:space-between;gap:12px;padding-block:12px;border-top:0;border-bottom:1px solid var(--account-line);font-size:13px}
+.ff-account-workspace .checkin-history>.acct-checkin-row:last-child{border-bottom:0;margin-bottom:0}
 .ff-account-workspace .acct-routine-note {grid-column:1/-1;display:grid;grid-template-columns:1fr 1.6fr auto;align-items:center;gap:24px;padding:27px 6px;border-block:1px solid var(--account-line)}
 .ff-account-workspace .acct-routine-note p {font-size:14px;margin:0}
 .ff-account-workspace .acct-panel .site-editor {display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px 24px;padding:30px;border:1px solid var(--account-line);border-radius:22px;background:var(--account-surface);margin-top:24px}
