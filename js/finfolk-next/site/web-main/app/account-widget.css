@@ -34,5 +34,35 @@
  :root[data-theme] .finfolk-guest-navigation .fm-toolbar{right:66px}
 }
 
+.ff-menu-panel{max-height:calc(100dvh - 130px);overflow:auto}
+/* Menu appearance choices are compact rows, separate from the settings cards. */
+:root[data-theme] nav.ff-menu-panel{padding:8px}
+:root[data-theme] body nav.ff-menu-panel>:is(a,button){box-sizing:border-box;display:flex;align-items:center;width:100%;min-height:44px;margin:0;padding:12px 14px;border:0;border-radius:10px;text-align:left;text-decoration:none;font:600 12px/20px Avenir,Arial,sans-serif;color:var(--account-ink)}
+:root[data-theme] body nav.ff-menu-panel>[hidden]{display:none}
+:root[data-theme] body nav.ff-menu-panel>.ff-mobile-profile{display:none}
+@media(max-width:900px){:root[data-theme] body nav.ff-menu-panel>.ff-mobile-profile{display:flex}}
+:root[data-theme] body nav.ff-menu-panel>:is(a,button):focus-visible{outline:2px solid var(--account-accent);outline-offset:-3px}
+:root[data-theme] nav.ff-menu-panel .ff-menu-themes{padding:12px 0;margin:6px 0;border-block:1px solid var(--account-line)}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-options{display:grid;grid-template-columns:minmax(0,1fr);gap:2px;min-width:0;padding:0;margin:0;border:0;background:transparent}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-options legend{padding:0 14px;margin:0 0 6px;font:500 11px/20px Avenir,Arial,sans-serif;color:var(--account-muted)}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-choice{position:relative;display:grid;grid-template-columns:20px minmax(0,1fr) 16px;align-items:center;gap:10px;min-width:0;min-height:44px;padding:10px 14px;margin:0;border:0;border-radius:10px;background:transparent;color:var(--account-ink);cursor:pointer}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-choice:is(:hover,:has(:checked)){background:color-mix(in srgb,var(--account-ink) 9%,var(--account-surface))}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-choice:has(:focus-visible){outline:2px solid var(--account-accent);outline-offset:-3px}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-name{font:500 12px/20px Avenir,Arial,sans-serif;color:inherit;white-space:nowrap}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-swatch{display:block;width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 1px #ffffff30}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-check{display:block;width:16px;height:16px;opacity:0}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-choice:has(:checked) .ff-menu-theme-check{opacity:1}
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-feedback{font:400 11px/1.5 Avenir,Arial,sans-serif;margin:8px 14px 0;color:var(--account-muted)}
+:root[data-theme] nav.ff-menu-panel .ff-visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);clip-path:inset(50%);white-space:nowrap;border:0}
+
+
+@media(max-width:900px){:root[data-theme] .finfolk-explore-map.finfolk-navigation-enabled .ff-utility-menu:not(.ff-guest-account){display:grid;position:fixed;top:70px;right:14px;bottom:auto;left:auto;width:44px;z-index:9}}
+@media(max-width:900px){:root[data-theme] .finfolk-explore-map .ff-utility-menu nav.ff-menu-panel{position:absolute;top:calc(100% + 8px);bottom:auto;right:0;left:auto;width:min(300px,calc(100vw - 28px));max-height:calc(100dvh - 140px)}}
+@media(max-width:900px){:root[data-theme] .finfolk-explore-map.finfolk-navigation-enabled .ff-utility-menu:not(.ff-guest-account){top:15px}:root[data-theme] .finfolk-explore-map .fm-toolbar{right:66px}}
+
 /* The wrapper positions the popover; only the rounded widget paints a surface. */
 :root[data-theme] :is(.app-rail,.profile-rail)>.ff-utility-menu{background:transparent;border:0;box-shadow:none}
+
+:root[data-theme] nav.ff-menu-panel .ff-menu-theme-choice input[type=radio]{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;z-index:1;cursor:pointer;transform:none}
+:root[data-theme] body nav.ff-menu-panel>:is(a,button){background:transparent!important;color:var(--account-ink)!important;box-shadow:none}
+:root[data-theme] body nav.ff-menu-panel>:is(a,button):hover{background:color-mix(in srgb,var(--account-ink) 9%,var(--account-surface))!important;color:var(--account-ink)!important}
