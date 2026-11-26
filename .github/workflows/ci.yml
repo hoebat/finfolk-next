@@ -46,6 +46,10 @@ jobs:
       - name: Validate ocean dataset catalog and materialized assets
         run: .venv/bin/python scripts/ocean_catalog.py validate
       - run: make check-generated
+      - name: Verify native cached rendering and session lifecycle
+        run: |
+          node tests/test_cached_page_model.mjs
+          node tests/test_supabase_client_recovery.mjs
       - run: npm run test:mail
       - uses: supabase/setup-cli@v3
         id: supabase_cli

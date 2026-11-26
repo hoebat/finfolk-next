@@ -28,3 +28,22 @@ Existing feature switches remain unchanged. Disabled integrations display their 
 Run `make test` for regressions and the substrate checks. `corepack yarn test:backbone` separately covers generated SQL, the actual XTalk runtime, registry coverage, forwarding, navigation, keyed caching, subscriptions, identity changes, API/SQL integration and anonymous public transports. Controlled API fixtures exercise profile/check-in, buddies, sessions, posts, trips and messaging permission/disabled states without external provider requests.
 
 Build with JDK 27 using `make build`, then deploy the preview API and site using `corepack yarn deploy:next:api` and `corepack yarn deploy:next`. No schema migration or SQL release-hash change is required for this route expansion. Check `/_next/health` and verify public browsing, account tabs, logbook, trip deep links, profile persistence and sign-out. Rollback uses the preceding preview Worker versions and their assets; production and member data are independent of these deployments.
+
+## Native SQLite read cache
+
+Native browser clients select the worker-owned SQLite backend. Cacheable reads
+are scoped by environment and actor, survive reloads and browser restarts when
+OPFS is available, and are removed on sign-out or account changes. Same-account
+token refreshes preserve the model and use the SDK's refreshed credentials.
+
+Native page models subscribe before revalidating. Their records expose cached,
+savedAt and refreshing alongside the existing data/loading/error fields. Saved
+reads render while the network refreshes; an online event retries mounted reads.
+SQLite startup falls back to the online memory model after two seconds. Browsers
+without persistent storage remain usable with temporary storage.
+
+The site catalogue uses this same substrate store. A valid old catalogue entry
+can hydrate the public model once; its duplicate Cache API entry is then retired.
+Downloaded atlas files keep their existing store and pinned-region policies.
+Credentials, administrative results and mutations are not persisted by SQLite.
+There is no offline mutation queue or automatic write replay.
