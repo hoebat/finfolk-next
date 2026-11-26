@@ -66,7 +66,8 @@
 :root[data-theme] .ff-logbook .logbook-intro {display:flex;align-items:center;justify-content:space-between;gap:24px;margin-block:28px}
 :root[data-theme] .ff-logbook .logbook-intro>p {margin:0;color:var(--account-muted);font-size:16px}
 :root[data-theme] .ff-logbook :is(button,a),.ff-logbook-dialog :is(button,a) {touch-action:manipulation}
-:root[data-theme] .ff-logbook button,.ff-logbook-dialog button {font:500 14px/1.4 Avenir,'Helvetica Neue',Arial,sans-serif;min-height:44px;padding:11px 18px;border:1px solid var(--account-line);border-radius:24px;background:var(--account-surface);color:var(--account-ink);box-shadow:none}
+:root[data-theme] .ff-logbook button,.ff-logbook-dialog button {font:500 14px/1.4 Avenir,'Helvetica Neue',Arial,sans-serif;min-height:44px;padding:11px 18px;border:1px solid var(--account-line);border-radius:24px;background:var(--account-surface);color:var(--theme-on-surface,var(--account-ink));box-shadow:none}
+:root[data-theme] .ff-logbook button.secondary,:root[data-theme] .ff-logbook-dialog button.secondary {color:var(--theme-on-surface,var(--account-ink))}
 :root[data-theme] .ff-logbook button.primary,:root[data-theme] .ff-logbook-dialog button.primary {background:var(--account-ink);color:var(--account-bg);border-color:var(--account-ink)}
 :root[data-theme] .ff-logbook button:disabled,.ff-logbook-dialog button:disabled {opacity:.55;cursor:wait}
 :root[data-theme] .ff-logbook :is(button,a,input,textarea,select):focus-visible,.profile-main[data-product=members] :is(a,button,input,textarea,select):focus-visible,.ff-logbook-dialog button:focus-visible {outline:2px solid var(--account-ink);outline-offset:4px}

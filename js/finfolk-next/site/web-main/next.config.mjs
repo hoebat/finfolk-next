@@ -3,6 +3,7 @@ import {readdir} from 'node:fs/promises';
 const packed=async()=>{try{return (await readdir(new URL('./public/__compressed/',import.meta.url),{recursive:true})).filter(x=>x.endsWith('.gz'));}catch{return [];}};
 const api=process.env.FINFOLK_API_ORIGIN||'https://api.finfolk.com.au';
 export default {
+ devIndicators:false,
  allowedDevOrigins:['127.0.0.1'],
  distDir:process.env.FINFOLK_NEXT_DIST_DIR||'.next',
  async redirects(){return legacyRedirects;},

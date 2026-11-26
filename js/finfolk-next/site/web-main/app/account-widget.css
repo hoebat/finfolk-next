@@ -33,3 +33,6 @@
  :root[data-theme] .finfolk-explore-map.finfolk-navigation-enabled .ff-guest-account{display:grid}
  :root[data-theme] .finfolk-guest-navigation .fm-toolbar{right:66px}
 }
+
+/* The wrapper positions the popover; only the rounded widget paints a surface. */
+:root[data-theme] :is(.app-rail,.profile-rail)>.ff-utility-menu{background:transparent;border:0;box-shadow:none}
