@@ -146,3 +146,5 @@
 .ff-account-workspace .checkin-site-options li[aria-selected=true]{background:color-mix(in srgb,var(--account-ink) 8%,transparent)}
 .ff-account-workspace .checkin-site-options strong{font-size:13px;line-height:1.4}
 .ff-account-workspace .checkin-site-options small{font-size:11px;line-height:1.4}
+
+:root[data-theme=yellow] .account-page.ff-account-workspace{background:#edff35;color:#172440}

@@ -128,4 +128,22 @@
 
 .fm-site-tooltip ul{list-style:none;padding:9px 0 0;margin:9px 0;border-top:1px solid var(--account-line);display:grid;gap:5px}
 .fm-site-tooltip li{font:500 12px/1.4 Avenir,Arial,sans-serif;color:var(--account-ink)}
+
+/* Keep focus on the search surface, without drawing a second pill inside it. */
+.fm-toolbar{z-index:6}
+.fm-toolbar .fm-search-form{position:relative}
+:root[data-theme] .fm-explore .fm-search-form #explore-query,
+:root[data-theme] .fm-explore .fm-search-form #explore-query:is(:focus,:focus-visible){border:0;outline:none;box-shadow:none;background:transparent;border-radius:0;appearance:none}
+.fm-toolbar .fm-search-form:focus-within{box-shadow:0 0 0 2px var(--account-ink),0 5px 24px #17244020}
+:root[data-theme] .fm-explore .fm-search-form>button[type=submit]{background:var(--account-ink);color:var(--account-bg)}
+:root[data-theme] .fm-explore .fm-search-form .fm-search-all{background:var(--account-surface);color:var(--account-ink)}
+
+
 .fm-explore .fm-site-tooltip{z-index:5}
+
+/* Geography counts follow the active palette, including Acid Club's yellow ink. */
+:root[data-theme] .fm-explore .fm-geography:is([data-level=state],[data-level=region]){background:var(--account-ink);color:var(--account-bg);border-color:var(--account-bg)}
+:root[data-theme] .fm-explore .fm-geography strong{color:inherit}
+.fm-map-region{background:var(--account-surface)}
+
+:root[data-theme=navy] .fm-explore .fm-geography:is([data-level=state],[data-level=region]){background:var(--account-accent);color:var(--account-bg);border-color:var(--account-accent)}

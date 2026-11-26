@@ -1,20 +1,20 @@
 import {DATASET_PROVIDER_BASE} from './dataset-release.js';
 import {createCoastMask} from './explore-coast-mask.js';
 import {createContourLayers} from './explore-contours.js';
-import {addDepthShading,styleExploreMap,addStateBoundaries,DEPTH_STOPS,LAND_COLOR} from './explore-style.js';
+import {addDepthShading,styleExploreMap,addStateBoundaries,mapPalette} from './explore-style.js';
 import {mapPointCollection,mapGeographyGroups,MAP_CATEGORIES,validPoint} from './explore-model.js';
 import {registerDepthRaster} from './explore-depth-raster.js';
 import {clusterRegionMarkers} from './geography-markers.js';
 let tooltipSequence=0;
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
-function markerImage(kind){const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const c=canvas.getContext('2d');c.strokeStyle='#fff';c.lineWidth=4;c.lineCap='round';c.lineJoin='round';c.beginPath();
+function markerImage(kind,color){const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const c=canvas.getContext('2d');c.strokeStyle=color;c.lineWidth=4;c.lineCap='round';c.lineJoin='round';c.beginPath();
  if(kind==='spot'){for(const y of [23,33,43]){c.moveTo(15,y);c.bezierCurveTo(23,y-10,31,y+10,39,y);c.bezierCurveTo(43,y-5,46,y-5,50,y);}}
  if(kind==='business'){c.rect(17,29,30,20);c.moveTo(14,29);c.lineTo(20,16);c.lineTo(44,16);c.lineTo(50,29);c.closePath();c.moveTo(28,49);c.lineTo(28,36);c.lineTo(37,36);c.lineTo(37,49);}
  if(kind==='event'){c.rect(17,20,30,29);c.moveTo(17,29);c.lineTo(47,29);c.moveTo(25,15);c.lineTo(25,24);c.moveTo(39,15);c.lineTo(39,24);c.moveTo(25,37);c.lineTo(39,37);}
  c.stroke();return c.getImageData(0,0,64,64);}
 export async function createExploreMap(container,{rows=[],onSelect,onViewport,onCamera,onStatus,onReady,onContourStatus,onContourInspect}={}){
  const imported=await import('maplibre-gl'),lib=imported.default||imported;
- registerDepthRaster(lib,{stops:DEPTH_STOPS,landColor:LAND_COLOR});
+ registerDepthRaster(lib,mapPalette);
  let camera;try{const stored=JSON.parse(sessionStorage.getItem('finfolk:explore-camera'));if(validPoint(stored?.center)&&Number.isFinite(stored.zoom)&&stored.zoom>=3&&stored.zoom<=18)camera=stored;}catch{}
  const map=new lib.Map({container,style:DATASET_PROVIDER_BASE+'openfreemap/styles/liberty',center:camera?.center||[134,-27],zoom:camera?.zoom||3.6,minZoom:3,maxZoom:18,dragRotate:false,pitchWithRotate:false,renderWorldCopies:false,attributionControl:true});
  let ready=false,alive=true,latestRows=rows,highlight=null,appearance='coast',contours=null,coastMask=null,contourVisibility={survey:true,regional:true};
@@ -75,7 +75,8 @@ export async function createExploreMap(container,{rows=[],onSelect,onViewport,on
   }
  }
  function setRows(value){hideSiteTooltip();latestRows=value;if(ready){map.getSource('finfolk').setData(mapPointCollection(value));focus(highlight,{zoom:false});updateGeography();}}
- function style(){if(ready)styleExploreMap(map,appearance);}
+ let iconTheme=null;
+ function style(){if(!ready)return;const palette=styleExploreMap(map,appearance);if(container.dataset.mapTheme!==palette.id)delete container.dataset.mapDepthTheme;container.dataset.mapTheme=palette.id;if(iconTheme!==palette.id){for(const kind of Object.keys(MAP_CATEGORIES))if(map.hasImage('ff-icon-'+kind))map.updateImage('ff-icon-'+kind,markerImage(kind,palette.pinInk));iconTheme=palette.id;}}
  function focus(row,{zoom=true}={}){highlight=row;if(ready){map.setFilter('ff-selection',['==',['get','id'],row?latestRows.find(r=>validPoint(r.point)&&r.point.join(',')===row.point?.join(','))?.id||row.id:'']);if(row&&validPoint(row.point)&&zoom){const mobile=matchMedia('(max-width:900px)').matches,height=container.clientHeight;map.easeTo({center:row.point,zoom:Math.max(map.getZoom(),row.kind==='business'?10:13),padding:{top:130,bottom:mobile?Math.min(height*.58,Math.max(0,height-180)):45,left:40,right:40},duration:reduced()?0:650});}}}
  let overviewFrame=0;
  function publishCamera(){if(!onCamera||overviewFrame||!alive)return;overviewFrame=requestAnimationFrame(()=>{overviewFrame=0;if(!alive)return;const b=map.getBounds();onCamera([b.getWest(),b.getSouth(),b.getEast(),b.getNorth()]);});}
@@ -89,12 +90,12 @@ export async function createExploreMap(container,{rows=[],onSelect,onViewport,on
   map.addLayer({id:'ff-cluster-count',type:'symbol',source:'finfolk',filter:['has','point_count'],layout:{'text-field':['to-string',['get','entities']],'text-font':['Noto Sans Bold'],'text-size':13},paint:{'text-color':'#fffaf0'}});
   map.addLayer({id:'ff-selection',type:'circle',source:'finfolk',filter:['==',['get','id'],''],paint:{'circle-radius':26,'circle-color':'#172440','circle-opacity':.2}});
   map.addLayer({id:'ff-points',type:'circle',source:'finfolk',filter:['!', ['has','point_count']],paint:{'circle-color':color,'circle-radius':18,'circle-stroke-color':'#fffaf0','circle-stroke-width':3}});
-  for(const kind of Object.keys(MAP_CATEGORIES))map.addImage('ff-icon-'+kind,markerImage(kind),{pixelRatio:2});
+  for(const kind of Object.keys(MAP_CATEGORIES))map.addImage('ff-icon-'+kind,markerImage(kind,mapPalette().pinInk),{pixelRatio:2});
   map.addLayer({id:'ff-icons',type:'symbol',source:'finfolk',filter:['all',['!', ['has','point_count']],['==',['get','count'],1]],layout:{'icon-image':['concat','ff-icon-',['get','kind']],'icon-size':.85,'icon-allow-overlap':true}});
   map.addLayer({id:'ff-shared',type:'symbol',source:'finfolk',filter:['all',['!', ['has','point_count']],['>', ['get','count'],1]],layout:{'text-field':['to-string',['get','count']],'text-font':['Noto Sans Bold'],'text-size':13,'text-allow-overlap':true},paint:{'text-color':'#fff'}});
   map.addLayer({id:'ff-labels',type:'symbol',source:'finfolk',minzoom:11,filter:['!', ['has','point_count']],layout:{'text-field':['get','label'],'text-font':['Noto Sans Regular'],'text-size':12,'text-anchor':'top','text-offset':[0,2],'text-max-width':13},paint:{'text-color':'#172440','text-halo-color':'#fffaf0','text-halo-width':2}});
   addStateBoundaries(map);
-  map.on('idle',()=>{container.dataset.stateBoundaryFeatures=String(map.getLayer('ff-state-boundaries')?map.queryRenderedFeatures({layers:['ff-state-boundaries']}).length:0);});
+  map.on('idle',()=>{if(map.isSourceLoaded('ff-ocean-dem')&&map.isSourceLoaded('ff-ocean-depth-coastal-source'))container.dataset.mapDepthTheme=mapPalette().id;container.dataset.stateBoundaryFeatures=String(map.getLayer('ff-state-boundaries')?map.queryRenderedFeatures({layers:['ff-state-boundaries']}).length:0);});
   contours=createContourLayers(map,lib,{onStatus:onContourStatus,onInspect:onContourInspect,isWater:point=>coastMask.isWater(point)});contours.setEnabled(contourVisibility);
   style();updateGeography();focus(highlight,{zoom:!!highlight});onViewport?.(map.getBounds());onStatus?.('');onReady?.();
   map.on('mouseenter','ff-clusters',showClusterTooltip);map.on('mouseleave','ff-clusters',hideSiteTooltip);

@@ -1,7 +1,11 @@
 name: Publish FinFolk frontend
-run-name: Publish FinFolk frontend from ${{ github.ref_name }}
+run-name: Publish FinFolk frontend from committed main
 
 on:
+  workflow_run:
+    workflows: ['Generate, test and build FinFolk Next']
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -12,34 +16,46 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  check-branch:
-    runs-on: ubuntu-latest
+  source:
+    if: >-
+      github.repository == 'hoebat/finfolk-next' &&
+      ((github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main') ||
+       (github.event_name == 'workflow_run' && github.event.workflow_run.conclusion == 'success' &&
+        github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' &&
+        github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-24.04
+    outputs:
+      sha: ${{ steps.commit.outputs.sha }}
     steps:
-      - name: Require the production branch
+      - name: Select the exact verified commit
+        id: commit
         env:
-          SELECTED_REF: ${{ github.ref }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
         run: |
-          if [ "$SELECTED_REF" != refs/heads/main ]; then
-            echo 'Select main when running this production workflow.' >&2
-            exit 1
-          fi
+          [[ "$RELEASE_SHA" =~ ^[a-f0-9]{40}$ ]]
+          echo "sha=$RELEASE_SHA" >> "$GITHUB_OUTPUT"
 
   verify:
-    needs: check-branch
+    if: github.event_name == 'workflow_dispatch'
+    needs: source
     uses: ./.github/workflows/ci.yml
 
   publish:
-    needs: verify
-    runs-on: ubuntu-latest
+    if: >-
+      always() && needs.source.result == 'success' &&
+      (needs.verify.result == 'success' ||
+       (github.event_name == 'workflow_run' && needs.verify.result == 'skipped'))
+    needs: [source, verify]
+    runs-on: ubuntu-24.04
     timeout-minutes: 40
     environment:
       name: production
       url: https://finfolk.com.au
     env:
+      RELEASE_SHA: ${{ needs.source.outputs.sha }}
       NETLIFY_SITE_ID: fe66fb45-09ab-4e37-8474-3a4f2e162123
       NETLIFY_TELEMETRY_DISABLED: '1'
       CONTEXT: production
-      NETLIFY_SKEW_PROTECTION_TOKEN: finfolk-publish-${{ github.run_id }}-${{ github.run_attempt }}
     steps:
       - name: Check publishing credential
         env:
@@ -51,16 +67,22 @@ jobs:
           fi
       - uses: actions/checkout@v6
         with:
+          ref: ${{ needs.source.outputs.sha }}
           submodules: recursive
           lfs: true
           persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '22'
+      - name: Capture the source commit and current production
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+        run: node scripts/prepare_frontend_release.mjs --capture
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
-      - uses: actions/setup-node@v6
-        with:
-          node-version: '22'
       - uses: actions/setup-python@v6
         with:
           python-version: '3.12'
@@ -71,48 +93,52 @@ jobs:
         with:
           path: ~/.m2/repository
           key: foundation-${{ runner.os }}-${{ hashFiles('project.version', 'project.clj') }}
-      - name: Install pinned publishing CLI
+      - name: Install pinned publishing and browser tools
         run: |
           corepack enable
           npm install --prefix .cache/netlify-tools --no-save --package-lock=false netlify-cli@27.16.2
           echo "$GITHUB_WORKSPACE/.cache/netlify-tools/node_modules/.bin" >> "$GITHUB_PATH"
-      - name: Build the production artifact
+          npm install --prefix .cache/promotion-tools --no-audit --no-fund --ignore-scripts playwright@1.58.2
+          node .cache/promotion-tools/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Test release guards
+        run: node --test tests/test_promote_frontend_preview.mjs tests/test_frontend_release.mjs
+      - name: Build and upload a production-configured draft
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        run: netlify build --context production --filter @finfolk/web-main
+        run: |
+          netlify deploy --build --context production --filter @finfolk/web-main --site "$NETLIFY_SITE_ID" --message "GitHub Actions $RELEASE_SHA" --verbose --json > .cache/frontend-preview-deploy.json
+          deploy_id=$(jq -er '.deploy_id | select(test("^[a-f0-9]{24}$"))' .cache/frontend-preview-deploy.json)
+          echo "DEPLOY_ID=$deploy_id" >> "$GITHUB_ENV"
       - name: Verify packaged files and server runtime
         run: |
           node scripts/check_netlify_output.mjs
           node tests/test_netlify_lambda_bundle.mjs
-      - name: Deploy an isolated preview of this artifact
+      - name: Validate the draft and production pointer
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
-        run: |
-          netlify deploy --no-build --filter @finfolk/web-main --site "$NETLIFY_SITE_ID" --json > .cache/frontend-preview-deploy.json
+        run: node scripts/promote_frontend_preview.mjs --check
       - name: Verify the hosted preview
         run: |
-          preview_url=$(jq -er '.deploy_url | select(startswith("https://"))' .cache/frontend-preview-deploy.json)
-          NETLIFY_TEST_URL="$preview_url" node tests/test_netlify_release_http.mjs
-      - name: Publish the verified artifact
+          node scripts/check_frontend_release.mjs "https://${DEPLOY_ID}--finfolk.netlify.app" | tee .cache/frontend-preview-check.json
+          node tests/test_frontend_header.mjs "https://${DEPLOY_ID}--finfolk.netlify.app"
+      - name: Require main still points to this release
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        run: node scripts/prepare_frontend_release.mjs --check-main
+      - name: Publish the exact verified draft without rebuilding
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
+          FRONTEND_RELEASE_RECEIPT: .cache/frontend-production-deploy.json
+        run: node scripts/promote_frontend_preview.mjs --publish
+      - name: Verify production
         run: |
-          netlify deploy --no-build --filter @finfolk/web-main --site "$NETLIFY_SITE_ID" --prod --message "GitHub Actions $GITHUB_SHA" --json > .cache/frontend-production-deploy.json
-      - name: Record the published release
-        env:
-          RELEASE_SHA: ${{ github.sha }}
-        run: |
-          deploy_url=$(jq -er '.deploy_url | select(startswith("https://"))' .cache/frontend-production-deploy.json)
-          {
-            echo '### FinFolk frontend published'
-            echo '- Live site: https://finfolk.com.au'
-            echo "- Exact deployment: $deploy_url"
-            echo "- Commit: $RELEASE_SHA"
-            echo '- API and database were not deployed by this workflow.'
-          } >> "$GITHUB_STEP_SUMMARY"
+          node scripts/check_frontend_release.mjs https://finfolk.com.au | tee .cache/frontend-production-check.json
+          node tests/test_frontend_header.mjs https://finfolk.com.au
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: frontend-publish-receipts
-          path: .cache/frontend-*-deploy.json
+          name: frontend-publish-receipts-${{ github.run_attempt }}
+          path: |
+            .cache/frontend-*.json
           if-no-files-found: ignore
+          include-hidden-files: true

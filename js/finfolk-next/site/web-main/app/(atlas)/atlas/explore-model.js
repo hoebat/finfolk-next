@@ -13,14 +13,21 @@ export function localityReference(locality,state,directory){
  if(!areas.length)return null;
  return {point:[0,1].map(axis=>areas.reduce((sum,a)=>sum+a.center[axis],0)/areas.length),label:locality+' · approximate area'};
 }
-export function mapRows(directory,listings=[],events=[]){
- const sites=(directory?.beaches||[]).filter(s=>validPoint(s.point));
+export function mapRows(directory,listings=[],events=[],{includeUnmapped=false}={}){
+ const sites=(directory?.beaches||[]).filter(s=>includeUnmapped||validPoint(s.point));
  const rows=sites.map(site=>({id:'spot:'+site.id,sourceId:site.id,kind:'spot',name:site.name,area:[site.area_name,site.state_id].filter(Boolean).join(' · '),point:site.point,regionCenter:directory?.areas?.find(area=>area.id===site.area_id)?.center,reference:site.reference_label||'Published place reference',description:site.description||'',tags:[site.waterbody&&site.waterbody!=='unknown'?site.waterbody:'',site.access_mode==='shore'?'Shore access':site.access_mode==='boat_only'?'Boat only':''].filter(Boolean),site}));
  for(const listing of listings){const ref=countryAU(listing.country)?localityReference(listing.locality,listing.state,directory):null;rows.push({id:'business:'+listing.id,sourceId:listing.id,kind:'business',name:listing.name,area:[listing.locality,listing.state,listing.country&&listing.country!=='Australia'?listing.country:''].filter(Boolean).join(' · '),point:ref?.point,reference:ref?ref.label+' · premises unconfirmed':'Location not mapped',description:listing.description||'',tags:[listing.category,listing.managed?'Managed page':'Unclaimed'].filter(Boolean),href:'/directory/'+encodeURIComponent(listing.id)});}
  for(const event of events){const doc=event.document||{},ref=localityReference(doc.location,'',directory);rows.push({id:'event:'+event.id,sourceId:event.id,kind:'event',name:doc.title||'Event',area:doc.location||'',point:ref?.point,reference:ref?ref.label+' · confirm venue with organiser':'Venue not mapped',description:doc.description||'',tags:[doc.category,event.starts_at?new Date(event.starts_at).toLocaleDateString('en-AU',{day:'numeric',month:'short',timeZone:'Australia/Sydney'}):''].filter(Boolean),href:'/events/'+encodeURIComponent(event.id)});}
  return rows;
 }
-export function filterMapRows(rows,{category='all',query='',bounds=null}={}){const q=normalize(query);return rows.filter(row=>(category==='all'||row.kind===category)&&(!q||normalize([row.name,row.area,...row.tags].join(' ')).includes(q))&&(!bounds||validPoint(row.point)&&bounds.contains(row.point)));}
+export function filterMapRows(rows,{category='all',query='',bounds=null}={}){const q=normalize(query);return rows.filter(row=>(category==='all'||row.kind===category)&&(!q||q.split(' ').every(word=>normalize([row.name,row.area,...row.tags,...(row.site?.aliases||[]),STATE_NAMES[row.site?.state_id],row.site?.state].join(' ')).includes(word)))&&(!bounds||validPoint(row.point)&&bounds.contains(row.point)));}
+// Search the complete published directory, independent of the camera and coverage.
+export function searchBeachRows(directory,query){
+ const q=normalize(query);if(!q)return [];
+ const rank=row=>{const name=normalize(row.name);return name===q?0:name.startsWith(q)?1:name.includes(q)?2:3;};
+ return filterMapRows(mapRows(directory,[],[],{includeUnmapped:true}),{query:q})
+  .sort((a,b)=>rank(a)-rank(b)||a.name.localeCompare(b.name)||a.area.localeCompare(b.area));
+}
 export function mapPointCollection(rows){const groups=new Map();for(const row of rows){if(!validPoint(row.point))continue;const key=row.point.join(',');if(!groups.has(key))groups.set(key,[]);groups.get(key).push(row);}return {type:'FeatureCollection',features:[...groups.values()].map(group=>({type:'Feature',geometry:{type:'Point',coordinates:group[0].point},properties:{id:group[0].id,count:group.length,kind:group[0].kind,label:group[0].name}}))};}
 export function surveyMode(params){return params.get('mode')==='survey'||params.has('region')||params.has('depth');}
 export function surveyHref(site=''){return '/map?mode=survey'+(site?'&site='+encodeURIComponent(site):'');}

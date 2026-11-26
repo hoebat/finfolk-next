@@ -1,56 +1,65 @@
 # Publish FinFolk from GitHub Actions
 
-Open [Actions → Publish FinFolk frontend](https://github.com/hoebat/finfolk-next/actions/workflows/publish-frontend.yml),
-choose **Run workflow**, select **main**, and run it. This action publishes the
-committed main branch to https://finfolk.com.au. Commit and push local changes
-before publishing them; files only on your computer are not part of the release.
-Pushes and pull requests continue to run checks without publishing.
+Push committed changes to `main`. The **Generate, test and build FinFolk Next**
+workflow checks that commit. A successful main-branch push run automatically starts
+[**Publish FinFolk frontend**](https://github.com/hoebat/finfolk-next/actions/workflows/publish-frontend.yml).
+Pull requests, failed/cancelled checks, forks and checks of an older main commit
+cannot publish production.
 
-The workflow reuses the existing generation, test and build workflow. After
-those checks pass, it builds with Netlify's production configuration, validates
-the packaged output and Lambda runtime, deploys an isolated preview, and runs
-the hosted HTTP acceptance checks. Only then does it publish that same build
-with `--no-build`. The Actions summary links to the exact deployment and commit.
-Production publishes are serialized; an in-progress publish is not cancelled.
+To publish manually, open that action, choose **Run workflow**, select **main**,
+and run it. Manual runs execute the same complete verification workflow first.
+Only committed files are included; local files and ignored release snapshots are
+not build inputs. Both automatic and manual releases check out the exact verified
+SHA. The existing Netlify production configuration supplies public app settings.
 
-The API Worker and database are separate releases. This action does not deploy
-Cloudflare Workers, install SQL, change DNS or run database migrations.
+The publishing job records the current production deployment, builds once using
+Netlify CLI `27.16.2` with production settings, and uploads a draft. The CLI creates
+the draft before building so deployment-tagged assets use its skew-protection
+token. Package integrity, Lambda runtime, hosted public routes and desktop/mobile
+header behavior must pass before publication. The header checks use controlled
+signed-in/guest fixtures and make no private backend writes.
 
-## Credential
+Immediately before publication, the workflow requires that main still points to
+its commit and production still points to the captured deployment. It promotes
+that exact ready draft without rebuilding or uploading a second production build.
+The candidate must belong to FinFolk, be newer than production, never have been
+published and carry this commit's Actions release title. A newer push or an
+out-of-band production release stops an older workflow from overwriting it.
 
-Configure `NETLIFY_AUTH_TOKEN` as an Actions repository secret or as a secret in
-the `production` environment. It must belong to a Netlify operator authorized to
-publish project `finfolk` (`fe66fb45-09ab-4e37-8474-3a4f2e162123`). Use a dedicated
-publishing identity where available. Rotate the secret when that credential is
-replaced. Tokens must never be committed, included in command arguments or
-printed in workflow logs. Verification jobs do not receive the Netlify secret;
-only the publishing job's credential-dependent steps receive it.
+The same hosted checks run against https://finfolk.com.au afterward. The Actions
+summary and uploaded `frontend-publish-receipts` link the commit, exact artifact,
+previous production and verification reports. A failed post-publication check
+reports failure; it does not automatically revert production. Production publishes
+and manual preview promotions share one concurrency group and are not cancelled
+mid-publication. Superseded queued runs fail the source/pointer checks safely.
 
-Netlify's existing production environment remains the configuration source.
-The CLI is pinned to `27.16.2`. The workflow must be on the repository's default
-branch before GitHub displays its **Run workflow** button. No release is
-triggered merely by adding this workflow.
+The API Worker and database remain separate releases. This action does not deploy
+Workers, install SQL, change DNS or run production database migrations. CI database
+checks run against isolated local test databases.
 
-## Promote a reviewed preview without rebuilding
+## Credentials and settings
 
-Open [Actions → Promote FinFolk preview](https://github.com/hoebat/finfolk-next/actions/workflows/promote-preview.yml),
-choose **Run workflow** on **main**, and enter the reviewed Netlify deploy ID and
-the current production deploy ID from Netlify. This publishes that exact existing
-artifact. Uncommitted local files and later source changes are not included.
+`NETLIFY_AUTH_TOKEN` must be an Actions repository secret or a secret in the
+`production` environment. It must authorize project `finfolk`
+(`fe66fb45-09ab-4e37-8474-3a4f2e162123`). Use a dedicated publishing identity where
+available and rotate it when replaced. Never commit or print tokens. Only the
+credential-dependent publishing steps receive the Netlify secret; GitHub source
+checks use the workflow's read-only `GITHUB_TOKEN`.
 
-The action only accepts a ready preview belonging to FinFolk that is newer than
-production and has never been published. It rechecks the production pointer before
-publishing, and shares the publishing action's production concurrency group.
-It checks the map, Sessions, real account configuration, absence of mock/local
-requests and browser errors, and that all six currently disabled features remain
-hidden (shop, events, progress, breathing, watch imports and breath check).
-These feature expectations must be updated when intentionally enabling them.
+The workflow must be merged into the default branch. GitHub Actions owns the
+production publishing flow; leave Netlify's separate Git auto-publishing disabled
+to avoid a second deployment path. An existing Netlify production lock must not be
+silently overridden by a different process.
 
-The same browser checks run on production afterward. A failed post-publication
-check reports failure; it does not automatically revert or publish another deploy.
-These frontend checks cover the guest community feed, fixed sign-in widget, map
-and closed feature routes. Authenticated browser acceptance is separate; GitHub
-PKCE and persistent native accounts have passed in Brave. The fresh Supabase
-release intentionally does not import legacy users.
-See [Supabase API status](SUPABASE_API_CUTOVER.md).
-The action makes no API deployment, database, authentication or DNS changes.
+## Promote an independently reviewed preview
+
+[**Promote FinFolk preview**](https://github.com/hoebat/finfolk-next/actions/workflows/promote-preview.yml)
+remains available for an exceptional, already-reviewed preview. Run it on **main**
+and supply the never-published candidate ID and current production ID. It uses the
+same forward-only guards and production concurrency group, checks the hosted
+preview, publishes its existing artifact and verifies production afterward.
+
+Public checks currently require shop, events, progress, breathing, watch imports
+and breath check to remain disabled. Update those assertions when intentionally
+enabling these features. Authenticated fixture checks verify presentation and
+navigation; real OAuth and private data writes require separate acceptance.

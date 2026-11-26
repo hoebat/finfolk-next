@@ -40,3 +40,14 @@ assert.equal(regions.length,2,'Regions with the same ID in different states rema
 assert.equal(mapGeographyGroups(filterMapRows(rows,{query:'Portsea'}),'state')[0].count,1);
 assert.deepEqual(mapGeographyGroups(filterMapRows(rows,{category:'business'})),[]);
 assert.equal(mapGeographyGroups([...rows,rows[0]],'state').reduce((n,g)=>n+g.count,0),2);
+
+const {searchBeachRows}=await import('../js/finfolk-next/site/web-main/app/(atlas)/atlas/explore-model.js');
+const searchCatalog={beaches:[{id:'far',name:'Remote Beach',state_id:'WA',area_name:'Western Coast',point:[115,-32],aliases:['Old Cove']},{id:'unknown',name:'Unmapped Beach',state_id:'TAS'},{id:'accent',name:'Côte Beach',state_id:'VIC',point:[145,-38]},{id:'exact',name:'Beach',state_id:'NSW',point:[151,-34]}]};
+assert.equal(searchBeachRows(searchCatalog,'Beach').length,4,'Suggestions include the entire directory, including unmapped beaches');
+assert.equal(searchBeachRows(searchCatalog,'Beach')[0].sourceId,'exact');
+assert.equal(searchBeachRows(searchCatalog,'old cove')[0].sourceId,'far');
+assert.equal(searchBeachRows(searchCatalog,'Western Australia')[0].sourceId,'far');
+assert.equal(searchBeachRows(searchCatalog,'cote')[0].sourceId,'accent');
+assert.deepEqual(searchBeachRows(searchCatalog,'   '),[]);
+assert.deepEqual(searchBeachRows(undefined,'Beach'),[]);
+assert.equal(filterMapRows(mapRows(searchCatalog,[],[],{includeUnmapped:true}),{query:'old cove'}).length,1,'Submitted results use the same alias matching as suggestions');

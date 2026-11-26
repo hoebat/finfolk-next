@@ -8,7 +8,7 @@ on:
 permissions:
   contents: read
 concurrency:
-  group: next-ci-${{ github.ref }}
+  group: next-ci-${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   verify:
@@ -38,6 +38,8 @@ jobs:
           path: ~/.m2/repository
           key: foundation-${{ runner.os }}-${{ hashFiles('project.version', 'project.clj') }}
       - run: corepack enable
+      - name: Test frontend release guards
+        run: node --test tests/test_promote_frontend_preview.mjs tests/test_frontend_release.mjs
       - name: Verify Foundation bootstrap pin
         run: node --test tests/test_bootstrap_pin.mjs
       - run: make bootstrap

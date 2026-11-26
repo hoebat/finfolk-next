@@ -1,3 +1,4 @@
+import {mapPalette} from './explore-palettes.js';
 import {LAND_MASK} from './explore-coast-mask.js';
 import {DATASET_RELEASE_BASE} from './dataset-release.js';
 const prefix='ff-contour-';
@@ -24,10 +25,10 @@ export function createContourLayers(map,lib,{onStatus=()=>{},onInspect=()=>{},is
   for(const id of active.keys())if(!ids.has(id))remove(id);
   for(const s of wanted){const id=prefix+s.id;if(active.has(id))continue;const before=map.getLayer(LAND_MASK)?LAND_MASK:map.getLayer('ff-clusters')?'ff-clusters':undefined;
    map.addSource(id,{type:'vector',tiles:s.tiles.map(path=>new URL(path.replace(/^\//,''),DATASET_RELEASE_BASE).href.replaceAll('%7B','{').replaceAll('%7D','}')),minzoom:s.minzoom,maxzoom:s.maxzoom,bounds:s.bounds,attribution:s.attribution.replace(/[<>&"']/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;',"'":'&#39;'}[c]))});
-   const base={source:id,'source-layer':'contours',minzoom:s.minzoom,filter:contourFilter,layout:{'line-join':'round','line-cap':'round'}},color=s.kind==='regional'?'#557d91':'#173f61';
+   const palette=mapPalette(),base={metadata:{finfolkContourKind:s.kind},source:id,'source-layer':'contours',minzoom:s.minzoom,filter:contourFilter,layout:{'line-join':'round','line-cap':'round'}},color=s.kind==='regional'?palette.regionalContour:palette.contour;
    map.addLayer({...base,id:id+'-hit',type:'line',paint:{'line-width':14,'line-opacity':0}},before);
    map.addLayer({...base,id:id+'-line',type:'line',paint:{'line-color':color,'line-opacity':s.kind==='regional'?.45:['case',multiple(10),.7,.35],'line-width':['interpolate',['linear'],['zoom'],10,.55,16,1],...(s.kind==='regional'?{'line-dasharray':[3,3]}:{})}},before);
-   map.addLayer({...base,id:id+'-labels',type:'symbol',filter:labelFilter,minzoom:Math.max(11,s.minzoom),layout:{'symbol-placement':'line','symbol-spacing':400,'text-field':['concat',['to-string',['get','depth_m']],s.archive_release?' m ref':' m'],'text-font':['Noto Sans Regular'],'text-size':11,'text-max-angle':35,'text-padding':24},paint:{'text-color':color,'text-halo-color':'#edf7f6','text-halo-width':1.5}},before);active.set(id,s);
+   map.addLayer({...base,id:id+'-labels',type:'symbol',filter:labelFilter,minzoom:Math.max(11,s.minzoom),layout:{'symbol-placement':'line','symbol-spacing':400,'text-field':['concat',['to-string',['get','depth_m']],s.archive_release?' m ref':' m'],'text-font':['Noto Sans Regular'],'text-size':11,'text-max-angle':35,'text-padding':24},paint:{'text-color':color,'text-halo-color':palette.halo,'text-halo-width':1.5}},before);active.set(id,s);
   }
   // Regional context stays underneath published surveys, regardless of pan order.
   for(const kind of ['regional','survey'])for(const [id,s]of active)if(s.kind===kind)for(const suffix of ['hit','line','labels'])map.moveLayer(id+'-'+suffix,map.getLayer(LAND_MASK)?LAND_MASK:map.getLayer('ff-clusters')?'ff-clusters':undefined);
