@@ -1,0 +1,9 @@
+export const onboardingSteps=[
+ {id:'welcome',label:'Welcome',eyebrow:'YOUR OCEAN COMMUNITY',title:'Your kind of water.',description:'A place for your favourite spots, your time in the water and the people you share it with.',tip:'A quick look around. Then it’s over to you.'},
+ {id:'explore',label:'Explore',eyebrow:'FIND YOUR NEXT SPOT',title:'The coast is yours to explore.',description:'Search for a beach, browse photographs and read the little details shared by the folk who know it.',tip:'Open a place on the map for access details, depth references and community notes.'},
+ {id:'checkin',label:'Check in',eyebrow:'A LITTLE MARK ON YOUR COASTAL STORY',title:'Where did you get in?',description:'Choose a place and share a check-in. It’s a quick way to remember the spots you return to.',tip:'A check-in records a visit. Sessions are where you keep the details of a dive.'},
+ {id:'sessions',label:'Sessions',eyebrow:'YOUR TIME IN THE WATER',title:'Keep the moments that matter.',description:'Save a location, a few notes and the details you want to remember. Your sessions start private; choose what to publish.',tip:'A short note today becomes a good memory later.'},
+ {id:'community',label:'Community',eyebrow:'GOOD COMPANY. SALT WATER.',title:'Find your people.',description:'Meet local divers, discover groups and read their stories. Create and manage a page for your group from Community.',tip:'Start with a shared spot. See where the conversation goes.'},
+ {id:'privacy',label:'Your profile',eyebrow:'SHARE ON YOUR TERMS',title:'Make yourself at home.',description:'Choose how you appear to other divers and what you share. Your profile and privacy settings are always yours to change.',tip:'You’re ready. Pick a spot, get to know the folk, and make FinFolk yours.'}
+];
+export const memberTourKey=uid=>'finfolk:member-tour:3:'+uid;
