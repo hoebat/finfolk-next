@@ -5,5 +5,5 @@ export function clusterRegionMarkers(groups,project,{width,height,spacing=56}){
  const centre=members=>[0,1].map(axis=>members.reduce((sum,group)=>sum+group.point[axis],0)/members.length);
  let merged=true;
  while(merged){merged=false;outer:for(let i=0;i<nodes.length;i++)for(let j=i+1;j<nodes.length;j++){const a=project(centre(nodes[i])),b=project(centre(nodes[j]));if(Math.hypot(a.x-b.x,a.y-b.y)<spacing){nodes[i].push(...nodes[j]);nodes.splice(j,1);merged=true;break outer;}}}
- return nodes.map(members=>members.length===1?members[0]:{id:'areas:'+members.map(g=>g.id).sort().join('|'),name:members.map(g=>g.name).join(' · '),count:members.reduce((sum,g)=>sum+g.count,0),point:centre(members),points:members.flatMap(g=>g.points)});
+ return nodes.map(members=>members.length===1?members[0]:{id:'areas:'+members.map(g=>g.id).sort().join('|'),name:members.map(g=>g.name).join(' · '),count:members.reduce((sum,g)=>sum+g.count,0),point:centre(members),points:members.flatMap(g=>g.points),locations:members.map(g=>({name:g.name,count:g.count})),sites:members.flatMap(g=>g.sites||[])});
 }

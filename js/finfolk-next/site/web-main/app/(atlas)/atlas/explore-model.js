@@ -33,8 +33,8 @@ const STATE_NAMES={NSW:'New South Wales',VIC:'Victoria',QLD:'Queensland',SA:'Sou
 export function mapGeographyGroups(rows,level='state'){
  const groups=new Map();
  for(const row of rows){if(row.kind!=='spot'||!validPoint(row.point))continue;const site=row.site||{},state=site.state_id||site.state||'Other',region=site.area_id||site.region||'other',id=level==='state'?state:state+':'+region;
-  if(!groups.has(id))groups.set(id,{id,state,name:level==='state'?(STATE_NAMES[state]||state):(site.area_name||site.region_name||site.group||'Other coastal locations'),points:new Map(),center:level==='state'?STATE_CENTRES[state]:row.regionCenter});
-  groups.get(id).points.set(row.sourceId,row.point);
+  if(!groups.has(id))groups.set(id,{id,state,name:level==='state'?(STATE_NAMES[state]||state):(site.area_name||site.region_name||site.group||'Other coastal locations'),points:new Map(),sites:new Map(),center:level==='state'?STATE_CENTRES[state]:row.regionCenter});
+  groups.get(id).points.set(row.sourceId,row.point);groups.get(id).sites.set(row.sourceId,{id:row.sourceId,name:row.name});
  }
- return [...groups.values()].map(group=>{const points=[...group.points.values()],point=validPoint(group.center)?group.center:[0,1].map(axis=>points.reduce((sum,p)=>sum+p[axis],0)/points.length);return {id:group.id,name:group.name,state:group.state,point,points,count:points.length,level};});
+ return [...groups.values()].map(group=>{const points=[...group.points.values()],point=validPoint(group.center)?group.center:[0,1].map(axis=>points.reduce((sum,p)=>sum+p[axis],0)/points.length);return {id:group.id,name:group.name,state:group.state,point,points,sites:[...group.sites.values()],count:points.length,level};});
 }

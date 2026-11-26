@@ -123,6 +123,9 @@
 :root[data-theme] .fm-explore .fm-geography[data-level=region]{position:relative;display:grid;place-items:center;width:44px;height:44px;min-width:44px;min-height:44px;box-sizing:border-box;padding:0;border:1px solid #fffaf0;border-radius:50%;background:#172440;color:#fffaf0;box-shadow:0 1px 5px #17244024;cursor:pointer}
 :root[data-theme] .fm-explore .fm-geography[data-level=region] strong{font:600 13px/1 Avenir,Arial,sans-serif;color:inherit}
 .fm-explore .fm-geography[data-level=region] span{display:none;position:absolute;top:calc(100% + 7px);left:50%;transform:translateX(-50%);width:max-content;max-width:210px;padding:7px 10px;border:1px solid var(--account-line);border-radius:8px;background:var(--account-surface);color:var(--account-ink);font:500 11px/1.4 Avenir,Arial,sans-serif;white-space:normal;box-shadow:0 2px 8px #17244018;pointer-events:none}
-.fm-explore .fm-geography[data-level=region]:is(:hover,:focus-visible) span{display:block}
 .fm-explore .fm-geography[data-level=region]:focus-visible{outline:2px solid var(--account-ink);outline-offset:3px}
 .fm-explore .maplibregl-marker:has(.fm-geography:is(:hover,:focus-visible)){z-index:2}
+
+.fm-site-tooltip ul{list-style:none;padding:9px 0 0;margin:9px 0;border-top:1px solid var(--account-line);display:grid;gap:5px}
+.fm-site-tooltip li{font:500 12px/1.4 Avenir,Arial,sans-serif;color:var(--account-ink)}
+.fm-explore .fm-site-tooltip{z-index:5}

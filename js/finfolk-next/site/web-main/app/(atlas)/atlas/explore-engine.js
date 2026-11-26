@@ -5,6 +5,7 @@ import {addDepthShading,styleExploreMap,addStateBoundaries,DEPTH_STOPS,LAND_COLO
 import {mapPointCollection,mapGeographyGroups,MAP_CATEGORIES,validPoint} from './explore-model.js';
 import {registerDepthRaster} from './explore-depth-raster.js';
 import {clusterRegionMarkers} from './geography-markers.js';
+let tooltipSequence=0;
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function markerImage(kind){const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const c=canvas.getContext('2d');c.strokeStyle='#fff';c.lineWidth=4;c.lineCap='round';c.lineJoin='round';c.beginPath();
  if(kind==='spot'){for(const y of [23,33,43]){c.moveTo(15,y);c.bezierCurveTo(23,y-10,31,y+10,39,y);c.bezierCurveTo(43,y-5,46,y-5,50,y);}}
@@ -17,15 +18,44 @@ export async function createExploreMap(container,{rows=[],onSelect,onViewport,on
  let camera;try{const stored=JSON.parse(sessionStorage.getItem('finfolk:explore-camera'));if(validPoint(stored?.center)&&Number.isFinite(stored.zoom)&&stored.zoom>=3&&stored.zoom<=18)camera=stored;}catch{}
  const map=new lib.Map({container,style:DATASET_PROVIDER_BASE+'openfreemap/styles/liberty',center:camera?.center||[134,-27],zoom:camera?.zoom||3.6,minZoom:3,maxZoom:18,dragRotate:false,pitchWithRotate:false,renderWorldCopies:false,attributionControl:true});
  let ready=false,alive=true,latestRows=rows,highlight=null,appearance='coast',contours=null,coastMask=null,contourVisibility={survey:true,regional:true};
- const siteTooltip=new lib.Popup({closeButton:false,closeOnClick:false,offset:24,maxWidth:'240px',className:'fm-site-tooltip'});
- let tooltipID=null;
- function hideSiteTooltip(){tooltipID=null;siteTooltip.remove();}
+ const siteTooltip=new lib.Popup({closeButton:false,closeOnClick:false,focusAfterOpen:false,offset:24,maxWidth:'260px',className:'fm-site-tooltip'});
+ const tooltipDOMID='ff-map-tooltip-'+ ++tooltipSequence;let tooltipID=null,tooltipTrigger=null;
+ function hideSiteTooltip(){tooltipID=null;tooltipTrigger?.removeAttribute('aria-describedby');tooltipTrigger=null;siteTooltip.remove();}
+ function showTooltip(id,point,{title,summary,names=[],hint},trigger=null){
+  if(tooltipID===id&&siteTooltip.isOpen())return;
+  if(tooltipID!==id){hideSiteTooltip();tooltipID=id;}
+  const content=document.createElement('div');content.id=tooltipDOMID;content.setAttribute('role','tooltip');
+  const heading=document.createElement('strong');heading.textContent=title;content.append(heading);
+  if(summary){const text=document.createElement('p');text.textContent=summary;content.append(text);}
+  if(names.length){const list=document.createElement('ul');for(const name of names){const item=document.createElement('li');item.textContent=name;list.append(item);}content.append(list);}
+  if(hint){const text=document.createElement('small');text.textContent=hint;content.append(text);}
+  tooltipTrigger=trigger;trigger?.setAttribute('aria-describedby',tooltipDOMID);siteTooltip.setDOMContent(content).setLngLat(point).addTo(map);
+ }
+ function placeSummary(rows,total,title='Nearby places'){
+  const names=rows.slice(0,5).map(row=>row.name),remaining=Math.max(0,total-names.length);
+  return {title,summary:total.toLocaleString('en-AU')+' '+(total===1?'place':'places'),names,hint:(remaining?remaining.toLocaleString('en-AU')+' more · ':'')+'Select to explore'};
+ }
  function showSiteTooltip(event){
   if(!matchMedia('(hover:hover)').matches||map.isMoving())return hideSiteTooltip();
   const feature=event.features?.[0],row=latestRows.find(item=>item.id===feature?.properties?.id);
-  if(!row||row.kind!=='spot'||!validPoint(row.point))return hideSiteTooltip();
-  if(tooltipID!==row.id){const content=document.createElement('div');content.setAttribute('role','tooltip');const name=document.createElement('strong');name.textContent=row.name;content.append(name);if(row.area){const area=document.createElement('p');area.textContent=row.area;content.append(area);}if(Number(feature.properties.count)>1){const related=document.createElement('small');related.textContent=feature.properties.count+' places at this spot';content.append(related);}siteTooltip.setDOMContent(content);tooltipID=row.id;}
-  siteTooltip.setLngLat(row.point).addTo(map);
+  if(!row||!validPoint(row.point))return hideSiteTooltip();
+  const atLocation=latestRows.filter(item=>validPoint(item.point)&&item.point.join(',')===row.point.join(','));
+  if(atLocation.length>1)showTooltip(row.id,row.point,placeSummary(atLocation,atLocation.length,'At this location'));
+  else if(row.kind==='spot')showTooltip(row.id,row.point,{title:row.name,summary:row.area});else hideSiteTooltip();
+ }
+ async function showClusterTooltip(event){
+  if(!matchMedia('(hover:hover)').matches||map.isMoving())return hideSiteTooltip();
+  const feature=event.features?.[0];if(!feature)return;const id='cluster:'+feature.properties.cluster_id;if(tooltipID===id)return;
+  hideSiteTooltip();tooltipID=id;
+  try{const leaves=await map.getSource('finfolk').getClusterLeaves(feature.properties.cluster_id,5,0);if(!alive||tooltipID!==id)return;
+   const points=new Set(leaves.map(leaf=>leaf.geometry.coordinates.join(','))),places=latestRows.filter(row=>validPoint(row.point)&&points.has(row.point.join(',')));
+   showTooltip(id,feature.geometry.coordinates,placeSummary(places,Number(feature.properties.entities||feature.properties.point_count)));
+  }catch{if(tooltipID===id)hideSiteTooltip();}
+ }
+ function showGeographyTooltip(group,level,button){
+  if(map.isMoving())return;
+  if(group.locations?.length>1){const model=placeSummary(group.sites||[],group.count,'Dive spots nearby');model.summary=group.count.toLocaleString('en-AU')+' dive spots across '+group.locations.length+' areas';if(!model.names.length)model.names=group.locations.map(location=>location.name).slice(0,5);showTooltip('area:'+group.id,group.point,model,button);}
+  else showTooltip('area:'+group.id,group.point,{title:group.name,summary:group.count.toLocaleString('en-AU')+' '+(group.count===1?'dive spot':'dive spots'),hint:'Select to explore '+(level==='state'?'this state':'this area')},button);
  }
  map.on('movestart',hideSiteTooltip);map.on('click',hideSiteTooltip);
  const dismissTooltip=event=>{if(event.key==='Escape')hideSiteTooltip();};window.addEventListener('keydown',dismissTooltip);
@@ -36,11 +66,11 @@ export async function createExploreMap(container,{rows=[],onSelect,onViewport,on
   if(!ready)return;
   const zoom=map.getZoom(),level=zoom<5.2?'state':zoom<8?'region':null,allGroups=level?mapGeographyGroups(latestRows,level):[],groups=level==='region'?clusterRegionMarkers(allGroups,point=>map.project(point),{width:container.clientWidth,height:container.clientHeight}):allGroups,summarized=allGroups.length>0;
   for(const id of ['ff-clusters','ff-cluster-count','ff-points','ff-icons','ff-shared','ff-labels'])map.setLayoutProperty(id,'visibility',summarized?'none':'visible');
-  const key=JSON.stringify([level,groups.map(g=>[g.id,g.count,g.point,g.points])]);if(key===geographyKey)return;geographyKey=key;
-  geographyMarkers.forEach(marker=>marker.remove());geographyMarkers=[];
+  const key=JSON.stringify([level,groups.map(g=>[g.id,g.name,g.count,g.point,g.points,g.sites])]);if(key===geographyKey)return;geographyKey=key;
+  hideSiteTooltip();geographyMarkers.forEach(marker=>marker.remove());geographyMarkers=[];
   for(const group of groups){const button=document.createElement('button');button.type='button';button.className='fm-geography';button.dataset.level=level;button.dataset.group=group.id;button.setAttribute('aria-label',`${group.name}: ${group.count} dive spots. Zoom in`);
-   const count=document.createElement('strong'),label=document.createElement('span');count.textContent=group.count.toLocaleString('en-AU');label.textContent=group.name;button.append(count,label);
-   button.addEventListener('click',event=>{event.stopPropagation();const bounds=new lib.LngLatBounds();group.points.forEach(point=>bounds.extend(point));const targetZoom=level==='state'?7:11,single=group.points.every(point=>point[0]===group.points[0][0]&&point[1]===group.points[0][1]),camera=single?{center:group.points[0],zoom:targetZoom}:map.cameraForBounds(bounds,{padding:65,maxZoom:targetZoom});if(camera)map.easeTo({...camera,zoom:Math.max(level==='state'?5.3:8.2,camera.zoom),padding:0,duration:reduced()?0:650});});
+   const count=document.createElement('strong'),label=document.createElement('span');count.textContent=group.count.toLocaleString('en-AU');label.textContent=group.name;button.append(count,label);button.addEventListener('mouseenter',()=>{if(matchMedia('(hover:hover)').matches)showGeographyTooltip(group,level,button);});button.addEventListener('focus',()=>showGeographyTooltip(group,level,button));button.addEventListener('mouseleave',hideSiteTooltip);button.addEventListener('blur',hideSiteTooltip);
+   button.addEventListener('click',event=>{event.stopPropagation();hideSiteTooltip();const bounds=new lib.LngLatBounds();group.points.forEach(point=>bounds.extend(point));const targetZoom=level==='state'?7:11,single=group.points.every(point=>point[0]===group.points[0][0]&&point[1]===group.points[0][1]),camera=single?{center:group.points[0],zoom:targetZoom}:map.cameraForBounds(bounds,{padding:65,maxZoom:targetZoom});if(camera)map.easeTo({...camera,zoom:Math.max(level==='state'?5.3:8.2,camera.zoom),padding:0,duration:reduced()?0:650});});
    const host=document.createElement('div');host.append(button);geographyMarkers.push(new lib.Marker({element:host}).setLngLat(group.point).addTo(map));
   }
  }
@@ -67,6 +97,7 @@ export async function createExploreMap(container,{rows=[],onSelect,onViewport,on
   map.on('idle',()=>{container.dataset.stateBoundaryFeatures=String(map.getLayer('ff-state-boundaries')?map.queryRenderedFeatures({layers:['ff-state-boundaries']}).length:0);});
   contours=createContourLayers(map,lib,{onStatus:onContourStatus,onInspect:onContourInspect,isWater:point=>coastMask.isWater(point)});contours.setEnabled(contourVisibility);
   style();updateGeography();focus(highlight,{zoom:!!highlight});onViewport?.(map.getBounds());onStatus?.('');onReady?.();
+  map.on('mouseenter','ff-clusters',showClusterTooltip);map.on('mouseleave','ff-clusters',hideSiteTooltip);
   map.on('mousemove','ff-points',showSiteTooltip);map.on('mouseleave','ff-points',hideSiteTooltip);
   map.on('click','ff-points',event=>onSelect?.(event.features[0].properties.id));
   map.on('click','ff-clusters',async event=>{const f=event.features[0];try{const zoom=await map.getSource('finfolk').getClusterExpansionZoom(f.properties.cluster_id);if(alive)map.easeTo({center:f.geometry.coordinates,zoom,duration:reduced()?0:550});}catch{if(alive)onStatus?.('Could not expand that cluster. Try zooming in.');}});
