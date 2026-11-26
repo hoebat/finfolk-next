@@ -1,5 +1,5 @@
 import clipping from 'polygon-clipping';
-import {DEPTH_LAYER,LAND_COLOR} from './explore-style.js';
+import {COAST_DEPTH_LAYER,LAND_COLOR} from './explore-style.js';
 export const LAND_MASK='ff-coast-land-mask';
 const SOURCE='ff-coast-mask',world=[[[-180,-85],[180,-85],[180,85],[-180,85],[-180,-85]]];
 export function landOutsideWater(features){
@@ -12,7 +12,7 @@ export function landOutsideWater(features){
 export function createCoastMask(map){
  const water=map.getStyle().layers.find(layer=>layer.type==='fill'&&(layer['source-layer']==='water'||layer.id==='water'));
  if(!water)return {isWater:()=>true,destroy(){}};
- const layers=map.getStyle().layers,depth=layers.findIndex(layer=>layer.id===DEPTH_LAYER),before=layers[depth+1]?.id;
+ const layers=map.getStyle().layers,depth=layers.findIndex(layer=>layer.id===COAST_DEPTH_LAYER),before=layers[depth+1]?.id;
  map.addSource(SOURCE,{type:'geojson',data:landOutsideWater([]),tolerance:0,buffer:64});
  map.addLayer({id:LAND_MASK,type:'fill',source:SOURCE,minzoom:9,paint:{'fill-color':LAND_COLOR,'fill-antialias':false}},before);
  let dirty=true,alive=true,timer;
