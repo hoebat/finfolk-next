@@ -18,5 +18,5 @@ export function usePageModel(session,page,name,inputs={}){
   const online=()=>{if(valid())bump(x=>x+1)};window.addEventListener('online',online);
   return()=>{active=false;stop?.();window.removeEventListener('online',online)};
  },[actor,client,key,session.status,revision]);
- return {record:session.status==='ready'&&record?.actor===actor&&record.client===client&&record.key===key?record:null,refresh:()=>bump(x=>x+1)};
+ return {record:session.status==='ready'&&record&&record.actor===actor&&record.client===client&&record.key===key?record:null,refresh:()=>bump(x=>x+1)};
 }
