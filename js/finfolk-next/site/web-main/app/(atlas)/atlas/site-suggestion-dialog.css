@@ -1,0 +1,7 @@
+:root[data-theme] .fm-site-dialog{box-sizing:border-box;width:min(820px,calc(100vw - 32px));max-width:none;max-height:calc(100dvh - 48px);margin:auto;padding:0;border:1px solid var(--account-line);border-radius:24px;background:var(--account-bg);color:var(--account-ink);overflow:auto;overscroll-behavior:contain;font:14px/1.6 Avenir,Arial,sans-serif}
+.fm-site-dialog::backdrop{background:#101d3e80;backdrop-filter:blur(4px)}
+.fm-site-dialog-heading{position:sticky;top:0;z-index:1;display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 26px;border-bottom:1px solid var(--account-line);background:var(--account-bg)}
+.fm-site-dialog-heading h2{margin:0;font-size:26px;letter-spacing:-.04em}.fm-site-dialog-heading p{margin:0 0 5px}
+.fm-site-dialog-heading button{flex:none;width:44px;height:44px;border:1px solid var(--account-line);border-radius:50%;background:var(--account-surface);color:inherit;font:24px Avenir,Arial,sans-serif;cursor:pointer}
+.fm-site-dialog-body{padding:24px 26px}.fm-site-dialog-body>p{margin:0 0 20px}.fm-site-dialog-body .site-editor{max-width:100%}.fm-site-dialog :focus-visible{outline:3px solid var(--account-accent);outline-offset:3px}.fm-site-submitted{padding:24px 0}
+@media(max-width:600px){:root[data-theme] .fm-site-dialog{width:calc(100vw - 20px);max-height:calc(100dvh - 24px);border-radius:18px}.fm-site-dialog-heading{padding:16px}.fm-site-dialog-heading h2{font-size:23px}.fm-site-dialog-body{padding:18px}.fm-site-dialog.ff-account-workspace .acct-panel .site-editor{padding:16px}}

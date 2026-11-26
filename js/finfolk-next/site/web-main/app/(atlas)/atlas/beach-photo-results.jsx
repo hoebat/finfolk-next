@@ -1,0 +1,10 @@
+'use client';
+import {useEffect,useState} from 'react';
+import {nearbyPhotoURL,nearbyPhotoResults} from './beach-photo-results.js';
+const saved=new Map();
+export default function BeachPhotoResults({site}){
+ const url=nearbyPhotoURL(site),[record,setRecord]=useState(null),[version,setVersion]=useState(0);
+ useEffect(()=>{setRecord(null);if(!url)return;const cached=saved.get(url);if(cached&&cached.until>Date.now()){setRecord({photos:cached.photos});return}const controller=new AbortController();let live=true;const timeout=setTimeout(()=>controller.abort(),12000);fetch(url,{signal:controller.signal,credentials:'omit'}).then(response=>{if(!response.ok)throw Error('Photographs could not load.');return response.json()}).then(nearbyPhotoResults).then(photos=>{if(!live)return;saved.set(url,{photos,until:Date.now()+3600000});if(saved.size>40)saved.delete(saved.keys().next().value);setRecord({photos});}).catch(()=>{if(live)setRecord({error:true})}).finally(()=>clearTimeout(timeout));return()=>{live=false;controller.abort();clearTimeout(timeout)};},[url,version]);
+ if(!url)return null;
+ return <section className="ff-web-photos" aria-label="Nearby photographs"><h4>Photographs around {site.name}</h4>{!record?<p role="status">Finding photographs…</p>:record.error?<p role="status">Photographs couldn’t load. <button type="button" onClick={()=>setVersion(n=>n+1)}>Try again</button></p>:!record.photos.length?<p>No matching photographs nearby yet.</p>:<><p className="ff-web-photo-context">Nearby coast and landmarks · within 1.2 km</p><div className="ff-web-photo-grid">{record.photos.map(photo=><figure key={photo.id}><a href={photo.source} target="_blank" rel="noopener noreferrer"><img src={photo.url} alt={photo.title} loading="lazy" onError={event=>{event.currentTarget.hidden=true}}/></a><figcaption><a href={photo.source} target="_blank" rel="noopener noreferrer">{photo.title}</a><small>{photo.credit} · <a href={photo.licenceURL} target="_blank" rel="noopener noreferrer">{photo.licence}</a> · Wikimedia Commons</small></figcaption></figure>)}</div></>}</section>;
+}

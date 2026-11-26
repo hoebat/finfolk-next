@@ -2,8 +2,121 @@
   "version": 1,
   "note": "Curated public social posts. Location associations are checked against the cited publisher; embed availability can change. Historical images do not establish current conditions.",
   "posts": [
-    {"id":"hyams-wanderlust","beach_ids":["hyams-beach"],"platform":"instagram","url":"https://www.instagram.com/p/Bnlcd2dFLFC/","title":"Hyams Beach · photographer’s location post","author":"The Ginger Wanderlust","location_context":"Hyams Beach, as identified in the photographer’s own location guide","association_source":"https://thegingerwanderlust.com/2019/12/29/most-instagrammable-places-in-australia/","reviewed_at":"2026-10-27"},
-    {"id":"bondi-icebergs-wanderlust","beach_ids":["bondi"],"platform":"instagram","url":"https://www.instagram.com/p/BkU3pGzFRP6/","title":"Bondi Icebergs · beside Bondi Beach","author":"The Ginger Wanderlust","location_context":"Nearby ocean pool, not a photo of the whole beach or a current conditions report","association_source":"https://thegingerwanderlust.com/2019/12/29/most-instagrammable-places-in-australia/","reviewed_at":"2026-10-27"},
-    {"id":"jervis-sea-cave-australia","area_ids":["nsw-jervis-bay","jbt-booderee"],"platform":"instagram","url":"https://www.instagram.com/p/BfC6m5EAOHS/","title":"Around Jervis Bay · sea-cave photograph","author":"Australia / Jordan Robins","location_context":"Regional Jervis Bay image; not necessarily the selected beach. Referenced in a 2018 council tourism report.","association_source":"https://shoalhaven.infocouncil.biz/Open/2018/04/TA_20180430_AGN_8844_AT.PDF","reviewed_at":"2026-10-27"}
+    {
+      "id": "hyams-wanderlust",
+      "beach_ids": [
+        "hyams-beach"
+      ],
+      "platform": "instagram",
+      "url": "https://www.instagram.com/p/Bnlcd2dFLFC/",
+      "title": "Hyams Beach · photographer’s location post",
+      "author": "The Ginger Wanderlust",
+      "location_context": "Hyams Beach, as identified in the photographer’s own location guide",
+      "association_source": "https://thegingerwanderlust.com/2019/12/29/most-instagrammable-places-in-australia/",
+      "reviewed_at": "2026-10-27"
+    },
+    {
+      "id": "bondi-icebergs-wanderlust",
+      "beach_ids": [
+        "bondi"
+      ],
+      "platform": "instagram",
+      "url": "https://www.instagram.com/p/BkU3pGzFRP6/",
+      "title": "Bondi Icebergs · beside Bondi Beach",
+      "author": "The Ginger Wanderlust",
+      "location_context": "Nearby ocean pool, not a photo of the whole beach or a current conditions report",
+      "association_source": "https://thegingerwanderlust.com/2019/12/29/most-instagrammable-places-in-australia/",
+      "reviewed_at": "2026-10-27"
+    },
+    {
+      "id": "jervis-sea-cave-australia",
+      "area_ids": [
+        "nsw-jervis-bay",
+        "jbt-booderee"
+      ],
+      "platform": "instagram",
+      "url": "https://www.instagram.com/p/BfC6m5EAOHS/",
+      "title": "Around Jervis Bay · sea-cave photograph",
+      "author": "Australia / Jordan Robins",
+      "location_context": "Regional Jervis Bay image; not necessarily the selected beach. Referenced in a 2018 council tourism report.",
+      "association_source": "https://shoalhaven.infocouncil.biz/Open/2018/04/TA_20180430_AGN_8844_AT.PDF",
+      "reviewed_at": "2026-10-27"
+    },
+    {
+      "id": "whitehaven-wanderlust",
+      "beach_ids": [
+        "whitehaven",
+        "37f1b67c-3a36-51e0-a649-5e602c564a10"
+      ],
+      "platform": "instagram",
+      "url": "https://www.instagram.com/p/BpWuKq5l68j/",
+      "title": "Whitehaven Beach · Whitsundays",
+      "author": "The Ginger Wanderlust",
+      "location_context": "Whitehaven and Hill Inlet, identified together in the creator’s guide. The precise viewpoint is not independently confirmed.",
+      "association_source": "https://thegingerwanderlust.com/2019/12/29/most-instagrammable-places-in-australia/",
+      "association": "nearby",
+      "reviewed_at": "2026-11-26"
+    },
+    {
+      "id": "lucky-bay-wanderlust",
+      "beach_ids": [
+        "lucky-bay",
+        "c1ad2ee3-fc4e-5359-aecd-7e6fc3b194e7"
+      ],
+      "platform": "instagram",
+      "url": "https://www.instagram.com/p/BwzOmxZF_vx/",
+      "title": "Lucky Bay · Esperance",
+      "author": "The Ginger Wanderlust",
+      "location_context": "Associated with Lucky Bay near Esperance in the creator’s guide.",
+      "association_source": "https://thegingerwanderlust.com/2019/12/29/most-instagrammable-places-in-australia/",
+      "association": "beach",
+      "reviewed_at": "2026-11-26"
+    },
+    {
+      "id": "hellfire-bay-wanderlust",
+      "beach_ids": [
+        "hellfire-bay",
+        "b6ff2182-3bbd-5de2-a16f-ea72c85b63a3"
+      ],
+      "platform": "instagram",
+      "url": "https://www.instagram.com/p/Bw1uYkXFvAX/",
+      "title": "Hellfire Bay · Cape Le Grand",
+      "author": "The Ginger Wanderlust",
+      "location_context": "Associated with Hellfire Bay in the creator’s guide.",
+      "association_source": "https://thegingerwanderlust.com/2019/12/29/most-instagrammable-places-in-australia/",
+      "association": "beach",
+      "reviewed_at": "2026-11-26"
+    },
+    {
+      "id": "brighton-boxes-wanderlust",
+      "beach_ids": [
+        "brighton-vic",
+        "6623d714-8e68-5530-a2ea-f0c9bcfc75fb",
+        "brighton"
+      ],
+      "platform": "instagram",
+      "url": "https://www.instagram.com/p/B1ElLbbHpaT/",
+      "title": "Brighton Beach · bathing boxes",
+      "author": "The Ginger Wanderlust",
+      "location_context": "Melbourne’s Brighton bathing boxes, identified in the creator’s guide.",
+      "association_source": "https://thegingerwanderlust.com/2019/12/29/most-instagrammable-places-in-australia/",
+      "association": "beach",
+      "reviewed_at": "2026-11-26"
+    },
+    {
+      "id": "surfers-paradise-wanderlust",
+      "beach_ids": [
+        "surfers-paradise",
+        "ecc3f90f-d18a-554a-ae49-4108d14346e2"
+      ],
+      "platform": "instagram",
+      "url": "https://www.instagram.com/p/BxcVdivFu8b/",
+      "title": "Surfers Paradise · Gold Coast coast",
+      "author": "The Ginger Wanderlust",
+      "location_context": "The guide mentions both Surfers Paradise and Kurrawa; shown as area inspiration, not an exact beach match.",
+      "association_source": "https://thegingerwanderlust.com/2019/12/29/most-instagrammable-places-in-australia/",
+      "association": "nearby",
+      "reviewed_at": "2026-11-26"
+    }
   ]
 }
