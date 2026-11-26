@@ -1,3 +1,4 @@
+import {depthTileURL} from './explore-depth-raster.js';
 import {DATASET_PROVIDER_BASE} from './dataset-release.js';
 // Numeric Mapzen/Terrain Tiles data: ETOPO1 supplies global ocean bathymetry.
 // Its ocean grid is ~1 arc-minute, so overscaling adds no local survey detail.
@@ -9,13 +10,13 @@ const roadColors=new WeakMap();
 export const DEPTH_STOPS=[[-11000,'#203b5e'],[-6000,'#2b4e73'],[-3000,'#426b8f'],[-1000,'#608ead'],[-200,'#83adc7'],[-50,'#a8c8db'],[-10,'#c3dce8'],[0,'#d9e8ef']];
 export const DEPTH_GRADIENT='linear-gradient(90deg, '+[...DEPTH_STOPS].reverse().map(([,color])=>color).join(', ')+')';
 export function addDepthShading(map){
- map.addSource(DEPTH_SOURCE,{type:'raster-dem',tiles:[DATASET_PROVIDER_BASE+'terrain/{z}/{x}/{y}.png'],encoding:'terrarium',tileSize:256,maxzoom:8,attribution:'<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles / Mapzen</a> · <a href="https://www.ncei.noaa.gov/products/etopo-global-relief-model/etopo1" target="_blank" rel="noopener">NOAA ETOPO1</a>'});
+ for(const [id,coastal]of [[DEPTH_SOURCE,false],[COAST_DEPTH_LAYER+'-source',true]])map.addSource(id,{type:'raster',tiles:[depthTileURL(DATASET_PROVIDER_BASE,coastal)],tileSize:256,maxzoom:8,attribution:'<a href="https://registry.opendata.aws/terrain-tiles/" target="_blank" rel="noopener">Terrain Tiles / Mapzen</a> · <a href="https://www.ncei.noaa.gov/products/etopo-global-relief-model/etopo1" target="_blank" rel="noopener">NOAA ETOPO1</a>'});
  // Keep vector labels, roads and FinFolk markers above the depth surface.
  const layers=map.getStyle().layers,water=layers.findIndex(layer=>layer.type==='fill'&&(layer['source-layer']==='water'||layer.id==='water')),before=layers[water>=0?water+1:layers.findIndex(layer=>layer.type!=='background')];
- map.addLayer({id:DEPTH_LAYER,type:'color-relief',source:DEPTH_SOURCE,maxzoom:9,paint:{'color-relief-color':['interpolate',['linear'],['elevation'],...DEPTH_STOPS.flat(),1,LAND_COLOR],'color-relief-opacity':1}},before?.id);
+ map.addLayer({id:DEPTH_LAYER,type:'raster',source:DEPTH_SOURCE,maxzoom:9,paint:{'raster-resampling':'linear','raster-fade-duration':0}},before?.id);
  // At local zooms the vector coastline masks land. Keep nonnegative DEM cells
  // at the shallow-water colour instead of magnifying their land/sea transition.
- map.addLayer({id:COAST_DEPTH_LAYER,type:'color-relief',source:DEPTH_SOURCE,minzoom:9,paint:{'color-relief-color':['interpolate',['linear'],['elevation'],...DEPTH_STOPS.flat()],'color-relief-opacity':1}},before?.id);
+ map.addLayer({id:COAST_DEPTH_LAYER,type:'raster',source:COAST_DEPTH_LAYER+'-source',minzoom:9,paint:{'raster-resampling':'linear','raster-fade-duration':0}},before?.id);
 }
 export function styleExploreMap(map,appearance){
  const coastal=appearance==='coast';

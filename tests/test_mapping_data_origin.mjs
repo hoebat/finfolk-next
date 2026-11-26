@@ -12,6 +12,6 @@ test('survey releases, basemap, terrain and publisher imagery use the dataset se
  for(const id of ['bondi','port-phillip','vic-corner-inlet']){
   const surface=surfaceForRegion({id,rasters:[]});urls.push(surfaceURL(surface,[144,-39,145,-38],800,600),surface.service+'/legend?f=json');
  }
- for(const url of urls)assert.equal(new URL(url).origin,DATASET_ORIGIN,url);
+ for(const url of urls)assert.equal(new URL(url.replace(/^finfolk-depth:/,'https:')).origin,DATASET_ORIGIN,url);
  const image={complete:true,naturalWidth:256};const images=new Map([[osmTileURL(9,461,315),image]]);assert.equal(cachedTile(images,10,923,631).image,image,'Parent tile fallback must use the same dataset URL as rendering');
 });

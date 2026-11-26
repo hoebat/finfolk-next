@@ -1,8 +1,9 @@
 import {DATASET_PROVIDER_BASE} from './dataset-release.js';
 import {createCoastMask} from './explore-coast-mask.js';
 import {createContourLayers} from './explore-contours.js';
-import {addDepthShading,styleExploreMap,addStateBoundaries} from './explore-style.js';
+import {addDepthShading,styleExploreMap,addStateBoundaries,DEPTH_STOPS,LAND_COLOR} from './explore-style.js';
 import {mapPointCollection,mapGeographyGroups,MAP_CATEGORIES,validPoint} from './explore-model.js';
+import {registerDepthRaster} from './explore-depth-raster.js';
 const reduced=()=>matchMedia('(prefers-reduced-motion: reduce)').matches;
 function markerImage(kind){const canvas=document.createElement('canvas');canvas.width=64;canvas.height=64;const c=canvas.getContext('2d');c.strokeStyle='#fff';c.lineWidth=4;c.lineCap='round';c.lineJoin='round';c.beginPath();
  if(kind==='spot'){for(const y of [23,33,43]){c.moveTo(15,y);c.bezierCurveTo(23,y-10,31,y+10,39,y);c.bezierCurveTo(43,y-5,46,y-5,50,y);}}
@@ -11,6 +12,7 @@ function markerImage(kind){const canvas=document.createElement('canvas');canvas.
  c.stroke();return c.getImageData(0,0,64,64);}
 export async function createExploreMap(container,{rows=[],onSelect,onViewport,onCamera,onStatus,onReady,onContourStatus,onContourInspect}={}){
  const imported=await import('maplibre-gl'),lib=imported.default||imported;
+ registerDepthRaster(lib,{stops:DEPTH_STOPS,landColor:LAND_COLOR});
  let camera;try{const stored=JSON.parse(sessionStorage.getItem('finfolk:explore-camera'));if(validPoint(stored?.center)&&Number.isFinite(stored.zoom)&&stored.zoom>=3&&stored.zoom<=18)camera=stored;}catch{}
  const map=new lib.Map({container,style:DATASET_PROVIDER_BASE+'openfreemap/styles/liberty',center:camera?.center||[134,-27],zoom:camera?.zoom||3.6,minZoom:3,maxZoom:18,dragRotate:false,pitchWithRotate:false,renderWorldCopies:false,attributionControl:true});
  let ready=false,alive=true,latestRows=rows,highlight=null,appearance='coast',contours=null,coastMask=null,contourVisibility={survey:true,regional:true};
