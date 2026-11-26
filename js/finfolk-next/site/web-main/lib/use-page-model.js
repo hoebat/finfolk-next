@@ -1,10 +1,10 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {resolveModel,runModel} from './page-models.js';
-export function usePageModel(session,page,name,inputs={}){
+export function usePageModel(session,page,name,inputs={},options={}){
  const model=resolveModel(page,name,inputs),values=session.client?.authProvider==='supabase'?model.nativeValues:model.values,key=page+':'+name+':'+JSON.stringify(values);
- const actor=session.user?.uid,client=session.client,current=useRef();current.current={actor,client,key,status:session.status};
- const [record,setRecord]=useState(null),[revision,bump]=useState(0),load=useRef();load.current=()=>runModel(client,page,name,inputs);
+ const actor=session.user?.uid||(options.allowGuest?'__guest__':null),client=session.client,current=useRef();current.current={actor,client,key,status:session.status};
+ const [record,setRecord]=useState(null),[revision,bump]=useState(0),load=useRef();load.current=()=>options.load?options.load(client):runModel(client,page,name,inputs);
  useEffect(()=>{
   if(!actor||session.status!=='ready')return;
   let active=true,stop;const valid=()=>active&&current.current.actor===actor&&current.current.client===client&&current.current.key===key&&current.current.status==='ready';

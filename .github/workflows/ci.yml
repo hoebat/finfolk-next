@@ -49,6 +49,7 @@ jobs:
       - name: Verify native cached rendering and session lifecycle
         run: |
           node tests/test_cached_page_model.mjs
+          node tests/test_cached_read_client.mjs
           node tests/test_supabase_client_recovery.mjs
       - run: npm run test:mail
       - uses: supabase/setup-cli@v3

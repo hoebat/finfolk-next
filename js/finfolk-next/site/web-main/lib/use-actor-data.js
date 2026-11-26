@@ -11,7 +11,7 @@ export function useActorData(session,key,load,{allowGuest=false}={}){
   const generation=++epoch.current,loadNow=loader.current;
   const active=()=>epoch.current===generation&&current.current.actor===actor&&current.current.key===key&&current.current.client===client&&current.current.status==='ready';
   if(!actor||status!=='ready')return;
-  setRecord({actor,key,client,loading:true});
+  setRecord(previous=>previous?.actor===actor&&previous.key===key&&previous.client===client&&previous.data!==undefined?{...previous,loading:false,refreshing:true}:{actor,key,client,loading:true});
   Promise.resolve().then(()=>active()?loadNow(client,actor):undefined).then(data=>{if(active())setRecord({actor,key,client,data,loading:false});}).catch(error=>{if(active())setRecord({actor,key,client,error,loading:false});});
   return()=>{epoch.current++;};
  },[actor,status,key,client,version]);
