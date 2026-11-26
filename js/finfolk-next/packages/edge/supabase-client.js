@@ -71,7 +71,10 @@ export function createAccountClient(auth,config,app){
     if(ctx.closed){
       return null;
     }
-    ctx.revision = (ctx.revision + 1);
+    let sameActor = session && ctx.user && (session.user.id == ctx.user.uid);
+    if(!sameActor){
+      ctx.revision = (ctx.revision + 1);
+    }
     if(event == "SIGNED_IN"){
       ctx.notice = "";
     }
@@ -81,10 +84,10 @@ export function createAccountClient(auth,config,app){
     if(!session){
       ctx.recovery = false;
     }
-    if(ctx.model){
+    if(ctx.model && !sameActor){
       app.clearMember();
+      ctx.model = null;
     }
-    ctx.model = null;
     ctx.session = session;
     ctx.user = (session ? {
       "uid":session.user.id,
@@ -92,7 +95,7 @@ export function createAccountClient(auth,config,app){
       "emailVerified":!!session.user.email_confirmed_at,
       "recovery":ctx.recovery
     } : null);
-    if(session){
+    if(session && !ctx.model){
       let revision = ctx.revision;
       let check = function (){
         if((revision != ctx.revision) || ctx.closed){

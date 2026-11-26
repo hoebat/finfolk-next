@@ -78,7 +78,7 @@ export function connectionReady(ctx){
     ctx["reject"] = reject;
     ctx["timer"] = setTimeout(function (){
       reject(new Error("SQLite worker startup timed out."));
-    },12000);
+    },2000);
   });
   return ready.then(async function (){
     let result = await request(ctx,{
@@ -310,7 +310,7 @@ export async function receive(ctx,message){
         console.error("Cache subscriber failed.");
       }
     }
-    if(state["status"] == "ready"){
+    if((state["status"] == "ready") || state["cached"]){
       if(!ctx["cachedReads"]){
         ctx["cachedReads"] = new Map();
       }
