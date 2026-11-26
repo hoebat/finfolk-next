@@ -12,7 +12,7 @@ export function createLogbookClient(config){
   if(base.origin!=='https://supabase.finfolk.com.au'&&!(['127.0.0.1','localhost'].includes(base.hostname)&&base.protocol==='http:'))throw Error('Unexpected account service');
 
   const path='/app-backbone.js';const {applicationBackbone}=await import(/* webpackIgnore: true */path);
-  const scoped={...config,backbone:true,authUrl:base.origin,cacheBackend:'memory',apiUrl:location.origin+'/',authRedirectTo:location.origin+'/account'};
+  const scoped={...config,backbone:true,authUrl:base.origin,cacheBackend:'sqlite',apiUrl:location.origin+'/',authRedirectTo:location.origin+'/account'};
   const app=await applicationBackbone(scoped);
   const callbackCode=new URL(location.href).searchParams.get('code');
   const auth=new AuthClient({url:new URL('/auth/v1',base).href,headers:{apikey:config.publishableKey},storageKey:'finfolk:auth:'+base.origin,persistSession:true,autoRefreshToken:true,detectSessionInUrl:!callbackCode,flowType:'pkce'});

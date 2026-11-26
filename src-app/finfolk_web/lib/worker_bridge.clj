@@ -37,7 +37,7 @@
 (defn.js connectionReady [ctx]
   (var ready (new Promise (fn [resolve reject]
     (:= (. ctx ["resolve"]) resolve) (:= (. ctx ["reject"]) reject)
-    (:= (. ctx ["timer"]) (setTimeout (fn [] (reject (new Error "SQLite worker startup timed out."))) 12000)))))
+    (:= (. ctx ["timer"]) (setTimeout (fn [] (reject (new Error "SQLite worker startup timed out."))) 2000)))))
   (return (. ready (then (async (fn []
     (var result (await (-/request ctx {"type" "hello" "protocol" 1 "client" (. ctx ["client"]) "environment" (. ctx ["environment"])} nil)))
     (-/announce "finfolk:cache-status" result)
@@ -139,7 +139,7 @@
       (. (. facade ["snapshots"]) (delete (. message ["key"]))))
     (var entry (. (. facade ["subscriptions"]) (get (. message ["subscription"]))))
     (when entry (try ((. entry ["callback"]) state) (catch error (console.error "Cache subscriber failed."))))
-    (when (== (. state ["status"]) "ready")
+    (when (or (== (. state ["status"]) "ready") (. state ["cached"]))
       (when (not (. ctx ["cachedReads"])) (:= (. ctx ["cachedReads"]) (new Map)))
       (var key (JSON.stringify [(. message ["scope"]) (. message ["key"])]))
       (if (. state ["cached"])

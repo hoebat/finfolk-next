@@ -3,7 +3,7 @@ export function accountConfiguration(){
  if(!configuration)configuration=Promise.resolve().then(async()=>{
   const embedded=document.getElementById('finfolk-account-config');let value;
   if(embedded)try{value=JSON.parse(embedded.textContent)}catch{}
-  if(value?.enabled&&value.authProvider==='supabase')return {...value,apiUrl:location.origin+'/',authUrl:value.supabaseUrl,backbone:true,cacheBackend:'memory'};
+  if(value?.enabled&&value.authProvider==='supabase')return {...value,apiUrl:location.origin+'/',authUrl:value.supabaseUrl,backbone:true,cacheBackend:'sqlite'};
   const response=await fetch('/api/account-config',{cache:'no-store'});if(!response.ok)throw Error('Accounts are temporarily unavailable.');return response.json();
  }).catch(error=>{configuration=null;throw error});
  return configuration;

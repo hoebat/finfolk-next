@@ -5,3 +5,12 @@ function fixture(passwordRecovery){let observe;const auth={getSession:async()=>(
  const app={member:()=>({}),clearMember(){},setPublicTransport(){},public:{}};return {client:createAccountClient(auth,{passwordRecovery},app),observe:(...args)=>observe(...args)};}
 test('a verified recovery exchange survives initialization and finishes after a password change',async()=>{const {client}=fixture(true);await client.ready;assert.equal(client.user.recovery,true);await client.resetPassword(null,'New-owned-password!');assert.equal(client.user.recovery,false);});
 test('normal sessions and URL-shaped values cannot enable recovery; signing out clears it',async()=>{for(const value of [undefined,false,'true']){const {client}=fixture(value);await client.ready;assert.equal(client.user.recovery,false);await assert.rejects(client.resetPassword(null,'New-owned-password!'),/valid password recovery link/);}const {client,observe}=fixture(true);await client.ready;observe('SIGNED_OUT',null);assert.equal(client.user,null);observe('SIGNED_IN',session);assert.equal(client.user.recovery,false);});
+test('token refresh preserves the member model; switching identity and signing out clear it',async()=>{
+ let observe,opens=0,clears=0;
+ const auth={getSession:async()=>({data:{session}}),onAuthStateChange(fn){observe=fn;return {data:{subscription:{unsubscribe(){}}}}}};
+ const app={member(){opens++;return {}},clearMember(){clears++},setPublicTransport(){},public:{}};
+ const client=createAccountClient(auth,{},app);await client.ready;
+ observe('TOKEN_REFRESHED',{...session,access_token:'refreshed'});assert.equal(opens,1);assert.equal(clears,0);
+ observe('SIGNED_IN',{...session,user:{...session.user,id:'00000000-0000-4000-8000-000000000002'}});assert.equal(opens,2);assert.equal(clears,1);
+ observe('SIGNED_OUT',null);assert.equal(clears,2);assert.equal(client.user,null);
+});

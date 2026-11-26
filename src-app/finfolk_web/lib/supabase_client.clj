@@ -31,14 +31,15 @@
   (var ctx {"revision" 0 "user" nil "session" nil "model" nil "listeners" (new Set) "closed" false "recovery" (== config.passwordRecovery true) "notice" ""})
   (var transition (fn [session (:= event nil)]
     (when ctx.closed (return nil))
-    (:= ctx.revision (+ ctx.revision 1))
+    (var sameActor (and session ctx.user (== session.user.id ctx.user.uid)))
+    (when (not sameActor) (:= ctx.revision (+ ctx.revision 1)))
     (when (== event "SIGNED_IN") (:= ctx.notice ""))
     (when (== event "PASSWORD_RECOVERY") (:= ctx.recovery true))
     (when (not session) (:= ctx.recovery false))
-    (when ctx.model (app.clearMember))
-    (:= ctx.model nil) (:= ctx.session session)
+    (when (and ctx.model (not sameActor)) (app.clearMember) (:= ctx.model nil))
+    (:= ctx.session session)
     (:= ctx.user (:? session {"uid" session.user.id "email" session.user.email "emailVerified" (not (not session.user.email_confirmed_at)) "recovery" ctx.recovery} nil))
-    (when session
+    (when (and session (not ctx.model))
       (var revision ctx.revision)
       (var check (fn []
         (when (or (not= revision ctx.revision) ctx.closed) (throw (new Error "Account changed. Sign in again.")))))

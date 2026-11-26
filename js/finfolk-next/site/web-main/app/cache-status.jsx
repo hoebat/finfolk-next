@@ -1,0 +1,3 @@
+'use client';
+import {useEffect,useState} from 'react';
+export default function CacheStatus(){const [cached,setCached]=useState(false);useEffect(()=>{const update=e=>{if(typeof e.detail?.cached==='boolean')setCached(e.detail.cached)};window.addEventListener('finfolk:cache-status',update);return()=>window.removeEventListener('finfolk:cache-status',update)},[]);return cached?<p role="status" style={{position:'fixed',bottom:12,right:12,zIndex:30,margin:0,padding:'6px 12px',borderRadius:20,fontSize:12,background:'var(--account-surface)',color:'var(--account-ink)',border:'1px solid var(--account-line)'}}>Saved on this device</p>:null}
