@@ -139,7 +139,7 @@
       (. (. facade ["snapshots"]) (delete (. message ["key"]))))
     (var entry (. (. facade ["subscriptions"]) (get (. message ["subscription"]))))
     (when entry (try ((. entry ["callback"]) state) (catch error (console.error "Cache subscriber failed."))))
-    (when (or (== (. state ["status"]) "ready") (. state ["cached"]))
+    (when (== (. state ["status"]) "ready")
       (when (not (. ctx ["cachedReads"])) (:= (. ctx ["cachedReads"]) (new Map)))
       (var key (JSON.stringify [(. message ["scope"]) (. message ["key"])]))
       (if (. state ["cached"])
