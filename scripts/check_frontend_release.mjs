@@ -19,7 +19,7 @@ try{
  await page.getByText('Finding good things from the community…',{exact:true}).waitFor({state:'hidden'});
  assert.equal(await page.getByText(/couldn’t load/).count(),0,'Public community reads must settle successfully');
  const guestNavigation=await main.innerText();assert(!guestNavigation.includes('You')&&!guestNavigation.includes('Practice'),'Guest sidebar must contain public navigation');
- const signInBox=await page.locator('.ff-signin').boundingBox();assert.equal(signInBox.width,172);assert.equal(signInBox.height,64);
+ const signInBox=await page.locator('.ff-account-widget').boundingBox();assert.equal(signInBox.width,172);assert.equal(signInBox.height,64);
 
  for(const path of ['/shop','/events','/practice/progress','/practice/breathing','/practice/watch-imports','/practice/breath-check']){
   const r=await page.goto(base+path,{waitUntil:'domcontentloaded'});if(path.startsWith('/practice/')&&r.status()===404)continue;await page.getByRole('heading',{name:'Feature unavailable',exact:true}).waitFor();

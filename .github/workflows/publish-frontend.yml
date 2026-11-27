@@ -109,6 +109,14 @@ jobs:
           netlify deploy --build --context production --filter @finfolk/web-main --site "$NETLIFY_SITE_ID" --message "GitHub Actions $RELEASE_SHA" --verbose --json > .cache/frontend-preview-deploy.json
           deploy_id=$(jq -er '.deploy_id | select(test("^[a-f0-9]{24}$"))' .cache/frontend-preview-deploy.json)
           echo "DEPLOY_ID=$deploy_id" >> "$GITHUB_ENV"
+      - name: Expose the exact draft for reviewed-origin setup
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-candidate-${{ github.run_attempt }}
+          path: .cache/frontend-preview-deploy.json
+          include-hidden-files: true
+      - name: Install the browser version used by the application tests
+        run: corepack yarn playwright install chromium
       - name: Verify packaged files and server runtime
         run: |
           node scripts/check_netlify_output.mjs
@@ -117,10 +125,14 @@ jobs:
         env:
           NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}
         run: node scripts/promote_frontend_preview.mjs --check
+      - name: Wait for the exact reviewed preview origin
+        run: node scripts/wait_frontend_preview_origin.mjs "https://${DEPLOY_ID}--finfolk.netlify.app"
       - name: Verify the hosted preview
         run: |
+          set -o pipefail
           node scripts/check_frontend_release.mjs "https://${DEPLOY_ID}--finfolk.netlify.app" | tee .cache/frontend-preview-check.json
           node tests/test_frontend_header.mjs "https://${DEPLOY_ID}--finfolk.netlify.app"
+          NEXTJS_TEST_URL="https://${DEPLOY_ID}--finfolk.netlify.app" node tests/test_nextjs_mobile_account_navigation.mjs
       - name: Require main still points to this release
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -132,8 +144,10 @@ jobs:
         run: node scripts/promote_frontend_preview.mjs --publish
       - name: Verify production
         run: |
+          set -o pipefail
           node scripts/check_frontend_release.mjs https://finfolk.com.au | tee .cache/frontend-production-check.json
           node tests/test_frontend_header.mjs https://finfolk.com.au
+          NEXTJS_TEST_URL=https://finfolk.com.au node tests/test_nextjs_mobile_account_navigation.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

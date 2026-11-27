@@ -17,3 +17,16 @@ test('Actions promotion rejects a preview from a different commit',()=>{
   assert.throws(()=>validatePromotion(site,{...candidate,title:'Another release'},id,sha));
   assert.throws(()=>validatePromotion(site,candidate,id,'main'));
 });
+
+
+test('preview gate requires the exact owned deploy origin and matching CORS response',async()=>{
+ const {waitForReviewedPreviewOrigin:wait}=await import('../scripts/wait_frontend_preview_origin.mjs');
+ const origin='https://'+('2'.repeat(24))+'--finfolk.netlify.app';let calls=0;
+ const result=await wait(origin,{pause:async()=>{},fetcher:async(url,options)=>{
+  assert.equal(url,'https://api.finfolk.com.au/health');assert.equal(options.headers.Origin,origin);
+  return ++calls===1?new Response('',{status:403}):new Response('',{headers:{'Access-Control-Allow-Origin':origin}});
+ }});
+ assert.equal(result.ready,true);assert.equal(calls,2);
+ await assert.rejects(wait(origin,{timeoutMs:0,fetcher:async()=>new Response('',{headers:{'Access-Control-Allow-Origin':'https://other.example'}})}));
+ for(const bad of ['https://other.netlify.app','http://'+('2'.repeat(24))+'--finfolk.netlify.app',origin+'/path'])await assert.rejects(wait(bad,{fetcher:()=>{throw Error('must not request')}}));
+});
