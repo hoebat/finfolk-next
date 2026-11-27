@@ -66,3 +66,48 @@
 :root[data-theme] nav.ff-menu-panel .ff-menu-theme-choice input[type=radio]{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;opacity:0;z-index:1;cursor:pointer;transform:none}
 :root[data-theme] body nav.ff-menu-panel>:is(a,button){background:transparent!important;color:var(--account-ink)!important;box-shadow:none}
 :root[data-theme] body nav.ff-menu-panel>:is(a,button):hover{background:color-mix(in srgb,var(--account-ink) 9%,var(--account-surface))!important;color:var(--account-ink)!important}
+:root[data-theme] .ff-account-widget>.ff-signin{width:auto;min-width:0;max-width:none;height:auto;min-height:0;max-height:none}
+.ff-account-widget>.ff-signin>svg{width:22px;height:22px;flex:none}
+@media(max-width:900px){
+ :root[data-theme] .ff-guest-account,:root[data-theme] .ff-guest-account .ff-account-widget{width:88px;min-width:88px;max-width:88px}
+ :root[data-theme] .ff-guest-account .ff-account-widget>.ff-signin{display:flex;flex:1;padding:10px}
+ :root[data-theme] .ff-guest-account .ff-account-widget #local-menu-toggle{width:44px;min-width:44px;max-width:44px;border-left:1px solid var(--account-line);border-radius:0 13px 13px 0}
+ :root[data-theme] .finfolk-guest-navigation .fm-toolbar{right:110px}
+}
+@media(max-width:900px){
+ .next-community.finfolk-guest-navigation .community-sections{padding-right:96px}
+ .next-community.finfolk-guest-navigation .profile-topbar{padding-right:116px}
+}
+/* Salt Paper uses a solid magenta sign-in target against the ivory rail. */
+:root[data-theme=navy-light] .ff-guest-account .ff-account-widget{background:var(--theme-accent);color:var(--theme-on-accent);border-color:var(--theme-accent)}
+:root[data-theme=navy-light] .ff-guest-account .ff-account-widget>.ff-signin{background:transparent;color:var(--theme-on-accent)}
+:root[data-theme=navy-light] .ff-guest-account .ff-account-widget #local-menu-toggle{background:transparent!important;color:var(--theme-on-accent)!important;border-left-color:color-mix(in srgb,var(--theme-on-accent) 30%,transparent)}
+:root[data-theme=navy-light] .ff-guest-account .ff-account-widget>:is(.ff-signin,#local-menu-toggle):hover{background:color-mix(in srgb,var(--theme-accent) 88%,#000)!important;color:var(--theme-on-accent)!important}
+
+/* A separate mobile target makes Account open Settings while the desktop
+   portrait continues to open the member's profile. */
+:root[data-theme] .ff-account-mobile-link{display:none}
+:root[data-theme] .landing-account .ff-account-mobile-link{display:none!important}
+@media(max-width:900px){
+ /* The account split control occupies the former logo slot in the bottom bar. */
+ :root[data-theme] :is(.app-rail>.brand,.profile-rail>.profile-home){display:none!important}
+ :root[data-theme] :is(.app-rail,.profile-rail)>.ff-utility-menu{display:block!important;position:fixed!important;left:6px!important;right:auto!important;top:auto!important;bottom:calc(8px + env(safe-area-inset-bottom))!important;width:88px!important;min-width:88px;max-width:88px;z-index:70!important}
+ :root[data-theme] :is(.app-rail,.profile-rail) .ff-account-widget{display:flex;width:88px;min-width:88px;max-width:88px;height:56px;min-height:56px;max-height:56px;border:0;border-radius:14px;box-shadow:inset 0 0 0 1px var(--account-line)}
+ :root[data-theme] :is(.app-rail,.profile-rail) .ff-account-desktop-link{display:none!important}
+ :root[data-theme] :is(.app-rail,.profile-rail) .ff-account-widget>:is(.ff-account-mobile-link,.ff-signin){display:flex;box-sizing:border-box;flex:0 0 44px;flex-direction:column;align-items:center;justify-content:center;gap:3px;width:44px;min-width:44px;max-width:44px;height:100%;padding:3px;border-radius:13px 0 0 13px;color:inherit;font:600 10px/1.2 Avenir,Arial,sans-serif}
+ :root[data-theme] :is(.app-rail,.profile-rail) .ff-account-widget>:is(.ff-account-mobile-link,.ff-signin)>span{display:block;white-space:nowrap}
+ :root[data-theme] :is(.app-rail,.profile-rail) .ff-account-mobile-link .person-portrait{width:24px;height:24px;flex:0 0 24px}
+ :root[data-theme] :is(.app-rail,.profile-rail) .ff-account-widget #local-menu-toggle{display:flex;box-sizing:border-box;flex:0 0 44px;width:44px;min-width:44px;max-width:44px;height:100%;padding:10px;border-left:1px solid var(--account-line);border-radius:0 13px 13px 0;color:inherit}
+ :root[data-theme] :is(.app-rail,.profile-rail) .ff-auth-loading{width:88px;min-width:88px;max-width:88px;height:56px;min-height:56px;max-height:56px;justify-content:center}
+ :root[data-theme] :is(.app-rail,.profile-rail) .ff-auth-loading>span{display:block;font-size:10px}
+ :root[data-theme] :is(.app-rail,.profile-rail) .ff-menu-panel{position:absolute!important;top:auto!important;bottom:calc(100% + 8px)!important;left:0!important;right:auto!important;width:min(300px,calc(100vw - 12px));box-sizing:border-box;max-height:calc(100dvh - 100px - env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain}
+ :root[data-theme] :is(.finfolk-navigation-enabled,body:has(>.app-rail)) nav.ff-primary-nav{padding-left:100px!important;padding-right:0;gap:0;grid-template-columns:repeat(var(--nav-count,4),minmax(0,1fr))}
+ :root[data-theme] .finfolk-explore-map .fm-toolbar{right:14px!important}
+ :root[data-theme] .next-community .community-sections{padding-right:0}
+ :root[data-theme] .next-community .profile-topbar{padding-right:0}
+ /* Landing retains its full-width header split button at every viewport size. */
+ :root[data-theme] .landing-account .ff-utility-menu{width:172px;min-width:172px;max-width:172px}
+ :root[data-theme] .landing-account .ff-menu-panel{box-sizing:border-box}
+ :root[data-theme] .landing-account .ff-utility-menu .ff-account-widget{width:172px;min-width:172px;max-width:172px;height:54px;min-height:54px;max-height:54px}
+ :root[data-theme] .landing-account .ff-account-widget #local-menu-toggle{width:44px!important;min-width:44px!important;max-width:44px!important;min-height:44px;flex:0 0 44px}
+}
