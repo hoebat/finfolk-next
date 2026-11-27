@@ -26,8 +26,8 @@ export function createSupabaseWorker({openDatabase=database}={}) {
     throw Error('Native backend configuration is incomplete');
    db=openDatabase(env.SUPABASE_DB.connectionString);
    const check=(await db.query(`SELECT current_database() AS database,
-    (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='finfolk' AND c.relkind IN ('r','p')) AS tables,
-    EXISTS(SELECT 1 FROM finfolk."DatabaseRelease" WHERE key=$1 AND manifest->>'schema_sha'=$1) AS installed`,[env.NATIVE_SCHEMA_SHA]))[0];
+    (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='finfolk' AND c.relkind IN ('r','p') AND c.relname=ANY($2::text[])) AS tables,
+    EXISTS(SELECT 1 FROM finfolk."DatabaseRelease" WHERE key=$1 AND manifest->>'schema_sha'=$1) AS installed`,[env.NATIVE_SCHEMA_SHA,Object.keys(catalog)]))[0];
    if(check?.database!=='postgres'||check.tables!==Object.keys(catalog).length||check.installed!==true)
     throw Error('Native database release mismatch');
    const app=new Hono();
