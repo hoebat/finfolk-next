@@ -48,16 +48,26 @@ test('allows only the exact reviewed preview origin when explicitly configured',
  assert.equal((await s.worker.fetch(new Request('https://api.finfolk.com.au/health',{headers:{Origin:'https://222222222222222222222222--finfolk.netlify.app'}}),{...env,FINFOLK_PREVIEW_ORIGIN:preview})).status,403);
 });
 
-test('does not expose retired messaging routes or background handlers',async()=>{
+test('Instagram fails closed without its dedicated service and retired workers remain stopped',async()=>{
  const s=setup();
- for(const path of ['/instagram/webhook','/v1/messaging/connections/chat/status']){
-  const response=await s.worker.fetch(new Request('https://api.finfolk.com.au'+path,{method:'POST'}),env);
-  assert.equal(response.status,501);assert.equal((await response.json()).code,'native_operation_unavailable');
- }
+ const instagram=await s.worker.fetch(new Request('https://api.finfolk.com.au/instagram/webhook',{method:'POST'}),env);
+ assert.equal(instagram.status,503);assert.equal((await instagram.json()).code,'social_unavailable');
+ const other=await s.worker.fetch(new Request('https://api.finfolk.com.au/v1/messaging/connections/chat/status',{method:'POST'}),env);
+ assert.equal(other.status,501);assert.equal((await other.json()).code,'native_operation_unavailable');
  assert.equal(s.closed(),s.opened());assert.equal(s.worker.queue,undefined);assert.equal(s.worker.scheduled,undefined);
  const retired=await retiredWorker.fetch(new Request('https://api.finfolk.com.au/instagram/webhook'),{});
  assert.equal(retired.status,410);assert.equal(retired.headers.get('Cache-Control'),'no-store');
  assert.equal(retiredWorker.queue,undefined);assert.equal(retiredWorker.scheduled,undefined);
+});
+test('native Instagram delegation preserves bearer authentication and the OAuth cookie with credentialed CORS',async()=>{
+ const s=setup();let seen;
+ const binding={fetch:async request=>{seen=request;return Response.json({authorizationURL:'https://www.facebook.com/'},{headers:{'Set-Cookie':'__Host-flow=nonce; Path=/; Secure; HttpOnly; SameSite=Lax'}});}};
+ const response=await s.worker.fetch(new Request('https://api.finfolk.com.au/v1/messaging/connections/finfolk-instagram/authorization',{
+  method:'POST',headers:{Origin:'https://finfolk.com.au',Authorization:'Bearer owner-token'},body:'{}'}),{...env,NATIVE_SOCIAL_SERVICE:binding});
+ assert.equal(response.status,200);assert.equal(seen.headers.get('Authorization'),'Bearer owner-token');
+ assert.equal(response.headers.get('Access-Control-Allow-Origin'),'https://finfolk.com.au');
+ assert.equal(response.headers.get('Access-Control-Allow-Credentials'),'true');
+ assert.match(response.headers.get('Set-Cookie'),/__Host-flow=nonce/);assert.equal(s.closed(),1);
 });
 test('closes a failed readiness connection and does not disclose database details',async()=>{
  const s=setup({}, {queryError:Error('PRIVATE_DATABASE_DETAIL')});
@@ -91,4 +101,10 @@ test('native permission failures stay forbidden and release the connection',asyn
   const response=await s.worker.fetch(new Request('https://api.finfolk.com.au/v1/native/account',{headers:{Authorization:'Bearer valid'}}),env);
   assert.equal(response.status,403);assert.equal(s.closed(),1);assert(! (await response.text()).includes('PRIVATE_SQL_DETAIL'));
  }finally{globalThis.fetch=previous;}
+});
+
+test('Buddies readiness requires all four private conversation tables',async()=>{
+ const buddyEnv={...env,NATIVE_BUDDIES_SCHEMA:'true'};
+ const absent=setup();assert.equal((await absent.worker.fetch(new Request('https://api.finfolk.com.au/health'),buddyEnv)).status,503);
+ const installed=setup({tables:Object.keys(catalog).length+4});assert.equal((await installed.worker.fetch(new Request('https://api.finfolk.com.au/health'),buddyEnv)).status,200);
 });
