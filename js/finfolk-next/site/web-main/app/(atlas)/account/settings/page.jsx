@@ -1,2 +1,2 @@
-import {redirect} from 'next/navigation';
-export default function Page(){redirect('/account/settings/appearance');}
+export const metadata={title:'Settings · FinFolk'};
+export default function Page(){return null;}

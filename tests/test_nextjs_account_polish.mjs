@@ -17,7 +17,7 @@ try{
    ['checkin','/account/checkin','.checkin-history'],['posts','/account/posts','.trip-manager'],
    ['instagram','/account/instagram','#member-actions'],['buddies','/account/privacy','#social-buddies'],
    ['sites','/account/sites','.site-editor'],['appearance','/account/settings/appearance','.theme-choice'],
-   ['profile','/account/settings/profile','.settings-editor'],['privacy','/account/settings/privacy','.settings-editor'],
+   ['profile','/account/settings/profile','.settings-editor'],['privacy','/account/settings/privacy','.settings-privacy'],
    ['account','/account/settings/account','.settings-content']
   ]){
    await page.goto(base+path);await page.locator(ready).first().waitFor();await page.evaluate(theme=>{localStorage.setItem('finfolk-theme',theme);globalThis.FinFolkAppearance.apply(theme);},theme);
