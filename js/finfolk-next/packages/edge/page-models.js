@@ -415,6 +415,21 @@ export var pages = {
     "actions":{},
     "reason":"Build-only public shell templates, rendered at canonical application routes."
   },
+  "instagram-operator":{
+    "routes":["/admin/instagram"],
+    "area":"member",
+    "models":{
+      "status":{"operation":"socialOperatorStatus","bindings":{}},
+      "event":{"operation":"socialOperatorEvent","bindings":{"id":"id"}}
+    },
+    "actions":{
+      "authorize":{"operation":"socialOperatorAuthorize","bindings":{}},
+      "activate":{"operation":"socialOperatorActivate","bindings":{}},
+      "pause":{"operation":"socialOperatorPause","bindings":{}},
+      "disconnect":{"operation":"socialOperatorDisconnect","bindings":{}},
+      "acceptance":{"operation":"socialOperatorAcceptance","bindings":{}}
+    }
+  },
   "event":{
     "routes":["/events/[id]"],
     "area":"member",
@@ -814,6 +829,15 @@ export var pages = {
     },
     "actions":{}
   },
+  "instagram-linking":{
+    "routes":[],
+    "area":"member",
+    "models":{"state":{"operation":"instagramAccount","bindings":{}}},
+    "actions":{
+      "connect":{"operation":"instagramCodeConnect","bindings":{}},
+      "disconnect":{"operation":"instagramMemberDisconnect","bindings":{}}
+    }
+  },
   "listing":{
     "routes":["/directory/[id]"],
     "area":"public",
@@ -976,6 +1000,12 @@ export var pages = {
     "models":{},
     "actions":{},
     "reason":"Public allowlisted authentication configuration; never an offline document."
+  },
+  "platform-status":{
+    "routes":["/admin"],
+    "area":"member",
+    "models":{"snapshot":{"operation":"platformStatus","bindings":{}}},
+    "actions":{}
   },
   "logbook-inbox":{
     "routes":[],

@@ -933,6 +933,16 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "socialOperatorAcceptance":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"POST",
+    "name":"socialOperatorAcceptance",
+    "path":"/v1/messaging/connections/finfolk-instagram/acceptance",
+    "transport":"rest",
+    "write":true
+  },
   "directoryDiscover":{
     "transport":"rest",
     "result-shape":{
@@ -1139,6 +1149,16 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "socialOperatorDisconnect":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"POST",
+    "name":"socialOperatorDisconnect",
+    "path":"/v1/messaging/connections/finfolk-instagram/disconnect",
+    "transport":"rest",
+    "write":true
+  },
   "mediaInbox":{
     "auth":true,
     "domain":"logbook",
@@ -1152,6 +1172,16 @@ export var operations = {
     "name":"tripDelete",
     "transport":"action",
     "write":true
+  },
+  "socialOperatorStatus":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"GET",
+    "name":"socialOperatorStatus",
+    "path":"/v1/messaging/connections/finfolk-instagram/status",
+    "transport":"rest",
+    "write":false
   },
   "siteImportStage":{
     "name":"siteImportStage",
@@ -1454,6 +1484,76 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "platformStatus":{
+    "transport":"action",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "required":["checkedAt","release","queues","failures","cleanupPending"],
+      "properties":{
+        "checkedAt":{"type":"string"},
+        "release":{"type":["string","null"]},
+        "expectedRelease":{"type":["string","null"]},
+        "overall":{"type":"string","enum":["healthy","unavailable"]},
+        "cleanupPending":{"type":"integer"},
+        "queues":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "required":["name","pending","processing","failed","overdue","oldest"],
+            "additionalProperties":false,
+            "properties":{
+              "name":{"type":"string"},
+              "pending":{"type":"integer"},
+              "processing":{"type":"integer"},
+              "failed":{"type":"integer"},
+              "overdue":{"type":"integer"},
+              "oldest":{"type":["number","null"]}
+            }
+          }
+        },
+        "failures":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":["id","source","code","observed"],
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "source":{"type":"string"},
+              "code":{"type":"string"},
+              "observed":{"type":"number"}
+            }
+          }
+        },
+        "services":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":["name","state"],
+            "properties":{
+              "name":{"type":"string"},
+              "state":{
+                "type":"string",
+                "enum":["healthy","unavailable","unknown","disabled","degraded"]
+              },
+              "detail":{"type":"string"},
+              "latencyMs":{"type":"number"}
+            }
+          }
+        }
+      }
+    },
+    "auth":true,
+    "admin":true,
+    "cache":false,
+    "name":"platformStatus",
+    "domain":"admin",
+    "native-rpc":"ret_platform_status",
+    "request-shape":{"type":"object","properties":{},"additionalProperties":false},
+    "write":false
+  },
   "publicEvent":{
     "transport":"rest",
     "result-shape":{
@@ -1676,6 +1776,16 @@ export var operations = {
         "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
       }
     }
+  },
+  "socialOperatorAuthorize":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"POST",
+    "name":"socialOperatorAuthorize",
+    "path":"/v1/messaging/connections/finfolk-instagram/authorization",
+    "transport":"rest",
+    "write":true
   },
   "postStatus":{
     "auth":true,
@@ -2637,6 +2747,16 @@ export var operations = {
     "domain":"trips",
     "name":"tripSave",
     "transport":"action",
+    "write":true
+  },
+  "socialOperatorPause":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"POST",
+    "name":"socialOperatorPause",
+    "path":"/v1/messaging/connections/finfolk-instagram/pause",
+    "transport":"rest",
     "write":true
   },
   "removePost":{
@@ -3834,6 +3954,25 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "socialOperatorActivate":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"POST",
+    "name":"socialOperatorActivate",
+    "path":"/v1/messaging/connections/finfolk-instagram/activation",
+    "transport":"rest",
+    "write":true
+  },
+  "instagramMemberDisconnect":{
+    "auth":true,
+    "domain":"instagram",
+    "method":"POST",
+    "name":"instagramMemberDisconnect",
+    "path":"/v1/me/instagram/disconnect",
+    "transport":"rest",
+    "write":true
+  },
   "report":{
     "auth":true,
     "domain":"community",
@@ -4685,6 +4824,16 @@ export var operations = {
     "domain":"instagram",
     "name":"instagramDiscoveryStatus",
     "transport":"action",
+    "write":false
+  },
+  "socialOperatorEvent":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"GET",
+    "name":"socialOperatorEvent",
+    "path":"/v1/messaging/connections/finfolk-instagram/events/:id",
+    "transport":"rest",
     "write":false
   },
   "stats":{
