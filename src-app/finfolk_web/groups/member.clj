@@ -4,7 +4,8 @@
 
 (def OPERATIONS
  (contracts/annotate
- {"buddyRead" {"name" "buddyRead" "auth" true "write" false "cache" false "transport" "action" "domain" "buddies"}
+ {"platformStatus" {"cache" false "auth" true "admin" true "domain" "admin" "name" "platformStatus" "transport" "action" "write" false}
+ "buddyRead" {"name" "buddyRead" "auth" true "write" false "cache" false "transport" "action" "domain" "buddies"}
  "buddyAction" {"name" "buddyAction" "retrySafe" true "auth" true "write" true "cache" false "transport" "action" "domain" "buddies"}
  "deleteAccount" {"auth" true
  "domain" "member"

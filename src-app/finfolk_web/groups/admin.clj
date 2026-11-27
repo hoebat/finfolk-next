@@ -2,7 +2,14 @@
   "Browser bindings for admin; HTTP permissions remain server-owned.")
 
 (def OPERATIONS
- {"messagingAuthorizationDiagnostics" {"admin" true "auth" true "domain" "admin" "method" "GET" "name" "messagingAuthorizationDiagnostics" "path" "/v1/admin/messaging/instagram/authorization/diagnostics" "transport" "rest" "write" false}
+ {"socialOperatorEvent" {"admin" true "auth" true "domain" "admin" "method" "GET" "name" "socialOperatorEvent" "path" "/v1/messaging/connections/finfolk-instagram/events/:id" "transport" "rest" "write" false}
+ "socialOperatorStatus" {"admin" true "auth" true "domain" "admin" "method" "GET" "name" "socialOperatorStatus" "path" "/v1/messaging/connections/finfolk-instagram/status" "transport" "rest" "write" false}
+ "socialOperatorAuthorize" {"admin" true "auth" true "domain" "admin" "method" "POST" "name" "socialOperatorAuthorize" "path" "/v1/messaging/connections/finfolk-instagram/authorization" "transport" "rest" "write" true}
+ "socialOperatorActivate" {"admin" true "auth" true "domain" "admin" "method" "POST" "name" "socialOperatorActivate" "path" "/v1/messaging/connections/finfolk-instagram/activation" "transport" "rest" "write" true}
+ "socialOperatorPause" {"admin" true "auth" true "domain" "admin" "method" "POST" "name" "socialOperatorPause" "path" "/v1/messaging/connections/finfolk-instagram/pause" "transport" "rest" "write" true}
+ "socialOperatorDisconnect" {"admin" true "auth" true "domain" "admin" "method" "POST" "name" "socialOperatorDisconnect" "path" "/v1/messaging/connections/finfolk-instagram/disconnect" "transport" "rest" "write" true}
+ "socialOperatorAcceptance" {"admin" true "auth" true "domain" "admin" "method" "POST" "name" "socialOperatorAcceptance" "path" "/v1/messaging/connections/finfolk-instagram/acceptance" "transport" "rest" "write" true}
+ "messagingAuthorizationDiagnostics" {"admin" true "auth" true "domain" "admin" "method" "GET" "name" "messagingAuthorizationDiagnostics" "path" "/v1/admin/messaging/instagram/authorization/diagnostics" "transport" "rest" "write" false}
  "messagingAuthorize" {"admin" true
  "auth" true
  "domain" "admin"

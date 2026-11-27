@@ -2,7 +2,9 @@
   "Browser bindings for instagram; HTTP permissions remain server-owned.")
 
 (def OPERATIONS
- {"instagramAccount" {"auth" true
+ {"instagramMemberDisconnect" {"auth" true "domain" "instagram" "method" "POST"
+   "name" "instagramMemberDisconnect" "path" "/v1/me/instagram/disconnect" "transport" "rest" "write" true}
+ "instagramAccount" {"auth" true
  "domain" "instagram"
  "method" "GET"
  "name" "instagramAccount"
