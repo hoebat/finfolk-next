@@ -310,7 +310,7 @@ export async function receive(ctx,message){
         console.error("Cache subscriber failed.");
       }
     }
-    if((state["status"] == "ready") || state["cached"]){
+    if(state["status"] == "ready"){
       if(!ctx["cachedReads"]){
         ctx["cachedReads"] = new Map();
       }
