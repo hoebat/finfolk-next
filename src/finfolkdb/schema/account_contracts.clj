@@ -71,8 +71,8 @@
   {:rpc rpc :arguments arguments :actor "server" :request request :result result :write write})
 (def OPERATIONS
   (merge directory/OPERATIONS events/OPERATIONS notes/OPERATIONS sites/OPERATIONS site-review/OPERATIONS
-  {"buddyRead" (operation "buddy_call" ["$actor" "$values"] {:type "object" :required ["mode"] :additionalProperties false :properties {:mode {:enum ["inbox" "thread"]} :conversation UUID :after {:type "integer" :minimum 0} :before {:type "integer" :minimum 1}}} {:type "object" :additionalProperties true} false)
-   "buddyAction" (operation "buddy_call" ["$actor" "$values"] {:type "object" :required ["mode"] :additionalProperties false :properties {:mode {:enum ["open" "send" "read" "archive"]} :conversation UUID :target UUID :session UUID :body {:type "string" :minLength 1 :maxLength 4000} :requestId UUID :sequence {:type "integer" :minimum 0} :archived {:type "boolean"}}} {:type "object" :additionalProperties true} true)
+  {"buddyRead" (operation "buddy_call" ["$actor" "$values"] {:type "object" :required ["mode"] :additionalProperties false :properties {:mode {:type "string" :enum ["inbox" "thread"]} :conversation UUID :after {:type "integer" :minimum 0} :before {:type "integer" :minimum 1}}} {:type "object" :additionalProperties true} false)
+   "buddyAction" (operation "buddy_call" ["$actor" "$values"] {:type "object" :required ["mode"] :additionalProperties false :properties {:mode {:type "string" :enum ["open" "send" "read" "archive"]} :conversation UUID :target UUID :session UUID :body {:type "string" :minLength 1 :maxLength 4000} :requestId UUID :sequence {:type "integer" :minimum 0} :archived {:type "boolean"}}} {:type "object" :additionalProperties true} true)
    "sessionPlans" (operation "session_plans" ["$actor"] EMPTY {:type "object" :additionalProperties true} false)
    "sessionPlanning" (operation "session_planning" ["$actor" "$values"]
      {:type "object" :required ["mode"] :additionalProperties false
