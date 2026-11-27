@@ -2692,6 +2692,16 @@ export var operations = {
     "transport":"action",
     "write":true
   },
+  "sessionPlans":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"sessionPlans",
+    "transport":"action",
+    "write":false,
+    "native-rpc":"session_plans",
+    "request-shape":{"type":"object","properties":{},"additionalProperties":false},
+    "result-shape":{"type":"object","additionalProperties":true}
+  },
   "finniesRedeem":{
     "transport":"rest",
     "method":"POST",
@@ -2747,6 +2757,34 @@ export var operations = {
     "path":"/v1/admin/messaging/events/:id/retry",
     "transport":"rest",
     "write":true
+  },
+  "sessionPlanning":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"sessionPlanning",
+    "transport":"action",
+    "write":true,
+    "native-rpc":"session_planning",
+    "request-shape":{
+      "type":"object",
+      "required":["mode"],
+      "additionalProperties":false,
+      "properties":{
+        "timezone":{"type":"string"},
+        "beachId":{"type":"string","format":"uuid"},
+        "startsAt":{"type":"string"},
+        "mode":{
+          "type":"string",
+          "enum":["list","save","invite","respond","start","finish","cancel"]
+        },
+        "meetingPoint":{"type":"string"},
+        "state":{"type":"string"},
+        "title":{"type":"string"},
+        "invitees":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "id":{"type":"string","format":"uuid"}
+      }
+    },
+    "result-shape":{"type":"object","additionalProperties":true}
   },
   "messagingEvents":{
     "admin":true,
@@ -3122,6 +3160,27 @@ export var operations = {
     "request-shape":{"type":"object","additionalProperties":false},
     "write":false
   },
+  "buddyRead":{
+    "transport":"action",
+    "result-shape":{"type":"object","additionalProperties":true},
+    "auth":true,
+    "cache":false,
+    "name":"buddyRead",
+    "domain":"buddies",
+    "native-rpc":"buddy_call",
+    "request-shape":{
+      "type":"object",
+      "required":["mode"],
+      "additionalProperties":false,
+      "properties":{
+        "mode":{"type":"string","enum":["inbox","thread"]},
+        "conversation":{"type":"string","format":"uuid"},
+        "after":{"type":"integer","minimum":0},
+        "before":{"type":"integer","minimum":1}
+      }
+    },
+    "write":false
+  },
   "siteNoteSave":{
     "transport":"rest",
     "result-shape":{
@@ -3422,6 +3481,32 @@ export var operations = {
     "domain":"trips",
     "name":"tripReport",
     "transport":"action",
+    "write":true
+  },
+  "buddyAction":{
+    "transport":"action",
+    "result-shape":{"type":"object","additionalProperties":true},
+    "auth":true,
+    "cache":false,
+    "name":"buddyAction",
+    "retrySafe":true,
+    "domain":"buddies",
+    "native-rpc":"buddy_call",
+    "request-shape":{
+      "type":"object",
+      "required":["mode"],
+      "additionalProperties":false,
+      "properties":{
+        "mode":{"type":"string","enum":["open","send","read","archive"]},
+        "conversation":{"type":"string","format":"uuid"},
+        "target":{"type":"string","format":"uuid"},
+        "session":{"type":"string","format":"uuid"},
+        "body":{"type":"string","minLength":1,"maxLength":4000},
+        "requestId":{"type":"string","format":"uuid"},
+        "sequence":{"type":"integer","minimum":0},
+        "archived":{"type":"boolean"}
+      }
+    },
     "write":true
   },
   "messagingAuthorize":{
@@ -4738,6 +4823,34 @@ export var operations = {
     "name":"reportPost",
     "transport":"action",
     "write":true
+  },
+  "sessionCheckin":{
+    "auth":true,
+    "domain":"logbook",
+    "name":"sessionCheckin",
+    "transport":"action",
+    "write":true,
+    "native-rpc":"session_checkin",
+    "request-shape":{
+      "type":"object",
+      "required":["mode"],
+      "additionalProperties":false,
+      "properties":{
+        "timezone":{"type":"string"},
+        "beachId":{"type":"string","format":"uuid"},
+        "startsAt":{"type":"string"},
+        "mode":{
+          "type":"string",
+          "enum":["list","save","invite","respond","start","finish","cancel"]
+        },
+        "meetingPoint":{"type":"string"},
+        "state":{"type":"string"},
+        "title":{"type":"string"},
+        "invitees":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "id":{"type":"string","format":"uuid"}
+      }
+    },
+    "result-shape":{"type":"object","additionalProperties":true}
   },
   "finniesAdmin":{
     "transport":"rest",

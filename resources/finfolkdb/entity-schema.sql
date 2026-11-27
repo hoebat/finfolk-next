@@ -11487,7 +11487,7 @@ BEGIN
       v_time := ("split_part"(v_cursor,':',1))::BIGINT;
       v_after := "split_part"(v_cursor,':',2);
     END IF;
-    EXECUTE 'SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY time_created DESC,id DESC),''[]''::jsonb) FROM (SELECT * FROM finfolk."DiveSession" WHERE owner_id=($1->>''actor'')::uuid AND (time_created,id)<(($1->>''time'')::bigint,($1->>''after'')::uuid) AND (NOT ($1->>''public'')::boolean OR detail->>''visibility''=''public'') ORDER BY time_created DESC,id DESC LIMIT 51) r' INTO o_rows USING jsonb_build_object(
+    EXECUTE 'SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY time_created DESC,id DESC),''[]''::jsonb) FROM (SELECT * FROM finfolk."DiveSession" WHERE coalesce(detail->''plan''->>''state'',''completed'')=''completed'' AND owner_id=($1->>''actor'')::uuid AND (time_created,id)<(($1->>''time'')::bigint,($1->>''after'')::uuid) AND (NOT ($1->>''public'')::boolean OR detail->>''visibility''=''public'') ORDER BY time_created DESC,id DESC LIMIT 51) r' INTO o_rows USING jsonb_build_object(
       'actor',
       i_user,
       'time',
@@ -11580,6 +11580,9 @@ BEGIN
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_old;
     IF o_old is null  THEN
       RAISE EXCEPTION USING errcode = 'P0002',message = 'Session unavailable';
+    END IF;
+    IF (i_visibility = 'public') AND (coalesce(((o_old -> 'detail') -> 'plan') ->> 'state','completed') != 'completed') THEN
+      RAISE EXCEPTION 'Finish the session before publishing';
     END IF;
     IF i_visibility = 'public' THEN
       IF NOT coalesce(i_verified,false) THEN
@@ -12322,6 +12325,647 @@ CREATE TABLE IF NOT EXISTS "finfolk"."UserReport" (
   CONSTRAINT one_target CHECK (("target_id" IS NOT NULL AND "trip_id" IS NULL) OR ("target_id" IS NULL AND "trip_id" IS NOT NULL))
 );
 CREATE INDEX ON "finfolk"."UserReport" ("author_id");
+
+-- finfolkdb.fn.user.user-community/record-community-checkin 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".record_community_checkin(
+  i_user UUID,
+  i_site UUID,
+  i_verified BOOLEAN
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  IF NOT coalesce(i_verified,false) THEN
+    RAISE EXCEPTION USING
+      errcode = '42501',
+      message = 'Verify your email before checking in'
+    ;
+  END IF;
+  DECLARE
+    o_site JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+      WHERE "id" = i_site
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+    IF o_site is null  THEN
+      RAISE EXCEPTION USING errcode = 'P0002',message = 'Choose an existing dive site';
+    END IF;
+    DECLARE
+      o_row JSONB;
+      v_count INT;
+      v_day DATE;
+      v_exists BOOLEAN;
+    BEGIN
+      v_day := ("timezone"(o_site ->> 'timezone',now()))::DATE;
+      SELECT exists(SELECT 1 FROM "finfolk"."UserCheckin"
+      WHERE "user_id" = i_user AND "site_id" = i_site AND "visit_day" = v_day) INTO v_exists;
+      v_count := 0;
+      o_row := null;
+      IF NOT v_exists THEN
+        DECLARE
+        o_created JSONB;
+      BEGIN
+        WITH j_ret AS (  
+            INSERT INTO "finfolk"."UserCheckin" ("user_id","site_id","visit_day") VALUES ((i_user)::UUID,(i_site)::UUID,(v_day)::DATE) RETURNING
+              "id",
+              "user_id",
+              "site_id",
+              "visit_day",
+              "time_created",
+              "checked_in_at",
+              "checked_out_at")
+          SELECT to_jsonb(j_ret) FROM j_ret INTO o_created;
+      END;
+      END IF;
+      DECLARE
+        o_visits JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          SELECT "visit_day" FROM "finfolk"."UserCheckin"
+          WHERE "user_id" = i_user
+          AND "site_id" = i_site
+          AND "visit_day" >= v_day - 29
+          ORDER BY "visit_day" ASC
+          LIMIT 31)
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_visits;
+        FOR o_row IN SELECT jsonb_array_elements(coalesce(o_visits,('[]')::JSONB)) LOOP
+          IF (o_row ->> 'visit_day')::DATE <= v_day THEN
+            v_count := (v_count + 1);
+          END IF;
+        END LOOP;
+      END;
+      RETURN jsonb_build_object('day',(v_day)::TEXT,'count',v_count,'selfReported',true);
+    END;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-community/remove-community-checkin 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".remove_community_checkin(
+  i_user UUID,
+  i_site UUID,
+  i_day DATE
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  IF i_day is null  THEN
+    RAISE EXCEPTION USING errcode = '22023',message = 'Choose a visit day';
+  END IF;
+  DECLARE
+    o_removed JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      DELETE FROM "finfolk"."UserCheckin" WHERE "user_id" = i_user AND "site_id" = i_site AND "visit_day" = i_day
+      RETURNING
+        "id",
+        "user_id",
+        "site_id",
+        "visit_day",
+        "time_created",
+        "checked_in_at",
+        "checked_out_at")
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_removed;
+    RETURN jsonb_build_object('removed',true);
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-community/ret-community-checkins 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_community_checkins(
+  i_user UUID
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_result JSONB;
+    o_row JSONB;
+    o_visits JSONB;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "user_id",
+        "site_id",
+        "visit_day",
+        "time_created",
+        "checked_in_at",
+        "checked_out_at"
+      FROM "finfolk"."UserCheckin"
+      WHERE "user_id" = i_user
+      ORDER BY "visit_day","site_id" DESC
+      LIMIT 100)
+    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_visits;
+    o_row := null;
+    o_result := ('[]')::JSONB;
+    FOR o_row IN SELECT jsonb_array_elements(coalesce(o_visits,('[]')::JSONB)) LOOP
+      DECLARE
+        o_site JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+          WHERE "id" = (o_row ->> 'site_id')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+        o_result := (o_result || jsonb_build_array(jsonb_build_object(
+          'beach_id',
+          o_row -> 'site_id',
+          'day',
+          o_row -> 'visit_day',
+          'name',
+          o_site -> 'name'
+        )));
+      END;
+    END LOOP;
+    RETURN o_result;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-community/discover-community-people 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".discover_community_people(
+  i_user UUID,
+  i_query JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  DECLARE
+    o_result JSONB;
+    o_row JSONB;
+    o_rows JSONB;
+    v_after TEXT;
+    v_availability TEXT;
+    v_cursor TEXT;
+    v_experience TEXT;
+    v_index INT;
+    v_next TEXT;
+    v_rank TEXT;
+    v_seed TEXT;
+    v_site TEXT;
+    v_zone TEXT;
+  BEGIN
+    v_seed := (i_query ->> 'seed');
+    v_availability := coalesce(i_query ->> 'availability','');
+    v_experience := coalesce(i_query ->> 'experience','');
+    v_site := coalesce(i_query ->> 'beachId','');
+    v_cursor := coalesce(i_query ->> 'cursor','');
+    v_rank := '';
+    v_after := '00000000-0000-0000-0000-000000000000';
+    v_zone := 'UTC';
+    o_rows := null;
+    o_row := null;
+    o_result := ('[]')::JSONB;
+    v_next := null;
+    v_index := 0;
+    IF v_seed IS NULL OR NOT "regexp_like"(v_seed,'^[A-Za-z0-9_-]{8,64}$') THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Choose a new people mix';
+    END IF;
+    IF NOT jsonb_exists(
+      ('["","weekday mornings","weekday afternoons","weekend mornings","weekend afternoons"]')::JSONB,
+      v_availability
+    ) OR NOT jsonb_exists(
+      ('["","new","comfortable","experienced"]')::JSONB,
+      v_experience
+    ) THEN
+      RAISE EXCEPTION USING errcode = '22023',message = 'Choose listed people filters';
+    END IF;
+    IF v_site != '' THEN
+      DECLARE
+      o_site JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+          WHERE "id" = (v_site)::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+        IF o_site is null  THEN
+          RAISE EXCEPTION USING errcode = 'P0002',message = 'Choose an existing dive site';
+        END IF;
+        v_zone := (o_site ->> 'timezone');
+    END;
+    END IF;
+    DECLARE
+      v_context TEXT;
+      v_day DATE;
+    BEGIN
+      v_context := "md5"(
+        (i_user)::TEXT || ':' || v_seed || ':' || (jsonb_build_array(v_site,v_availability,v_experience))::TEXT
+      );
+      v_day := ("timezone"(v_zone,now()))::DATE;
+      IF v_cursor != '' THEN
+        IF NOT "regexp_like"(v_cursor,'^[0-9a-f]{32}[.][0-9a-f]{32}[.][0-9a-f-]{36}$') OR ("split_part"(v_cursor,'.',1) != v_context) THEN
+          RAISE EXCEPTION USING
+            errcode = '22023',
+            message = 'This people mix changed; start a new mix'
+          ;
+        END IF;
+        v_rank := "split_part"(v_cursor,'.',2);
+        v_after := "split_part"(v_cursor,'.',3);
+      END IF;
+      EXECUTE 'WITH p AS (SELECT ($1->>''actor'')::uuid AS actor,$1->>''seed'' AS seed,nullif($1->>''site'','''')::uuid AS site,($1->>''day'')::date AS day,$1->>''availability'' AS availability,$1->>''experience'' AS experience,$1->>''rank'' AS rank,($1->>''after'')::uuid AS after), eligible AS (  SELECT m.id,m.profile,md5(p.actor::text||'':''||p.seed||'':''||m.id::text) AS mix_rank,  (SELECT CASE WHEN c.status IN (''pending'',''accepted'') THEN c.status::text ELSE NULL END FROM finfolk."UserConnection" c WHERE c.user_id=least(p.actor,m.id) AND c.target_id=greatest(p.actor,m.id)) AS connection,  CASE WHEN p.site IS NULL THEN 0 ELSE (SELECT count(*) FROM finfolk."UserCheckin" v WHERE v.user_id=m.id AND v.site_id=p.site AND v.visit_day BETWEEN p.day-29 AND p.day) END AS visits  FROM finfolk."User" m CROSS JOIN p WHERE m.id<>p.actor AND NOT m.deleted AND m.profile->''open''=''true''::jsonb  AND (p.availability='''' OR coalesce(m.profile->''availability'',''[]''::jsonb)?p.availability)  AND (p.experience='''' OR m.profile->>''experience''=p.experience)  AND NOT EXISTS(SELECT 1 FROM finfolk."UserBlock" b WHERE (b.owner_id=p.actor AND b.target_id=m.id) OR (b.owner_id=m.id AND b.target_id=p.actor))  AND NOT EXISTS(SELECT 1 FROM finfolk."UserConnection" c WHERE c.user_id=least(p.actor,m.id) AND c.target_id=greatest(p.actor,m.id) AND c.status=''declined'')  ), page AS (SELECT e.* FROM eligible e CROSS JOIN p WHERE (p.site IS NULL OR e.visits>0 OR coalesce(e.profile->''beaches'',''[]''::jsonb)?p.site::text) AND (e.mix_rank,e.id)>(p.rank,p.after) ORDER BY e.mix_rank,e.id LIMIT 7)  SELECT coalesce(jsonb_agg(jsonb_build_object(''id'',id,''displayName'',coalesce(profile->>''displayName'',''Diver''),''open'',true,''bio'',coalesce(profile->>''bio'',''''),''instagram'',coalesce(profile->>''instagram'',''''),''tiktok'',coalesce(profile->>''tiktok'',''''),''portrait'',coalesce(profile->>''portrait'',''''),''availability'',coalesce(profile->''availability'',''[]''::jsonb),''experience'',coalesce(profile->>''experience'',''''),''beaches'',coalesce(profile->''beaches'',''[]''::jsonb),''regular'',visits>=8,''recent'',visits>0,''connection'',connection,''mix_rank'',mix_rank) ORDER BY mix_rank,id),''[]''::jsonb) FROM page' INTO o_rows USING jsonb_build_object(
+        'actor',
+        i_user,
+        'seed',
+        v_seed,
+        'site',
+        v_site,
+        'day',
+        v_day,
+        'availability',
+        v_availability,
+        'experience',
+        v_experience,
+        'rank',
+        v_rank,
+        'after',
+        v_after
+      );
+      FOR o_row IN SELECT jsonb_array_elements(o_rows) LOOP
+        IF v_index < 6 THEN
+          o_result := (o_result || jsonb_build_array(o_row - 'mix_rank'));
+          IF v_index = 5 THEN
+            v_next := (v_context || '.' || (o_row ->> 'mix_rank') || '.' || (o_row ->> 'id'));
+          END IF;
+        END IF;
+        v_index := (v_index + 1);
+      END LOOP;
+      IF jsonb_array_length(o_rows) <= 6 THEN
+        v_next := null;
+      END IF;
+      RETURN jsonb_build_object('people',o_result,'cursor',v_next);
+    END;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-session-planning/session-planning 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".session_planning(
+  i_user UUID,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  PERFORM "finfolk_rpc".ret_account(i_user);
+  PERFORM "pg_advisory_xact_lock"("hashtextextended"('session-planning',0));
+  DECLARE
+    o_list JSONB;
+    o_op JSONB;
+    o_plan JSONB;
+    o_row JSONB;
+    v_id UUID;
+    v_member TEXT;
+    v_mode TEXT;
+  BEGIN
+    v_mode := (i_values ->> 'mode');
+    v_id := (i_values ->> 'id')::UUID;
+    o_op := "finfolk".op_fn('session-planning',i_user,('{}')::JSONB);
+    o_row := null;
+    o_plan := null;
+    o_list := null;
+    v_member := null;
+    IF v_mode = 'list' THEN
+      EXECUTE 'SELECT coalesce(jsonb_agg(jsonb_build_object(''id'',s.id,''ownerId'',s.owner_id,''locationName'',s.detail->>''locationName'',''beachId'',s.site_id,''plan'',s.detail->''plan'') ORDER BY s.detail->''plan''->>''startsAt''),''[]''::jsonb) FROM finfolk."DiveSession" s JOIN finfolk."User" u ON u.id=s.owner_id WHERE NOT u.deleted AND s.detail ? ''plan'' AND (s.owner_id=$1 OR s.detail->''plan''->''members'' ? $1::text) AND NOT finfolk.is_user_blocked($1,s.owner_id)' INTO o_list USING i_user;
+      RETURN jsonb_build_object(
+        'sessions',
+        o_list,
+        'connections',
+        "finfolk_rpc".ret_account_connections(i_user)
+      );
+    END IF;
+    DECLARE
+      o_loaded JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "owner_id",
+          "site_id",
+          "detail",
+          "audit_id",
+          "rev_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."DiveSession"
+        WHERE "id" = v_id
+        LIMIT 1
+        FOR UPDATE)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_loaded;
+      o_row := o_loaded;
+    END;
+    IF (v_mode = 'save') AND o_row IS NULL THEN
+      EXECUTE 'SELECT to_jsonb(s) FROM finfolk."DiveSession" s WHERE owner_id=($1->>''actor'')::uuid AND detail->''plan''->>''requestId''=$1->>''id'' LIMIT 1' INTO o_row USING jsonb_build_object('actor',i_user,'id',v_id);
+      IF o_row is not null  THEN
+        RETURN jsonb_build_object('id',o_row -> 'id');
+      END IF;
+    END IF;
+    o_plan := ((o_row -> 'detail') -> 'plan');
+    IF v_mode = 'invite' THEN
+      IF o_row IS NULL OR ((o_row ->> 'owner_id')::UUID != i_user) OR NOT jsonb_exists(
+        ('["upcoming","current"]')::JSONB,
+        coalesce(o_plan ->> 'state','')
+      ) THEN
+        RAISE EXCEPTION 'Organiser access to an active session required';
+      END IF;
+      FOR v_member IN SELECT jsonb_array_elements_text(coalesce(i_values -> 'invitees',('[]')::JSONB)) LOOP
+      DECLARE
+          v_connected BOOLEAN;
+          v_target UUID;
+        BEGIN
+          v_target := (v_member)::UUID;
+          SELECT exists(SELECT 1 FROM "finfolk"."UserConnection"
+          WHERE "user_id" = least(i_user,v_target)
+          AND "target_id" = greatest(i_user,v_target)
+          AND "status" = ('accepted')::"finfolk"."EnumUserConnectionStatus") INTO v_connected;
+          IF (v_target = i_user) OR "finfolk".is_user_blocked(i_user,v_target) OR NOT v_connected THEN
+            RAISE EXCEPTION 'Invite an available connection';
+          END IF;
+          IF NOT jsonb_exists(o_plan -> 'members',(v_target)::TEXT) THEN
+            o_plan := "jsonb_set"(o_plan,"string_to_array"('members,' || (v_target)::TEXT,','),jsonb_build_object(
+              'name',
+              ("finfolk_rpc".ret_account(v_target) -> 'profile') ->> 'displayName',
+              'state',
+              'invited'
+            ),true);
+          END IF;
+        END;
+    END LOOP;
+      DECLARE
+      o_saved JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          UPDATE "finfolk"."DiveSession" SET
+            "detail" = "finfolk".as_jsonb(
+            ((o_row -> 'detail') || jsonb_build_object('plan',o_plan))::JSONB
+          ),
+            "op_updated" = (o_op ->> 'id')::UUID,
+            "time_updated" = (o_op ->> 'time')::BIGINT
+          WHERE "id" = v_id AND "owner_id" = i_user
+          RETURNING
+            "id",
+            "owner_id",
+            "site_id",
+            "audit_id",
+            "rev_id",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+    END;
+      RETURN jsonb_build_object('id',v_id);
+    END IF;
+    IF v_mode = 'save' THEN
+      IF o_row IS NOT NULL AND ((o_row ->> 'owner_id')::UUID != i_user) THEN
+        RAISE EXCEPTION 'Session unavailable';
+      END IF;
+      IF o_row IS NOT NULL AND o_plan IS NULL THEN
+        RAISE EXCEPTION 'Session unavailable';
+      END IF;
+      IF o_plan IS NOT NULL AND jsonb_exists(('["completed","cancelled"]')::JSONB,o_plan ->> 'state') THEN
+        RAISE EXCEPTION 'Session is closed';
+      END IF;
+      IF ("btrim"(coalesce(i_values ->> 'title','')) = '') OR ("char_length"(i_values ->> 'title') > 160) OR ("char_length"(coalesce(i_values ->> 'meetingPoint','')) > 500) OR NOT jsonb_exists(
+        ('["upcoming","current"]')::JSONB,
+        coalesce(i_values ->> 'state','')
+      ) THEN
+        RAISE EXCEPTION 'Enter a title and session type';
+      END IF;
+      DECLARE
+      v_date TEXT;
+        v_start TIMESTAMPTZ;
+        v_zone TEXT;
+    BEGIN
+      v_start := (i_values ->> 'startsAt')::TIMESTAMPTZ;
+        v_zone := (i_values ->> 'timezone');
+        v_date := "to_char"("timezone"(v_zone,v_start),'YYYY-MM-DD');
+        IF v_start is null  THEN
+          RAISE EXCEPTION 'Choose a meeting time';
+        END IF;
+        IF ((i_values ->> 'state') = 'upcoming') AND (v_start <= now()) THEN
+          RAISE EXCEPTION 'Choose a future meeting time';
+        END IF;
+        IF o_row is null  THEN
+          DECLARE
+          o_created JSONB;
+        BEGIN
+          o_created := "finfolk_rpc".save_private_session(i_user,null,jsonb_build_object(
+              'date',
+              v_date,
+              'locationName',
+              'Session',
+              'beachId',
+              i_values ->> 'beachId'
+            ));
+            v_id := (o_created ->> 'id')::UUID;
+            DECLARE
+              o_loaded JSONB;
+            BEGIN
+              WITH j_ret AS (  
+                SELECT
+                  "id",
+                  "owner_id",
+                  "site_id",
+                  "detail",
+                  "audit_id",
+                  "rev_id",
+                  "op_created",
+                  "op_updated",
+                  "time_created",
+                  "time_updated"
+                FROM "finfolk"."DiveSession"
+                WHERE "id" = v_id
+                LIMIT 1)
+              SELECT to_jsonb(j_ret) FROM j_ret INTO o_loaded;
+              o_row := o_loaded;
+            END;
+        END;
+        END IF;
+        o_plan := (coalesce(o_plan,('{}')::JSONB) || jsonb_build_object(
+          'requestId',
+          coalesce(o_plan ->> 'requestId',i_values ->> 'id'),
+          'title',
+          i_values ->> 'title',
+          'startsAt',
+          v_start,
+          'timezone',
+          v_zone,
+          'meetingPoint',
+          coalesce(i_values ->> 'meetingPoint',''),
+          'state',
+          coalesce(o_plan ->> 'state',i_values ->> 'state'),
+          'members',
+          coalesce(o_plan -> 'members',('{}')::JSONB)
+        ));
+        FOR v_member IN SELECT jsonb_array_elements_text(coalesce(i_values -> 'invitees',('[]')::JSONB)) LOOP
+          DECLARE
+            v_connected BOOLEAN;
+            v_target UUID;
+          BEGIN
+            v_target := (v_member)::UUID;
+            SELECT exists(SELECT 1 FROM "finfolk"."UserConnection"
+            WHERE "user_id" = least(i_user,v_target)
+            AND "target_id" = greatest(i_user,v_target)
+            AND "status" = ('accepted')::"finfolk"."EnumUserConnectionStatus") INTO v_connected;
+            IF NOT v_connected OR "finfolk".is_user_blocked(i_user,v_target) OR (v_target = i_user) THEN
+              RAISE EXCEPTION 'Invite an available connection';
+            END IF;
+            IF NOT jsonb_exists(o_plan -> 'members',(v_target)::TEXT) THEN
+              o_plan := "jsonb_set"(o_plan,"string_to_array"('members,' || (v_target)::TEXT,','),jsonb_build_object(
+                'name',
+                ("finfolk_rpc".ret_account(v_target) -> 'profile') ->> 'displayName',
+                'state',
+                'invited'
+              ),true);
+            END IF;
+          END;
+        END LOOP;
+    END;
+      DECLARE
+      o_site JSONB;
+    BEGIN
+      WITH j_ret AS (  
+          SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
+          WHERE "id" = (i_values ->> 'beachId')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
+        IF o_site is null  THEN
+          RAISE EXCEPTION 'Choose an existing beach';
+        END IF;
+        DECLARE
+          o_saved JSONB;
+        BEGIN
+          WITH j_ret AS (  
+            UPDATE "finfolk"."DiveSession" SET
+              "site_id" = (i_values ->> 'beachId')::UUID,
+              "detail" = "finfolk".as_jsonb(((o_row -> 'detail') || jsonb_build_object('locationName',o_site ->> 'name','date',"to_char"(
+              "timezone"(o_plan ->> 'timezone',(o_plan ->> 'startsAt')::TIMESTAMPTZ),
+              'YYYY-MM-DD'
+            ),'plan',o_plan))::JSONB),
+              "op_updated" = (o_op ->> 'id')::UUID,
+              "time_updated" = (o_op ->> 'time')::BIGINT
+            WHERE "id" = v_id AND "owner_id" = i_user
+            RETURNING
+              "id",
+              "owner_id",
+              "site_id",
+              "audit_id",
+              "rev_id",
+              "op_created",
+              "op_updated",
+              "time_created",
+              "time_updated")
+          SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+        END;
+    END;
+      RETURN jsonb_build_object('id',v_id);
+    END IF;
+    IF o_plan IS NULL OR "finfolk".is_user_blocked(i_user,(o_row ->> 'owner_id')::UUID) THEN
+      RAISE EXCEPTION 'Session unavailable';
+    END IF;
+    IF v_mode = 'respond' THEN
+      IF NOT jsonb_exists(o_plan -> 'members',(i_user)::TEXT) OR NOT jsonb_exists(
+        ('["joined","declined"]')::JSONB,
+        coalesce(i_values ->> 'state','')
+      ) OR jsonb_exists(('["completed","cancelled"]')::JSONB,o_plan ->> 'state') THEN
+        RAISE EXCEPTION 'Invitation unavailable';
+      END IF;
+      o_plan := "jsonb_set"(
+        o_plan,
+        "string_to_array"('members,' || (i_user)::TEXT || ',state',','),
+        i_values -> 'state',
+        false
+      );
+    END IF;
+    IF v_mode != 'respond' THEN
+      IF (o_row ->> 'owner_id')::UUID != i_user THEN
+        RAISE EXCEPTION 'Organiser access required';
+      END IF;
+      IF NOT (((v_mode = 'start') AND ((o_plan ->> 'state') = 'upcoming')) OR ((v_mode = 'finish') AND ((o_plan ->> 'state') = 'current')) OR ((v_mode = 'cancel') AND jsonb_exists(('["upcoming","current"]')::JSONB,o_plan ->> 'state'))) THEN
+        RAISE EXCEPTION 'Session cannot make that transition';
+      END IF;
+      o_plan := (o_plan || jsonb_build_object('state',CASE WHEN v_mode = 'start' THEN 'current'
+    WHEN v_mode = 'finish' THEN 'completed'
+    WHEN true THEN 'cancelled'
+    END));
+    END IF;
+    DECLARE
+      o_saved JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        UPDATE "finfolk"."DiveSession" SET
+          "detail" = "finfolk".as_jsonb(
+          ((o_row -> 'detail') || jsonb_build_object('plan',o_plan))::JSONB
+        ),
+          "op_updated" = (o_op ->> 'id')::UUID,
+          "time_updated" = (o_op ->> 'time')::BIGINT
+        WHERE "id" = v_id
+        RETURNING
+          "id",
+          "owner_id",
+          "site_id",
+          "audit_id",
+          "rev_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated")
+      SELECT jsonb_agg(j_ret) FROM j_ret INTO o_saved;
+      RETURN jsonb_build_object('id',v_id);
+    END;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-session-planning/session-plans 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".session_plans(
+  i_user UUID
+) RETURNS JSONB AS $$
+BEGIN
+  RETURN "finfolk_rpc".session_planning(i_user,jsonb_build_object('mode','list'));
+END;
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.user.user-session-planning/session-checkin 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".session_checkin(
+  i_user UUID,
+  i_verified BOOLEAN,
+  i_values JSONB
+) RETURNS JSONB AS $$
+BEGIN
+  IF NOT coalesce(i_verified,false) THEN
+    RAISE EXCEPTION 'Verify your email before checking in';
+  END IF;
+  IF NOT (((i_values ->> 'mode') = 'start') OR (((i_values ->> 'mode') = 'save') AND ((i_values ->> 'state') = 'current'))) THEN
+    RAISE EXCEPTION 'Choose a current session';
+  END IF;
+  DECLARE
+    o_result JSONB;
+    o_row JSONB;
+  BEGIN
+    o_result := "finfolk_rpc".session_planning(i_user,i_values);
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "owner_id",
+        "site_id",
+        "audit_id",
+        "rev_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."DiveSession"
+      WHERE "id" = (o_result ->> 'id')::UUID AND "owner_id" = i_user
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_row;
+    PERFORM "finfolk_rpc".record_community_checkin(i_user,(o_row ->> 'site_id')::UUID,i_verified);
+    RETURN o_result;
+  END;
+END;
+$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.social.social-policy/social-member-allowed 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".social_member_allowed(
@@ -15308,280 +15952,6 @@ CREATE TABLE IF NOT EXISTS "finfolk"."MediaImport" (
   CONSTRAINT fk_media_import_connection_owner FOREIGN KEY (owner_id,connection_id) REFERENCES "finfolk"."SocialConnection"(user_id,id)
 );
 CREATE INDEX ON "finfolk"."MediaImport" ("owner_id");
-
--- finfolkdb.fn.user.user-community/record-community-checkin 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".record_community_checkin(
-  i_user UUID,
-  i_site UUID,
-  i_verified BOOLEAN
-) RETURNS JSONB AS $$
-BEGIN
-  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
-  PERFORM "finfolk_rpc".ret_account(i_user);
-  IF NOT coalesce(i_verified,false) THEN
-    RAISE EXCEPTION USING
-      errcode = '42501',
-      message = 'Verify your email before checking in'
-    ;
-  END IF;
-  DECLARE
-    o_site JSONB;
-  BEGIN
-    WITH j_ret AS (  
-      SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
-      WHERE "id" = i_site
-      LIMIT 1)
-    SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
-    IF o_site is null  THEN
-      RAISE EXCEPTION USING errcode = 'P0002',message = 'Choose an existing dive site';
-    END IF;
-    DECLARE
-      o_row JSONB;
-      v_count INT;
-      v_day DATE;
-      v_exists BOOLEAN;
-    BEGIN
-      v_day := ("timezone"(o_site ->> 'timezone',now()))::DATE;
-      SELECT exists(SELECT 1 FROM "finfolk"."UserCheckin"
-      WHERE "user_id" = i_user AND "site_id" = i_site AND "visit_day" = v_day) INTO v_exists;
-      v_count := 0;
-      o_row := null;
-      IF NOT v_exists THEN
-        DECLARE
-        o_created JSONB;
-      BEGIN
-        WITH j_ret AS (  
-            INSERT INTO "finfolk"."UserCheckin" ("user_id","site_id","visit_day") VALUES ((i_user)::UUID,(i_site)::UUID,(v_day)::DATE) RETURNING
-              "id",
-              "user_id",
-              "site_id",
-              "visit_day",
-              "time_created",
-              "checked_in_at",
-              "checked_out_at")
-          SELECT to_jsonb(j_ret) FROM j_ret INTO o_created;
-      END;
-      END IF;
-      DECLARE
-        o_visits JSONB;
-      BEGIN
-        WITH j_ret AS (  
-          SELECT "visit_day" FROM "finfolk"."UserCheckin"
-          WHERE "user_id" = i_user
-          AND "site_id" = i_site
-          AND "visit_day" >= v_day - 29
-          ORDER BY "visit_day" ASC
-          LIMIT 31)
-        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_visits;
-        FOR o_row IN SELECT jsonb_array_elements(coalesce(o_visits,('[]')::JSONB)) LOOP
-          IF (o_row ->> 'visit_day')::DATE <= v_day THEN
-            v_count := (v_count + 1);
-          END IF;
-        END LOOP;
-      END;
-      RETURN jsonb_build_object('day',(v_day)::TEXT,'count',v_count,'selfReported',true);
-    END;
-  END;
-END;
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.user.user-community/remove-community-checkin 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".remove_community_checkin(
-  i_user UUID,
-  i_site UUID,
-  i_day DATE
-) RETURNS JSONB AS $$
-BEGIN
-  PERFORM "pg_advisory_xact_lock"("hashtextextended"((i_user)::TEXT,0));
-  PERFORM "finfolk_rpc".ret_account(i_user);
-  IF i_day is null  THEN
-    RAISE EXCEPTION USING errcode = '22023',message = 'Choose a visit day';
-  END IF;
-  DECLARE
-    o_removed JSONB;
-  BEGIN
-    WITH j_ret AS (  
-      DELETE FROM "finfolk"."UserCheckin" WHERE "user_id" = i_user AND "site_id" = i_site AND "visit_day" = i_day
-      RETURNING
-        "id",
-        "user_id",
-        "site_id",
-        "visit_day",
-        "time_created",
-        "checked_in_at",
-        "checked_out_at")
-    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_removed;
-    RETURN jsonb_build_object('removed',true);
-  END;
-END;
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.user.user-community/ret-community-checkins 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_community_checkins(
-  i_user UUID
-) RETURNS JSONB AS $$
-BEGIN
-  PERFORM "finfolk_rpc".ret_account(i_user);
-  DECLARE
-    o_result JSONB;
-    o_row JSONB;
-    o_visits JSONB;
-  BEGIN
-    WITH j_ret AS (  
-      SELECT
-        "id",
-        "user_id",
-        "site_id",
-        "visit_day",
-        "time_created",
-        "checked_in_at",
-        "checked_out_at"
-      FROM "finfolk"."UserCheckin"
-      WHERE "user_id" = i_user
-      ORDER BY "visit_day","site_id" DESC
-      LIMIT 100)
-    SELECT jsonb_agg(j_ret) FROM j_ret INTO o_visits;
-    o_row := null;
-    o_result := ('[]')::JSONB;
-    FOR o_row IN SELECT jsonb_array_elements(coalesce(o_visits,('[]')::JSONB)) LOOP
-      DECLARE
-        o_site JSONB;
-      BEGIN
-        WITH j_ret AS (  
-          SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
-          WHERE "id" = (o_row ->> 'site_id')::UUID
-          LIMIT 1)
-        SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
-        o_result := (o_result || jsonb_build_array(jsonb_build_object(
-          'beach_id',
-          o_row -> 'site_id',
-          'day',
-          o_row -> 'visit_day',
-          'name',
-          o_site -> 'name'
-        )));
-      END;
-    END LOOP;
-    RETURN o_result;
-  END;
-END;
-$$ LANGUAGE 'plpgsql';
-
--- finfolkdb.fn.user.user-community/discover-community-people 
-CREATE OR REPLACE FUNCTION "finfolk_rpc".discover_community_people(
-  i_user UUID,
-  i_query JSONB
-) RETURNS JSONB AS $$
-BEGIN
-  PERFORM "finfolk_rpc".ret_account(i_user);
-  DECLARE
-    o_result JSONB;
-    o_row JSONB;
-    o_rows JSONB;
-    v_after TEXT;
-    v_availability TEXT;
-    v_cursor TEXT;
-    v_experience TEXT;
-    v_index INT;
-    v_next TEXT;
-    v_rank TEXT;
-    v_seed TEXT;
-    v_site TEXT;
-    v_zone TEXT;
-  BEGIN
-    v_seed := (i_query ->> 'seed');
-    v_availability := coalesce(i_query ->> 'availability','');
-    v_experience := coalesce(i_query ->> 'experience','');
-    v_site := coalesce(i_query ->> 'beachId','');
-    v_cursor := coalesce(i_query ->> 'cursor','');
-    v_rank := '';
-    v_after := '00000000-0000-0000-0000-000000000000';
-    v_zone := 'UTC';
-    o_rows := null;
-    o_row := null;
-    o_result := ('[]')::JSONB;
-    v_next := null;
-    v_index := 0;
-    IF v_seed IS NULL OR NOT "regexp_like"(v_seed,'^[A-Za-z0-9_-]{8,64}$') THEN
-      RAISE EXCEPTION USING errcode = '22023',message = 'Choose a new people mix';
-    END IF;
-    IF NOT jsonb_exists(
-      ('["","weekday mornings","weekday afternoons","weekend mornings","weekend afternoons"]')::JSONB,
-      v_availability
-    ) OR NOT jsonb_exists(
-      ('["","new","comfortable","experienced"]')::JSONB,
-      v_experience
-    ) THEN
-      RAISE EXCEPTION USING errcode = '22023',message = 'Choose listed people filters';
-    END IF;
-    IF v_site != '' THEN
-      DECLARE
-      o_site JSONB;
-    BEGIN
-      WITH j_ret AS (  
-          SELECT "id","key","name","timezone","area_name","state" FROM "finfolk"."Site"
-          WHERE "id" = (v_site)::UUID
-          LIMIT 1)
-        SELECT to_jsonb(j_ret) FROM j_ret INTO o_site;
-        IF o_site is null  THEN
-          RAISE EXCEPTION USING errcode = 'P0002',message = 'Choose an existing dive site';
-        END IF;
-        v_zone := (o_site ->> 'timezone');
-    END;
-    END IF;
-    DECLARE
-      v_context TEXT;
-      v_day DATE;
-    BEGIN
-      v_context := "md5"(
-        (i_user)::TEXT || ':' || v_seed || ':' || (jsonb_build_array(v_site,v_availability,v_experience))::TEXT
-      );
-      v_day := ("timezone"(v_zone,now()))::DATE;
-      IF v_cursor != '' THEN
-        IF NOT "regexp_like"(v_cursor,'^[0-9a-f]{32}[.][0-9a-f]{32}[.][0-9a-f-]{36}$') OR ("split_part"(v_cursor,'.',1) != v_context) THEN
-          RAISE EXCEPTION USING
-            errcode = '22023',
-            message = 'This people mix changed; start a new mix'
-          ;
-        END IF;
-        v_rank := "split_part"(v_cursor,'.',2);
-        v_after := "split_part"(v_cursor,'.',3);
-      END IF;
-      EXECUTE 'WITH p AS (SELECT ($1->>''actor'')::uuid AS actor,$1->>''seed'' AS seed,nullif($1->>''site'','''')::uuid AS site,($1->>''day'')::date AS day,$1->>''availability'' AS availability,$1->>''experience'' AS experience,$1->>''rank'' AS rank,($1->>''after'')::uuid AS after), eligible AS (  SELECT m.id,m.profile,md5(p.actor::text||'':''||p.seed||'':''||m.id::text) AS mix_rank,  (SELECT CASE WHEN c.status IN (''pending'',''accepted'') THEN c.status::text ELSE NULL END FROM finfolk."UserConnection" c WHERE c.user_id=least(p.actor,m.id) AND c.target_id=greatest(p.actor,m.id)) AS connection,  CASE WHEN p.site IS NULL THEN 0 ELSE (SELECT count(*) FROM finfolk."UserCheckin" v WHERE v.user_id=m.id AND v.site_id=p.site AND v.visit_day BETWEEN p.day-29 AND p.day) END AS visits  FROM finfolk."User" m CROSS JOIN p WHERE m.id<>p.actor AND NOT m.deleted AND m.profile->''open''=''true''::jsonb  AND (p.availability='''' OR coalesce(m.profile->''availability'',''[]''::jsonb)?p.availability)  AND (p.experience='''' OR m.profile->>''experience''=p.experience)  AND NOT EXISTS(SELECT 1 FROM finfolk."UserBlock" b WHERE (b.owner_id=p.actor AND b.target_id=m.id) OR (b.owner_id=m.id AND b.target_id=p.actor))  AND NOT EXISTS(SELECT 1 FROM finfolk."UserConnection" c WHERE c.user_id=least(p.actor,m.id) AND c.target_id=greatest(p.actor,m.id) AND c.status=''declined'')  ), page AS (SELECT e.* FROM eligible e CROSS JOIN p WHERE (p.site IS NULL OR e.visits>0 OR coalesce(e.profile->''beaches'',''[]''::jsonb)?p.site::text) AND (e.mix_rank,e.id)>(p.rank,p.after) ORDER BY e.mix_rank,e.id LIMIT 7)  SELECT coalesce(jsonb_agg(jsonb_build_object(''id'',id,''displayName'',coalesce(profile->>''displayName'',''Diver''),''open'',true,''bio'',coalesce(profile->>''bio'',''''),''instagram'',coalesce(profile->>''instagram'',''''),''tiktok'',coalesce(profile->>''tiktok'',''''),''portrait'',coalesce(profile->>''portrait'',''''),''availability'',coalesce(profile->''availability'',''[]''::jsonb),''experience'',coalesce(profile->>''experience'',''''),''beaches'',coalesce(profile->''beaches'',''[]''::jsonb),''regular'',visits>=8,''recent'',visits>0,''connection'',connection,''mix_rank'',mix_rank) ORDER BY mix_rank,id),''[]''::jsonb) FROM page' INTO o_rows USING jsonb_build_object(
-        'actor',
-        i_user,
-        'seed',
-        v_seed,
-        'site',
-        v_site,
-        'day',
-        v_day,
-        'availability',
-        v_availability,
-        'experience',
-        v_experience,
-        'rank',
-        v_rank,
-        'after',
-        v_after
-      );
-      FOR o_row IN SELECT jsonb_array_elements(o_rows) LOOP
-        IF v_index < 6 THEN
-          o_result := (o_result || jsonb_build_array(o_row - 'mix_rank'));
-          IF v_index = 5 THEN
-            v_next := (v_context || '.' || (o_row ->> 'mix_rank') || '.' || (o_row ->> 'id'));
-          END IF;
-        END IF;
-        v_index := (v_index + 1);
-      END LOOP;
-      IF jsonb_array_length(o_rows) <= 6 THEN
-        v_next := null;
-      END IF;
-      RETURN jsonb_build_object('people',o_result,'cursor',v_next);
-    END;
-  END;
-END;
-$$ LANGUAGE 'plpgsql';
 
 -- finfolkdb.fn.social.social-messaging/receive-social-message 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".receive_social_message(

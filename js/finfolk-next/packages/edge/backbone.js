@@ -173,7 +173,7 @@ export async function run(ctx,name,values,options){
   ensureOpen(ctx);
   let entry = ensureModel(ctx,name,values);
   let spec = entry["spec"];
-  if(spec["write"] && ctx["blocked"].has(spec["domain"])){
+  if(spec["write"] && !spec["retrySafe"] && ctx["blocked"].has(spec["domain"])){
     throw new Error(
       "Reload before making another change: the previous change was saved but its refresh failed."
     );

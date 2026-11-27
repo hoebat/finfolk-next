@@ -367,6 +367,18 @@ export var pages = {
     "actions":{},
     "adapters":["site-review","post-review","trip-review"]
   },
+  "buddies":{
+    "routes":["/buddies"],
+    "area":"member",
+    "models":{
+      "inbox":{"operation":"buddyRead","bindings":{"mode":"mode"}},
+      "thread":{
+        "operation":"buddyRead",
+        "bindings":{"mode":"mode","conversation":"conversation"}
+      }
+    },
+    "actions":{"change":{"operation":"buddyAction","bindings":{}}}
+  },
   "profile":{
     "routes":["/profile","/members/[id]"],
     "area":"member",
@@ -489,6 +501,9 @@ export var pages = {
       }
     },
     "actions":{
+      "checkin":{"operation":"sessionCheckin","bindings":{}},
+      "plans":{"operation":"sessionPlans","bindings":{}},
+      "planning":{"operation":"sessionPlanning","bindings":{}},
       "assignImportedMedia":{"operation":"assignImportedMedia","bindings":{}},
       "delete":{
         "operation":"deleteSession",

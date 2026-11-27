@@ -2244,6 +2244,14 @@ export var operations = {
     },
     "write":true
   },
+  "sessionPlans":{
+    "rpc":"session_plans",
+    "arguments":["$actor"],
+    "actor":"server",
+    "request":{"type":"object","properties":{},"additionalProperties":false},
+    "result":{"type":"object","additionalProperties":true},
+    "write":false
+  },
   "siteDraftReject":{
     "rpc":"native_site_review_reject",
     "arguments":["$actor","$verified","$values"],
@@ -2265,6 +2273,32 @@ export var operations = {
       "properties":{"ok":{"type":"boolean"}},
       "required":["ok"]
     },
+    "write":true
+  },
+  "sessionPlanning":{
+    "rpc":"session_planning",
+    "arguments":["$actor","$values"],
+    "actor":"server",
+    "request":{
+      "type":"object",
+      "required":["mode"],
+      "additionalProperties":false,
+      "properties":{
+        "timezone":{"type":"string"},
+        "beachId":{"type":"string","format":"uuid"},
+        "startsAt":{"type":"string"},
+        "mode":{
+          "type":"string",
+          "enum":["list","save","invite","respond","start","finish","cancel"]
+        },
+        "meetingPoint":{"type":"string"},
+        "state":{"type":"string"},
+        "title":{"type":"string"},
+        "invitees":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "id":{"type":"string","format":"uuid"}
+      }
+    },
+    "result":{"type":"object","additionalProperties":true},
     "write":true
   },
   "publicSessions":{
@@ -2577,6 +2611,24 @@ export var operations = {
     },
     "write":false
   },
+  "buddyRead":{
+    "rpc":"buddy_call",
+    "arguments":["$actor","$values"],
+    "actor":"server",
+    "request":{
+      "type":"object",
+      "required":["mode"],
+      "additionalProperties":false,
+      "properties":{
+        "mode":{"type":"string","enum":["inbox","thread"]},
+        "conversation":{"type":"string","format":"uuid"},
+        "after":{"type":"integer","minimum":0},
+        "before":{"type":"integer","minimum":1}
+      }
+    },
+    "result":{"type":"object","additionalProperties":true},
+    "write":false
+  },
   "siteNoteSave":{
     "rpc":"native_notes_save",
     "request":{
@@ -2839,6 +2891,28 @@ export var operations = {
     "not_found":"Event unavailable.",
     "action":"save",
     "actor":"server"
+  },
+  "buddyAction":{
+    "rpc":"buddy_call",
+    "arguments":["$actor","$values"],
+    "actor":"server",
+    "request":{
+      "type":"object",
+      "required":["mode"],
+      "additionalProperties":false,
+      "properties":{
+        "mode":{"type":"string","enum":["open","send","read","archive"]},
+        "conversation":{"type":"string","format":"uuid"},
+        "target":{"type":"string","format":"uuid"},
+        "session":{"type":"string","format":"uuid"},
+        "body":{"type":"string","minLength":1,"maxLength":4000},
+        "requestId":{"type":"string","format":"uuid"},
+        "sequence":{"type":"integer","minimum":0},
+        "archived":{"type":"boolean"}
+      }
+    },
+    "result":{"type":"object","additionalProperties":true},
+    "write":true
   },
   "eventAccept":{
     "rpc":"native_events_accept",
@@ -3905,6 +3979,32 @@ export var operations = {
       "required":["ok"],
       "additionalProperties":false
     },
+    "write":true
+  },
+  "sessionCheckin":{
+    "rpc":"session_checkin",
+    "arguments":["$actor","$verified","$values"],
+    "actor":"server",
+    "request":{
+      "type":"object",
+      "required":["mode"],
+      "additionalProperties":false,
+      "properties":{
+        "timezone":{"type":"string"},
+        "beachId":{"type":"string","format":"uuid"},
+        "startsAt":{"type":"string"},
+        "mode":{
+          "type":"string",
+          "enum":["list","save","invite","respond","start","finish","cancel"]
+        },
+        "meetingPoint":{"type":"string"},
+        "state":{"type":"string"},
+        "title":{"type":"string"},
+        "invitees":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "id":{"type":"string","format":"uuid"}
+      }
+    },
+    "result":{"type":"object","additionalProperties":true},
     "write":true
   },
   "connections":{

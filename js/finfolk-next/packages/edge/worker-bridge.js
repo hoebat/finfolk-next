@@ -365,7 +365,7 @@ export function createScope(ctx,actor,transport){
           throw new Error("Account context closed.");
         }
         let spec = registry.operation(name);
-        if(spec["write"] && facade["blocked"].has(spec["domain"])){
+        if(spec["write"] && !spec["retrySafe"] && facade["blocked"].has(spec["domain"])){
           throw new Error(
             "Reload before making another change: confirm whether the previous change was saved."
           );
@@ -374,7 +374,7 @@ export function createScope(ctx,actor,transport){
         if(facade["closed"]){
           throw new Error("Account context closed.");
         }
-        if(spec["write"] && facade["blocked"].has(spec["domain"])){
+        if(spec["write"] && !spec["retrySafe"] && facade["blocked"].has(spec["domain"])){
           throw new Error(
             "Reload before making another change: confirm whether the previous change was saved."
           );
