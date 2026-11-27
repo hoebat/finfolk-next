@@ -35,6 +35,7 @@ seconds, lists every fifteen seconds, and both refresh on focus/reconnect.
 - `node tests/test_feature_flags.mjs`
 - `node scripts/test_database.mjs --buddies` against disposable local Supabase
 - `NEXTJS_TEST_URL=http://127.0.0.1:3271 node tests/test_nextjs_buddies.mjs`
+- `NEXTJS_TEST_URL=http://127.0.0.1:3274 node tests/test_nextjs_buddies_preview.mjs` (fictional, enabled Buddies preview only)
 - Optimized Next production build and offline asset verification
 
 The database suite tests pair uniqueness, forbidden reads/sends, send idempotency,
