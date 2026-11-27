@@ -168,11 +168,11 @@
      "call" (async (fn [name values options]
        (when (. facade ["closed"]) (throw (new Error "Account context closed.")))
        (var spec (registry/operation name))
-       (when (and (. spec ["write"]) (. (. facade ["blocked"]) (has (. spec ["domain"]))))
+       (when (and (. spec ["write"]) (not (. spec ["retrySafe"])) (. (. facade ["blocked"]) (has (. spec ["domain"]))))
          (throw (new Error "Reload before making another change: confirm whether the previous change was saved.")))
        (await (. facade ["ready"]))
        (when (. facade ["closed"]) (throw (new Error "Account context closed.")))
-       (when (and (. spec ["write"]) (. (. facade ["blocked"]) (has (. spec ["domain"]))))
+       (when (and (. spec ["write"]) (not (. spec ["retrySafe"])) (. (. facade ["blocked"]) (has (. spec ["domain"]))))
          (throw (new Error "Reload before making another change: confirm whether the previous change was saved.")))
        (:= values (or values {})) (:= options (or options {}))
        (var key (+ name ":" (backbone/stableKey values)))

@@ -101,7 +101,7 @@
 (defn.js ^{:- [:async]} run [ctx name values options]
   (-/ensureOpen ctx)
   (var entry (-/ensureModel ctx name values)) (var spec (. entry ["spec"]))
-  (when (and (. spec ["write"]) (. (. ctx ["blocked"]) (has (. spec ["domain"]))))
+  (when (and (. spec ["write"]) (not (. spec ["retrySafe"])) (. (. ctx ["blocked"]) (has (. spec ["domain"]))))
     (throw (new Error "Reload before making another change: the previous change was saved but its refresh failed.")))
   (var revision (. entry ["revision"]))
   (:= (. entry ["options"]) options)
