@@ -11031,7 +11031,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".insert_dive_session(
     o_session JSONB;
     v_id UUID;
   BEGIN
-    v_id := uuid_generate_v4();
+    v_id := "gen_random_uuid"();
     o_data := (("finfolk".as_jsonb(i_data) - 'beachId') || jsonb_build_object('visibility','private','photos',('[]')::JSONB));
     o_base := "finfolk".insert_base_addons('DiveSession',v_id,o_data,o_op);
     WITH j_ret AS (  

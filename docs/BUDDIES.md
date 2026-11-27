@@ -53,3 +53,17 @@ for testers, verify two real accounts, and only then enable for everyone.
 No email or push notifications are sent. Do not enable the flag against an API or
 database lacking these operations. Generation and tests never install production
 SQL. The ordinary frontend workflow does not publish the API or database.
+
+The 27 November 2026 release is generated from committed authored sources with
+schema fingerprint `1c5b4ceae62cf952b2a4fe7cc1b24b563b4003f7c06053c65f4b247bee2a2e3c`.
+The additive installation preserves the previous release marker and adds four
+private conversation tables, planning RPCs and membership triggers. API readiness
+checks every required table, including conversation storage, rather than rejecting
+additional tables during a rolling release. A verified encrypted off-server backup
+and a repeated installation rehearsal precede installation.
+
+The database regression suite relocates `uuid-ossp` into Supabase's `extensions`
+schema and creates invitations through the actual trusted HTTP gateway. Session
+creation uses PostgreSQL's built-in `gen_random_uuid()` so it does not depend on
+a login role's extension search path. Production activation remains a separate,
+audited feature-flag update after hosted and frontend release checks.
