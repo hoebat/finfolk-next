@@ -57,6 +57,7 @@ jobs:
         id: supabase_cli
         with:
           version: 2.122.0
+      - run: corepack yarn playwright install --with-deps chromium firefox webkit
       - run: make test
       - run: make test-db-social
       - run: make test-db-note-revisions
@@ -64,7 +65,6 @@ jobs:
       - name: Stop local Supabase
         if: always() && steps.supabase_cli.outcome == 'success'
         run: make test-db-local-down
-      - run: corepack yarn playwright install --with-deps chromium firefox webkit
       - run: make test-browser
       - name: Build native Next app with Netlify adapter (no deployment)
         run: npx --yes netlify-cli build --offline --context deploy-preview --filter @finfolk/web-main

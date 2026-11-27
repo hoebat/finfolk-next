@@ -11,8 +11,9 @@ test('page audit detects handled render failures, console errors, exceptions and
   if(req.url==='/broken'){res.end('<h1>Could not load this page</h1><script>console.error("script warning");fetch("/failed");setTimeout(()=>{throw Error("render exploded")},10)</script>');return;}
   res.end('<h1>Settings</h1><p>Ready</p>');
  });
- server.listen(0,'127.0.0.1');await once(server,'listening');const browser=await chromium.launch();
+ let browser;
  try{
+  server.listen(0,'127.0.0.1');await once(server,'listening');browser=await chromium.launch();
   const origin='http://127.0.0.1:'+server.address().port;
   for(const [route,broken]of [['/healthy',false],['/broken',true]]){
    const {context,result}=await inspectPage(browser,origin+route,{settleMs:150});
@@ -22,5 +23,5 @@ test('page audit detects handled render failures, console errors, exceptions and
    }finally{await context.close();}
   }
   const discovered=await discoverRoutes();assert.ok(discovered.routes.includes('/account/settings'));assert.ok(discovered.skipped.includes('/members/[id]'));assert.ok(discovered.routes.every(route=>!route.includes('(')&&!route.includes('[')));
- }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}
+ }finally{await browser?.close();if(server.listening)await new Promise(resolve=>server.close(resolve));}
 });
