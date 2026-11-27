@@ -1,4 +1,5 @@
 // Transport only. Operation signatures and payloads come from finfolkdb declarations.
+import {collectPlatformStatus} from './platform-status.mjs';
 import {deliverEventInvitation} from './event-delivery.mjs';
 import {runDirectorySearch} from './directory-discovery.mjs';
 import {verifiedIdentity} from '../js/finfolk-next/packages/edge/supabase-auth.js';
@@ -12,7 +13,7 @@ async function readInput(request){
  finally {reader.releaseLock();}
  try{return JSON.parse(text);}catch{throw Object.assign(Error('Invalid request'),{status:400});}
 }
-export function createNativeAccount({assertFeature,query, transaction, supabaseUrl, publishableKey, serviceRoleKey, adminFetch, directorySearch, eventDelivery, deliveryKey, invitationOrigin}) {
+export function createNativeAccount({assertFeature,query, transaction, supabaseUrl, publishableKey, serviceRoleKey, adminFetch, expectedRelease, directorySearch, eventDelivery, deliveryKey, invitationOrigin}) {
  if(typeof transaction!=='function')throw Error('Native accounts require a transaction-capable database');
  return async request=>{
   let requestSpec,stage='input';
@@ -56,6 +57,7 @@ export function createNativeAccount({assertFeature,query, transaction, supabaseU
     try{await finishAccountDeletion({query,supabaseUrl,serviceRoleKey,adminFetch},identity.id);}
     catch{await createNativeRPC(query)('record_account_deletion_failure',[identity.id]).catch(()=>{});return Response.json({error:'Your FinFolk data was removed; sign-in cleanup is pending.',code:'account_deletion_pending',dataDeleted:true},{status:503,headers:{'Cache-Control':'no-store'}});}
    }
+   if(spec.effect==='platform-status')result=await collectPlatformStatus(result,{expectedRelease});
    if(input.operation==='me')result={...result,verified:identity.verified};
    stage='response';
    validate(spec.result,result,'result');

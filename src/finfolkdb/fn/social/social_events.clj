@@ -212,15 +212,11 @@
             o-connection nil
             (:uuid v-owner) nil
             o-command nil]
-        (when (or (not= (:integer (:->> o-event "generation"))
-                        (:integer (:->> o-inbox "generation")))
-                  (<= (:bigint (:->> o-event "deadline")) (pg/time-us))
-                  (and (== (:->> o-inbox "mode") "pilot")
-                       (not (pg/jsonb-exists (:-> o-inbox "pilot_sender_ids")
-                                             (:->> o-payload "senderId")))))
-          (let [o-expired (pg/t:update workflow/SocialEvent
-                            {:where {:id v-event} :set {:status "expired"} :track o-op})]
-            (return (pg/jsonb-build-object "id" v-event "status" "expired"))))
+        (let [(:text v-rollout) (policy/social-rollout-error o-inbox o-event)]
+          (when [v-rollout :is-not-null]
+            (let [o-expired (pg/t:update workflow/SocialEvent
+                              {:where {:id v-event} :set {:status "expired" :error v-rollout} :track o-op})]
+              (return (pg/jsonb-build-object "id" v-event "status" "expired")))))
         (when (== v-name "none")
           (let [o-ignored (pg/t:update workflow/SocialEvent
                             {:where {:id v-event} :set {:status "completed"} :track o-op})]

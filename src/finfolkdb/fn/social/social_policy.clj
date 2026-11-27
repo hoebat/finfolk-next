@@ -4,6 +4,7 @@
 (l/script :postgres
   {:require [[postgres.core :as pg]
              [finfolkdb.common.type-social-account :as accounts]
+             [finfolkdb.common.type-user :as users]
              [finfolkdb.common.type-social-post :as posts]
              [finfolkdb.fn.helper.helper-access :as access]]
    :static {:application ["finfolk-entity"]
@@ -14,26 +15,42 @@
   [:jsonb o-inbox :uuid i-user]
   (when (not (access/is-user-active i-user))
     (return false))
+  (when (not= (:->> o-inbox "provider") "mock")
+    (let [(:boolean v-verified) (pg/t:exists users/User {:where {:id i-user :deleted false :email-verified true}})]
+      (when (not v-verified) (return false))))
   (let [o-operated (pg/t:get accounts/SocialConnection
                      {:where {:account (:uuid (:->> o-inbox "social_account_id"))
                               :status "active"}})]
     (return (not (access/is-user-blocked i-user (:uuid (:->> o-operated "user_id")))))))
 
-(defn.pg ^{:- [:text]}
-  social-work-policy-error
-  "A paused inbox retains pending work. Generation, identity and audience changes invalidate it."
-  [:jsonb o-inbox :jsonb o-event :jsonb o-command]
-  (let [(:text v-name) (pg/coalesce (:->> o-command "command")
-                                    (:->> (:-> (:-> o-event "payload") "parsed") "command"))]
+(defn.pg ^{:- [:text]} social-rollout-error
+  "Shared intake/execution/delivery fence for current audience and activation time."
+  [:jsonb o-inbox :jsonb o-event]
     (when (or [o-event :is-null]
               (not= (:integer (:->> o-event "generation")) (:integer (:->> o-inbox "generation"))))
       (return "generation_changed"))
     (when (<= (:bigint (:->> o-event "deadline")) (pg/time-us))
       (return "deadline_expired"))
+    (let [(:bigint v-started) (:bigint (:->> (:-> (:-> o-inbox "checks") "socialActivation") "activatedAt"))]
+      ;; Meta timestamps have millisecond precision. A one-second tolerance
+      ;; handles boundary rounding without accepting older provider retries.
+      (when (and [v-started :is-not-null]
+                 (< (:bigint (:->> o-event "sent_at")) (- v-started 1000000)))
+        (return "predates_rollout")))
     (when (and (== (:->> o-inbox "mode") "pilot")
                (not (pg/jsonb-exists (:-> o-inbox "pilot_sender_ids")
                                      (:->> (:-> o-event "payload") "senderId"))))
       (return "audience_changed"))
+  (return nil))
+
+(defn.pg ^{:- [:text]}
+  social-work-policy-error
+  "Paused receipts remain inspectable. New rollout generations fence their execution."
+  [:jsonb o-inbox :jsonb o-event :jsonb o-command]
+  (let [(:text v-name) (pg/coalesce (:->> o-command "command")
+                                    (:->> (:-> (:-> o-event "payload") "parsed") "command"))]
+    (let [(:text v-rollout) (-/social-rollout-error o-inbox o-event)]
+      (when [v-rollout :is-not-null] (return v-rollout)))
     (when (and (not= v-name "none") (not (pg/jsonb-exists (:-> o-inbox "enabled_commands") v-name)))
       (return "command_disabled"))
     (when (and (== v-name "whoami") (not= (:->> o-inbox "provider") "mock"))

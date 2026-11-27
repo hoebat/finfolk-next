@@ -127,6 +127,10 @@
                    "deadline" (:-> o-claimed "deadline")
                    "provider" (:->> o-inbox "provider")
                    "accountId" (:->> o-inbox "account_id")
+                   "verification" (pg/case (== (:->> o-claimed "reply_kind") "connect_code")
+                     (pg/jsonb-build-object "provider" (:->> o-inbox "provider")
+                       "namespace" (:text (pg/jsonb-build-array (:->> o-inbox "provider") i-application i-inbox))
+                       "externalId" (:->> o-claimed "recipient")) true nil)
                    "destination" (pg/jsonb-build-object "channel" (:->> o-claimed "channel")
                                                         "recipientId" (:->> o-claimed "recipient")
                                                         "conversationId"
@@ -141,6 +145,31 @@
                                                     "replyKind" (:->> o-claimed
                                                                       "reply_kind")))))))))]
       (return nil))))
+
+(defn.pg ^{:- [:boolean]} confirm-social-delivery
+  "Recheck current authority after provider evidence and before dispatch."
+  [:uuid i-application :uuid i-inbox :uuid i-delivery :uuid i-lease :jsonb i-evidence]
+  (let [o-inbox (pg/t:get messaging/MessagingAccount
+                  {:where {:id i-inbox :application i-application} :for [:update]})
+        o-delivery (pg/t:get delivery/MessagingOutbox {:where {:id i-delivery :account i-inbox} :for [:update]})
+        o-command (pg/t:get workflow/SocialCommand {:where {:id (:uuid (:->> o-delivery "command_id"))}})
+        o-event (pg/t:get workflow/SocialEvent {:where {:id (:uuid (:->> o-delivery "event_id"))}})]
+    (when (or [o-inbox :is-null] [o-delivery :is-null] [o-command :is-null] [o-event :is-null]
+              (== (:->> o-inbox "mode") "disabled")
+              (not= (:->> o-delivery "state") "sending")
+              [i-lease :is-null] (not= (:uuid (:->> o-delivery "lease")) i-lease)
+              (<= (:bigint (:->> o-delivery "lease_until")) (pg/time-us))
+              [(-/social-delivery-policy-error o-inbox o-event o-command o-delivery) :is-not-null])
+      (return false))
+    (when (== (:->> o-delivery "reply_kind") "connect_code")
+      (let [o-account (pg/t:get accounts/SocialAccount {:where {:id (:uuid (:->> o-event "account_id"))}})]
+        (when (or [o-account :is-null]
+                  (not= (pg/coalesce (:-> i-evidence "eligible") (:jsonb "false")) (:jsonb "true"))
+                  (not= (:->> i-evidence "provider") (:->> o-inbox "provider"))
+                  (not= (:->> i-evidence "namespace") (:->> o-account "namespace"))
+                  (not= (:->> i-evidence "externalId") (:->> o-account "external_id")))
+          (return false))))
+    (return true)))
 
 (defn.pg complete-social-delivery
   "Only a known rejection can retry. Transport ambiguity and abandoned sends stay uncertain."

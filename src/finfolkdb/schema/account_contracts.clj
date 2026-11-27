@@ -70,10 +70,19 @@
 (def TARGET {:type "object" :properties {:target UUID} :required ["target"] :additionalProperties false})
 (defn operation [rpc arguments request result write]
   {:rpc rpc :arguments arguments :actor "server" :request request :result result :write write})
+(def PLATFORM-STATUS
+  {:type "object" :additionalProperties false :required ["checkedAt" "release" "queues" "failures" "cleanupPending"]
+   :properties {:checkedAt STRING :release {:type ["string" "null"]}
+                :expectedRelease {:type ["string" "null"]} :overall {:type "string" :enum ["healthy" "unavailable"]}
+                :cleanupPending {:type "integer"}
+                :queues {:type "array" :items {:type "object" :required ["name" "pending" "processing" "failed" "overdue" "oldest"] :additionalProperties false
+                         :properties {:name STRING :pending {:type "integer"} :processing {:type "integer"} :failed {:type "integer"} :overdue {:type "integer"} :oldest {:type ["number" "null"]}}}}
+                :failures {:type "array" :items {:type "object" :additionalProperties false :required ["id" "source" "code" "observed"] :properties {:id UUID :source STRING :code STRING :observed {:type "number"}}}}
+                :services {:type "array" :items {:type "object" :additionalProperties false :required ["name" "state"] :properties {:name STRING :state {:type "string" :enum ["healthy" "unavailable" "unknown" "disabled" "degraded"]} :detail STRING :latencyMs {:type "number"}}}}}})
 (def OPERATIONS
-  (merge directory/OPERATIONS events/OPERATIONS notes/OPERATIONS sites/OPERATIONS site-review/OPERATIONS
-  (buddy-contracts/operations operation UUID EMPTY)
-  {"publicTrips" (assoc (operation "ret_public_trips" ["$values"]
+  (merge (buddy-contracts/operations operation UUID EMPTY) directory/OPERATIONS events/OPERATIONS notes/OPERATIONS sites/OPERATIONS site-review/OPERATIONS
+  {"platformStatus" (assoc (operation "ret_platform_status" ["$actor" "$verified"] EMPTY PLATFORM-STATUS false) :effect "platform-status")
+   "publicTrips" (assoc (operation "ret_public_trips" ["$values"]
                     {:type "object" :additionalProperties false :properties {:beachId UUID :ownerId UUID}}
                     {:type "object" :additionalProperties false :required ["trips"]
                      :properties {:trips {:type "array" :items {:type "object" :additionalProperties false

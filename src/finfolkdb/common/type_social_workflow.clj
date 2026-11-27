@@ -54,6 +54,7 @@
                         :sql {:default 1}}
    :account-generation {:type :integer :required true
                         :sql {:default 1}}
+   :content-cleared    {:type :boolean :required true :sql {:default false}}
    :fingerprint        {:type :text}
    :sent-at            {:type :long}
    :deadline           {:type :long}

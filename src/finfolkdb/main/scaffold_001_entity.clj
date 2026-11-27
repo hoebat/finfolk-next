@@ -3,7 +3,9 @@
   (:require [lang.core :as l]))
 
 (l/script :postgres
-  {:require [[finfolkdb.fn.social.social-interop :as social-interop]
+  {:require [[finfolkdb.fn.social.social-operator :as social-operator]
+             [finfolkdb.fn.social.social-retention :as social-retention]
+             [finfolkdb.fn.social.social-interop :as social-interop]
              [finfolkdb.fn.social.social-delivery :as social-delivery]
              [finfolkdb.fn.social.social-events :as social-events]
              [finfolkdb.fn.social.social-commands :as social-commands]

@@ -16,10 +16,20 @@ export async function createSocialRuntime({db, application, inbox, provider, cry
     [work.id, work.lease, result.status, result.messageId ?? null, result.retryAfter ?? null]);
   return {
     scope,
+    memberStatus: member=>call('ret_social_member_connection',[application,inbox,member]),
     receive: envelope => invoke('receive_social_event', [envelope]),
     processNext: () => invoke('process_social_event'),
     reconcile: () => invoke('reconcile_social_work'),
+    async cleanup() {
+      return {content:await invoke('scrub_social_content'),diagnostics:await invoke('purge_social_diagnostics')};
+    },
     redeem: (member, code) => invoke('redeem_social_connection', [member, code], member),
+    async redeemVerified(member,code,ipHash,adapter) {
+      const snapshot=await invoke('prepare_social_redemption',[member,code,ipHash],member);
+      if(!snapshot||snapshot.error||snapshot.replayed)return snapshot;
+      const evidence=await adapter.verifyAccount({provider:snapshot.provider,namespace:snapshot.namespace,externalId:snapshot.externalId},{includeHandle:true});
+      return invoke('complete_social_redemption',[member,code,snapshot,evidence],member);
+    },
     disconnect: (member, connection, version) => invoke('disconnect_social_connection',
       [member, connection, version, null], member),
     async performNextAction(adapter) {
@@ -48,10 +58,19 @@ export async function createSocialRuntime({db, application, inbox, provider, cry
       } catch {
         return completeDelivery(work, {status: 'failed'});
       }
+      let evidence={};
+      if(work.verification){
+        try {evidence=await adapter.verifyAccount(work.verification);}
+        catch {return completeDelivery(work,{status:'retry',retryAfter:30});}
+      }
+      // This is a separate committed RPC, after the external lookup. It checks
+      // the lease, rollout, identity and proof again. No send occurs on denial.
+      if(!await call('confirm_social_delivery',[application,inbox,work.id,work.lease,evidence]))
+        return completeDelivery(work,{status:'failed'});
       let result;
       try {
         result = await adapter.send({idempotencyKey: work.id, provider: work.provider,
-          accountId: work.accountId, destination: work.destination, body});
+          accountId: work.accountId, destination: work.destination, body, deadline: work.deadline});
         if (!result || !['accepted', 'retry', 'failed', 'uncertain'].includes(result.status) ||
             result.status === 'accepted' && (typeof result.messageId !== 'string' || !result.messageId))
           result = {status: 'uncertain'};

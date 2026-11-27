@@ -302,7 +302,9 @@
               (let [(:uuid v-next) (-/enqueue-social-action v-command "prepare-link" o-op)] nil)
               [:perform
                (-/finish-social-command-reply v-command
-                                              "This social account is not eligible to connect."
+                                              (pg/case (== (:->> o-inbox "provider") "instagram")
+                                                "Follow @finfolk.com.au, then send /connect again to receive your connection code."
+                                                true "This social account is not eligible to connect.")
                                               nil
                                               nil
                                               (:jsonb "{\"error\":\"account_ineligible\"}")
