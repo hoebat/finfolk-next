@@ -12,7 +12,8 @@
       (get-in schema [:properties :document])
       (assoc "payload-pick" {"document" (vec (sort (map name (keys (get-in schema [:properties :document :properties])))))}))))
 (def PILOT_DEFINITIONS
-  {"directory" {"routes" ["/directory"] "area" "public"
+  {"buddies" {"routes" ["/buddies"] "area" "member" "models" {"inbox" (seed/read-model "buddyRead" {"mode" "mode"}) "thread" (seed/read-model "buddyRead" {"mode" "mode" "conversation" "conversation"})} "actions" {"change" (seed/action "buddyAction")}}
+   "directory" {"routes" ["/directory"] "area" "public"
                  "models" {"listings" (seed/read-model "publicDirectory" {"*" "query"})} "actions" {}}
    "listing" {"routes" ["/directory/[id]"] "area" "public"
                "models" {"listing" (seed/read-model "publicDirectoryDetail" {"id" "id"})

@@ -3,7 +3,8 @@
   (:require [clojure.string :as str] [clojure.data.json :as json]))
 
 (def DEFINITIONS
-  [{:id "shop" :label "Shop" :description "Shop, rewards, management and checkout"}
+  [{:id "buddies" :label "Buddies" :description "Private buddy messages and session chats"}
+   {:id "shop" :label "Shop" :description "Shop, rewards, management and checkout"}
    {:id "events" :label "Events" :description "Events, invitations and RSVP"}
    {:id "practice.progress" :label "Progress" :description "Personal recorded progress"}
    {:id "practice.breathing" :label "Breathing practice" :description "Routines and practice history"}

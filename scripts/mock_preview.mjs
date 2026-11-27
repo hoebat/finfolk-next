@@ -1,3 +1,4 @@
+import {previewBuddyOperation} from './lib/preview_buddies.mjs';
 // Development-only mock service. The UI still runs generated Substrate models.
 import {localPreviewFeatureFlags} from './lib/environment_feature_flags.mjs';
 import {featureForOperation} from '../js/finfolk-next/site/web-main/lib/feature-flags.js';
@@ -22,7 +23,7 @@ let state;try{state=JSON.parse(await readFile(directory+'/state.json'));if(state
 let writes=Promise.resolve();const persist=()=>writes=writes.then(async()=>{await writeFile(directory+'/state.tmp',JSON.stringify(state));await rename(directory+'/state.tmp',directory+'/state.json');});
 function requirePreviewMember(actor){if(actor==='guest')throw Object.assign(Error('Sign in to continue.'),{status:401});}
 function guardPreviewPath(path,actor){if(/^\/(?:v1\/(?:me|admin)|me|admin)(?:\/|$)/.test(new URL(path,'http://preview').pathname))requirePreviewMember(actor);}
-async function operation(name,v={},actor='alice'){if(operations[name]?.auth)requirePreviewMember(actor);await assertPreviewFlag(featureForOperation(name));
+async function operation(name,v={},actor='alice'){if(operations[name]?.auth)requirePreviewMember(actor);await assertPreviewFlag(featureForOperation(name));if(name==='buddyRead'||name==='buddyAction')return previewBuddyOperation(state,actor,name,v);
  if(v.__rest){const spec=operations[name];return request(v.path,{method:spec.method,body:v.body},actor);}
  const profile=state.profiles[actor];if(!profile&&actor!=='guest')throw Error('Unknown preview actor');
  switch(name){
@@ -31,7 +32,22 @@ async function operation(name,v={},actor='alice'){if(operations[name]?.auth)requ
  case 'profile':case 'publicProfile':{const id=v.target||actor,p=state.profiles[id];if(!p||id!==actor&&!p.open)return {restricted:true};return {id,...p};}
  case 'preferences':Object.assign(profile,v.profile);await persist();return {profile};
  case 'community':return {people:Object.entries(state.profiles).filter(([id])=>id!==actor).map(([id,p])=>({id,...p,regular:true})),cursor:null};
- case 'sessions':case 'publicSessions':return {sessions:state.sessions.filter(s=>s.ownerId===(v.owner||actor)&&(name==='sessions'&&s.ownerId===actor||s.visibility==='public')&&(!v.publicOnly||s.visibility==='public')),more:false,cursor:null};
+ case 'sessionPlans':return {sessions:state.sessions.filter(s=>s.plan&&(s.ownerId===actor||s.plan.members[actor])),connections:await operation('connections',{},actor)};
+ case 'sessionCheckin':case 'sessionPlanning':{
+  let s=state.sessions.find(s=>s.id===v.id);
+  if(v.mode==='save'){
+   if(s&&s.ownerId!==actor)throw Error('Organiser access required');
+   if(!s){s={id:v.id,ownerId:actor,photos:[],linkedMedia:[],visibility:'private',notes:'',date:v.startsAt.slice(0,10),beachId:v.beachId,locationName:beach.name,plan:{members:{}}};state.sessions.push(s);}
+   const connections=await operation('connections',{},actor);
+   const members={...s.plan.members};for(const id of v.invitees||[]){const c=connections.find(c=>c.id===id&&c.status==='accepted');if(!c)throw Error('Invite an accepted connection');members[id]||={name:c.name,state:'invited'};}
+   s.plan={...s.plan,title:v.title,startsAt:v.startsAt,timezone:v.timezone,meetingPoint:v.meetingPoint,state:s.plan.state||v.state,members};
+  }else{
+   if(!s||!s.plan||!['upcoming','current'].includes(s.plan.state))throw Error('Session unavailable');
+   if(v.mode==='invite'){if(s.ownerId!==actor)throw Error('Organiser access required');const people=await operation('connections',{},actor);for(const id of v.invitees||[]){const c=people.find(p=>p.id===id&&p.status==='accepted');if(!c)throw Error('Accepted buddy required');s.plan.members[id]||={name:c.name,state:'invited'};}}else if(v.mode==='respond'){if(!s.plan.members[actor])throw Error('Invitation unavailable');s.plan.members[actor].state=v.state;}
+   else {if(s.ownerId!==actor)throw Error('Organiser access required');if(v.mode==='start'&&s.plan.state!=='upcoming'||v.mode==='finish'&&s.plan.state!=='current')throw Error('Invalid transition');s.plan.state={start:'current',finish:'completed',cancel:'cancelled'}[v.mode];}
+  }if(name==='sessionCheckin'){const day=new Date().toISOString().slice(0,10);if(!state.visits.some(v=>v.actor===actor&&v.beach_id===s.beachId&&v.day===day))state.visits.push({actor,beach_id:s.beachId,name:s.locationName,day});}await persist();return {id:s.id};
+ }
+ case 'sessions':case 'publicSessions':return {sessions:state.sessions.filter(s=>(!s.plan||s.plan.state==='completed')&&s.ownerId===(v.owner||actor)&&(name==='sessions'&&s.ownerId===actor||s.visibility==='public')&&(!v.publicOnly||s.visibility==='public')),more:false,cursor:null};
  case 'session':case 'publicSession':{const s=state.sessions.find(s=>s.id===v.id);if(!s||(name==='publicSession'||s.ownerId!==actor)&&s.visibility!=='public')throw Error('Session unavailable');return s;}
  case 'saveSession':{let s=state.sessions.find(s=>s.id===v.id);if(s&&s.ownerId!==actor)throw Error('Not your session');if(!s){s={id:randomUUID(),ownerId:actor,photos:[],linkedMedia:[],visibility:'private'};state.sessions.push(s);}Object.assign(s,v.values);await persist();return {id:s.id};}
  case 'visibility':case 'deleteSession':{const s=state.sessions.find(s=>s.id===v.id&&s.ownerId===actor);if(!s)throw Error('Not your session');if(name==='visibility')s.visibility=v.visibility;else state.sessions=state.sessions.filter(x=>x!==s);await persist();return {};}

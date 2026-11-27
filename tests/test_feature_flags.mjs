@@ -13,7 +13,7 @@ try{await withTestDatabase(admin,base,async url=>{
  const db=database(url.href);try{
   await db.query(sql);
   assert.equal((await db.query("SELECT has_schema_privilege('anon','finfolk_flags','USAGE') AS allowed"))[0].allowed,false,'anonymous database roles cannot inspect settings');
-  const store=createFlagStore(db);assert.equal((await store.rows()).length,6);
+  const store=createFlagStore(db);assert.equal((await store.rows()).length,7);
   assert.ok(Object.values(evaluateFlags(await store.rows()).flags).every(v=>v===false));
   await assert.rejects(store.save({id:'shop',mode:'unknown',testers:[],revision:0}),{status:400});
   assert.throws(()=>validateFlagUpdate({id:'shop',mode:'testers',testers:[alice,alice],revision:0}),{status:400});

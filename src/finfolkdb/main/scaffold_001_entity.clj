@@ -11,6 +11,7 @@
              [finfolkdb.fn.user.user-manage :as user]
              [finfolkdb.fn.user.user-community :as community]
              [finfolkdb.fn.user.user-logbook :as native-logbook]
+             [finfolkdb.fn.user.user-session-planning :as planning]
              [finfolkdb.fn.user.user-profile :as native-profile]
              [finfolkdb.fn.user.user-account :as account]
              [finfolkdb.fn.social.social-manage :as social-manage]

@@ -103,7 +103,7 @@
           o-audit (pg/t:delete system/Audit {:where {:id (:uuid (:->> o-old "audit_id"))} :track o-op})]
       (return (pg/jsonb-build-object "deleted" true)))))
 (def PRIVATE-LIST-SQL
-  "SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY time_created DESC,id DESC),'[]'::jsonb) FROM (SELECT * FROM finfolk.\"DiveSession\" WHERE owner_id=($1->>'actor')::uuid AND (time_created,id)<(($1->>'time')::bigint,($1->>'after')::uuid) AND (NOT ($1->>'public')::boolean OR detail->>'visibility'='public') ORDER BY time_created DESC,id DESC LIMIT 51) r")
+  "SELECT coalesce(jsonb_agg(to_jsonb(r) ORDER BY time_created DESC,id DESC),'[]'::jsonb) FROM (SELECT * FROM finfolk.\"DiveSession\" WHERE coalesce(detail->'plan'->>'state','completed')='completed' AND owner_id=($1->>'actor')::uuid AND (time_created,id)<(($1->>'time')::bigint,($1->>'after')::uuid) AND (NOT ($1->>'public')::boolean OR detail->>'visibility'='public') ORDER BY time_created DESC,id DESC LIMIT 51) r")
 (defn.pg ^{:- [:jsonb]} ret-private-sessions [:uuid i-user :jsonb i-query]
   [:perform (account/ret-account i-user)]
   (when (and [(:->> i-query "owner") :is-not-null] (not= (:uuid (:->> i-query "owner")) i-user))
@@ -139,6 +139,7 @@
     [:raise :exception :using '[[errcode := "22023"] [message := "Choose private or public visibility"]]])
   (let [o-old (pg/t:get book/DiveSession {:where {:id i-session :owner i-user} :returning #{:*/standard :detail} :for [:update]})]
     (when [o-old :is-null] [:raise :exception :using '[[errcode := "P0002"] [message := "Session unavailable"]]])
+    (when (and (== i-visibility "public") (not= (pg/coalesce (:->> (:-> (:-> o-old "detail") "plan") "state") "completed") "completed")) [:raise-exception "Finish the session before publishing"])
     (when (== i-visibility "public")
       (when (not (pg/coalesce i-verified false))
         [:raise :exception :using '[[errcode := "42501"] [message := "Verify your email before publishing"]]])

@@ -4,7 +4,10 @@
 
 (def OPERATIONS
  (contracts/annotate
- { "publicSession" {"auth" false "domain" "logbook" "name" "publicSession" "transport" "action" "write" false}
+ { "sessionCheckin" {"auth" true "domain" "logbook" "name" "sessionCheckin" "transport" "action" "write" true}
+   "sessionPlans" {"auth" true "domain" "logbook" "name" "sessionPlans" "transport" "action" "write" false}
+   "sessionPlanning" {"auth" true "domain" "logbook" "name" "sessionPlanning" "transport" "action" "write" true}
+   "publicSession" {"auth" false "domain" "logbook" "name" "publicSession" "transport" "action" "write" false}
    "publicSessions" {"auth" false "domain" "logbook" "name" "publicSessions" "transport" "action" "write" false}
    "publicProfile" {"auth" false "domain" "member" "name" "publicProfile" "transport" "action" "write" false}
    "mediaInbox" {"auth" true "domain" "logbook" "name" "mediaInbox" "transport" "action" "write" false}

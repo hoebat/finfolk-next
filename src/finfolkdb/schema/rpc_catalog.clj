@@ -12,7 +12,7 @@
   []
   (namespaces/load-all!)
   (let [book (snapshot/get-book (library/get-snapshot (impl/runtime-library)) :postgres)]
-    (into (sorted-map)
+    (assoc (into (sorted-map)
           (for [module (vals (:modules book))
                 entry (vals (:code module))
                 :when (and (= :function (:static/dbtype entry))
@@ -23,4 +23,4 @@
               :arguments (mapv (fn [[type argument]] {:name (str argument) :type (name type)})
                                (partition 2 (nth (:form entry) 2)))
               :returns (mapv str (:static/return entry))
-              :contract (get contracts/RPCS (str/replace (str (:id entry)) "-" "_"))}]))))
+              :contract (get contracts/RPCS (str/replace (str (:id entry)) "-" "_"))}])) "buddy_call" {:module "finfolkdb.schema.buddies" :schema "finfolk_rpc" :arguments [{:name "actor" :type "uuid"} {:name "values" :type "jsonb"}] :returns ["jsonb"]})))

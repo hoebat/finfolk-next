@@ -71,7 +71,16 @@
   {:rpc rpc :arguments arguments :actor "server" :request request :result result :write write})
 (def OPERATIONS
   (merge directory/OPERATIONS events/OPERATIONS notes/OPERATIONS sites/OPERATIONS site-review/OPERATIONS
-  {"publicTrips" (assoc (operation "ret_public_trips" ["$values"]
+  {"buddyRead" (operation "buddy_call" ["$actor" "$values"] {:type "object" :required ["mode"] :additionalProperties false :properties {:mode {:enum ["inbox" "thread"]} :conversation UUID :after {:type "integer" :minimum 0} :before {:type "integer" :minimum 1}}} {:type "object" :additionalProperties true} false)
+   "buddyAction" (operation "buddy_call" ["$actor" "$values"] {:type "object" :required ["mode"] :additionalProperties false :properties {:mode {:enum ["open" "send" "read" "archive"]} :conversation UUID :target UUID :session UUID :body {:type "string" :minLength 1 :maxLength 4000} :requestId UUID :sequence {:type "integer" :minimum 0} :archived {:type "boolean"}}} {:type "object" :additionalProperties true} true)
+   "sessionPlans" (operation "session_plans" ["$actor"] EMPTY {:type "object" :additionalProperties true} false)
+   "sessionPlanning" (operation "session_planning" ["$actor" "$values"]
+     {:type "object" :required ["mode"] :additionalProperties false
+      :properties {:mode {:type "string" :enum ["list" "save" "invite" "respond" "start" "finish" "cancel"]}
+                   :id UUID :state STRING :title STRING :startsAt STRING :timezone STRING :meetingPoint STRING
+                   :beachId UUID :invitees {:type "array" :items UUID}}}
+     {:type "object" :additionalProperties true} true)
+   "publicTrips" (assoc (operation "ret_public_trips" ["$values"]
                     {:type "object" :additionalProperties false :properties {:beachId UUID :ownerId UUID}}
                     {:type "object" :additionalProperties false :required ["trips"]
                      :properties {:trips {:type "array" :items {:type "object" :additionalProperties false
@@ -156,6 +165,9 @@
                    :tag STRING :pilotBeaches {:type "array" :items UUID}}
                   :required ["admin" "enabled" "tag" "pilotBeaches"] :additionalProperties false} false)
    "unblock" (operation "set_account_block" ["$actor" "target" "$false"] TARGET OK true)}))
+(def OPERATIONS
+  (assoc OPERATIONS "sessionCheckin"
+    (assoc (get OPERATIONS "sessionPlanning") :rpc "session_checkin" :arguments ["$actor" "$verified" "$values"])))
 (def RPCS (merge (into {} (for [[_ spec] OPERATIONS] [(:rpc spec) {:result (:result spec)}]))
                  {"ensure_account" {:result ACCOUNT} "ret_account" {:result ACCOUNT}}))
 (defn annotate [declarations]

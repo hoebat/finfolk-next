@@ -30,6 +30,6 @@ export default function FeatureFlags({children}){
   return()=>{epoch.current++;clearInterval(timer);window.removeEventListener('focus',refresh);window.removeEventListener('online',refresh);window.removeEventListener('offline',offline);resetFeatureFlags();};
  },[actor,session.client,session.status]);
  // Match the rendered route tree first: an unmatched URL must retain its 404.
- const value=scoped?record:{flags:{},ready:false},flag=['shop','events','practice'].includes(section)?featureForRoute(path||''):null;
+ const value=scoped?record:{flags:{},ready:false},flag=['buddies','shop','events','practice'].includes(section)?featureForRoute(path||''):null;
  return <Context.Provider value={value}>{flag&&value.flags[flag]!==true?<main className="ff-section-hub"><h1>{value.ready?'Feature unavailable':'Loading…'}</h1>{value.ready&&<a href="/">Back to FinFolk</a>}</main>:children}</Context.Provider>;
 }

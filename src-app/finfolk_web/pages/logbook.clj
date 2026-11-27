@@ -16,7 +16,7 @@
                "models" {"session" (sdk-read "session" "get" ["id"])
                          "profile" (sdk-read "profile" "profile" ["target"])
                          "ensure" (assoc-in (sdk-read "me" "ensureProfile" []) ["sdk" "optional"] true)}
-               "actions" {"assignImportedMedia" (seed/action "assignImportedMedia") "delete" (sdk-action "deleteSession" "deleteSession" ["id"])
+               "actions" {"checkin" (seed/action "sessionCheckin") "plans" (seed/action "sessionPlans") "planning" (seed/action "sessionPlanning") "assignImportedMedia" (seed/action "assignImportedMedia") "delete" (sdk-action "deleteSession" "deleteSession" ["id"])
                           "visibility" (sdk-action "visibility" "visibility" ["id" "visibility"])}
                "auth-actions" account/AUTH_ACTIONS "sdk-actions" SDK_ACTIONS}
    "logbook-list" {"routes" [] "area" "mixed"

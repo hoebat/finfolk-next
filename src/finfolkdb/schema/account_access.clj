@@ -1,6 +1,7 @@
 (ns finfolkdb.schema.account-access
   "Trusted account-server role. Never grant this role to browser/PostgREST roles."
   (:require [clojure.string :as str]
+            [finfolkdb.schema.buddies :as buddies]
             [finfolkdb.schema.account-contracts :as contracts]
             [finfolkdb.schema.events :as events]
             [finfolkdb.schema.event-delivery :as delivery]
@@ -29,4 +30,4 @@
        "GRANT DELETE ON finfolk.\"SiteRevision\",finfolk.\"SiteImport\",finfolk.\"Rev\",finfolk.\"Audit\",finfolk.\"Activity\" TO finfolk_account;\n"
        "GRANT finfolk_directory,finfolk_site_notes TO finfolk_account;\n"
        (events/grants-sql) (delivery/grants-sql) (sites/grants-sql) (site-review/grants-sql)
-       "-- Grant membership only to the trusted account server login.\nCOMMIT;\n"))
+       "-- Grant membership only to the trusted account server login.\nCOMMIT;\n" (buddies/sql)))

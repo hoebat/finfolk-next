@@ -1,0 +1,18 @@
+import{randomUUID}from'node:crypto';
+const threads=new Map();
+export function previewBuddyOperation(state,actor,operation,v){
+ const blocked=(a,b)=>state.blocks.some(x=>x.actor===a&&x.id===b||x.actor===b&&x.id===a);
+ const connected=(a,b)=>state.connections.some(x=>x.status==='accepted'&&(x.actor===a&&x.target===b||x.actor===b&&x.target===a));
+ const plan=id=>state.sessions.find(s=>s.id===id);
+ const sync=c=>{const s=c.session&&plan(c.session),eligible=c.session?[s.ownerId,...Object.entries(s.plan.members).filter(([,m])=>m.state==='joined').map(([id])=>id)]:connected(...c.people)?c.people:[];for(const m of c.periods)if(m.last==null&&!eligible.includes(m.user))m.last=c.sequence;for(const user of eligible)if(!c.periods.some(m=>m.user===user&&m.last==null))c.periods.push({user,first:c.sequence+1,last:null});};
+ const allowed=c=>c.periods.some(m=>m.user===actor)&&!c.periods.some(m=>(m.last==null||!c.session)&&blocked(actor,m.user));
+ for(const c of threads.values())sync(c);
+ if(v.mode==='open'){let c;if(v.session){const s=plan(v.session);if(!s||s.ownerId!==actor&&s.plan.members?.[actor]?.state!=='joined')throw Error('Join the session first');c=[...threads.values()].find(c=>c.session===v.session);if(!c){c={id:randomUUID(),session:s.id,title:s.plan.title,people:[],periods:[],sequence:0,messages:[],read:{},archived:false};threads.set(c.id,c)}}else{if(!connected(actor,v.target)||blocked(actor,v.target))throw Error('Accepted buddy required');const people=[actor,v.target].sort();c=[...threads.values()].find(c=>!c.session&&c.people.join()===people.join());if(!c){c={id:randomUUID(),people,periods:[],sequence:0,messages:[],read:{},archived:false};threads.set(c.id,c)}}sync(c);if(!allowed(c))throw Error('Conversation unavailable');return {id:c.id}}
+ if(v.mode==='inbox')return{conversations:[...threads.values()].filter(allowed).map(c=>({id:c.id,kind:c.session?'session':'direct',session:c.session,title:c.session?c.title:state.profiles[c.people.find(p=>p!==actor)]?.displayName,archived:c.archived,unread:c.messages.filter(m=>m.sender!==actor&&m.sequence>(c.read[actor]||0)&&c.periods.some(p=>p.user===actor&&m.sequence>=p.first&&(p.last==null||m.sequence<=p.last))).length}))};
+ const c=threads.get(v.conversation);if(!c||!allowed(c))throw Error('Conversation unavailable');const s=c.session&&plan(c.session),active=c.periods.some(m=>m.user===actor&&m.last==null),visible=c.messages.filter(m=>c.periods.some(p=>p.user===actor&&m.sequence>=p.first&&(p.last==null||m.sequence<=p.last)));
+ if(v.mode==='thread')return{messages:visible.filter(m=>m.sequence>(v.after||0)&&m.sequence<(v.before||Infinity)).slice(v.after?0:-50,v.after?50:undefined),canSend:active&&!c.archived&&s?.plan.state!=='cancelled',canArchive:s?.ownerId===actor,archived:c.archived,session:c.session};
+ if(v.mode==='archive'){if(s?.ownerId!==actor)throw Error('Organiser access required');c.archived=v.archived;return{ok:true}}
+ if(v.mode==='read'){c.read[actor]=Math.max(c.read[actor]||0,...visible.filter(m=>m.sequence<=v.sequence).map(m=>m.sequence));return{ok:true}}
+ if(v.mode==='send'){if(!active||c.archived||s?.plan.state==='cancelled')throw Error('Conversation is read-only');const prior=c.messages.find(m=>m.sender===actor&&m.requestId===v.requestId);if(prior){if(prior.body!==v.body)throw Error('Request already used');return{sequence:prior.sequence}}if(!v.requestId||!v.body?.trim()||v.body.length>4000)throw Error('Enter a message');c.messages.push({sequence:++c.sequence,sender:actor,name:state.profiles[actor]?.displayName,body:v.body,requestId:v.requestId,sentAt:new Date().toISOString()});return{sequence:c.sequence}}
+ throw Error('Unknown buddy operation');
+}
