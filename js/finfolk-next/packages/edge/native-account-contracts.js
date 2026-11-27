@@ -1214,6 +1214,73 @@ export var operations = {
     "effect":"event-invitation-retry",
     "actor":"server"
   },
+  "platformStatus":{
+    "rpc":"ret_platform_status",
+    "arguments":["$actor","$verified"],
+    "actor":"server",
+    "request":{"type":"object","properties":{},"additionalProperties":false},
+    "result":{
+      "type":"object",
+      "additionalProperties":false,
+      "required":["checkedAt","release","queues","failures","cleanupPending"],
+      "properties":{
+        "checkedAt":{"type":"string"},
+        "release":{"type":["string","null"]},
+        "expectedRelease":{"type":["string","null"]},
+        "overall":{"type":"string","enum":["healthy","unavailable"]},
+        "cleanupPending":{"type":"integer"},
+        "queues":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "required":["name","pending","processing","failed","overdue","oldest"],
+            "additionalProperties":false,
+            "properties":{
+              "name":{"type":"string"},
+              "pending":{"type":"integer"},
+              "processing":{"type":"integer"},
+              "failed":{"type":"integer"},
+              "overdue":{"type":"integer"},
+              "oldest":{"type":["number","null"]}
+            }
+          }
+        },
+        "failures":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":["id","source","code","observed"],
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "source":{"type":"string"},
+              "code":{"type":"string"},
+              "observed":{"type":"number"}
+            }
+          }
+        },
+        "services":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":["name","state"],
+            "properties":{
+              "name":{"type":"string"},
+              "state":{
+                "type":"string",
+                "enum":["healthy","unavailable","unknown","disabled","degraded"]
+              },
+              "detail":{"type":"string"},
+              "latencyMs":{"type":"number"}
+            }
+          }
+        }
+      }
+    },
+    "write":false,
+    "effect":"platform-status"
+  },
   "publicEvent":{
     "rpc":"native_events_public_detail",
     "request":{
