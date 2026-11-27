@@ -3,5 +3,5 @@
   "authProvider": "supabase",
   "supabaseUrl": "https://supabase.finfolk.com.au",
   "apiOrigin": "https://api.finfolk.com.au",
-  "schemaSha": "b9f3ae8a0142cc4954fa37af9e317c57f9038a17d75f2c3410a16cab1f9d0cd5"
+  "schemaSha": "cb8983cd6820f76d3efb77af5b441be123c914574f77bef02fd4c22ed06d9e04"
 }

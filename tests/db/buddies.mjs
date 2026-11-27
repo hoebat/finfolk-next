@@ -1,7 +1,7 @@
 import {createNativeAccount} from '../../backend/native-account.mjs';
 import assert from 'node:assert/strict';import{randomUUID}from'node:crypto';import{readFile}from'node:fs/promises';import{connect}from'./harness.mjs';import{installEntities,user}from'./fixtures/entities.mjs';import{ids}from'./fixtures/ids.mjs';
 const db=await connect(),call=async(a,v)=>(await db.query('select finfolk_rpc.buddy_call($1,$2::jsonb) value',[a,JSON.stringify(v)])).rows[0].value;
-try{await installEntities(db);await db.query("DO $$ BEGIN CREATE ROLE finfolk_account NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$");const source=await readFile('src/finfolkdb/schema/buddies.clj','utf8'),sql=source.split('\n').filter(l=>l.startsWith('  "')).map(l=>JSON.parse(l.trim())).join('\n');await db.query(sql);
+try{await installEntities(db);await db.query('CREATE SCHEMA IF NOT EXISTS extensions; ALTER EXTENSION "uuid-ossp" SET SCHEMA extensions');await db.query("DO $$ BEGIN CREATE ROLE finfolk_account NOLOGIN; EXCEPTION WHEN duplicate_object THEN NULL; END $$");const source=await readFile('src/finfolkdb/schema/buddies.clj','utf8'),sql=source.split('\n').filter(l=>l.startsWith('  "')).map(l=>JSON.parse(l.trim())).join('\n');await db.query(sql);
  for(const [id,name]of[[ids.alice,'Alice'],[ids.bob,'Bob'],[ids.carol,'Carol']])await user(db,id,{displayName:name});
  const link=async(a,b,mode)=>db.query('select finfolk_rpc.set_account_connection($1,$2,$3,true)',[a,b,mode]);await link(ids.alice,ids.bob,'request');await link(ids.bob,ids.alice,'accept');
  const c=await call(ids.alice,{mode:'open',target:ids.bob});assert.equal((await call(ids.bob,{mode:'open',target:ids.alice})).id,c.id);

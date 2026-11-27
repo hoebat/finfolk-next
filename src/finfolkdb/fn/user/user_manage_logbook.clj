@@ -18,7 +18,7 @@
 (defn.pg insert-dive-session
   "New saves are private and cannot persist photo payloads supplied by callers."
   [:uuid i-owner :uuid i-beach :jsonb i-data :jsonb o-op]
-  (let [(:uuid v-id) (pg/uuid-generate-v4)
+  (let [(:uuid v-id) (#{"gen_random_uuid"})
         o-data (|| (- (tss/as-jsonb i-data) "beachId")
                    (pg/jsonb-build-object "visibility" "private" "photos" (:jsonb "[]")))
         o-base (he/insert-base-addons "DiveSession" v-id o-data o-op)
