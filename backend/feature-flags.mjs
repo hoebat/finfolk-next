@@ -46,7 +46,7 @@ export function flagForPath(path){
  const practice=/^\/v1\/practice\/(progress|breathing|watch-imports|breath-check)(?:\/|$)/.exec(path);
  return practice?'practice.'+practice[1]:null;
 }
-export function nativeOperationFlag(operation){return /^buddy/.test(operation)?'buddies':/^(publicEvent|event)/.test(operation)?'events':null;}
+export function nativeOperationFlag(operation){return /^(buddy|sessionPlan|sessionCheckin)/.test(operation)?'buddies':/^(publicEvent|event)/.test(operation)?'events':null;}
 export function registerFeatureFlags(app,{db,verify,previewFeatureFlags=null}){
  const store=createFlagStore(db);
  const settings=async(env,actor)=>previewFeatureFlags?previewFeatureFlags():localFlags(env)?{flags:Object.fromEntries(flagDefinitions.map(f=>[f.id,true])),revision:0}:evaluateFlags(await store.rows(),actor);

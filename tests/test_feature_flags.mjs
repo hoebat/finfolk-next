@@ -69,5 +69,5 @@ let cachedReads=0;const cachedClient={call:async()=>{cachedReads++;return {event
 await assert.rejects(readModel(cachedClient,'events','events',{query:{}}),{code:'feature_disabled'});assert.equal(cachedReads,0,'closed gates cannot read cached models');
 await assert.rejects(pageActions(cachedClient,'event',{id:alice}).rsvp({state:'going'}),{code:'feature_disabled'});
 setFeatureFlags({flags:{events:true}});assert.deepEqual(await readModel(cachedClient,'events','events',{query:{}}),{events:[]});assert.equal(cachedReads,1);resetFeatureFlags();
-assert.equal(featureForRoute('/logbook'),null);assert.equal(featureForRoute('/practice/breath-check'),'practice.breath-check');assert.equal(flagForPath('/v1/events/one'),'events');assert.equal(nativeOperationFlag('eventSave'),'events');
+assert.equal(featureForRoute('/logbook'),null);assert.equal(featureForRoute('/practice/breath-check'),'practice.breath-check');assert.equal(flagForPath('/v1/events/one'),'events');assert.equal(nativeOperationFlag('eventSave'),'events');for(const name of ['buddyRead','buddyAction','sessionPlans','sessionPlanning','sessionCheckin'])assert.equal(nativeOperationFlag(name),'buddies');
 console.log('Feature flags: persisted updates, conflicts, audit history, identities, native/REST gates, outage and preview checks passed.');
