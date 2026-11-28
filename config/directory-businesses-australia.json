@@ -1,0 +1,569 @@
+{
+  "version": 1,
+  "researchedAt": "2026-11-28",
+  "scope": "Australian freediving businesses — first workbench batch",
+  "records": [
+    {
+      "id": "b0547479-8a84-550a-a5f9-6064b8a60006",
+      "key": "immersia-freediving",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Immersia Freediving",
+        "category": "School",
+        "state": "NSW",
+        "country": "Australia",
+        "locality": "Bondi and Manly, Sydney",
+        "description": "Freediving courses, coached training and ocean expeditions, with Sydney courses in Bondi and Manly.",
+        "website": "https://www.immersiafreediving.com/",
+        "image": "",
+        "sources": [
+          "https://www.immersiafreediving.com/"
+        ],
+        "socials": [
+          "https://www.instagram.com/immersiafreediving/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://www.immersiafreediving.com/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "fc7815e4197df25ada2a111551842a1a2ddc75c65719b147b88b4167c9b67554"
+      }
+    },
+    {
+      "id": "534bae7d-2105-56e7-a2fd-d430678c629a",
+      "key": "freediving-central",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Freediving Central",
+        "category": "School",
+        "state": "NSW",
+        "country": "Australia",
+        "locality": "Sydney and Central Coast",
+        "description": "Freediving courses, pool and depth training, private coaching, social dives and diving trips in Sydney and the Central Coast.",
+        "website": "https://freedivingcentral.com/",
+        "image": "",
+        "sources": [
+          "https://freedivingcentral.com/"
+        ],
+        "socials": [
+          "https://www.instagram.com/freedivingcentral/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://freedivingcentral.com/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "8be84cde0ae1c47f91da6ccaf9dd3a7ef7210af09ab3cc9e14e6c6e36b70c37c"
+      }
+    },
+    {
+      "id": "0f99b521-0d7d-5aae-a712-5cb437590dfc",
+      "key": "freediving-australia",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Freediving Australia",
+        "category": "School",
+        "state": "NSW",
+        "country": "Australia",
+        "locality": "Central Coast; courses across Australia",
+        "description": "Freediving Family’s Australian school, offering introductory freediving courses in Sydney, the Central Coast, Melbourne, Perth, Brisbane and the Gold Coast.",
+        "website": "https://www.freedivingaustralia.com/",
+        "image": "",
+        "sources": [
+          "https://www.freedivingaustralia.com/"
+        ],
+        "socials": [
+          "https://www.instagram.com/freediving.australia/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://www.freedivingaustralia.com/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "28f3efa3a0bc38b5f38853294cf26e61ccbc9ae914bd0c27cb56d11df1e2ff71"
+      }
+    },
+    {
+      "id": "5322939d-1d62-5e21-ae20-b32499af50ff",
+      "key": "legasea-freediving",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "LegaSea Freediving",
+        "category": "School",
+        "state": "NSW",
+        "country": "Australia",
+        "locality": "Shellharbour",
+        "description": "Shellharbour freediving school offering courses, social dives, trips and breathwork experiences.",
+        "website": "https://legaseafreediving.com.au/courses/",
+        "image": "",
+        "sources": [
+          "https://legaseafreediving.com.au/courses/"
+        ],
+        "socials": [
+          "https://www.instagram.com/legaseafreediving/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://legaseafreediving.com.au/courses/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "fba5033a07bed24843dcbec9ca64d4da57dc739931113a6c3157f86f2d999f4a"
+      }
+    },
+    {
+      "id": "62eb0266-1620-53ac-ad53-4f207da05eed",
+      "key": "deep-sensations-freediving",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Deep Sensations Freediving",
+        "category": "School",
+        "state": "NSW",
+        "country": "Australia",
+        "locality": "Central Coast and Sydney",
+        "description": "Freediving courses on the Central Coast, with further training, workshops and diving trips listed on its official website.",
+        "website": "https://www.deepsensationsfreediving.com/centralcoast",
+        "image": "",
+        "sources": [
+          "https://www.deepsensationsfreediving.com/centralcoast"
+        ],
+        "socials": []
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": null,
+        "instagramStatus": "not-yet-confirmed",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "cafb91897c54db422314a0ecfb37b31dab8377b296a379982d978276f232201d"
+      }
+    },
+    {
+      "id": "d18bf1e5-29d0-5088-a47c-cb061b08d354",
+      "key": "woebegone-dive",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Woebegone Dive",
+        "category": "School",
+        "state": "NSW",
+        "country": "Australia",
+        "locality": "Jervis Bay",
+        "description": "Jervis Bay dive operator offering freediving courses and boat-based ocean experiences.",
+        "website": "https://www.woebegone.com.au/courses",
+        "image": "",
+        "sources": [
+          "https://www.woebegone.com.au/courses"
+        ],
+        "socials": [
+          "https://www.instagram.com/woebegone_dive/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://www.woebegone.com.au/courses",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "ae856645468acc1158480e61316adec53f40015fa38f4ffd4a81490a519027df"
+      }
+    },
+    {
+      "id": "1dd39a50-2c75-52d9-aab4-d9627b09c59d",
+      "key": "salty-pilgrims-freediving",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Salty Pilgrims Freediving",
+        "category": "School",
+        "state": "NSW",
+        "country": "Australia",
+        "locality": "Newcastle and Sydney",
+        "description": "Freediving courses and community diving centred on Newcastle and Sydney, with training and travel opportunities.",
+        "website": "https://saltypilgrimsfreediving.com/",
+        "image": "",
+        "sources": [
+          "https://saltypilgrimsfreediving.com/"
+        ],
+        "socials": [
+          "https://www.instagram.com/saltypilgrimsfreediving/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://saltypilgrimsfreediving.com/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "43740ac6d7c1ae1e62ca86198c259e3db1c1886743007f931357c1d3238a668e"
+      }
+    },
+    {
+      "id": "e6cf5505-78ca-5880-a983-4d6de7c4acc2",
+      "key": "salt-sessions-freediving",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Salt Sessions Freediving",
+        "category": "School",
+        "state": "VIC",
+        "country": "Australia",
+        "locality": "Melbourne and Port Phillip Bay",
+        "description": "Melbourne freediving and spearfishing school offering beginner and advanced courses, social dives and retreats.",
+        "website": "https://saltsessions.com.au/",
+        "image": "",
+        "sources": [
+          "https://saltsessions.com.au/"
+        ],
+        "socials": [
+          "https://www.instagram.com/salt_sessions_freediving/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://saltsessions.com.au/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "4de296fbd3fe077b8eaf904c165fcf5c2274fc2f8e60e128b84b220340a76c10"
+      }
+    },
+    {
+      "id": "bf279e97-5732-548e-a2bc-4d380f1f726c",
+      "key": "drifters-freediving",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Drifters Freediving",
+        "category": "School",
+        "state": "VIC",
+        "country": "Australia",
+        "locality": "Melbourne",
+        "description": "Melbourne freediving school offering introductory through instructor-level courses, depth coaching, beginner spearfishing and retreats.",
+        "website": "https://driftersfreediving.com/",
+        "image": "",
+        "sources": [
+          "https://driftersfreediving.com/"
+        ],
+        "socials": [
+          "https://www.instagram.com/driftersfreediving/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://driftersfreediving.com/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "7e99dfaed3da31e927f89920fecaa9ab730dd1179ee0020cb2726985f5006a72"
+      }
+    },
+    {
+      "id": "5fba0279-5032-53d1-a4df-930693364e6b",
+      "key": "oceansense-freediving",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "OceanSense Freediving",
+        "category": "School",
+        "state": "QLD",
+        "country": "Australia",
+        "locality": "Airlie Beach; southeast Queensland and Sydney",
+        "description": "Freediving courses, training, day trips and retreats, with locations in the Whitsundays, southeast Queensland and Sydney.",
+        "website": "https://oceansense.com.au/",
+        "image": "",
+        "sources": [
+          "https://oceansense.com.au/"
+        ],
+        "socials": []
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": null,
+        "instagramStatus": "not-yet-confirmed",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": null
+      }
+    },
+    {
+      "id": "25ef0094-fa79-50b8-a7c6-c0cd8ac33a29",
+      "key": "freedivefnq",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "FreediveFNQ",
+        "category": "School",
+        "state": "QLD",
+        "country": "Australia",
+        "locality": "Cairns and Far North Queensland",
+        "description": "Cairns-based freediving school offering courses for beginner and experienced freedivers in Far North Queensland.",
+        "website": "https://www.freedivefnq.com/",
+        "image": "",
+        "sources": [
+          "https://www.freedivefnq.com/"
+        ],
+        "socials": []
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": null,
+        "instagramStatus": "not-yet-confirmed",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "9f2f8b162f7870ee1939eff5d4b92f4e3c200c08810634e0ddaa2b05aa287919"
+      }
+    },
+    {
+      "id": "ffb9f6e6-01c5-56b1-a2cc-2f1a42792170",
+      "key": "freediving-gold-coast",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Freediving Gold Coast",
+        "category": "School",
+        "state": "QLD",
+        "country": "Australia",
+        "locality": "Ashmore and Gold Coast",
+        "description": "Gold Coast freediving school offering pool and ocean courses, coaching, deep dive days, equipment and retreats.",
+        "website": "https://freedivinggoldcoast.com.au/",
+        "image": "",
+        "sources": [
+          "https://freedivinggoldcoast.com.au/"
+        ],
+        "socials": [
+          "https://www.instagram.com/freedivinggoldcoast/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://freedivinggoldcoast.com.au/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "c479fb6a3e68470c7a79b91ab058fbef90248813b4213f711fe99b55464c2121"
+      }
+    },
+    {
+      "id": "7de6986f-a9bc-585c-aea0-dd795c786541",
+      "key": "rusty-freediving",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Rusty Freediving",
+        "category": "School",
+        "state": "WA",
+        "country": "Australia",
+        "locality": "Osborne Park, Perth",
+        "description": "Perth freediving school offering courses, pool and depth training, private instruction and coaching, based at Spear West in Osborne Park.",
+        "website": "https://rustyfreediving.com/pages/about-us",
+        "image": "",
+        "sources": [
+          "https://rustyfreediving.com/pages/about-us"
+        ],
+        "socials": [
+          "https://www.instagram.com/rusty.freediving/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://rustyfreediving.com/pages/about-us",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "c6bd61b7a9a2b0aa575dacfe5c5052f76c9ca0005c59afc191f0da2ecd9bf5a2"
+      }
+    },
+    {
+      "id": "e3c73acf-9d86-5069-a77b-ed342782b618",
+      "key": "blueback-freediving-and-yoga",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Blueback Freediving & Yoga",
+        "category": "School",
+        "state": "WA",
+        "country": "Australia",
+        "locality": "Fremantle and Perth",
+        "description": "Freediving and yoga provider offering courses, pool training, ocean adventures and community freedives around Fremantle and Perth.",
+        "website": "https://www.bluebackfreedivingandyoga.com/home",
+        "image": "",
+        "sources": [
+          "https://www.bluebackfreedivingandyoga.com/home"
+        ],
+        "socials": [
+          "https://www.instagram.com/blueback.freediving.yoga/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://www.bluebackfreedivingandyoga.com/home",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "900c9d8917fea74a5db810e3dfe80730e30c088606de1a090512041d79b83090"
+      }
+    },
+    {
+      "id": "e68b0338-4cba-53b6-a519-7e9a6b6b4528",
+      "key": "apnea-australia",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Apnea Australia",
+        "category": "School",
+        "state": "WA",
+        "country": "Australia",
+        "locality": "Perth; courses across Australia",
+        "description": "Freediving school offering courses, breath-hold clinics, surf-survival training and trips across multiple Australian regions, including Perth.",
+        "website": "https://apneaaustralia.com.au/",
+        "image": "",
+        "sources": [
+          "https://apneaaustralia.com.au/"
+        ],
+        "socials": []
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": null,
+        "instagramStatus": "not-yet-confirmed",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "d67101f37e716d7517cc90dc947377d89494cf958b7b689e0f1726e23fab01e8"
+      }
+    },
+    {
+      "id": "4183eea9-e5c1-5b7d-a7e2-6b4dc10a215d",
+      "key": "spear-west",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Spear West",
+        "category": "Business",
+        "state": "WA",
+        "country": "Australia",
+        "locality": "Osborne Park, Perth",
+        "description": "Perth retailer of freediving, spearfishing and snorkelling equipment, including fins, masks, wetsuits and accessories.",
+        "website": "https://spearwest.com.au/pages/about-us",
+        "image": "",
+        "sources": [
+          "https://spearwest.com.au/pages/about-us"
+        ],
+        "socials": [
+          "https://www.instagram.com/spearwest/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://spearwest.com.au/pages/about-us",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "5d35527ca6e9ac2fa4f92cf3bcb4136fa5edf4cc9873c1cec96fba895d78d0d3"
+      }
+    },
+    {
+      "id": "f4f5516b-2c04-594c-ac04-aa892b602bb1",
+      "key": "deepsouth-freediving",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Deep South Freediving",
+        "category": "School",
+        "state": "TAS",
+        "country": "Australia",
+        "locality": "Hobart and Tasman Peninsula",
+        "description": "Tasmanian freediving school offering courses, pool sessions, shore dives, private coaching and boat-based ocean adventures.",
+        "website": "https://www.deepsouthfreediving.com.au/",
+        "image": "",
+        "sources": [
+          "https://www.deepsouthfreediving.com.au/"
+        ],
+        "socials": [
+          "https://www.instagram.com/deep.south.freediving/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://www.deepsouthfreediving.com.au/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "8aaad79bdb7310ac035d660295105a871bcce7cc6bd7bd6803515f0ab5b1203f"
+      }
+    },
+    {
+      "id": "bdc32912-b2c1-5010-a104-f767826fdc8c",
+      "key": "freedive-tasmania",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Freedive Tasmania",
+        "category": "School",
+        "state": "TAS",
+        "country": "Australia",
+        "locality": "Tasmania",
+        "description": "Tasmanian freediving provider offering courses, retreats, guided snorkelling and an equipment store.",
+        "website": "https://www.freedivetasmania.com/",
+        "image": "",
+        "sources": [
+          "https://www.freedivetasmania.com/"
+        ],
+        "socials": [
+          "https://www.instagram.com/freedive_tasmania/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://www.freedivetasmania.com/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "63459e328c6780857f1dfba01d743401a4c1d8a8b4fc721d08f2995c3870a16e"
+      }
+    },
+    {
+      "id": "67b3ba53-9cf5-5114-a0c5-5968bb8c49a6",
+      "key": "diving-adelaide",
+      "researchedAt": "2026-11-28",
+      "publication": "workbench-only",
+      "ownership": "unclaimed",
+      "document": {
+        "name": "Diving Adelaide",
+        "category": "School",
+        "state": "SA",
+        "country": "Australia",
+        "locality": "Adelaide and South Australia",
+        "description": "Adelaide dive centre offering a freediver course and retreat alongside its broader diving courses and equipment services.",
+        "website": "https://divingadelaide.com.au/freediver-course/",
+        "image": "",
+        "sources": [
+          "https://divingadelaide.com.au/freediver-course/"
+        ],
+        "socials": [
+          "https://www.instagram.com/divingadelaide.onlinedivegear/"
+        ]
+      },
+      "research": {
+        "method": "Official website and linked social profile URLs",
+        "instagramEvidence": "https://divingadelaide.com.au/freediver-course/",
+        "instagramStatus": "official-website-linked",
+        "notes": "Source-linked business draft. Ownership and Instagram API access have not been verified.",
+        "sourceSha256": "26988646c6e65d272eb4523e40948cab67352fa06f4d549d3bd283eabd7e3642"
+      }
+    }
+  ]
+}

@@ -1,0 +1,31 @@
+:root{--workspace-danger:var(--theme-danger,#a60045);--workspace-canvas:#edff35;--workspace-surface:#f7ffad;--workspace-ink:#172440;--workspace-muted:#45516b;--workspace-line:#b3c43c;--workspace-accent:#172440;--workspace-on-accent:#edff35;--workspace-focus:#172440;--workspace-chart:#33636b;--workspace-chart-alt:#4e557b}
+/* Shared workspace palette. Branded rails and geographic map layers keep their own palettes. */
+:root[data-theme] :is(#logbook-page.ff-logbook,.next-community .profile-workspace){
+ --account-bg:var(--workspace-canvas);--account-surface:var(--workspace-surface);--account-ink:var(--workspace-ink);--account-muted:var(--workspace-muted);--account-line:var(--workspace-line);--account-accent:var(--workspace-accent);
+ --theme-bg:var(--workspace-canvas);--theme-surface:var(--workspace-surface);--theme-ink:var(--workspace-ink);--theme-muted:var(--workspace-muted);--theme-line:var(--workspace-line);--theme-accent:var(--workspace-accent);--theme-on-accent:var(--workspace-on-accent);--theme-on-surface:var(--workspace-ink);--theme-focus:var(--workspace-focus);
+ background:var(--workspace-canvas);color:var(--workspace-ink);color-scheme:inherit;
+}
+/* Legacy cards declare local tokens. Reset those locally, for every theme rather than only yellow. */
+:root[data-theme] :is(#logbook-page.ff-logbook,.next-community .profile-workspace) :is(.session-card,.logbook-card,.session-visibility,.logbook-status,.follow-invitation,.person-card,.member-card,.profile-card,.profile-post-link,.profile-guest,.profile-location-card,.profile-privacy,.account-card,.cf-recommendation,.cf-popular,.cf-membership,.cf-page-tools,.cf-post,.cf-invitation){
+ --account-bg:var(--workspace-canvas);--account-surface:var(--workspace-surface);--account-ink:var(--workspace-ink);--account-muted:var(--workspace-muted);--account-line:var(--workspace-line);--account-accent:var(--workspace-accent);
+ --theme-bg:var(--workspace-canvas);--theme-surface:var(--workspace-surface);--theme-ink:var(--workspace-ink);--theme-muted:var(--workspace-muted);--theme-line:var(--workspace-line);--theme-accent:var(--workspace-accent);--theme-on-accent:var(--workspace-on-accent);--theme-on-surface:var(--workspace-ink);--theme-surface-muted:var(--workspace-muted);
+ background:var(--workspace-surface);color:var(--workspace-ink);border-color:var(--workspace-line);
+}
+:root[data-theme] .next-community #profile-main :is(h1,h2,h3,h4,strong,label,legend,summary){color:var(--workspace-ink)}
+:root[data-theme] .next-community #profile-main :is(p,small,.cf-eyebrow,.cf-section-heading>span,.profile-small){color:var(--workspace-muted)}
+:root[data-theme] .next-community #profile-main :is(a,.cf-recommendation-link){color:var(--workspace-ink)}
+:root[data-theme] .next-community #profile-main button{background:var(--workspace-surface)!important;color:var(--workspace-ink)!important;border-color:var(--workspace-line)}
+:root[data-theme] .next-community #profile-main :is(.cf-primary,button.primary,.cf-filters button[aria-pressed=true]){background:var(--workspace-accent)!important;color:var(--workspace-on-accent)!important;border-color:var(--workspace-accent)}
+:root[data-theme] .next-community #profile-main :is(.cf-primary,button.primary) :is(span,strong,small){color:inherit}
+:root[data-theme] :is(#logbook-page.ff-logbook,.next-community .profile-workspace) .community-sections a{color:var(--workspace-muted);border-color:var(--workspace-line)}
+:root[data-theme] :is(#logbook-page.ff-logbook,.next-community .profile-workspace) .community-sections a[aria-current=page]{background:var(--workspace-accent);color:var(--workspace-on-accent)!important;border-color:var(--workspace-accent)}
+:root[data-theme] :is(#logbook-page.ff-logbook,.next-community .profile-workspace) :is(input:not([type=checkbox]):not([type=radio]):not([type=range]),select,textarea){background:var(--workspace-canvas);color:var(--workspace-ink);border-color:var(--workspace-line)}
+:root[data-theme] :is(#logbook-page.ff-logbook,.next-community .profile-workspace) :is(input,textarea)::placeholder{color:var(--workspace-muted);opacity:1}
+:root[data-theme] :is(#logbook-page.ff-logbook,.next-community .profile-workspace) :is(button,a,input,select,textarea,summary):focus-visible{outline-color:var(--workspace-focus)}
+/* The mobile navigation paints a surface of its own; give it the matching foreground. */
+@media(max-width:900px){:root[data-theme] .finfolk-navigation-enabled nav.ff-primary-nav{--account-bg:var(--workspace-canvas);--account-surface:var(--workspace-surface);--account-ink:var(--workspace-ink);--account-line:var(--workspace-line);background:var(--workspace-surface)!important;border-color:var(--workspace-line)}
+ :root[data-theme] .finfolk-navigation-enabled nav.ff-primary-nav .ff-nav-item{color:var(--workspace-ink)}
+ :root[data-theme] .finfolk-navigation-enabled nav.ff-primary-nav .ff-nav-item[aria-current=page]{background:var(--workspace-accent);color:var(--workspace-on-accent)!important}}
+
+/* Switch foreground and background together; avoid low-contrast intermediate fades. */
+:root[data-theme] :is(#logbook-page.ff-logbook,.next-community .profile-workspace,nav.ff-primary-nav) :is(button,a,input,select,textarea){transition-property:transform,box-shadow,border-color}

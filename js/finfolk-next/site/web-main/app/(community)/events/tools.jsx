@@ -1,7 +1,7 @@
 'use client';
 import {useEffect,useRef,useState} from 'react';
 import {pageActions} from '../../../lib/page-models.js';
-export function EventNavigation(){return <><a className="profile-action" href="/events">Browse events</a><a className="profile-action" href="/events/my">My events</a><a className="profile-action" href="/pages">My pages</a></>}
+export function EventNavigation(){return <><a className="profile-action" href="/events">Browse events</a><a className="profile-action" href="/events/my">My events</a><a className="profile-action" href="/directory?manage=1">Manage pages</a></>}
 export function EventCard({event:e}){return <article className="profile-empty"><h2><a className="profile-action" href={'/events/'+e.id}>{e.document.title}</a></h2><p>{e.organiser} · {e.document.location}</p><p>{new Date(e.starts_at).toLocaleString(undefined,{timeZone:e.timezone})} · {e.timezone}</p>{e.state&&<p>{e.state} · {e.visibility}</p>}</article>}
 export function EventGate({session,record,retry}){return session.status==='loading'||session.user&&(!record||record.loading)?<p role="status">Loading events…</p>:session.error||record?.error?<p role="alert">{(session.error||record.error).message}<button className="profile-action" onClick={session.error?session.retry:retry}>Try again</button></p>:!session.user?<><p>Sign in with a verified account to continue.</p><a className="profile-action" href="/account">Sign in</a></>:null;}
 export function useEventAction(session,page,inputs={}){

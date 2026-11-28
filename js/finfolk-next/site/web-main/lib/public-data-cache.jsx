@@ -1,9 +1,11 @@
 'use client';
 import {useEffect,useState} from 'react';
+import {usePublishedSites} from './use-published-sites.js';
 import {nativeApplicationBackbone} from './application-client.js';
 async function read(name,values){
  const app=await nativeApplicationBackbone();
  if(!app)throw Error('Published data is unavailable. Please check your connection.');
+ await app.ready;
  return app.public.call(name,values);
 }
 // Preserve server rendering while letting the existing public model own its
@@ -24,4 +26,8 @@ export function usePublicData(name,values,{enabled=true}={}){
  const key=name+':'+JSON.stringify(values),[record,setRecord]=useState(null),[version,setVersion]=useState(0);
  useEffect(()=>{if(!enabled)return;let live=true;setRecord({key,loading:true});read(name,values).then(data=>{if(live)setRecord({key,data});}).catch(error=>{if(live)setRecord({key,error});});return()=>{live=false;};},[key,version,enabled]);
  return {record:record?.key===key?record:null,retry:()=>setVersion(value=>value+1)};
+}
+export function useSiteCatalog(enabled=true){
+ const state=usePublishedSites(enabled);
+ return {sites:state.directory?.beaches||[],loading:enabled&&!state.directory&&!state.error,error:state.error,retry:state.refresh};
 }

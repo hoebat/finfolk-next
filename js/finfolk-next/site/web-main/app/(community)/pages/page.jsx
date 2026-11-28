@@ -1,4 +1,4 @@
-import Pages from './screen.jsx';
 import {Suspense} from 'react';
-export const metadata={title:'My pages',robots:{index:false,follow:false}};
-export default function MyPages(){return <Suspense fallback={<p role="status">Loading pages…</p>}><Pages/></Suspense>}
+import LegacyPagesRedirect from './legacy-redirect.jsx';
+export const metadata={title:'Pages',alternates:{canonical:'https://finfolk.com.au/directory'},robots:{index:false,follow:false}};
+export default function LegacyPages(){return <Suspense fallback={<p role="status">Opening Pages…</p>}><LegacyPagesRedirect/></Suspense>;}

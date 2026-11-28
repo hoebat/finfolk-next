@@ -23,6 +23,11 @@ blocked.FinFolkAppearance.apply('navy');assert.equal(window.document.documentEle
 const luminance=hex=>{const rgb=hex.slice(1).match(/../g).map(value=>parseInt(value,16)/255).map(value=>value<=.04045?value/12.92:((value+.055)/1.055)**2.4);return rgb[0]*.2126+rgb[1]*.7152+rgb[2]*.0722;};
 const contrast=(a,b)=>{const x=luminance(a),y=luminance(b);return (Math.max(x,y)+.05)/(Math.min(x,y)+.05);};
 for(const theme of blocked.FinFolkAppearance.themes){
+ const w=theme.workspace;if(theme.id==='yellow')assert.equal(w.canvas,theme.bg,'Acid Club keeps its acid-yellow canvas');
+ for(const [fg,bg] of [['ink','canvas'],['ink','surface'],['muted','canvas'],['muted','surface'],['onAccent','accent']])assert.ok(contrast(w[fg],w[bg])>=4.5,`${theme.name} workspace: ${fg}/${bg}`);
+ for(const key of ['chart','chartAlt','focus'])assert.ok(contrast(w[key],w.surface)>=3,`${theme.name} workspace: ${key} must remain visible`);
+ blocked.FinFolkAppearance.apply(theme.id);assert.equal(blocked.document.documentElement.style.getPropertyValue('--workspace-surface'),w.surface);assert.ok(blocked.document.documentElement.style.getPropertyValue('--theme-on-surface'));
+
  for(const [fg,bg] of (theme.id==='yellow'?[['ink','bg'],['onAccent','surface'],['onAccent','accent']]:[['ink','bg'],['ink','surface'],['muted','surface'],['accent','surface'],['onAccent','accent']]))assert.ok(contrast(theme[fg],theme[bg])>=4.5,`${theme.name}: ${fg}/${bg} must meet normal text contrast`);
 }
 await window.happyDOM.close();

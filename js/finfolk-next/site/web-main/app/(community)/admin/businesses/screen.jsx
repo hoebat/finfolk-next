@@ -1,0 +1,22 @@
+'use client';
+import {useState} from 'react';
+import {useSession} from '../../../../lib/use-session.js';
+import {usePageData} from '../../../../lib/use-page-data.js';
+import {pageActions} from '../../../../lib/page-models.js';
+import PageEditor from '../../pages/editor.jsx';
+import './businesses.css';
+export default function BusinessAdmin(){
+ const session=useSession(),{record,refresh}=usePageData(session,'directory-review'),data=record?.data?.review;
+ const [scope,setScope]=useState('unclaimed'),[query,setQuery]=useState(''),[state,setState]=useState(''),[status,setStatus]=useState(''),[busy,setBusy]=useState(false),[notice,setNotice]=useState(null);
+ const rows=data?.listings||[],unclaimed=rows.filter(row=>!row.owner_id).length;
+ const matches=rows.filter(row=>(scope==='all'||(scope==='unclaimed'?!row.owner_id:!!row.owner_id))&&(!state||row.document.state===state)&&(!status||row.status===status)&&(!query||[row.document.name,row.document.locality,row.document.website].join(' ').toLowerCase().includes(query.toLowerCase())));
+ async function save(body){if(busy)throw Error('A save is already in progress.');const actor=session.user.uid;setBusy(true);setNotice(null);try{const result=await pageActions(session.client,'directory-review').save(body);if(session.client.user?.uid===actor){setNotice({actor,text:'Page saved. Published changes are now on the site.'});refresh();}return result;}finally{setBusy(false);}}
+ const loading=session.status==='loading'||session.user&&(!record||record.loading),error=session.error||record?.error;
+ return <div className="business-admin"><p className="profile-eyebrow">Superadmin</p><h1>Business management</h1><p>Review unclaimed pages, keep their information current and choose which pages appear on FinFolk.</p><a className="profile-back" href="/directory">← Public pages</a>
+ {loading?<p role="status">Loading businesses…</p>:error?<section role="alert"><p>{error.message}</p><button className="profile-action" onClick={session.error?session.retry:refresh}>Try again</button></section>:!session.user?<p><a href="/account?returnTo=%2Fadmin%2Fbusinesses">Sign in</a> with a superadmin account to manage businesses.</p>:!data?<p role="alert">Administrator access required.</p>:<>
+ <div className="business-admin-summary"><strong>{unclaimed} unclaimed</strong><span>{rows.length-unclaimed} claimed</span><span>{rows.filter(row=>row.status==='published').length} published</span></div>
+ <div className="business-admin-filters"><label>Ownership<select aria-label="Ownership filter" value={scope} onChange={e=>setScope(e.target.value)}><option value="unclaimed">Unclaimed</option><option value="claimed">Claimed</option><option value="all">All pages</option></select></label><label>Search businesses<input type="search" value={query} onChange={e=>setQuery(e.target.value)} placeholder="Name, location or website"/></label><label>State<select aria-label="Filter by state" value={state} onChange={e=>setState(e.target.value)}><option value="">All states</option>{['NSW','VIC','QLD','WA','SA','TAS','ACT','NT'].map(value=><option key={value}>{value}</option>)}</select></label><label>Publication<select aria-label="Filter by publication" value={status} onChange={e=>setStatus(e.target.value)}><option value="">All statuses</option>{['candidate','published','archived','suppressed','rejected'].map(value=><option key={value}>{value}</option>)}</select></label></div>
+ <p role="status">{matches.length} {matches.length===1?'page':'pages'}</p><div className="business-admin-list">{matches.map(row=><details className="business-admin-row" key={session.user.uid+':'+row.id+':'+row.revision}><summary><strong>{row.document.name}</strong><span>{row.document.state||row.document.country} · {row.status} · {row.owner_id?'Claimed':'Unclaimed'}</span></summary><div className="business-admin-editor"><p>{row.owner_id?'This page has an owner. Changes keep their ownership.':'This page has no owner. Editing or publishing it keeps it available to claim.'}</p>{row.status==='published'&&<a className="profile-action" href={'/directory/'+row.id}>View public page ↗</a>}<PageEditor row={row} admin save={save} disabled={busy}/></div></details>)}</div>{!matches.length&&<p>No pages match these filters.</p>}
+ <details className="business-admin-create"><summary>Create a page</summary><PageEditor admin save={save} disabled={busy}/></details><p><a href="/pages/review">Ownership requests, discovery and audit history ↗</a></p>
+ </>}{notice?.actor===session.user?.uid&&data&&<p role="status">{notice.text}</p>}</div>;
+}

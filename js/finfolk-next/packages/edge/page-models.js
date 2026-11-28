@@ -164,8 +164,14 @@ export var pages = {
   "page-owner":{
     "routes":[],
     "area":"member",
-    "models":{"access":{"operation":"pageAccess","bindings":{"id":"id"}}},
+    "models":{
+      "instagram":{"operation":"pageInstagramManage","bindings":{"id":"id"}},
+      "access":{"operation":"pageAccess","bindings":{"id":"id"}}
+    },
     "actions":{
+      "instagram-save":{"operation":"pageInstagramSave","bindings":{"id":"id"}},
+      "instagram-refresh":{"operation":"pageInstagramRefresh","bindings":{"id":"id"}},
+      "instagram-review":{"operation":"pageInstagramReview","bindings":{"id":"id"}},
       "save":{
         "operation":"directoryOwnerSave",
         "bindings":{"id":"id"},
@@ -221,6 +227,7 @@ export var pages = {
       "refresh":{"method":["refresh"],"check-error":false},
       "verify":{"method":["verify"],"check-error":false},
       "verify-code":{"method":["verifyCode"],"check-error":false},
+      "facebook":{"method":["facebook"],"check-error":false},
       "sign-out":{"method":["signOut"],"check-error":false},
       "delete-account":{"method":["deleteAccount"],"check-error":false},
       "reset-password":{"method":["resetPassword"],"check-error":false},
@@ -229,7 +236,7 @@ export var pages = {
   },
   "you-hub":{"routes":["/you"],"area":"public","models":{},"actions":{}},
   "directory-review":{
-    "routes":["/pages/review"],
+    "routes":["/pages/review","/admin/businesses"],
     "area":"member",
     "order":["mine","review"],
     "models":{
@@ -367,6 +374,12 @@ export var pages = {
     "actions":{},
     "adapters":["site-review","post-review","trip-review"]
   },
+  "profile-setup":{
+    "routes":[],
+    "area":"member",
+    "models":{"me":{"operation":"me","bindings":{}}},
+    "actions":{"save":{"operation":"profileSetup","bindings":{}}}
+  },
   "buddies":{
     "routes":["/buddies"],
     "area":"member",
@@ -419,10 +432,13 @@ export var pages = {
     "routes":["/admin/instagram"],
     "area":"member",
     "models":{
+      "collection":{"operation":"pageInstagramConnection","bindings":{}},
       "status":{"operation":"socialOperatorStatus","bindings":{}},
       "event":{"operation":"socialOperatorEvent","bindings":{"id":"id"}}
     },
     "actions":{
+      "collection-save":{"operation":"pageInstagramConnect","bindings":{}},
+      "collection-pause":{"operation":"pageInstagramPause","bindings":{}},
       "authorize":{"operation":"socialOperatorAuthorize","bindings":{}},
       "activate":{"operation":"socialOperatorActivate","bindings":{}},
       "pause":{"operation":"socialOperatorPause","bindings":{}},
@@ -540,6 +556,7 @@ export var pages = {
       "refresh":{"method":["refresh"],"check-error":false},
       "verify":{"method":["verify"],"check-error":false},
       "verify-code":{"method":["verifyCode"],"check-error":false},
+      "facebook":{"method":["facebook"],"check-error":false},
       "sign-out":{"method":["signOut"],"check-error":false},
       "delete-account":{"method":["deleteAccount"],"check-error":false},
       "reset-password":{"method":["resetPassword"],"check-error":false},
@@ -605,6 +622,21 @@ export var pages = {
       "accept":{"operation":"pageInviteRedeem","bindings":{"token":"token"}}
     }
   },
+  "tiktok-operator":{
+    "routes":["/admin/tiktok"],
+    "area":"member",
+    "models":{
+      "status":{"operation":"tiktokOperatorStatus","bindings":{}},
+      "event":{"operation":"tiktokOperatorEvent","bindings":{"id":"id"}}
+    },
+    "actions":{
+      "authorize":{"operation":"tiktokOperatorAuthorize","bindings":{}},
+      "activate":{"operation":"tiktokOperatorActivate","bindings":{}},
+      "pause":{"operation":"tiktokOperatorPause","bindings":{}},
+      "disconnect":{"operation":"tiktokOperatorDisconnect","bindings":{}},
+      "acceptance":{"operation":"tiktokOperatorAcceptance","bindings":{}}
+    }
+  },
   "account-integration":{
     "routes":[],
     "area":"member",
@@ -612,6 +644,15 @@ export var pages = {
       "status":{"operation":"instagramDiscoveryStatus","bindings":{}}
     },
     "actions":{}
+  },
+  "tiktok-linking":{
+    "routes":["/account/tiktok"],
+    "area":"member",
+    "models":{"state":{"operation":"tiktokAccount","bindings":{}}},
+    "actions":{
+      "connect":{"operation":"tiktokCodeConnect","bindings":{}},
+      "disconnect":{"operation":"tiktokMemberDisconnect","bindings":{}}
+    }
   },
   "profile-editor":{
     "policy":{"regularDays":8},
@@ -735,6 +776,21 @@ export var pages = {
       "accept":{"operation":"eventAccept","bindings":{"token":"token"}}
     }
   },
+  "tiktok-comments-operator":{
+    "routes":["/admin/tiktok/comments"],
+    "area":"member",
+    "models":{
+      "status":{"operation":"tiktokCommentsStatus","bindings":{}},
+      "event":{"operation":"tiktokCommentsEvent","bindings":{"id":"id"}}
+    },
+    "actions":{
+      "authorize":{"operation":"tiktokCommentsAuthorize","bindings":{}},
+      "activate":{"operation":"tiktokCommentsActivate","bindings":{}},
+      "pause":{"operation":"tiktokCommentsPause","bindings":{}},
+      "disconnect":{"operation":"tiktokCommentsDisconnect","bindings":{}},
+      "acceptance":{"operation":"tiktokCommentsAcceptance","bindings":{}}
+    }
+  },
   "place-public":{
     "routes":[],
     "area":"public",
@@ -766,6 +822,7 @@ export var pages = {
       "refresh":{"method":["refresh"],"check-error":false},
       "verify":{"method":["verify"],"check-error":false},
       "verify-code":{"method":["verifyCode"],"check-error":false},
+      "facebook":{"method":["facebook"],"check-error":false},
       "sign-out":{"method":["signOut"],"check-error":false},
       "delete-account":{"method":["deleteAccount"],"check-error":false},
       "reset-password":{"method":["resetPassword"],"check-error":false},
@@ -843,6 +900,7 @@ export var pages = {
     "routes":["/directory/[id]"],
     "area":"public",
     "models":{
+      "instagram":{"operation":"publicPageInstagram","bindings":{"id":"id"}},
       "listing":{"operation":"publicDirectoryDetail","bindings":{"id":"id"}},
       "events":{"operation":"publicEvents","bindings":{"page":"id"}},
       "mine":{"operation":"directoryMine","bindings":{},"when":[["actor"]]}

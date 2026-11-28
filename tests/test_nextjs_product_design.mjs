@@ -22,9 +22,9 @@ try {
     ['people','/people',()=>page.locator('[data-person=maya]').waitFor()],
     ['profile-edit','/profile/edit',()=>page.getByLabel('Display name',{exact:true}).waitFor()],
    ]:[
-    ['sessions','/logbook',()=>page.getByRole('button',{name:'Bondi',exact:true}).waitFor()],
+    ['sessions','/logbook',()=>page.getByRole('toolbar',{name:'Sessions actions'}).waitFor()],
     ['session','/logbook?session=one',()=>page.locator('.session-detail').waitFor()],
-    ['session-edit','/logbook',async()=>{await page.getByRole('button',{name:'Log a session',exact:true}).click();await page.getByLabel('Notes',{exact:true}).waitFor();await page.getByLabel('Date',{exact:true}).blur();}],
+    ['session-edit','/logbook?session=one',async()=>{await page.getByRole('button',{name:'Log session',exact:true}).click();await page.getByLabel('Notes',{exact:true}).waitFor();await page.getByLabel('Date',{exact:true}).blur();}],
    ];
    for(const [screen,path,ready]of cases) {
     await page.goto(base+path);await ready();await page.evaluate(()=>document.fonts.ready);

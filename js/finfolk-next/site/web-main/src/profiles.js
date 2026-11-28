@@ -7,7 +7,7 @@ import {closeInstagramConnectDialogs} from './instagram-connect.js';
 import {installNavigation,navigationURL} from './navigation.js';
 import {createWordmark} from './identity.js';
 import {applySavedTheme,setTheme} from './theme.js';
-import {AVAILABILITY,EXPERIENCES,SHARING,profileURL,socialURL,publishedLogs,portraitDataURL} from './profile-model.js';
+import {AVAILABILITY,AVAILABILITY_TIMES,availabilityTimes,availabilityValues,availabilityLabel,EXPERIENCES,SHARING,profileURL,socialURL,publishedLogs,portraitDataURL} from './profile-model.js';
 
 export async function installProfiles({doc=document,api:providedAPI,directory:providedDirectory,loadClient=async config=>(await import('./account-client.js')).createLogbookClient(config)}={}){
  const win=doc.defaultView,main=doc.getElementById('profile-main'),status=doc.getElementById('profile-status');
@@ -135,7 +135,7 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   if(member.restricted){main.append(empty('Profile unavailable','This diver is not sharing their profile with you.',profileLink('Back to People','people')));return;}
   main.append(profileLink('← Meet more people','people',{},'profile-back'));
   const hero=node('section',undefined,'member-hero'+(own?' is-own':'')),content=node('div');content.append(node('p',own?'PROFILE':'DIVER PROFILE','profile-eyebrow'),node('h1',member.displayName),node('p',member.bio||'No bio added.','member-bio'));
-  const tags=node('div',undefined,'profile-tags');if(EXPERIENCES[member.experience])tags.append(node('span',EXPERIENCES[member.experience]));for(const value of member.availability||[])tags.append(node('span',value));content.append(tags,socials(member));
+  const tags=node('div',undefined,'profile-tags');if(EXPERIENCES[member.experience])tags.append(node('span',EXPERIENCES[member.experience]));for(const value of availabilityTimes(member.availability))tags.append(node('span',availabilityLabel(value)));content.append(tags,socials(member));
   const actions=node('div',undefined,'profile-action-row');
   if(own)actions.append(profileLink('Edit profile','edit',{},'profile-action primary'),link('Instagram connection','#instagram-claim'),link('Check in ↗',navigationURL('checkin',selectedLocation()?.id)));
   else actions.append(connect(member,connections.find(row=>row.id===id)?.status));
@@ -199,7 +199,7 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   const places=group('Locations & availability'),search=field(places,'locationSearch','Find a location','search'),placeList=node('div',undefined,'profile-directory-list');places.append(placeList);
   function showSites(){placeList.replaceChildren();const query=search.value.trim().toLowerCase();for(const site of sites.filter(site=>site.name.toLowerCase().includes(query)||selectedSites.has(site.id))){const input=check(placeList,'beaches',site.name+' · '+(site.state_id||site.state||''),selectedSites.has(site.id));input.value=site.id;input.onchange=()=>{if(input.checked&&selectedSites.size>=20){input.checked=false;error.textContent='Choose up to 20 locations.';return;}input.checked?selectedSites.add(site.id):selectedSites.delete(site.id);};}}
   search.oninput=showSites;showSites();
-  const availability=[];for(const value of AVAILABILITY){const input=check(places,'availability',value,(profile.availability||[]).includes(value));input.value=value;availability.push(input);}
+  const availability=[];for(const value of AVAILABILITY_TIMES){const input=check(places,'availability',availabilityLabel(value),availabilityTimes(profile.availability).includes(value));input.value=value;availability.push(input);}
   const experienceLabel=node('label','Experience'),experience=node('select');experience.name='experience';experience.append(option('Choose an experience level',''));for(const [value,label]of Object.entries(EXPERIENCES))experience.append(option(label,value));experience.value=profile.experience||'';experienceLabel.append(experience);places.append(experienceLabel);
   const social=group('Linked profiles');social.append(link('Manage Instagram ↗','./profiles?screen=me#instagram-claim'));field(social,'tiktok','TikTok profile URL','url',profile.tiktok||'').placeholder='https://www.tiktok.com/@yourname/';social.append(node('p','Links open the original platform. Saving a link does not verify ownership.','profile-small'));
   function featurePicker(title,key,items,initial){
@@ -218,7 +218,7 @@ export async function installProfiles({doc=document,api:providedAPI,directory:pr
   form.onsubmit=async event=>{
    event.preventDefault();if(uploadPending)return;save.disabled=true;error.textContent='Saving profile…';
    try{
-    const values={...draft(),tiktok:fields.tiktok.value,beaches:[...selectedSites],availability:availability.filter(input=>input.checked).map(input=>input.value),experience:experience.value,open:open.checked,sharing:Object.fromEntries(Object.entries(checks).map(([key,input])=>[key,input.checked])),featuredPosts:[...featuredPosts],featuredLogs:[...featuredLogs]};
+    const values={...draft(),tiktok:fields.tiktok.value,beaches:[...selectedSites],availability:availabilityValues(availability.filter(input=>input.checked).map(input=>input.value)),experience:experience.value,open:open.checked,sharing:Object.fromEntries(Object.entries(checks).map(([key,input])=>[key,input.checked])),featuredPosts:[...featuredPosts],featuredLogs:[...featuredLogs]};
     if(!values.displayName)throw Error('Enter a display name.');
     const result=await api.call('preferences',{profile:values});if(generation!==epoch||disposed)return;me={...me,profile:result.profile};message('Profile saved.');await navigate('me');
    }catch(e){if(generation===epoch)error.textContent=e.message||'Your profile could not be saved. Try again.';}finally{if(save.isConnected)save.disabled=false;}

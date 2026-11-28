@@ -16,7 +16,7 @@ try{
  await page.goto(origin+'/practice');await page.getByRole('link',{name:'Open Sessions →',exact:true}).waitFor();
  for(const name of ['Progress','Breathing practice','Watch imports','Breath check'])assert.equal(await page.getByRole('heading',{name,exact:true}).count(),0,name);
  assert.equal(await page.getByRole('navigation',{name:'Main navigation'}).getByRole('link',{name:'Events',exact:true}).count(),0);
- await page.goto(origin+'/community');await page.getByRole('heading',{name:'Your people. Your coast.',exact:true}).waitFor();assert.equal(await page.getByRole('link',{name:/FinFolk Coop/}).count(),0);
+ await page.goto(origin+'/community');await page.getByRole('heading',{name:'Community',exact:true}).waitFor();assert.equal(await page.getByRole('link',{name:/FinFolk Coop/}).count(),0);
  for(const path of ['/shop','/shop/manage','/events','/events/my','/events/new','/events/invitation','/events/public-event']){await page.goto(origin+path);await page.getByRole('heading',{name:'Feature unavailable',exact:true}).waitFor();}
  for(const path of ['/practice/progress','/practice/breathing','/practice/watch-imports','/practice/breath-check','/shop/not-a-route']){const response=await page.goto(origin+path);assert.equal(response.status(),404);await page.getByRole('heading',{name:'Page unavailable',exact:true}).waitFor();}
  flags={events:true,shop:true,'practice.progress':true};await page.goto(origin+'/practice');await page.getByRole('heading',{name:'Progress',exact:true}).waitFor();assert.equal(await page.getByRole('heading',{name:'Breathing practice',exact:true}).count(),0);

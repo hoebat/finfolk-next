@@ -1,0 +1,5 @@
+import './auth.css';
+export default function AuthShell({children,overlay=false}){
+ if(overlay)return <div className="ff-auth-page ff-auth-overlay"><div className="ff-auth-panel">{children}</div></div>;
+ return <div className="ff-auth-page"><header className="ff-auth-header"><a href="/" aria-label="FinFolk home"><span className="brand-wordmark" style={{'--wordmark-width':'200px'}} role="img" aria-label="FinFolk" data-brand-print="fine"><span className="brand-wordmark__fill"/></span></a><a href="/map">Explore the coast <span aria-hidden="true">↗</span></a></header><div className="ff-auth-layout"><div className="ff-auth-story"><span className="signin-eyebrow">YOUR OCEAN COMMUNITY</span><h1>Good water.<br/>Great people.<br/><em>Your FinFolk.</em></h1><p>A shared love of the ocean.<br/>A whole coast of people to meet.</p><div className="ff-auth-tide" aria-hidden="true"><span>MEET YOU IN THE WATER</span></div></div><div className="ff-auth-panel">{children}</div></div><footer className="ff-auth-footer"><span>FIND YOUR PEOPLE. FIND YOUR WATER.</span><span>Made for life along the coast.</span></footer></div>;
+}

@@ -7,5 +7,5 @@ export function publicAccountConfig(env){
  let publicKey=typeof publishableKey==='string'&&publishableKey.startsWith('sb_publishable_');
  if(publishableKey&&!publicKey)try{publicKey=JSON.parse(Buffer.from(publishableKey.split('.')[1],'base64url').toString()).role==='anon';}catch{}
  if(!publicKey)return null;
- return {enabled:true,authProvider:'supabase',supabaseUrl:url.origin,publishableKey,googleEnabled:env.FINFOLK_GOOGLE_AUTH_ENABLED==='true',githubEnabled:env.FINFOLK_GITHUB_AUTH_ENABLED==='true'};
+ return {enabled:true,authProvider:'supabase',supabaseUrl:url.origin,publishableKey,googleEnabled:env.FINFOLK_GOOGLE_AUTH_ENABLED==='true',githubEnabled:env.FINFOLK_GITHUB_AUTH_ENABLED==='true',facebookEnabled:env.FINFOLK_FACEBOOK_AUTH_ENABLED==='true'};
 }

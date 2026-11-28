@@ -1,0 +1,73 @@
+/* Sessions: theme-aware working canvas, restrained brand accents, compact controls. */
+:root[data-theme] #logbook-page.ff-logbook{--account-bg:var(--workspace-canvas);--account-surface:var(--workspace-surface);--account-ink:var(--workspace-ink);--account-muted:var(--workspace-muted);--account-line:var(--workspace-line);--account-accent:var(--workspace-accent);--theme-focus:var(--workspace-focus);--session-paper:var(--workspace-surface);--session-canvas:var(--workspace-canvas);--session-chart:var(--workspace-chart);--session-rest:var(--workspace-chart-alt);padding:28px clamp(16px,3vw,44px) calc(var(--nav-height,76px) + 28px);background:var(--session-canvas);font-size:14px;line-height:1.5}
+:root[data-theme] #logbook-page.ff-logbook>*{max-width:1080px;width:100%;box-sizing:border-box}
+:root[data-theme] #logbook-page.ff-logbook h2{font-size:15px;letter-spacing:-.015em;margin:24px 0 12px;font-weight:650}
+:root[data-theme] #logbook-page.ff-logbook .logbook-header{border:0;margin:0;padding:0 0 16px}
+:root[data-theme] #logbook-page.ff-logbook .logbook-header h1{font-size:24px;margin:0}
+:root[data-theme] #logbook-page.ff-logbook .logbook-header .logbook-actions{display:none}
+:root[data-theme] #logbook-page.ff-logbook:has(.session-planning) .logbook-header{height:0;padding:0;overflow:hidden}
+:root[data-theme] #logbook-page.ff-logbook:has(.session-planning) .logbook-header h1{position:absolute;width:1px;height:1px;clip-path:inset(50%);overflow:hidden;white-space:nowrap}
+:root[data-theme] #logbook-page.ff-logbook .logbook-status:empty{display:none}
+:root[data-theme] #logbook-page.ff-logbook .sessions-sections{margin:0 0 18px;gap:6px;padding:0 50px 16px 0;border-bottom:1px solid var(--account-line)}
+:root[data-theme] #logbook-page.ff-logbook .sessions-sections a{padding:8px 17px;min-height:36px;font-size:12px;background:transparent;color:var(--account-muted);border-color:transparent}
+:root[data-theme] #logbook-page.ff-logbook .sessions-sections a[aria-current=page]{background:var(--workspace-accent);color:var(--workspace-on-accent)!important}
+:root[data-theme] #logbook-page.ff-logbook button{background:var(--session-paper)!important;color:var(--account-ink)!important;border:1px solid var(--account-line);border-radius:8px;min-height:38px;padding:8px 13px;font-size:12px;font-weight:600;box-shadow:0 1px 2px #152e4410}
+:root[data-theme] #logbook-page.ff-logbook button.primary{background:var(--workspace-accent)!important;color:var(--workspace-on-accent)!important;border-color:var(--workspace-accent)}
+:root[data-theme] #logbook-page.ff-logbook button:hover{border-color:var(--account-muted)}
+:root[data-theme] #logbook-page.ff-logbook button:focus-visible{outline:2px solid var(--account-accent);outline-offset:3px}
+:root[data-theme] #logbook-page.ff-logbook .session-toolbar{display:flex;align-items:center;flex-wrap:wrap;gap:8px;border:0;padding:0;margin:0 0 22px}
+
+:root[data-theme] #logbook-page.ff-logbook .session-planning{margin:0 0 20px}
+.session-status-tabs{display:flex;gap:22px;align-items:center;border-bottom:1px solid var(--account-line);overflow-x:auto;scrollbar-width:none}
+:root[data-theme] #logbook-page.ff-logbook .session-status-tabs button{position:relative;padding:8px 0 12px;min-height:38px;flex-shrink:0;border:0;border-radius:0;box-shadow:none;background:transparent!important;color:var(--account-muted)!important;font-weight:500}
+:root[data-theme] #logbook-page.ff-logbook .session-status-tabs button[aria-selected=true]{color:var(--account-ink)!important}
+.session-status-tabs button[aria-selected=true]:after{content:'';position:absolute;bottom:0;left:0;right:0;height:2px;background:var(--account-ink)}
+.session-status-tabs span{color:var(--workspace-ink);margin-left:5px;font-size:10px;background:var(--account-line);border-radius:4px;padding:2px 5px;font-variant-numeric:tabular-nums}
+:root[data-theme] #logbook-page.ff-logbook .session-planning [role=tabpanel]>p{font-size:12px;color:var(--account-muted);margin:12px 0 0}
+:root[data-theme] #logbook-page.ff-logbook .session-grid{grid-template-columns:1fr;gap:9px}
+:root[data-theme] #logbook-page.ff-logbook .session-card{position:relative;padding:17px 20px;border:1px solid var(--account-line);border-radius:12px;background:var(--session-paper);color:var(--account-ink);gap:6px;box-shadow:0 2px 5px #152e4404}
+:root[data-theme] #logbook-page.ff-logbook .session-card h3{font-size:16px;margin:0;letter-spacing:-.015em}
+:root[data-theme] #logbook-page.ff-logbook .session-card p{margin:0;font-size:12px;color:var(--account-muted)}
+:root[data-theme] #logbook-page.ff-logbook .session-planning .session-card .beach-thumbnail{position:absolute;right:16px;top:14px;width:72px;height:45px;opacity:.6}
+:root[data-theme] #logbook-page.ff-logbook .session-planning .session-card>h3,:root[data-theme] #logbook-page.ff-logbook .session-planning .session-card>small{padding-right:80px}
+:root[data-theme] #logbook-page.ff-logbook .session-card ul{display:flex;gap:14px;flex-wrap:wrap;padding:0;margin:4px 0;list-style:none}
+:root[data-theme] #logbook-page.ff-logbook .session-card li{font-size:12px;margin:0}
+:root[data-theme] #logbook-page.ff-logbook .session-card .logbook-actions{gap:6px;margin-top:8px}
+:root[data-theme] #logbook-page.ff-logbook .session-records .session-card{display:grid;grid-template-columns:minmax(150px,1fr) minmax(120px,1fr) auto;align-items:center;gap:10px 22px}
+:root[data-theme] #logbook-page.ff-logbook .session-card-meta{grid-column:1/-1;font-size:11px}
+:root[data-theme] #logbook-page.ff-logbook button.session-title{font-size:15px;padding:0;border:0;border-radius:0;min-height:30px;background:transparent!important;text-align:left;box-shadow:none;letter-spacing:-.01em}
+:root[data-theme] #logbook-page.ff-logbook .session-records .session-notes{display:none}
+:root[data-theme] #logbook-page.ff-logbook .session-visibility{background:var(--account-bg);border:0;padding:3px 8px;font-size:10px;letter-spacing:0}
+:root[data-theme] #logbook-page.ff-logbook .ff-session-metrics{display:flex;gap:24px;margin:0;padding:0;border:0}
+:root[data-theme] #logbook-page.ff-logbook .ff-session-metrics dd{font-size:21px;margin:0;font-weight:500}
+:root[data-theme] #logbook-page.ff-logbook .ff-session-metrics dt{font-size:10px;color:var(--account-muted)}
+:root[data-theme] #logbook-page.ff-logbook .session-open{box-shadow:none;font-weight:500}
+:root[data-theme] #logbook-page.ff-logbook .logbook-empty{padding:20px;border-radius:10px;font-size:12px}
+.session-analytics{font-variant-numeric:tabular-nums;margin:22px 0 26px;padding:24px;border:1px solid var(--account-line);border-radius:16px;background:var(--session-paper);box-shadow:0 3px 12px #152e4404}
+.analytics-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;margin-bottom:22px}
+:root[data-theme] #logbook-page.ff-logbook .analytics-heading h2{margin:0;font-size:15px;letter-spacing:-.01em}
+.analytics-heading>span{font-size:11px;color:var(--account-muted)}
+.analytics-totals{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:16px;padding:0 0 24px;border-bottom:1px solid var(--account-line);margin-bottom:22px}
+.analytics-totals>div{display:grid;gap:7px}.analytics-totals>div+div{border-left:1px solid var(--account-line);padding-left:24px}.analytics-totals span{font-size:11px;color:var(--account-muted)}.analytics-totals strong{font-size:30px;line-height:1.1;font-weight:550;letter-spacing:-.04em}.analytics-totals strong small{font-size:10px!important;font-weight:400;letter-spacing:0;margin-left:7px;color:var(--account-muted)}
+.analytics-charts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px}.analytics-chart{margin:0;min-width:0}.analytics-chart figcaption{display:flex;justify-content:space-between;gap:8px;font-size:11px}.analytics-chart figcaption strong{font-weight:550}.analytics-chart figcaption>span{font-size:10px;color:var(--account-muted)}.analytics-chart svg{display:block;width:100%;height:auto;margin-top:15px;overflow:visible}.analytics-chart .chart-grid{stroke:var(--account-line);stroke-dasharray:3 4;stroke-width:1}.analytics-chart text{fill:var(--account-muted);font-size:10px;font-family:inherit}.analytics-chart .chart-stem{fill:var(--session-chart);opacity:.12}.analytics-chart .chart-point{fill:var(--session-chart)}.analytics-chart .chart-value{fill:var(--account-ink);font-size:11px;font-weight:600}.analytics-chart.chart-rest .chart-stem{fill:var(--session-rest)}.analytics-chart.chart-rest .chart-point{fill:var(--session-rest)}.chart-empty{display:flex;height:145px;flex-direction:column;align-items:center;justify-content:center;gap:8px;color:var(--account-muted);font-size:11px}.chart-empty-mark{font-size:24px;opacity:.35}.analytics-footnote{margin:18px 0 0!important;font-size:10px!important;color:var(--account-muted)}
+.dive-entry{border:1px solid var(--account-line);border-radius:10px;padding:14px;min-width:0}.dive-entry legend{font-size:12px}.dive-entry-head,.dive-entry-row{display:grid;grid-template-columns:20px repeat(3,minmax(0,1fr)) 34px;gap:6px;align-items:center;margin-bottom:8px}.dive-entry-head{font-size:10px;color:var(--account-muted)}.dive-entry-row>span{font-size:12px}.dive-entry-row input{width:100%;min-width:0;padding:7px!important;min-height:36px!important;font-size:13px!important}
+@media(max-width:650px){:root[data-theme] #logbook-page.ff-logbook{padding:18px 16px calc(var(--nav-height,76px) + 24px)}:root[data-theme] #logbook-page.ff-logbook .session-toolbar{gap:7px;margin-bottom:18px}:root[data-theme] #logbook-page.ff-logbook .sessions-sections{margin-bottom:16px}.session-status-tabs{gap:18px}.session-analytics{padding:18px 16px;border-radius:13px;margin-top:22px}.analytics-heading{align-items:flex-start;margin-bottom:20px}.analytics-heading>span{font-size:10px}.analytics-totals{grid-template-columns:1fr 1fr;gap:22px 18px;padding-bottom:20px}.analytics-totals>div+div{padding-left:0;border:0}.analytics-totals>div:nth-child(even){border-left:1px solid var(--account-line);padding-left:18px}.analytics-totals strong{font-size:29px}.analytics-totals strong small{display:block;margin:5px 0 0;font-size:9px!important}.analytics-charts{grid-template-columns:1fr;gap:22px}.analytics-chart+.analytics-chart{padding-top:18px;border-top:1px solid var(--account-line)}.analytics-chart svg{margin-top:12px}.analytics-footnote{font-size:9px!important;line-height:1.6}:root[data-theme] #logbook-page.ff-logbook .session-records .session-card{grid-template-columns:1fr auto;padding:15px;gap:8px}:root[data-theme] #logbook-page.ff-logbook .session-records .ff-session-metrics{grid-column:1/-1;grid-row:3}:root[data-theme] #logbook-page.ff-logbook .session-card .logbook-actions{flex-wrap:wrap}}
+/* Legacy theme cards set their own palette; keep nested session surfaces consistent too. */
+:root[data-theme] #logbook-page.ff-logbook :is(.session-card,.logbook-card){background:var(--session-paper);border-radius:12px;border:1px solid var(--account-line)}
+:root[data-theme] #logbook-page.ff-logbook :is(.session-card,.logbook-card) :is(h1,h2,h3,h4,h5,strong,b,label,legend,summary,a){color:var(--account-ink)}
+:root[data-theme] #logbook-page.ff-logbook :is(.session-card,.logbook-card) :is(p,small,dt){color:var(--account-muted)}
+:root[data-theme] #logbook-page.ff-logbook>*{margin-inline:auto!important}
+:root[data-theme] #logbook-page.ff-logbook .session-records .session-card{max-width:none;width:100%;box-sizing:border-box}
+:root[data-theme] #logbook-page.ff-logbook .media-inbox{padding:20px;margin-top:24px}
+:root[data-theme] #logbook-page.ff-logbook .media-inbox>.eyebrow{display:none}
+:root[data-theme] #logbook-page.ff-logbook .media-inbox h2{margin-top:0}
+:root[data-theme] #logbook-page.ff-logbook .logbook-status{background:transparent;border:0}
+:root[data-theme] #logbook-page.ff-logbook .session-visibility{background:var(--account-bg);color:var(--account-muted)}
+.session-create-split{display:inline-flex;position:relative;align-items:stretch;isolation:isolate;z-index:10}
+:root[data-theme] #logbook-page.ff-logbook .session-create-split button.session-create-main{display:inline-flex;align-items:center;gap:8px;border-radius:8px 0 0 8px;border-right:0;padding-right:12px}
+:root[data-theme] #logbook-page.ff-logbook .session-create-split button.session-create-toggle{display:grid;place-items:center;width:34px;padding:7px;border-radius:0 8px 8px 0;border-left:1px solid color-mix(in srgb,var(--account-bg) 25%,transparent)}
+.session-create-split svg{width:17px;height:17px;flex:none}
+.session-create-menu{position:absolute;left:0;top:calc(100% + 8px);z-index:50;width:236px;padding:5px;background:var(--account-surface);border:1px solid var(--account-line);border-radius:11px;box-shadow:0 10px 30px #152e441c}
+:root[data-theme] #logbook-page.ff-logbook .session-create-menu button{display:flex;flex-direction:column;align-items:flex-start;gap:3px;width:100%;padding:10px 12px;text-align:left;border:0;background:transparent!important;box-shadow:none;border-radius:7px;color:var(--account-ink)!important}
+:root[data-theme] #logbook-page.ff-logbook .session-create-menu button:hover,:root[data-theme] #logbook-page.ff-logbook .session-create-menu button:focus-visible{background:var(--account-bg)!important}
+:root[data-theme] #logbook-page.ff-logbook .session-create-menu small{font-size:10px;color:var(--account-muted);font-weight:400}

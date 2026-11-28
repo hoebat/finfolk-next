@@ -68,7 +68,7 @@ for (const dedicated of [false,true]) test(`native mutations and unavailable RES
   const app=createApplicationBackbone({authUrl:'https://native-fixture.invalid',apiUrl:location.origin,cacheBackend:'sqlite'});
   const client=createAccountClient(auth,{apiUrl:location.origin},app);await client.ready;
   const saved=await client.call('preferences',{profile:{displayName:'Fixture'}});
-  let unavailable;try{await client.request('/v1/me/instagram/connect',{method:'POST'});}catch(error){unavailable={status:error.status,code:error.code};}
+  let unavailable;try{await client.request('/v1/me/unsupported',{method:'POST'});}catch(error){unavailable={status:error.status,code:error.code};}
   client.close();return {saved,unavailable};
  });
  expect(requests[0]).toEqual({operation:'preferences',values:{profile:{displayName:'Fixture'}}});

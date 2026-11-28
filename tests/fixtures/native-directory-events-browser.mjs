@@ -9,8 +9,8 @@ export async function nativeDirectoryEventsBrowser({browser,page,origin}){
  await search.getByLabel('Optional seed name or handle',{exact:true}).fill('provider-failure');
  await search.getByRole('button',{name:'Find candidates',exact:true}).click();
  await page.getByRole('status').filter({hasText:'Search failed; retry discovery.'}).waitFor();
- await page.goto(origin+'/pages?create=1&state=NSW&locality=Sydney');
- await page.getByRole('heading',{name:'My pages',exact:true}).waitFor();
+ await page.goto(origin+'/directory?manage=1&create=1&state=NSW&locality=Sydney');
+ await page.getByRole('heading',{name:'Groups & outlets',exact:true}).waitFor();
  await page.getByLabel('Name',{exact:true}).fill('Browser native group');
  await page.getByLabel('Website',{exact:true}).fill('https://example.test/native-group');
  await page.getByLabel('Source URLs (separated by commas)',{exact:true}).fill('https://example.test/source');
@@ -20,9 +20,9 @@ export async function nativeDirectoryEventsBrowser({browser,page,origin}){
  await page.goto(origin+'/pages/review');
  const row=page.locator('details').filter({has:page.locator('summary').filter({hasText:'Browser native group'})});
  await row.locator('summary').click();await row.getByLabel('Publication',{exact:true}).selectOption('published');
- await row.getByRole('button',{name:'Save listing',exact:true}).click();
+ await row.getByRole('button',{name:'Save page',exact:true}).click();
  await row.locator('summary').filter({hasText:'published'}).waitFor();
- await page.goto(origin+'/pages');
+ await page.goto(origin+'/directory?manage=1');
  const publicLink=page.getByRole('link',{name:'View public page',exact:true});await publicLink.waitFor();
  await publicLink.click();await page.getByRole('heading',{name:'Browser native group',exact:true}).waitFor();
  await page.getByRole('link',{name:'Create event',exact:true}).click();

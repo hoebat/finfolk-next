@@ -1,0 +1,50 @@
+'use client';
+import {useEffect,useRef,useState} from 'react';
+import {useSession} from '../lib/use-session.js';
+import {usePageRead} from '../lib/use-page-data.js';
+import {pageActions} from '../lib/page-models.js';
+import {usePublishedSites} from '../lib/use-published-sites.js';
+import {portraitDataURL,SHARING} from '../src/profile-model.js';
+import {SETUP_STEPS,needsProfileSetup,suggestedName,providerPhotoURL,importProviderPortrait} from '../lib/profile-setup.js';
+import {Portrait} from './(community)/profile/components.jsx';
+import './profile-setup.css';
+export default function ProfileSetup(){
+ const session=useSession(),eligible=session.status==='ready'&&session.user&&!session.user.recovery;
+ const {record,refresh}=usePageRead({...session,user:eligible?session.user:null},'profile-setup','me');
+ const [active,setActive]=useState(null),opened=useRef(new Set()),requested=useRef(false);
+ const account=record?.data;
+ useEffect(()=>{if(!eligible){setActive(null);requested.current=false;return;}if(account&&!record.cached&&!record.refreshing&&(requested.current||needsProfileSetup(account.profile)&&!opened.current.has(session.user.uid)&&new URLSearchParams(location.search).get('tour')!=='1')){requested.current=false;opened.current.add(session.user.uid);setActive({actor:session.user.uid,account});}},[eligible,session.user?.uid,account]);
+ useEffect(()=>{const open=()=>{if(eligible&&account){opened.current.add(session.user.uid);setActive({actor:session.user.uid,account});}else if(eligible){requested.current=true;refresh();}};window.addEventListener('finfolk:profile-setup',open);return()=>window.removeEventListener('finfolk:profile-setup',open);},[eligible,session.user?.uid,account]);
+ if(!eligible||!active||active.actor!==session.user.uid)return null;
+ return <SetupDialog key={active.actor} session={session} account={active.account} close={()=>{setActive(null);refresh();}}/>;
+}
+function SetupDialog({session,account,close}){
+ const profile=account.profile||{},dialog=useRef(null),alive=useRef(true),actor=session.user.uid;
+ const [step,setStep]=useState(Math.min(3,Math.max(0,profile.profileSetup?.step||0))),[name,setName]=useState(()=>suggestedName(account)),[portrait,setPortrait]=useState(profile.portrait||''),[bio,setBio]=useState(profile.bio||''),[beaches,setBeaches]=useState(profile.beaches||[]),[search,setSearch]=useState(''),[open,setOpen]=useState(profile.open===true),[sharing,setSharing]=useState(profile.sharing||{}),[busy,setBusy]=useState(false),[error,setError]=useState('');
+ const directory=usePublishedSites(),sites=directory.directory?.beaches||[],provider=account.profileSuggestions?.provider,photo=providerPhotoURL(account.profileSuggestions?.photo),canPublish=account.verified===true;
+ useEffect(()=>{alive.current=true;dialog.current.showModal();return()=>{alive.current=false;dialog.current?.close();};},[]);
+ useEffect(()=>{dialog.current?.querySelector('[data-step-title]')?.focus();},[step]);
+ const current=()=>alive.current&&session.client.user?.uid===actor;
+ async function picture(file,fromProvider=false){if(busy)return;setBusy(true);setError('');try{const data=fromProvider?await importProviderPortrait(photo):await portraitDataURL(file,window);if(current())setPortrait(data);}catch(e){if(current())setError(fromProvider?'We couldn’t import that photo. Upload one, or continue with your illustration.':e.message);}finally{if(current())setBusy(false);}}
+ async function save({defer=false,skip=false}={}){
+  if(busy)return;
+  const patch=defer||skip?{}:step===0?{displayName:name.trim(),portrait}:step===1?{bio:bio.trim()}:step===2?{beaches}:{...(open!==(profile.open===true)?{open}:{}),sharing};
+  if(!defer&&step===0&&!name.trim()){setError('Enter the name you’d like people to see.');return;}
+  setBusy(true);setError('');
+  try{const result=await pageActions(session.client,'profile-setup').save({profile:patch,step:defer?step:Math.min(step+1,3),status:defer?'deferred':step===3?'completed':'pending'});if(current()){if(skip){if(step===1)setBio(result.profile.bio||'');if(step===2){setBeaches(result.profile.beaches||[]);}}if(defer||step===3)close();else setStep(step+1);}}
+  catch(e){if(current())setError(e.message||'Your changes could not be saved. Try again.');}
+  finally{if(current())setBusy(false);}
+ }
+ const toggle=(values,value,set)=>set(values.includes(value)?values.filter(item=>item!==value):[...values,value]);
+ return <dialog ref={dialog} className="profile-setup-dialog" aria-labelledby="profile-setup-title" onCancel={event=>{event.preventDefault();save({defer:true});}}><form onSubmit={event=>{event.preventDefault();save();}}>
+  <header className="ps-top"><span>Profile setup</span><button type="button" disabled={busy} onClick={()=>save({defer:true})}>Finish later <span aria-hidden="true">↗</span></button></header>
+  <ol className="ps-steps" aria-label="Setup progress">{SETUP_STEPS.map((label,index)=><li key={label} aria-current={step===index?'step':undefined} data-done={index<step}><span>{index<step?'✓':index+1}</span>{label}</li>)}</ol>
+  <section className="ps-content"><p className="ps-count">{String(step+1).padStart(2,'0')} / 04</p><h2 id="profile-setup-title" data-step-title tabIndex={-1}>{['Make it yours.','A little about you.','Where you get in.','Choose what you share.'][step]}</h2>
+  {step===0&&<><p>Confirm the name and photo people will see on FinFolk.</p><div className="ps-identity"><div className="ps-portrait"><Portrait member={{id:actor,displayName:name||'Your profile',portrait}}/></div><div className="ps-photo-actions">{photo&&!profile.portrait&&<button type="button" disabled={busy} onClick={()=>picture(null,true)}>Use {provider==='github'?'GitHub':provider==='facebook'?'Facebook':'Google'} photo</button>}<label className="ps-upload">Upload photo<input aria-label="Upload photo" type="file" accept="image/jpeg,image/png,image/webp" disabled={busy} onChange={event=>{if(event.target.files[0])picture(event.target.files[0]);event.target.value='';}}/></label>{portrait&&<button type="button" disabled={busy} onClick={()=>setPortrait('')}>Use illustration</button>}<small>JPEG, PNG or WebP · up to 2 MiB</small></div></div><label className="ps-field">Display name<input autoComplete="nickname" required maxLength={80} value={name} disabled={busy} onChange={e=>setName(e.target.value)}/></label>{account.profileSuggestions?.name&&<small className="ps-note">Suggested from {provider==='email'?'your registration':provider==='github'?'GitHub':provider==='facebook'?'Facebook':'Google'}. You can change it.</small>}</>}
+  {step===1&&<><p>Add a short introduction, or leave this for later.</p><label className="ps-field">About you <span>Optional</span><textarea rows={5} maxLength={500} value={bio} disabled={busy} onChange={e=>setBio(e.target.value)} placeholder="What brings you to the water?"/></label><small className="ps-note">{bio.length} / 500</small></>}
+  {step===2&&<><p>Select your favourite dive sites. You can choose more than one, up to 20.</p><label className="ps-field">Find dive sites <span>{beaches.length} / 20 selected</span><input type="search" value={search} disabled={busy} onChange={e=>setSearch(e.target.value)} placeholder="Search dive sites"/></label>{beaches.length>0&&<div className="ps-selected-sites" aria-label="Selected dive sites">{beaches.map(id=><button type="button" key={id} disabled={busy} aria-label={'Remove '+(sites.find(site=>site.id===id)?.name||'dive site')} onClick={()=>setBeaches(beaches.filter(value=>value!==id))}>{sites.find(site=>site.id===id)?.name||'Selected dive site'} <span aria-hidden="true">×</span></button>)}</div>}<div className="ps-sites">{sites.filter(site=>!search.trim()||site.name.toLowerCase().includes(search.trim().toLowerCase())).slice(0,30).map(site=><label key={site.id}><input type="checkbox" checked={beaches.includes(site.id)} disabled={busy||!beaches.includes(site.id)&&beaches.length>=20} onChange={()=>toggle(beaches,site.id,setBeaches)}/><span>{site.name}<small>{site.state_id||site.state||''}</small></span></label>)}{directory.loading&&!sites.length&&<p role="status">Loading dive sites…</p>}{!directory.loading&&!directory.error&&!sites.some(site=>!search.trim()||site.name.toLowerCase().includes(search.trim().toLowerCase()))&&<p>No sites found. Try another name.</p>}{directory.error&&<p>Sites couldn’t load. You can add favourites from Edit profile later.</p>}</div><small className="ps-note">Your selections stay selected when you search for another site. This step is optional.</small></>}
+  {step===3&&<><div className="ps-review"><div className="ps-review-portrait"><Portrait member={{id:actor,displayName:name,portrait}}/></div><div><strong>{name}</strong><span>{bio||'No bio added'}</span></div></div><label className="ps-check"><input type="checkbox" checked={open} disabled={busy||!canPublish&&!profile.open} onChange={e=>setOpen(e.target.checked)}/><span><strong>Appear in People</strong><small>Let people find you at your chosen locations.</small></span></label>{!canPublish&&<p className="ps-note">Verify your email to turn this on.</p>}<fieldset className="ps-sharing"><legend>Share activity statistics</legend>{Object.entries(SHARING).map(([key,label])=><label className="ps-check" key={key}><input type="checkbox" checked={sharing[key]===true} disabled={busy} onChange={e=>setSharing({...sharing,[key]:e.target.checked})}/><span>{label}</span></label>)}</fieldset><p className="ps-note">Closed profiles stay out of People. These choices can be changed in Settings.</p></>}
+  {error&&<p className="ps-error" role="alert">{error}</p>}{busy&&<p className="ps-note" role="status">Saving…</p>}</section>
+  <footer className="ps-footer">{step>0?<button type="button" disabled={busy} onClick={()=>{setError('');setStep(step-1);}}>← Back</button>:<span/>}<div>{step>0&&step<3&&<button type="button" disabled={busy} onClick={()=>save({skip:true})}>Skip</button>}<button className="ps-primary" type="submit" disabled={busy}>{step===3?'Finish setup':'Continue'} <span aria-hidden="true">→</span></button></div></footer>
+ </form></dialog>;
+}

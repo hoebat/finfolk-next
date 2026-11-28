@@ -3,6 +3,7 @@ import {useEffect,useRef,useState} from 'react';
 import {useSession} from '../../../lib/use-session.js';
 import {runModel,pageActions} from '../../../lib/page-models.js';
 import './operator.css';
+import PageCollection from './collection.jsx';
 const evidenceFields=[['ping','Visible /ping reply'],['help','Visible /help reply'],['nonFollowerHelp','Help reply to a separate unregistered non-follower'],['linked','Connection code redeemed after unlink/relink'],['denied','Non-follower connection denied without a code']];
 const confirmations=[['visibleReplies','I saw the actual replies in Instagram.'],['nonFollowerHelp','The separate help tester was unregistered, not following, and saw the reply.'],['nonFollowerLinkDenied','The non-follower could not obtain a code or link an account.'],['linkUnlinkRelink','I verified linking, reload, unlinking and relinking in the website and Instagram.']];
 export default function InstagramOperator(){
@@ -32,6 +33,7 @@ export default function InstagramOperator(){
     <p role="status">{message||(!actor?'Sign in with your verified operator account.':!data?'Loading operator access…':'')}</p>
     {actor&&<button disabled={busy} onClick={()=>run(async()=>({}))}>Refresh</button>}
     {data&&<>
+      <PageCollection session={session}/>
       <section className="platform-panel"><h2>Connection</h2><p>Mode: <strong>{data.connection.mode}</strong></p><p>Authorization: {data.connection.checks.authorized?'Verified':'Required'} · Subscription: {data.connection.checks.subscribed?'Verified':'Required'}</p>
         <p>Public delivery requires the live checks below. Comments, publishing, visits and points remain off.</p>
         <button disabled={busy} onClick={()=>run(actions=>actions.authorize({}))}>Authorize Instagram</button>{' '}

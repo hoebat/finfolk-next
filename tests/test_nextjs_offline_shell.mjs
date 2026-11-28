@@ -42,9 +42,9 @@ try{
  await offline.waitForFunction(()=>!!navigator.serviceWorker.controller);
  await offline.evaluate(()=>{const anchor=document.createElement('a');anchor.href='/pages?offline-link=1';anchor.textContent='Open saved pages';anchor.addEventListener('click',event=>{event.preventDefault();sessionStorage.setItem('offline-rsc-attempt','yes');});document.body.append(anchor);});
  await offline.getByRole('link',{name:'Open saved pages',exact:true}).click();
- await offline.waitForURL('**/pages?offline-link=1');await offline.getByRole('heading',{name:'My pages',exact:true}).waitFor();
+ await offline.waitForURL('**/directory?manage=1');await offline.getByRole('heading',{name:'Pages',exact:true}).waitFor();
  assert.equal(await offline.evaluate(()=>sessionStorage.getItem('offline-rsc-attempt')),null);
- for(const [path,title] of [['/pages','My pages'],['/pages/review','Directory superadmin'],['/members','Choose a diver'],['/events/my','My events']]){
+ for(const [path,title] of [['/pages','Pages'],['/pages/review','Directory superadmin'],['/members','Choose a diver'],['/events/my','My events']]){
   const document=await context.newPage();document.setDefaultTimeout(20000);document.on('pageerror',e=>errors.push(e.stack||e.message));
   const response=await document.goto(base+path+'?offline-check=1');assert.equal(response.headers()['x-finfolk-offline'],'1',path);
   await document.waitForFunction(()=>document.querySelector('select[aria-label="Theme"]')?.disabled===false);

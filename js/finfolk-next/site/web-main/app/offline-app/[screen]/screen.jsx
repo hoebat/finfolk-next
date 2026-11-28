@@ -26,7 +26,7 @@ function AtlasDocument({screen}){
  const {state}=useAtlas(),query=useSearchParams(),sites=state.directory?.beaches||[];
  if(screen==='report')return <OfflineReport/>;
  if(screen==='account')return <AccountFrame sites={sites}/>;
- if(screen==='logbook')return <Logbook sites={sites} values={{create:query.get('new')||'',session:query.get('session')||'',profile:query.get('profile')||''}}/>;
+ if(screen==='logbook')return <Logbook sites={sites} values={{section:['plans','history','statistics'].includes(query.get('section'))?query.get('section'):'overview',mode:query.get('mode')||'',site:query.get('site')||'',create:query.get('new')||'',session:query.get('session')||'',profile:query.get('profile')||''}}/>;
  return <Sections directoryPage={query.get('section')==='directory'?directory:null} eventsPage={query.get('section')==='events'?events:null}/>;
 }
 

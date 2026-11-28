@@ -1,0 +1,47 @@
+/* Standalone authentication, independent of the atlas rail and mobile navigation. */
+:root[data-theme] body.finfolk-auth-layout {display:block;grid-template-columns:none;height:auto;min-height:100dvh;overflow:auto;padding:0;--nav-height:0px}
+:root[data-theme] body #app-main.ff-auth-main {width:100%;height:auto;min-height:100dvh;overflow:visible;grid-column:1/-1;margin:0;padding:0}
+:root[data-theme] .ff-auth-main .account-page-guest {display:block;width:100%;max-width:none;height:auto;min-height:100dvh;padding:0;margin:0;overflow:visible}
+.ff-auth-page {min-height:100dvh;display:flex;flex-direction:column;box-sizing:border-box;padding:32px clamp(24px,5vw,88px) 24px;background:var(--theme-bg);color:var(--theme-ink);font:15px/1.6 Avenir,'Helvetica Neue',Arial,sans-serif}
+.ff-auth-header {display:flex;align-items:center;justify-content:space-between;gap:20px;padding-bottom:28px;border-bottom:1px solid var(--theme-line)}
+.ff-auth-header>a {display:block;text-decoration:none;font-size:13px;color:inherit}
+.ff-auth-header .brand-wordmark {display:block;margin:0;max-width:42vw}
+.ff-auth-layout {flex:1;display:grid;grid-template-columns:minmax(0,1.2fr) minmax(340px,.8fr);align-items:center;gap:clamp(40px,7vw,120px);width:100%;max-width:1440px;margin:0 auto;padding:64px 0}
+.ff-auth-story {position:relative;min-width:0;overflow:hidden;padding-bottom:130px}
+:root[data-theme] .ff-auth-page .signin-eyebrow {display:block;color:inherit;font:600 10px/1.5 Avenir,Arial,sans-serif;letter-spacing:.2em}
+:root[data-theme] .ff-auth-story h1 {position:relative;z-index:1;color:inherit;font:500 clamp(54px,6.2vw,100px)/1.02 Avenir,Arial,sans-serif;letter-spacing:-.065em;margin:28px 0}
+.ff-auth-story h1 em {font-family:Georgia,'Times New Roman',serif;font-weight:400}
+:root[data-theme] .ff-auth-story p {position:relative;z-index:1;color:var(--theme-muted);font-size:17px;line-height:1.7;margin:0}
+.ff-auth-tide {position:absolute;left:0;bottom:-230px;width:110%;height:330px;border:1px solid currentColor;border-radius:50%;transform:rotate(-12deg);opacity:.35}
+.ff-auth-tide::before,.ff-auth-tide::after {content:'';position:absolute;inset:22px -40px -22px 25px;border:1px solid currentColor;border-radius:50%}
+.ff-auth-tide::after {inset:44px -80px -44px 50px}
+.ff-auth-tide span {position:absolute;top:-29px;left:15%;font-size:9px;letter-spacing:.23em}
+.ff-auth-panel {min-width:0}
+:root[data-theme] .ff-auth-page .signin-card {width:100%;max-width:480px;box-sizing:border-box;padding:40px clamp(24px,3vw,48px);margin:0 auto;border:1px solid var(--theme-line);border-radius:24px;background:var(--theme-bg);color:var(--theme-ink);box-shadow:none;text-align:left}
+:root[data-theme] .ff-auth-page .signin-card h2 {margin:18px 0;font:400 clamp(32px,3vw,44px)/1.12 Georgia,'Times New Roman',serif;letter-spacing:-.045em;color:inherit}
+:root[data-theme] .ff-auth-page .signin-description {color:var(--theme-muted);font-size:14px;line-height:1.7;margin:0 0 28px}
+:root[data-theme] .ff-auth-page .signin-card .signin-google {display:block;width:100%;min-height:50px;margin:10px 0;padding:12px;border:1px solid var(--theme-line);border-radius:8px;background:transparent;color:inherit;font:600 13px/1.5 Avenir,Arial,sans-serif}
+.ff-auth-page .signin-google::before {content:none}
+:root[data-theme] .ff-auth-page .signin-divider {display:flex;align-items:center;gap:14px;margin:24px 0;color:var(--theme-muted);font-size:11px}
+.ff-auth-page .signin-divider::before,.ff-auth-page .signin-divider::after {content:'';flex:1;height:1px;background:var(--theme-line)}
+.ff-auth-page .signin-form {display:grid;gap:18px;margin:0}
+:root[data-theme] .ff-auth-page .signin-form label {display:grid;gap:8px;color:inherit;margin:0;font:600 12px/1.5 Avenir,Arial,sans-serif}
+.ff-auth-page .signin-form label[hidden] {display:none}
+:root[data-theme] .ff-auth-page .signin-form input {box-sizing:border-box;width:100%;min-width:0;min-height:50px;margin:0;padding:12px 14px;border:1px solid var(--theme-line);border-radius:8px;background:transparent;color:inherit;font:400 16px/1.5 Avenir,Arial,sans-serif}
+:root[data-theme] .ff-auth-page .signin-form .primary {width:100%;min-height:52px;margin:4px 0 0;border:0;border-radius:8px;background:var(--theme-ink);color:var(--theme-bg);font:600 14px/1.5 Avenir,Arial,sans-serif}
+.ff-auth-page .signin-links {display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;margin-top:18px}
+:root[data-theme] .ff-auth-page .signin-links button {margin:0;padding:8px 0;min-height:44px;border:0;background:transparent;box-shadow:none;color:inherit;font:500 12px/1.5 Avenir,Arial,sans-serif;text-decoration:underline;text-underline-offset:4px}
+:root[data-theme] .ff-auth-page .signin-status {color:inherit;font-size:13px;line-height:1.6;margin:18px 0 0;overflow-wrap:anywhere}
+.ff-auth-page .signin-status:empty {display:none}
+.ff-auth-page .signin-back {display:inline-block;font-size:13px;margin-top:24px;text-underline-offset:4px}
+.ff-auth-page button {cursor:pointer}
+.ff-auth-page button:disabled {cursor:wait}
+.ff-auth-footer {display:flex;justify-content:space-between;gap:20px;border-top:1px solid var(--theme-line);padding-top:22px;font-size:10px;letter-spacing:.12em;color:var(--theme-muted)}
+@media(max-width:900px){.ff-auth-layout {grid-template-columns:1fr 1fr;gap:30px;padding:48px 0}.ff-auth-story {padding-bottom:100px}.ff-auth-story h1 {font-size:clamp(46px,6.5vw,70px)}}
+@media(max-width:650px){.ff-auth-page {padding:22px 20px}.ff-auth-header {padding-bottom:20px}.ff-auth-header .brand-wordmark {width:150px}.ff-auth-header>a {font-size:11px}.ff-auth-layout {grid-template-columns:1fr;gap:30px;padding:36px 0}.ff-auth-story {padding:0;overflow:visible}.ff-auth-story h1 {font-size:48px;margin:18px 0}.ff-auth-story p,.ff-auth-tide {display:none}:root[data-theme] .ff-auth-page .signin-card {max-width:none;padding:28px 24px}.ff-auth-footer {font-size:8px;letter-spacing:.08em}.ff-auth-footer span:last-child {text-align:right}}
+.ff-auth-header>a:first-child {width:200px;flex:none;max-width:42vw}
+:root[data-theme=yellow] .ff-auth-page .signin-form .primary {background:var(--theme-ink)!important;color:var(--theme-bg)!important}
+@media(max-width:650px){.ff-auth-header>a:first-child {width:150px}}
+:root[data-theme]:has(.ff-auth-main){height:auto;min-height:100%;overflow:auto}
+:root[data-theme] .ff-auth-main #account-page.account-page-guest{position:static;inset:auto;height:auto;min-height:100dvh;contain:none;transform:none}
+:root[data-theme] .ff-auth-page button.signin-back{min-height:44px;padding:8px 0;border:0;background:transparent!important;box-shadow:none;color:inherit!important;font:500 13px/1.5 Avenir,Arial,sans-serif;text-decoration:underline;text-underline-offset:4px}

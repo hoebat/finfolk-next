@@ -1,0 +1,122 @@
+{
+  "version": 1,
+  "publishedAt": "2026-11-27T22:49:09.365Z",
+  "site": "https://finfolk.com.au",
+  "batchSha256": "ea46d13f3aa54ee264cb4e7e6f58dc0e7fa24ed07e9d9d1273636fc5e865e639",
+  "pages": [
+    {
+      "key": "immersia-freediving",
+      "id": "06f7bcaa-8727-46e0-bbe3-cc8c2beda9b6",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "freediving-central",
+      "id": "02706ee6-8d3a-4f11-9999-a26263140c32",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "freediving-australia",
+      "id": "78a11502-424d-4fcc-b99b-4d7d065c85ba",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "legasea-freediving",
+      "id": "d37f4a04-fe27-4e5e-8201-ecaeb880dd93",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "deep-sensations-freediving",
+      "id": "cd3bac83-684d-4cc0-ace4-158c5d86368f",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "woebegone-dive",
+      "id": "2c6f48f7-f6be-461d-9e5e-9a76bcd372e0",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "salty-pilgrims-freediving",
+      "id": "8bb3ed2c-70ad-4c81-8cd4-8ada9971ddf4",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "salt-sessions-freediving",
+      "id": "78996b59-aac8-4162-80bb-b65829d983e5",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "drifters-freediving",
+      "id": "3fc996f8-677d-44cd-b67f-b616f522853a",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "oceansense-freediving",
+      "id": "58ca9ab3-507f-48e9-9034-b5228335477f",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "freedivefnq",
+      "id": "d0b72a23-89d5-403f-bbbc-ae21843f039d",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "freediving-gold-coast",
+      "id": "7036ebe8-7400-4c17-97d7-781f547b7d99",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "rusty-freediving",
+      "id": "157164e8-7903-4873-a3f5-d45bcd738273",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "blueback-freediving-and-yoga",
+      "id": "06b04502-0e6b-44b3-9538-86f89fb0e1a2",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "apnea-australia",
+      "id": "941f7b87-2a8e-443d-bdc5-23beb9f179bf",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "spear-west",
+      "id": "6ee5a6e2-a798-472f-ac4c-f3f0fb2f989d",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "deepsouth-freediving",
+      "id": "4d3210ef-9ba1-4b07-b6db-be1261eedf3e",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "freedive-tasmania",
+      "id": "65cc6f1e-a8b1-41cc-b068-6cef335d6f22",
+      "status": "published",
+      "ownership": "unclaimed"
+    },
+    {
+      "key": "diving-adelaide",
+      "id": "b6c5f4d3-84ef-41c0-999a-7aca59c65d5a",
+      "status": "published",
+      "ownership": "unclaimed"
+    }
+  ]
+}

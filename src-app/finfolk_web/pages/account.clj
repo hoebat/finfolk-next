@@ -6,7 +6,7 @@
          "payload-pick" {"site" (mapv name (keys (:properties site-review/DOCUMENT)))}))
 
 (def AUTH_ACTIONS
-  (into {} (for [[key method] {"google" ["google"] "github" ["github"] "email" ["email"] "sign-up" ["auth" "signUp" "email"]
+  (into {} (for [[key method] {"google" ["google"] "github" ["github"] "facebook" ["facebook"] "email" ["email"] "sign-up" ["auth" "signUp" "email"]
                                "refresh" ["refresh"] "reset" ["reset"] "reset-password" ["resetPassword"]
                                "verify" ["verify"] "verify-code" ["verifyCode"] "sign-out" ["signOut"]
                                "reauthenticate" ["reauthenticate"] "delete-account" ["deleteAccount"]}]
@@ -20,6 +20,8 @@
                        "models" {"connections" (seed/read-model "connections") "blocks" (seed/read-model "blocks")}
                        "actions" (into {} (for [op ["preferences" "connection" "block" "unblock"]] [op (seed/action op)]))
                        "auth-actions" AUTH_ACTIONS}
+   "profile-setup" {"routes" [] "area" "member" "models" {"me" (seed/read-model "me")}
+                    "actions" {"save" (seed/action "profileSetup")}}
    "account-identity" {"routes" [] "area" "member" "models" {"me" (seed/read-model "me")} "actions" {}}
    "account-checkin" {"routes" ["/account/checkin"] "area" "member"
                        "models" {"checkins" (seed/read-model "myCheckins")}
@@ -41,10 +43,23 @@
   "instagram-discovery" {"routes" [] "area" "member" "loader" "instagram-discovery" "models" (into {} (for [op ["instagramStatus" "instagramMyPosts" "instagramDiscoveryInbox"]] [op (seed/read-model op)])) "actions" (into {} (for [op ["instagramBindMediaOwner" "instagramChoosePostBeach" "instagramDiscoveryRetry" "instagramHidePost" "instagramRemoveAllPosts" "instagramReviewPost" "instagramSharing" "instagramSuppressSource"]] [op (seed/action op)]))}
   "trip-report" {"routes" [] "area" "member" "models" (into {} (for [op []] [op (seed/read-model op)])) "actions" (into {} (for [op ["tripReport"]] [op (seed/action op)]))}
   "instagram-operator" {"routes" ["/admin/instagram"] "area" "member"
-    "models" {"status" (seed/read-model "socialOperatorStatus") "event" (seed/read-model "socialOperatorEvent" {"id" "id"})}
-    "actions" {"authorize" (seed/action "socialOperatorAuthorize") "activate" (seed/action "socialOperatorActivate")
+    "models" {"collection" (seed/read-model "pageInstagramConnection") "status" (seed/read-model "socialOperatorStatus") "event" (seed/read-model "socialOperatorEvent" {"id" "id"})}
+    "actions" {"collection-save" (seed/action "pageInstagramConnect") "collection-pause" (seed/action "pageInstagramPause") "authorize" (seed/action "socialOperatorAuthorize") "activate" (seed/action "socialOperatorActivate")
                "pause" (seed/action "socialOperatorPause") "disconnect" (seed/action "socialOperatorDisconnect")
                "acceptance" (seed/action "socialOperatorAcceptance")}}
+  "tiktok-operator" {"routes" ["/admin/tiktok"] "area" "member"
+    "models" {"status" (seed/read-model "tiktokOperatorStatus") "event" (seed/read-model "tiktokOperatorEvent" {"id" "id"})}
+    "actions" {"authorize" (seed/action "tiktokOperatorAuthorize") "activate" (seed/action "tiktokOperatorActivate")
+               "pause" (seed/action "tiktokOperatorPause") "disconnect" (seed/action "tiktokOperatorDisconnect")
+               "acceptance" (seed/action "tiktokOperatorAcceptance")}}
+  "tiktok-comments-operator" {"routes" ["/admin/tiktok/comments"] "area" "member"
+    "models" {"status" (seed/read-model "tiktokCommentsStatus") "event" (seed/read-model "tiktokCommentsEvent" {"id" "id"})}
+    "actions" {"authorize" (seed/action "tiktokCommentsAuthorize") "activate" (seed/action "tiktokCommentsActivate")
+               "pause" (seed/action "tiktokCommentsPause") "disconnect" (seed/action "tiktokCommentsDisconnect")
+               "acceptance" (seed/action "tiktokCommentsAcceptance")}}
+  "tiktok-linking" {"routes" ["/account/tiktok"] "area" "member"
+    "models" {"state" (seed/read-model "tiktokAccount")}
+    "actions" {"connect" (seed/action "tiktokCodeConnect") "disconnect" (seed/action "tiktokMemberDisconnect")}}
   "instagram-linking" {"routes" [] "area" "member"
     "models" {"state" (seed/read-model "instagramAccount")}
     "actions" {"connect" (seed/action "instagramCodeConnect") "disconnect" (seed/action "instagramMemberDisconnect")}}

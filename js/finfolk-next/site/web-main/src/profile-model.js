@@ -1,4 +1,15 @@
 export const AVAILABILITY=['weekday mornings','weekday afternoons','weekend mornings','weekend afternoons'];
+export const AVAILABILITY_TIMES=['mornings','afternoons'];
+export const availabilityLabel=value=>value==='mornings'?'Mornings':'Afternoons';
+export function availabilityTimes(values){
+ const selected=Array.isArray(values)?values:[];
+ return AVAILABILITY_TIMES.filter(time=>selected.some(value=>[time,'weekday '+time,'weekend '+time].includes(value)));
+}
+// Keep the native API's existing day-specific codes compatible with open tabs.
+// Each visible time choice applies to both weekdays and weekends.
+export function availabilityValues(values){
+ return availabilityTimes(values).flatMap(time=>['weekday '+time,'weekend '+time]);
+}
 export const EXPERIENCES={new:'New to freediving',comfortable:'Comfortable in the water',experienced:'Experienced'};
 export const SHARING={visits:'Visit days',months:'Active months',dives:'Dive count',time:'Time in the water',depth:'Typical depth'};
 export const profileURL=(screen='me',values={})=>{

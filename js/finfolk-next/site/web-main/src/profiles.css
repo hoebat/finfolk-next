@@ -28,5 +28,3 @@
 .directory-initials{font:500 56px/1 Georgia,serif;letter-spacing:-.05em;color:var(--account-ink)}
 
 .profile-handle{display:inline-flex;font-size:14px;line-height:1.6;margin:0 0 14px;color:var(--account-muted);overflow-wrap:anywhere;max-width:100%}
-
-.profile-handle{display:inline-flex;font-size:14px;line-height:1.6;margin:0 0 14px;color:var(--account-muted);overflow-wrap:anywhere;max-width:100%}

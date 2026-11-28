@@ -36,7 +36,7 @@ try{
  await page.waitForURL(url=>url.pathname==='/account'&&url.searchParams.has('returnTo'));
  assert.match(new URL(page.url()).searchParams.get('returnTo'),/locality=Bondi/);
  await page.waitForFunction(()=>!!window.completeDirectorySignIn);await page.evaluate(()=>window.completeDirectorySignIn());
- await page.waitForURL(url=>url.pathname==='/pages'&&url.searchParams.get('create')==='1');
+ await page.waitForURL(url=>url.pathname==='/directory'&&url.searchParams.get('create')==='1');
  await page.getByRole('button',{name:'Submit page for review',exact:true}).waitFor();
  assert.equal(await page.getByLabel('Category',{exact:true}).first().inputValue(),'Group');
  assert.equal(await page.getByLabel('State',{exact:true}).first().inputValue(),'NSW');

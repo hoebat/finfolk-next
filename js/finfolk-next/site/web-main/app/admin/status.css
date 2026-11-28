@@ -8,3 +8,9 @@
 .platform-status .status-badge{color:var(--signal)}
 .platform-status .platform-metric>strong{color:var(--theme-ink)}
 .platform-status .platform-metric[data-tone=warning]>strong{color:var(--theme-danger)}
+
+:root[data-theme=yellow] .platform-status{--ps-panel:#172440;--ps-line:#89964f}
+:root[data-theme=yellow] :is(.platform-panel,.platform-metric,.platform-notice){--ps-ink:#edff35;--ps-muted:#d6df8b;color:var(--ps-ink)}
+:root[data-theme=yellow] .platform-metric>strong{color:#edff35}
+
+:root[data-theme=yellow] .platform-status :is(thead,.platform-release dd){background:#edff35;color:#172440}

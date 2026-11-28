@@ -9,7 +9,8 @@ export function publicSeed(name,values,data){
 import {resolveModel} from './page-models.js';
 export async function loadPublicPage(key,inputs={}){
  const {definition}=await import('./page-models.js');
- const entries=Object.keys(definition(key).models).map(name=>[name,resolveModel(key,name,inputs)]).filter(([,m])=>!m.spec.auth);
+ // Instagram posts load independently in the browser so a provider/feed error cannot break the page.
+ const entries=Object.keys(definition(key).models).filter(name=>!(key==='listing'&&name==='instagram')).map(name=>[name,resolveModel(key,name,inputs)]).filter(([,m])=>!m.spec.auth);
  return Object.fromEntries(await Promise.all(entries.map(async([name,m])=>{
   // Event collections are loaded after browser flag/session resolution.
   if(key==='listing'&&m.name==='publicEvents')return [name,{events:[]}];

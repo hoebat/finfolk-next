@@ -1,3 +1,9 @@
+/* App route stylesheets remain loaded after client navigation. The landing
+   page owns a full-width document, rather than either column of the app shell. */
+:root[data-theme]:has(body>.finfolk-landing){height:auto;min-height:100%;overflow:auto}
+:root[data-theme] body:has(>.finfolk-landing){display:block;grid-template-columns:none;height:auto;min-height:100dvh;margin:0;padding:0;overflow:visible}
+:root[data-theme] body>.finfolk-landing{display:block;width:100%;min-width:0;font-family:var(--atelier-body);line-height:1.5}
+:root[data-theme] .finfolk-landing>#landing-main{display:block;position:static;inset:auto;width:100%;max-width:none;height:auto;margin:0;padding:0;overflow:visible}
 /* The landing page uses the same palette and surface roles as the app. */
 :root[data-theme] .finfolk-landing{--landing-search-focus:var(--theme-focus);--account-bg:var(--theme-bg);--account-surface:var(--theme-surface);--account-ink:var(--theme-ink);--account-muted:var(--theme-muted);--account-line:var(--theme-line);--account-accent:var(--theme-accent);background:var(--theme-bg);color:var(--theme-ink)}
 :root[data-theme] .finfolk-landing .landing-primary{background:var(--theme-accent);color:var(--theme-on-accent);border-color:var(--theme-accent);gap:12px}

@@ -16,7 +16,8 @@
    "directory" {"routes" ["/directory"] "area" "public"
                  "models" {"listings" (seed/read-model "publicDirectory" {"*" "query"})} "actions" {}}
    "listing" {"routes" ["/directory/[id]"] "area" "public"
-               "models" {"listing" (seed/read-model "publicDirectoryDetail" {"id" "id"})
+               "models" {"instagram" (seed/read-model "publicPageInstagram" {"id" "id"})
+                         "listing" (seed/read-model "publicDirectoryDetail" {"id" "id"})
                          "events" (seed/read-model "publicEvents" {"page" "id"})
                          "mine" (assoc (seed/read-model "directoryMine") "when" [["actor"]])}
                "actions" {"claim" (seed/action "directoryInstagramClaim" {"id" "id"})
@@ -25,8 +26,12 @@
              "models" {"mine" (seed/read-model "directoryMine")}
              "actions" {"create" (directory-action "directoryCreate")}}
    "page-owner" {"routes" [] "area" "member"
-                  "models" {"access" (seed/read-model "pageAccess" {"id" "id"})}
-                  "actions" {"save" (directory-action "directoryOwnerSave" {"id" "id"})
+                  "models" {"instagram" (seed/read-model "pageInstagramManage" {"id" "id"})
+                            "access" (seed/read-model "pageAccess" {"id" "id"})}
+                  "actions" {"instagram-save" (seed/action "pageInstagramSave" {"id" "id"})
+                             "instagram-refresh" (seed/action "pageInstagramRefresh" {"id" "id"})
+                             "instagram-review" (seed/action "pageInstagramReview" {"id" "id"})
+                             "save" (directory-action "directoryOwnerSave" {"id" "id"})
                              "invite" (seed/action "pageInvite" {"id" "id"})
                              "revoke" (seed/action "pageInviteRevoke" {"id" "id"})
                              "remove-admin" (seed/action "pageAdminRemove" {"id" "id"})}}})
@@ -54,7 +59,7 @@
                          "actions" {"accept" (seed/action "eventAccept" {"token" "token"})}}
      "page-invitation" {"routes" ["/pages/invitation"] "area" "member" "models" {}
                         "actions" {"accept" (seed/action "pageInviteRedeem" {"token" "token"})}}
-     "directory-review" {"routes" ["/pages/review"] "area" "member" "order" ["mine" "review"]
+     "directory-review" {"routes" ["/pages/review" "/admin/businesses"] "area" "member" "order" ["mine" "review"]
                          "models" {"mine" (seed/read-model "directoryMine")
                                    "review" (assoc (seed/read-model "directoryAdmin")
                                               "require" [["models" "mine" "admin"]]

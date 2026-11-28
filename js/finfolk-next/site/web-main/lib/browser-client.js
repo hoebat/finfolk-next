@@ -12,7 +12,7 @@ export function browserClient(){
  if(!ready)ready=(async()=>{
   const config=await accountConfiguration();
   if(!config.enabled)throw Error('Accounts are temporarily unavailable.');
-  if(config.authProvider==='preview'){const selected=new URL(location.href).searchParams.get('previewActor');if(['guest','alice','bob','owner','admin'].includes(selected))sessionStorage.setItem('finfolk:preview:actor',selected);const {createPreviewClient}=await import(/* webpackIgnore: true */ '/preview-client.js');const client=createPreviewClient(config,sessionStorage.getItem('finfolk:preview:actor')||'alice');client.featureFlags=async()=>{const r=await fetch('/v1/features',{cache:'no-store'});if(!r.ok)throw Error('Feature settings unavailable');return r.json();};return client;}
+  if(config.authProvider==='preview'){const selected=new URL(location.href).searchParams.get('previewActor');if(['guest','alice','bob','owner','admin','newmember','returning'].includes(selected))sessionStorage.setItem('finfolk:preview:actor',selected);const {createPreviewClient}=await import(/* webpackIgnore: true */ '/preview-client.js');const client=createPreviewClient(config,sessionStorage.getItem('finfolk:preview:actor')||'alice');client.featureFlags=async()=>{const r=await fetch('/v1/features',{cache:'no-store'});if(!r.ok)throw Error('Feature settings unavailable');return r.json();};return client;}
   if(config.authProvider!=='supabase')throw Error('Supabase account configuration is required.');
   const path='/account-client.js';const {createLogbookClient}=await import(/* webpackIgnore: true */path);
   return createLogbookClient(config);

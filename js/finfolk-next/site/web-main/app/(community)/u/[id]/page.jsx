@@ -7,6 +7,5 @@ export async function generateMetadata({params}){const {id}=await params;if(!val
 export default async function PublicProfile({params}){
  const {id}=await params;if(!validHandle(id))notFound();const {profile}=await loadPublicPage('public-profile',{id});if(!profile)notFound();
  if(id!==profile.handle)redirect('/u/'+encodeURIComponent(profile.handle));
- const {catalog:sites}=await loadPublicPage('community-catalog');
- return <><PublicDataCache name="siteCatalog" data={sites} values={{}}/><PublicDataCache name="publicProfileByHandle" data={profile} values={{handle:id}}/><Profile sites={sites.beaches||[]} target={profile.id} initialPublic={profile}/></>;
+ return <><PublicDataCache name="publicProfileByHandle" data={profile} values={{handle:id}}/><Profile target={profile.id} initialPublic={profile}/></>;
 }

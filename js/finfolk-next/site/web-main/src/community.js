@@ -1,3 +1,4 @@
+import {AVAILABILITY_TIMES,availabilityTimes,availabilityValues,availabilityLabel} from './profile-model.js';
 import {renderSiteSubmissions,renderSiteAdmin} from './site-editor.js';
 import { renderMessagingSettings } from './messaging-settings.js';
 import {renderTripManager,renderTripAdmin} from './trips.js';
@@ -364,7 +365,7 @@ export function installCommunity({
         group.append(el('legend', title));
         const inputs = allowed.map((value) => [
           value,
-          field(group, value, value, values?.includes(value), 'checkbox'),
+          field(group, allowed===AVAILABILITY_TIMES?availabilityLabel(value):value, value, values?.includes(value), 'checkbox'),
         ]);
         form.append(group);
         return () => inputs.filter(([, n]) => n.checked).map(([v]) => v);
@@ -374,12 +375,7 @@ export function installCommunity({
           'ocean-swimming',
           'spearfishing',
         ]),
-        availability = checks('Usual times (optional)', p.availability, [
-          'weekday mornings',
-          'weekday afternoons',
-          'weekend mornings',
-          'weekend afternoons',
-        ]);
+        availability = checks('Usual times (optional)', availabilityTimes(p.availability), AVAILABILITY_TIMES);
       const experience = el('select');
       experience.setAttribute('aria-label', 'Self-described experience');
       for (const [value, label] of [
@@ -445,7 +441,7 @@ export function installCommunity({
               open: open.checked,
               beaches: [...selected],
               activities: activities(),
-              availability: availability(),
+              availability: availabilityValues(availability()),
               experience: experience.value,
               depthGoal: depth.value ? Number(depth.value) : null,
               sharing: Object.fromEntries(
