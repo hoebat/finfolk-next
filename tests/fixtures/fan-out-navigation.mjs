@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import {expect} from '@playwright/test';
-export async function checkFanOut(page,host,{pane='primary',trigger='.ff-primary-fab',itemsSelector='.ff-fan-destinations .ff-nav-item,.ff-account-widget>button'}={}){
+export async function checkFanOut(page,host,{pane='primary',trigger='.ff-primary-fab',itemsSelector='.ff-fan-destinations .ff-nav-item,.ff-account-widget>:is(button,a)'}={}){
  if(pane==='primary')assert.equal(await host.locator('.ff-fan-destinations').evaluate(element=>getComputedStyle(element).backgroundColor),'rgba(0, 0, 0, 0)','The fan origin stays transparent so the close icon is visible');
  const fab=await host.locator(trigger).boundingBox(),viewport=page.viewportSize(),items=host.locator(itemsSelector),panel=host.locator('.ff-pane-'+pane),boxes=[];
  assert.equal(await panel.evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)','The vertical menu has no card background');
@@ -12,7 +12,7 @@ export async function checkFanOut(page,host,{pane='primary',trigger='.ff-primary
   assert(await item.evaluate(e=>{const r=e.getBoundingClientRect();return e.contains(document.elementFromPoint(r.x+r.width/2,r.y+r.height/2));}),'Each circle remains clickable');
   const scroll=await panel.evaluate(e=>e.scrollTop);boxes.push({y:box.y+scroll,labelY:label.y+scroll,labelHeight:label.height});
  }
- for(let i=1;i<boxes.length;i++){assert(boxes[i-1].y-boxes[i].y>=55,'Actions follow their declared order upwards from the bottom');assert(boxes[i].labelY+boxes[i].labelHeight<=boxes[i-1].labelY,'Labels do not overlap');}
+ for(let i=1;i<boxes.length;i++){if(pane==='primary'){assert(boxes[i].y-boxes[i-1].y>=55,'Primary destinations start at the top, before account and page options');assert(boxes[i-1].labelY+boxes[i-1].labelHeight<=boxes[i].labelY,'Labels do not overlap');}else{assert(boxes[i-1].y-boxes[i].y>=55,'Submenu actions rise from the bottom');assert(boxes[i].labelY+boxes[i].labelHeight<=boxes[i-1].labelY,'Labels do not overlap');}}
 
 }
 
@@ -31,4 +31,13 @@ export async function checkMenuFocus(host,name){
 export async function checkSingleFab(host){
  await expect(host.getByRole('button')).toHaveCount(1,{timeout:30000});
  await expect(host.getByRole('button',{name:'Open menu',exact:true})).toBeVisible();
+}
+
+export async function checkDirectSignIn(page,host){
+ const floating=await host.locator('.ff-primary-fab').count()>0;if(floating){await checkSingleFab(host);await host.getByRole('button',{name:'Open menu',exact:true}).click();}
+ const link=host.getByRole('link',{name:'Sign in',exact:true});await expect(link).toBeVisible();
+ await expect(host.getByRole('button',{name:'Open account menu',exact:true})).toHaveCount(0);
+ const before=page.url();await link.click();const dialog=page.getByRole('dialog',{name:'Sign in',exact:true});
+ await expect(dialog).toBeVisible();await expect(host.locator('.ff-pane-account')).toHaveCount(0);assert.equal(page.url(),before,'Sign in opens directly without navigating away');
+ await dialog.getByRole('button',{name:'Close sign in',exact:true}).click();if(floating)await checkMenuFocus(host,'Open menu');else await expect(link).toBeFocused({timeout:30000});
 }

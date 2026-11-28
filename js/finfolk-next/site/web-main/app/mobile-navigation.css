@@ -1,7 +1,7 @@
 /* Primary navigation, account actions and page options have separate surfaces. */
 .ff-mobile-navigation{display:none}
 nav.ff-primary-nav.ff-mobile-destinations{display:none!important}
-:root[data-theme] .ff-navigation-controls .ff-account-widget>.ff-avatar-toggle{display:flex!important;flex:1;min-width:0;max-width:none;width:auto;height:auto;min-height:0;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;text-align:left}
+:root[data-theme] .ff-navigation-controls .ff-account-widget>.ff-avatar-toggle{display:flex!important;flex:1;min-width:0;max-width:none;width:auto;height:auto;min-height:0;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;text-align:left;text-decoration:none}
 :root[data-theme] .ff-navigation-controls .ff-context-toggle{display:flex;align-items:center;justify-content:center;flex:0 0 38px;width:38px;min-width:38px;padding:8px;border:0;border-left:1px solid var(--account-line);border-radius:0 17px 17px 0;background:transparent;color:inherit;cursor:pointer}
 .ff-context-toggle svg{width:22px;height:22px}
 :root[data-theme] .ff-navigation-controls :is(.ff-avatar-toggle,.ff-context-toggle,.ff-primary-fab):focus-visible{outline:3px solid var(--account-accent);outline-offset:4px}
@@ -51,7 +51,7 @@ nav.ff-primary-nav.ff-mobile-destinations{display:none!important}
  :root[data-theme] .fm-explore .fm-result-content{padding-bottom:80px}
 }
 @media(prefers-reduced-motion:no-preference){.ff-floating-controls .ff-layered-menu:not([hidden]){animation:ff-menu-enter .16s ease-out;transform-origin:bottom right}@keyframes ff-menu-enter{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}}
-/* One FAB opens circular actions in an ordered column, starting at the bottom. */
+/* One FAB opens circular actions in an ordered column above it. */
 @media(max-width:900px){
  :root[data-theme] .ff-floating-controls .ff-primary-fab{position:relative;z-index:68}
  :root[data-theme] .ff-floating-controls .ff-account-widget{display:none!important}
@@ -59,7 +59,7 @@ nav.ff-primary-nav.ff-mobile-destinations{display:none!important}
  :root[data-theme] .ff-mobile-navigation nav.ff-layered-menu[data-fan=true]{display:flex;flex-direction:column;align-items:flex-end;gap:8px;bottom:64px!important;width:min(224px,calc(100vw - 32px));height:auto;max-height:calc(100dvh - 108px - env(safe-area-inset-top) - env(safe-area-inset-bottom));padding:4px;border:0;border-radius:0;background:transparent;box-shadow:none;overflow-x:hidden;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:none;pointer-events:auto;animation:none}
  .ff-floating-controls nav[data-fan=true]>.ff-menu-heading{display:none}
  :root[data-theme] .ff-floating-controls .ff-stack-items,:root[data-theme] .ff-floating-controls nav[data-fan=true] .ff-action-fan{display:flex!important;flex-direction:column-reverse;align-items:flex-end;gap:8px;flex:none}
- .ff-floating-controls .ff-stack-items{width:100%}
+ :root[data-theme] .ff-floating-controls .ff-stack-items{width:100%;flex-direction:column}
  :root[data-theme] .ff-floating-controls .ff-stack-items[hidden]{display:none!important}
  :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-fan-destinations{display:contents!important;background:transparent!important}
  :root[data-theme] .ff-floating-controls nav[data-fan=true] .ff-action-fan{position:static;inset:auto;width:100%;height:auto;min-height:0;margin:0;padding:0;border:0;pointer-events:none}
@@ -80,6 +80,6 @@ nav.ff-primary-nav.ff-mobile-destinations{display:none!important}
  :root[data-theme] .ff-floating-controls nav[data-fan=true]>.ff-menu-error,:root[data-theme] .ff-floating-controls nav[data-fan=true] .ff-theme-fan>.ff-menu-theme-feedback:not(.ff-visually-hidden){position:fixed;top:calc(16px + env(safe-area-inset-top));bottom:auto;left:16px;right:16px;max-width:none;padding:10px;border-radius:10px;background:var(--account-surface);pointer-events:auto}
 }
 @media(max-width:900px) and (prefers-reduced-motion:no-preference){
- .ff-floating-controls :is(.ff-fan-destinations .ff-nav-item,.ff-action-fan>.ff-fan-action),.ff-floating-controls[data-pane=primary] .ff-account-widget>button{animation:ff-stack-enter .16s ease-out both;animation-delay:var(--fan-delay,0ms)}
+ .ff-floating-controls :is(.ff-fan-destinations .ff-nav-item,.ff-action-fan>.ff-fan-action),.ff-floating-controls[data-pane=primary] .ff-account-widget>:is(button,a){animation:ff-stack-enter .16s ease-out both;animation-delay:var(--fan-delay,0ms)}
  @keyframes ff-stack-enter{from{opacity:0;scale:.85}to{opacity:1;scale:1}}
 }
