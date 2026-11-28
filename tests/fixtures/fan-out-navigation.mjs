@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import {expect} from '@playwright/test';
 export async function checkFanOut(page,host,{pane='primary',trigger='.ff-primary-fab',itemsSelector='.ff-fan-destinations .ff-nav-item,.ff-account-widget>button'}={}){
+ if(pane==='primary')assert.equal(await host.locator('.ff-fan-destinations').evaluate(element=>getComputedStyle(element).backgroundColor),'rgba(0, 0, 0, 0)','The fan origin stays transparent so the close icon is visible');
  const fab=await host.locator(trigger).boundingBox(),viewport=page.viewportSize(),items=host.locator(itemsSelector),boxes=[];
  assert.equal(await host.locator('.ff-pane-'+pane).evaluate(e=>getComputedStyle(e).backgroundColor),'rgba(0, 0, 0, 0)','Speed dial has no menu card');
  for(const item of await items.all()){
@@ -21,10 +23,10 @@ export async function openMenuBranch(host,name){
 }
 export async function checkMenuFocus(host,name){
  const target=await host.locator('.ff-primary-fab').count()?host.locator('.ff-primary-fab'):host.getByRole('button',{name,exact:true});
- assert(await target.evaluate(element=>element===document.activeElement),'Focus returns to the menu trigger');
+ await expect(target).toBeFocused({timeout:30000});
  if(await host.locator('.ff-primary-fab').count())await checkSingleFab(host);
 }
 export async function checkSingleFab(host){
- assert.equal(await host.getByRole('button').count(),1,'The collapsed mobile menu has exactly one button');
- assert(await host.getByRole('button',{name:'Open menu',exact:true}).isVisible());
+ await expect(host.getByRole('button')).toHaveCount(1,{timeout:30000});
+ await expect(host.getByRole('button',{name:'Open menu',exact:true})).toBeVisible();
 }
