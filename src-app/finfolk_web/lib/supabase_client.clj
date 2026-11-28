@@ -6,6 +6,10 @@
   (when response.error (throw response.error))
   (return response.data))
 (defn.js ^{:- [:async]} requestAccount [config operation values session check]
+  (when (== operation "siteCatalog")
+    (var response (await (fetch (new URL "/v1/sites/catalog" config.apiUrl) {"cache" "no-cache"})))
+    (when (not response.ok) (throw (new Error "Dive sites unavailable.")))
+    (return (await (response.json))))
   (:= values (contracts/compactRequest values))
   (var spec (. contracts/operations [operation]))
   (when (not spec)
@@ -15,6 +19,7 @@
   (when (and (not session) (not spec.public)) (throw (Object.assign (new Error "Sign in first.") {"status" 401})))
   (check)
   (var headers {"Content-Type" "application/json"})
+  (when (== operation "me") (:= (. headers ["X-FinFolk-Profile-Setup"]) "1"))
   (when session (:= headers.Authorization (+ "Bearer " session.access_token)))
   (var response (await (fetch (new URL "/v1/native/account" config.apiUrl)
     {"method" "POST" "headers" headers "body" (JSON.stringify {"operation" operation "values" values}) "cache" "no-store"})))
@@ -25,6 +30,38 @@
       "mutationOutcomeUnknown" (and spec.write (>= response.status 500) (not body.dataDeleted))})))
   (contracts/validate spec.result body "result")
   (return body))
+(defn.js socialRequestAllowed [path method]
+  (:= path (. path (replace (new RegExp "^/v1/me/tiktok(?=/|$)") "/v1/me/instagram") (replace (new RegExp "^/v1/messaging/connections/finfolk-tiktok-comments/") "/v1/messaging/connections/finfolk-instagram/") (replace (new RegExp "^/v1/messaging/connections/finfolk-tiktok/") "/v1/messaging/connections/finfolk-instagram/")))
+  (return (or
+    (and (== method "GET") (or (== path "/v1/me/instagram")
+      (== path "/v1/messaging/connections/finfolk-instagram/status")
+      (. (new RegExp "^/v1/messaging/connections/finfolk-instagram/events/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$" "i") (test path))))
+    (and (== method "POST") (. ["/v1/me/instagram/connect" "/v1/me/instagram/disconnect"
+      "/v1/messaging/connections/finfolk-instagram/authorization" "/v1/messaging/connections/finfolk-instagram/activation"
+      "/v1/messaging/connections/finfolk-instagram/pause" "/v1/messaging/connections/finfolk-instagram/disconnect"
+      "/v1/messaging/connections/finfolk-instagram/acceptance"] (includes path))))))
+
+(defn.js ^{:- [:async]} requestSocial [config path options session check]
+  (var method (. (or options.method "GET") (toUpperCase)))
+  (when (or (not= (typeof path) "string") (not (-/socialRequestAllowed path method)))
+    (throw (Object.assign (new Error "This feature is not available in this build.") {"status" 501 "code" "native_operation_unavailable"})))
+  (when (not session) (throw (Object.assign (new Error "Sign in first.") {"status" 401})))
+  (check)
+  ;; OAuth nonce cookies must belong to the canonical callback host, not the website proxy.
+  (var base (:? (. ["/v1/messaging/connections/finfolk-instagram/authorization" "/v1/messaging/connections/finfolk-tiktok/authorization" "/v1/messaging/connections/finfolk-tiktok-comments/authorization"] (includes path)) "https://api.finfolk.com.au/" config.apiUrl))
+  (var url (new URL path base))
+  (when (not= url.origin (. (new URL base) origin)) (throw (new Error "Unexpected integration origin")))
+  (var headers {"Content-Type" "application/json" "Authorization" (+ "Bearer " session.access_token)})
+  (var response (await (fetch url {"method" method "headers" headers "credentials" "include" "cache" "no-store"
+    "signal" (or options.signal (AbortSignal.timeout 30000))
+    "body" (:? (== method "POST") (JSON.stringify (or options.body {})) nil)})))
+  (var body (await (response.json)))
+  (check)
+  (when (not response.ok)
+    (throw (Object.assign (new Error (or body.error "Social connection unavailable"))
+      {"status" response.status "code" body.code "mutationOutcomeUnknown" (and (== method "POST") (>= response.status 500))})))
+  (return body))
+
 (defn.js createAccountClient [auth config app]
   (when (not app) (throw (new Error "An application backbone is required")))
   (:= app.authProvider "supabase") (:= app.configuration config)
@@ -79,9 +116,13 @@
       (when (not spec) (throw (Object.assign (new Error "This feature is not available in this build.") {"status" 501 "code" "native_operation_unavailable"})))
       (when (not spec.public) (throw (new Error "Sign in first.")))
       (return (app.public.subscribe operation values listener)))
-    "request" (async (fn [_path _options]
-      (throw (Object.assign (new Error "This feature is not available in this build.")
-                            {"status" 501 "code" "native_operation_unavailable"}))))
+    "request" (async (fn [path (:= options {})]
+      (var revision ctx.revision)
+      (var session ctx.session)
+      (var check (fn []
+        (when (or (not= revision ctx.revision) ctx.closed)
+          (throw (new Error "Account changed. Sign in again.")))))
+      (return (await (-/requestSocial config path options session check)))))
     "configuration" config
     "profile" (async (fn [target]
       (return (await (client.call (:? ctx.model "profile" "publicProfile") (:? target {"target" target} {}))))))
@@ -105,6 +146,7 @@
       (return (Object.assign {} response {"confirmationRequired" (and (not response.error) (not response.data.session))}))))}}
     "google" (async (fn [] (return (-/checked (await (auth.signInWithOAuth {"provider" "google" "options" {"redirectTo" config.authRedirectTo}}))))))
     "github" (async (fn [] (return (-/checked (await (auth.signInWithOAuth {"provider" "github" "options" {"redirectTo" config.authRedirectTo}}))))))
+    "facebook" (async (fn [] (return (-/checked (await (auth.signInWithOAuth {"provider" "facebook" "options" {"redirectTo" config.authRedirectTo}}))))))
     "verify" (async (fn []
       (when (not ctx.user) (throw (new Error "Sign in first.")))
       (return (-/checked (await (auth.resend {"type" "signup" "email" ctx.user.email}))))))

@@ -79,10 +79,11 @@
                "actions" {"connect" (seed/action "connection")}}
      "profile" {"routes" ["/profile" "/members/[id]"] "area" "member" "loader" "profile"
                 "models" PROFILE_MODELS "actions" PROFILE_ACTIONS}
+     "public-profile" {"routes" ["/u/[id]"] "area" "public" "models" {"profile" (seed/read-model "publicProfileByHandle" {"handle" "id"})} "actions" {}}
      "profile-editor" {"policy" {"regularDays" contracts/REGULAR-DAYS} "routes" ["/profile/edit"] "area" "member" "loader" "profile-editor"
                        "models" (select-keys PROFILE_MODELS ["me" "sessions" "session" "posts"])
                        "actions" {"save" (assoc (seed/action "preferences") "payload-pick"
-                          {"profile" ["displayName" "bio" "instagram" "tiktok" "open" "sharing" "beaches" "activities" "availability" "experience" "depthGoal" "portrait" "featuredLogs" "featuredPosts"]})}}
+                          {"profile" ["displayName" "handle" "bio" "instagram" "tiktok" "open" "sharing" "beaches" "activities" "availability" "experience" "depthGoal" "portrait" "featuredLogs" "featuredPosts"]})}}
      "member-chooser" {"routes" ["/members"] "area" "public" "models" {} "actions" {}}
      "instagram-link" {"routes" [] "area" "member" "models" {"status" (seed/read-model "instagramClaimStatus")}
                        "actions" {"disconnect" (seed/action "instagramDisconnect")

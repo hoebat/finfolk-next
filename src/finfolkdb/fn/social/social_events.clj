@@ -38,6 +38,12 @@
         (:text v-fingerprint) nil]
     (when (or [o-inbox :is-null] (== v-provider "app"))
       [:raise-exception "External social inbox is outside application scope"])
+    (when (and (== (:->> o-inbox "provider_scope") "tiktok-comments")
+               (or (not= v-provider "tiktok") (not= v-channel "mention")
+                   (not (pg/coalesce (pg/jsonb-exists (:jsonb "[\"owned\",\"mention\"]") (:->> o-input "commentOrigin")) false))
+                   (not (pg/coalesce (#{"regexp_like"} (:->> o-input "mediaId") "^[0-9]{1,40}$") false))
+                   (not (pg/coalesce (#{"regexp_like"} v-message "^[0-9]{1,40}$") false))))
+      [:raise-exception "TikTok comments require a verified comment and media target"])
     (when (or (pg/jsonb-exists o-input "application")
               (pg/jsonb-exists o-input "inbox")
               (pg/jsonb-exists o-input "namespace")
@@ -98,7 +104,8 @@
             o-account (pg/t:get accounts/SocialAccount {:where {:id v-account}})
             o-parsed (commands/parse-social-command v-channel v-body)
             o-payload (|| (- (- o-input "body") "eventId")
-                          (pg/jsonb-build-object "parsed" o-parsed))
+                          (pg/jsonb-build-object "parsed" o-parsed
+                            "bodyHash" (#{"encode"} (#{"digest"} v-body "sha256") "hex")))
             (:uuid v-message-id) nil]
         (when (== (:->> o-parsed "command") "none")
           (:= o-payload (|| o-payload (pg/jsonb-build-object "body" v-body))))

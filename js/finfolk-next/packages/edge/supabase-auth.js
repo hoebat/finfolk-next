@@ -1,4 +1,34 @@
 // Generated from finfolk-web.lib.supabase-auth; do not edit.
+export function profileSuggestions(user){
+  let provider = (user.app_metadata && user.app_metadata.provider) || "email";
+  if(!["google","github","facebook","email"].includes(provider)){
+    return {};
+  }
+  let identity = (user.identities || []).find(function (item){
+    return item.provider == provider;
+  });
+  let data = (provider == "email") ? (user.user_metadata || {}) : ((identity && identity.identity_data) || user.user_metadata || {});
+  let name = (provider == "email") ? data.displayName : (data.full_name || data.name || data.displayName || data.user_name || "");
+  let result = {"provider":provider};
+  if((typeof name) == "string"){
+    result.name = name.replace(new RegExp("[\\u0000-\\u001f\\u007f]","g"),"").trim().slice(0,80);
+  }
+  if(provider != "email"){
+    try{
+      let photo = new URL(data.avatar_url || data.picture || "");
+      if((photo.protocol == "https:") && !photo.username && !photo.password && !photo.port && (photo.href.length < 2048) && new RegExp(
+        "(^|\\.)(googleusercontent\\.com|avatars\\.githubusercontent\\.com|fbcdn\\.net)$|^graph\\.facebook\\.com$"
+      ).test(photo.hostname)){
+        result.photo = photo.href;
+      }
+    }
+    catch(error){
+      null;
+    }
+  }
+  return result;
+}
+
 export async function verifiedIdentity(config,authorization){
   if(((typeof authorization) != "string") || !authorization.startsWith("Bearer ")){
     throw Object.assign(new Error("Sign in first."),{"status":401});
@@ -27,6 +57,7 @@ export async function verifiedIdentity(config,authorization){
   return {
     "id":user.id,
     "email":user.email,
-    "verified":!!user.email_confirmed_at
+    "verified":!!user.email_confirmed_at,
+    "profileSuggestions":profileSuggestions(user)
   };
 }

@@ -10,7 +10,7 @@ export class MessagingOAuthError extends Error{
 }
 
 export function createMessagingOAuth({db,application,account,provider,providerAuthorization,authorizationStore,
- redirectURI,returnURL,configurationFingerprint,subscribeOnAuthorization=false}){
+ redirectURI,returnURL,configurationFingerprint,subscribeOnAuthorization=false,reportFailure=()=>{}}){
  const redirect=new URL(redirectURI),destination=new URL(returnURL);
  if(redirect.protocol!=='https:'||destination.protocol!=='https:'||redirect.hash||destination.username||redirect.username||
     !configurationFingerprint||!['instagram','tiktok'].includes(provider)||!providerAuthorization?.authorizationURL)
@@ -44,14 +44,19 @@ export function createMessagingOAuth({db,application,account,provider,providerAu
     throw new MessagingOAuthError('Operator access is no longer available.',403);
    const consumed=await call('consume_messaging_oauth',[intent.user_id,hash(state),hash(nonce),flow]);
    if(!consumed)throw new MessagingOAuthError('Authorization state is expired, changed or already used.');
+   let stage='exchange';
    try{
     const grant=await providerAuthorization.exchangeCode({code});
+    stage='install';
     const installed=await authorizationStore.install({...grant,expectedGeneration:consumed.generation,
-     verify:credential=>providerAuthorization.verify(credential,{subscribe:subscribeOnAuthorization})});
+     verify:async credential=>{stage='provider_verification';const proof=await providerAuthorization.verify(credential,{subscribe:subscribeOnAuthorization});stage='store';return proof;}});
     return {installed,returnURL:destination.href,cookie:cookie('',0)};
    }catch(error){
+    const diagnostic=typeof error.code==='string'&&/^(?:[A-Z0-9]{5}|(?:provider|oauth|token|wrong|page|credential)_[a-z_]{1,50})$/.test(error.code)?error.code:'authorization_failed';
+    try{reportFailure({stage,code:diagnostic});}catch{}
     if(error instanceof MessagingAuthorizationChanged)throw new MessagingOAuthError('The account changed during authorization.',409);
-    throw new MessagingOAuthError('Provider authorization could not be confirmed. Start authorization again.',503);
+    const failure=new MessagingOAuthError('Provider authorization could not be confirmed. Start authorization again.',503);
+    failure.stage=stage;failure.code=diagnostic;throw failure;
    }
   },
  };

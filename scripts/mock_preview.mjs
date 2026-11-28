@@ -1,3 +1,4 @@
+import {seedProfileHandles,validatePreviewHandle,publicPreviewHandle} from './lib/preview_profile_handles.mjs';
 import {previewBuddyOperation} from './lib/preview_buddies.mjs';
 // Development-only mock service. The UI still runs generated Substrate models.
 import {localPreviewFeatureFlags} from './lib/environment_feature_flags.mjs';
@@ -23,14 +24,16 @@ let state;try{state=JSON.parse(await readFile(directory+'/state.json'));if(state
 let writes=Promise.resolve();const persist=()=>writes=writes.then(async()=>{await writeFile(directory+'/state.tmp',JSON.stringify(state));await rename(directory+'/state.tmp',directory+'/state.json');});
 function requirePreviewMember(actor){if(actor==='guest')throw Object.assign(Error('Sign in to continue.'),{status:401});}
 function guardPreviewPath(path,actor){if(/^\/(?:v1\/(?:me|admin)|me|admin)(?:\/|$)/.test(new URL(path,'http://preview').pathname))requirePreviewMember(actor);}
+seedProfileHandles(state);
 async function operation(name,v={},actor='alice'){if(operations[name]?.auth)requirePreviewMember(actor);await assertPreviewFlag(featureForOperation(name));if(name==='buddyRead'||name==='buddyAction')return previewBuddyOperation(state,actor,name,v);
  if(v.__rest){const spec=operations[name];return request(v.path,{method:spec.method,body:v.body},actor);}
  const profile=state.profiles[actor];if(!profile&&actor!=='guest')throw Error('Unknown preview actor');
  switch(name){
  case 'siteCatalog':return {revision:1,beaches:[beach],states:[{id:'NSW',name:'New South Wales'}],areas:[],sources:[]};
  case 'me':return {id:actor,profile};
+ case 'publicProfileByHandle':return publicPreviewHandle(state,v.handle);
  case 'profile':case 'publicProfile':{const id=v.target||actor,p=state.profiles[id];if(!p||id!==actor&&!p.open)return {restricted:true};return {id,...p};}
- case 'preferences':Object.assign(profile,v.profile);await persist();return {profile};
+ case 'preferences':{const patch={...v.profile};if('handle'in patch)patch.handle=validatePreviewHandle(state,actor,patch.handle);Object.assign(profile,patch);await persist();return {profile};}
  case 'community':return {people:Object.entries(state.profiles).filter(([id])=>id!==actor).map(([id,p])=>({id,...p,regular:true})),cursor:null};
  case 'sessionPlans':return {sessions:state.sessions.filter(s=>s.plan&&(s.ownerId===actor||s.plan.members[actor])),connections:await operation('connections',{},actor)};
  case 'sessionCheckin':case 'sessionPlanning':{
@@ -95,7 +98,7 @@ async function request(path,options,actor){guardPreviewPath(path,actor);await as
  if(['/v1/me/events/detail','/v1/me/events/roster','/v1/me/events/mine','/v1/me/directory/access'].includes(p))return rest(path,options,actor);
  throw Error('Mock write not implemented: '+p);
 }
-const server=createServer(async(req,res)=>{res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');try{let body='';for await(const chunk of req)body+=chunk;const input=body?JSON.parse(body):{},url=new URL(req.url,'http://preview');await assertPreviewFlag(flagForPath(url.pathname));let data;if(url.pathname==='/v1/features')data=await previewFlags();else if(url.pathname==='/__preview/operation')data=await operation(input.operation,input.values,input.actor);else if(url.pathname==='/__preview/reset'){state=seed();await persist();data={ok:true};}else if(url.pathname==='/__preview/request')data=await request(url.searchParams.get('path'),input.options||{},input.actor);else data=rest(req.url);res.end(JSON.stringify(data));}catch(error){res.statusCode=error.status||501;res.end(JSON.stringify({error:error.message}));}});
+const server=createServer(async(req,res)=>{res.setHeader('Content-Type','application/json');res.setHeader('Cache-Control','no-store');try{let body='';for await(const chunk of req)body+=chunk;const input=body?JSON.parse(body):{},url=new URL(req.url,'http://preview');await assertPreviewFlag(flagForPath(url.pathname));let data;if(url.pathname==='/v1/features')data=await previewFlags();else if(url.pathname==='/__preview/operation')data=await operation(input.operation,input.values,input.actor);else if(url.pathname==='/__preview/reset'){state=seed();seedProfileHandles(state);await persist();data={ok:true};}else if(url.pathname==='/__preview/request')data=await request(url.searchParams.get('path'),input.options||{},input.actor);else data=rest(req.url);res.end(JSON.stringify(data));}catch(error){res.statusCode=error.status||501;res.end(JSON.stringify({error:error.message}));}});
 await new Promise(resolve=>server.listen(0,'127.0.0.1',resolve));
 const portArgument=process.argv.indexOf('--port');
 const port=(portArgument>=0?process.argv[portArgument+1]:process.env.PREVIEW_PORT)||'3010';

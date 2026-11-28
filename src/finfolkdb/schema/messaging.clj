@@ -24,7 +24,7 @@
    "GRANT SELECT,INSERT,UPDATE ON " (str/join "," (map #(str "finfolk.\"" % "\"") TABLES))
    " TO finfolk_messaging;\n" "GRANT SELECT(id,deleted,email_verified) ON finfolk.\"User\" TO finfolk_messaging;\n"
    "GRANT SELECT(account_id,status,user_id) ON finfolk.\"SocialConnection\" TO finfolk_messaging;\n"
-   "GRANT EXECUTE ON FUNCTION finfolk.as_jsonb(jsonb),finfolk.as_bounded_text(text,integer,integer),finfolk.as_bounded_integer(integer,integer,integer) TO finfolk_messaging;\n"
+   "GRANT EXECUTE ON FUNCTION finfolk.as_jsonb(jsonb),finfolk.as_jsonb_array(jsonb),finfolk.as_bounded_text(text,integer,integer),finfolk.as_bounded_integer(integer,integer,integer) TO finfolk_messaging;\n"
    "DO $$ DECLARE f record; BEGIN FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' AND p.proname IN ("
    (str/join "," (map #(str "'" % "'") FUNCTIONS))
    ") LOOP EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO finfolk_messaging',f.signature); END LOOP; END $$;\n"

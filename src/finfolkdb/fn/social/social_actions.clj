@@ -207,6 +207,7 @@
                        "provider" (:->> o-account "provider")
                        "namespace" (:->> o-account "namespace")
                        "externalId" (:->> o-account "external_id")
+                       "conversationId" (:->> (:-> o-event "payload") "conversationId")
                        "codeLength" 8
                        "alphabet" "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
                        "prefix" "Your FinFolk connection code: "

@@ -9,6 +9,16 @@ export function checked(response){
 }
 
 export async function requestAccount(config,operation,values,session,check){
+  if(operation == "siteCatalog"){
+    let response = await fetch(
+      new URL("/v1/sites/catalog",config.apiUrl),
+      {"cache":"no-cache"}
+    );
+    if(!response.ok){
+      throw new Error("Dive sites unavailable.");
+    }
+    return await response.json();
+  }
   values = contracts.compactRequest(values);
   let spec = contracts.operations[operation];
   if(!spec){
@@ -28,6 +38,9 @@ export async function requestAccount(config,operation,values,session,check){
   }
   check();
   let headers = {"Content-Type":"application/json"};
+  if(operation == "me"){
+    headers["X-FinFolk-Profile-Setup"] = "1";
+  }
   if(session){
     headers.Authorization = ("Bearer " + session.access_token);
   }
@@ -48,6 +61,73 @@ export async function requestAccount(config,operation,values,session,check){
     });
   }
   contracts.validate(spec.result,body,"result");
+  return body;
+}
+
+export function socialRequestAllowed(path,method){
+  path = path.replace(new RegExp("^/v1/me/tiktok(?=/|$)"),"/v1/me/instagram").replace(
+    new RegExp("^/v1/messaging/connections/finfolk-tiktok-comments/"),
+    "/v1/messaging/connections/finfolk-instagram/"
+  ).replace(
+    new RegExp("^/v1/messaging/connections/finfolk-tiktok/"),
+    "/v1/messaging/connections/finfolk-instagram/"
+  );
+  return ((method == "GET") && ((path == "/v1/me/instagram") || (path == "/v1/messaging/connections/finfolk-instagram/status") || new RegExp(
+    "^/v1/messaging/connections/finfolk-instagram/events/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$",
+    "i"
+  ).test(path))) || ((method == "POST") && [
+    "/v1/me/instagram/connect",
+    "/v1/me/instagram/disconnect",
+    "/v1/messaging/connections/finfolk-instagram/authorization",
+    "/v1/messaging/connections/finfolk-instagram/activation",
+    "/v1/messaging/connections/finfolk-instagram/pause",
+    "/v1/messaging/connections/finfolk-instagram/disconnect",
+    "/v1/messaging/connections/finfolk-instagram/acceptance"
+  ].includes(path));
+}
+
+export async function requestSocial(config,path,options,session,check){
+  let method = (options.method || "GET").toUpperCase();
+  if(((typeof path) != "string") || !socialRequestAllowed(path,method)){
+    throw Object.assign(
+      new Error("This feature is not available in this build."),
+      {"status":501,"code":"native_operation_unavailable"}
+    );
+  }
+  if(!session){
+    throw Object.assign(new Error("Sign in first."),{"status":401});
+  }
+  check();
+  let base = [
+    "/v1/messaging/connections/finfolk-instagram/authorization",
+    "/v1/messaging/connections/finfolk-tiktok/authorization",
+    "/v1/messaging/connections/finfolk-tiktok-comments/authorization"
+  ].includes(path) ? "https://api.finfolk.com.au/" : config.apiUrl;
+  let url = new URL(path,base);
+  if(url.origin != new URL(base).origin){
+    throw new Error("Unexpected integration origin");
+  }
+  let headers = {
+    "Content-Type":"application/json",
+    "Authorization":"Bearer " + session.access_token
+  };
+  let response = await fetch(url,{
+    "method":method,
+    "headers":headers,
+    "credentials":"include",
+    "cache":"no-store",
+    "signal":options.signal || AbortSignal.timeout(30000),
+    "body":(method == "POST") ? JSON.stringify(options.body || {}) : null
+  });
+  let body = await response.json();
+  check();
+  if(!response.ok){
+    throw Object.assign(new Error(body.error || "Social connection unavailable"),{
+      "status":response.status,
+      "code":body.code,
+      "mutationOutcomeUnknown":(method == "POST") && (response.status >= 500)
+    });
+  }
   return body;
 }
 
@@ -257,11 +337,21 @@ export function createAccountClient(auth,config,app){
         return checked(await auth.resend({"type":"signup","email":ctx.user.email}));
       },
     "application":app,
-    "request":async function (_path,_options){
-        throw Object.assign(
-          new Error("This feature is not available in this build."),
-          {"status":501,"code":"native_operation_unavailable"}
-        );
+    "request":async function (path,options = {}){
+        let revision = ctx.revision;
+        let session = ctx.session;
+        let check = function (){
+          if((revision != ctx.revision) || ctx.closed){
+            throw new Error("Account changed. Sign in again.");
+          }
+        };
+        return await requestSocial(config,path,options,session,check);
+      },
+    "facebook":async function (){
+        return checked(await auth.signInWithOAuth({
+          "provider":"facebook",
+          "options":{"redirectTo":config.authRedirectTo}
+        }));
       },
     "deleteAccount":async function (password){
         let result = null;

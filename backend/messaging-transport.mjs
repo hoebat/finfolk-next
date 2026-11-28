@@ -15,7 +15,7 @@ export function createMessagingWebhook({messaging,verify,normalize,wake=async()=
    const body=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));
    envelopes=await normalize(body);
    if(!Array.isArray(envelopes))throw Error('Expected normalized messages');
-  }catch{return new Response('',{status:400});}
+  }catch(error){return new Response('',{status:error.providerRead===true?503:400});}
   const receipts=[];
   try{
    // Repeated provider batches are safe even if a later receipt temporarily fails:

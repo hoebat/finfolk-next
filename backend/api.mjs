@@ -87,9 +87,9 @@ export function createAPI({
     }
     if (origin) c.header('Access-Control-Allow-Origin', origin);
     c.header('Vary', 'Origin');
-    c.header('Cache-Control', 'private, no-store');
-    c.header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Idempotency-Key');
-    c.header('Access-Control-Expose-Headers','X-Request-Id, Idempotency-Replayed, Retry-After');
+    if(!(c.req.method==='GET'&&c.req.path==='/v1/native/sites/catalog'))c.header('Cache-Control', 'private, no-store');
+    c.header('Access-Control-Allow-Headers', 'Authorization, Content-Type, Idempotency-Key, If-None-Match');
+    c.header('Access-Control-Expose-Headers','X-Request-Id, Idempotency-Replayed, Retry-After, ETag');
     c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
     if (c.req.method === 'OPTIONS') return c.body(null, 204);
     await next();
@@ -117,7 +117,7 @@ export function createAPI({
   registerFinniesPublic(app,{db});
   registerSitesPublic(app,{db});
   registerSiteNotesPublic(app,{db:siteNotesDb});
-  app.get('/v1/native/sites/catalog',c=>nativeAccountSites(q));
+  app.get('/v1/native/sites/catalog',c=>nativeAccountSites(q,c.req.raw));
   app.all('/v1/native/account', c => {
     const {SUPABASE_URL:supabaseUrl,SUPABASE_PUBLISHABLE_KEY:publishableKey}=c.env||{};
     if(!supabaseUrl||!publishableKey)return c.json({error:'Native accounts unavailable.'},503);

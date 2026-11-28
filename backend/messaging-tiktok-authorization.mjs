@@ -2,7 +2,9 @@
 const host='https://business-api.tiktok.com/open_api/v1.3';
 const required=['message.list.manage','message.list.send','user.account.type'];
 const string=value=>typeof value==='string'&&value.length>0;
-export function createTikTokMessagingAuthorization({appId,appSecret,accountId,callbackURL,oauthRedirectURI,accountAuthorizationURL,fetcher=fetch,now=()=>Date.now()}){
+export function createTikTokMessagingAuthorization({appId,appSecret,accountId,callbackURL,oauthRedirectURI,accountAuthorizationURL,fetcher=fetch,now=()=>Date.now(),requiredScopes=required}){
+ const needed=[...requiredScopes];
+ if(!needed.length||!needed.every(string))throw Error('Trusted TikTok authorization scopes required.');
  if(![appId,appSecret,accountId].every(string)||new URL(callbackURL).protocol!=='https:')throw Error('TikTok Business Messaging configuration is required.');
  async function request(path,{token,body,params}={}){
   const url=new URL(host+path);for(const [key,value]of Object.entries(params||{}))url.searchParams.set(key,value);
@@ -19,7 +21,7 @@ export function createTikTokMessagingAuthorization({appId,appSecret,accountId,ca
   const scopes=new Set(typeof data.scope==='string'?data.scope.split(',').map(s=>s.trim()):[]);
   if(data.open_id!==accountId||!string(data.access_token)||!string(data.refresh_token)||
      !Number.isFinite(data.expires_in)||data.expires_in<=0||!Number.isFinite(data.refresh_token_expires_in)||data.refresh_token_expires_in<=0||
-     !required.every(scope=>scopes.has(scope)))throw Error('TikTok account, messaging scopes or token expiry were not verified.');
+     !needed.every(scope=>scopes.has(scope)))throw Error('TikTok account, required scopes or token expiry were not verified.');
   return {credential:{token:data.access_token,refreshToken:data.refresh_token,authMethod:'tiktok-business',
    refreshExpiresAt:new Date(now()+data.refresh_token_expires_in*1000).toISOString()},
    expiresAt:new Date(now()+data.expires_in*1000).toISOString()};

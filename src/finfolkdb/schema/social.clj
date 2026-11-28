@@ -1,6 +1,6 @@
 (ns finfolkdb.schema.social
   "Explicit privileges for trusted social adapters; never granted to browser roles."
-  (:require [clojure.string :as str]))
+  (:require [finfolkdb.schema.page-instagram :as page-instagram] [clojure.string :as str]))
 
 (def TABLES
   ["SocialAccount" "SocialConnection" "SocialConnectionProof" "SocialSource"
@@ -8,7 +8,7 @@
    "SocialEvent" "SocialRateLimit"])
 
 (def FUNCTIONS
-  (concat ["lock_social_member" "ret_social_operator_event" "ret_social_operator_health" "record_social_acceptance" "activate_social_inbox" "scrub_social_content" "purge_social_diagnostics" "ret_social_redemption_replay" "ret_social_member_connection" "ret_social_redemption_proof" "prepare_social_redemption" "complete_social_redemption" "new_social_operation" "ret_social_adapter_scope" "social_delivery_result"
+  (concat ["activate_social_comments" "record_social_comment_acceptance" "lock_social_member" "ret_social_operator_event" "ret_social_operator_health" "record_social_acceptance" "activate_social_inbox" "scrub_social_content" "purge_social_diagnostics" "ret_social_redemption_replay" "ret_social_member_connection" "ret_social_redemption_proof" "prepare_social_redemption" "complete_social_redemption" "new_social_operation" "ret_social_adapter_scope" "social_delivery_result"
            "record_social_delivery_audit" "social_delivery_policy_error" "claim_social_delivery"
            "confirm_social_delivery" "complete_social_delivery" "reconcile_social_work" "social_member_allowed"
            "social_rollout_error" "social_work_policy_error" "expire_social_action"]
@@ -44,4 +44,5 @@
    "DO $$ DECLARE f record; BEGIN FOR f IN SELECT p.oid::regprocedure AS signature FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace WHERE n.nspname='finfolk_rpc' AND p.proname IN ("
    (str/join "," (map #(str "'" % "'") FUNCTIONS))
    ") LOOP EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO finfolk_social',f.signature); END LOOP; END $$;\n"
-   "-- Grant finfolk_social only to a dedicated trusted server login.\nCOMMIT;\n"))
+   "-- Grant finfolk_social only to a dedicated trusted server login.\nCOMMIT;\n"
+   (clojure.string/replace (page-instagram/grants-sql) "finfolk_page_instagram" "finfolk_social")))

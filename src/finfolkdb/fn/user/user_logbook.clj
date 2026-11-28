@@ -11,13 +11,29 @@
              [finfolkdb.common.type-system-site :as sites]
              [finfolkdb.common.type-system-base :as system]]
    :static {:application ["finfolk-entity"] :all {:schema ["finfolk_rpc"]}}})
+(defn.pg ^{:- [:jsonb]} private-session-dives [:jsonb i-dives]
+  (let [o-dives (pg/coalesce i-dives (:jsonb "[]")) o-dive nil (:text v-key) nil]
+    (when (not= (pg/jsonb-typeof o-dives) "array") [:raise-exception "Dives must be an array"])
+    (when (> (pg/jsonb-array-length o-dives) 500) [:raise-exception "Maximum 500 dives per session"])
+    [:for o-dive :in :select (pg/jsonb-array-elements o-dives)
+     (loop []
+       (when (not= (pg/jsonb-typeof o-dive) "object") [:raise-exception "Invalid dive"])
+       [:for v-key :in :select (pg/jsonb-object-keys o-dive)
+        (loop []
+          (when (not (pg/jsonb-exists (:jsonb "[\"durationSeconds\",\"depthMetres\",\"restSeconds\"]") v-key)) [:raise-exception "Unknown dive field"])
+          (let [o-value (:-> o-dive v-key)]
+            (when (not (pg/jsonb-exists (:jsonb "[\"number\",\"null\"]") (pg/jsonb-typeof o-value))) [:raise-exception "Dive measurements must be numeric"])
+            (when (and (not= o-value (:jsonb "null"))
+                       (or (< (:numeric (:text o-value)) 0)
+                           (> (:numeric (:text o-value)) (pg/case (== v-key "depthMetres") 300 (== v-key "durationSeconds") 3600 true 86400)))) [:raise-exception "Dive measurement out of range"])))])]
+    (return o-dives)))
 (defn.pg ^{:- [:jsonb]} private-session-values [:jsonb i-values]
   (when (not= (pg/coalesce (pg/jsonb-typeof i-values) "null") "object")
     [:raise :exception :using '[[errcode := "22023"] [message := "Invalid session"]]])
   (let [(:text v-key) nil]
     [:for v-key :in :select (pg/jsonb-object-keys i-values)
      (loop []
-       (when (not (pg/jsonb-exists (:jsonb "[\"date\",\"locationName\",\"beachId\",\"point\",\"durationMinutes\",\"maxDepthMetres\",\"notes\"]") v-key))
+       (when (not (pg/jsonb-exists (:jsonb "[\"date\",\"locationName\",\"beachId\",\"point\",\"durationMinutes\",\"maxDepthMetres\",\"notes\",\"dives\"]") v-key))
          [:raise :exception :using '[[errcode := "22023"] [message := "Unknown session field"]]]))])
   (let [(:text v-date) (pg/coalesce (:->> i-values "date") "")
         (:text v-place) (#{"btrim"} (pg/coalesce (:->> i-values "locationName") ""))
@@ -46,7 +62,7 @@
         [:raise :exception :using '[[errcode := "22023"] [message := "Choose a valid map location"]]]))
     (return (pg/jsonb-build-object "date" v-date "locationName" v-place "notes" v-notes
       "beachId" (pg/coalesce (:->> i-values "beachId") "") "point" o-point
-      "durationMinutes" o-duration "maxDepthMetres" o-depth "visibility" "private" "photos" (:jsonb "[]") "linkedMedia" (:jsonb "[]")))))
+      "dives" (-/private-session-dives (:-> i-values "dives")) "durationMinutes" o-duration "maxDepthMetres" o-depth "visibility" "private" "photos" (:jsonb "[]") "linkedMedia" (:jsonb "[]")))))
 (defn.pg ^{:- [:jsonb]} private-session-row [:jsonb i-row]
   (let [o-data (:-> i-row "detail")
         o-site (pg/t:get sites/Site {:where {:id (:uuid (:->> i-row "site_id"))}})]
@@ -57,7 +73,7 @@
       "point" (pg/coalesce (:-> o-data "point") (:jsonb "null"))
       "durationMinutes" (pg/coalesce (:-> o-data "durationMinutes") (:jsonb "null"))
       "maxDepthMetres" (pg/coalesce (:-> o-data "maxDepthMetres") (:jsonb "null"))
-      "notes" (pg/coalesce (:->> o-data "notes") "") "visibility" (pg/coalesce (:->> o-data "visibility") "private")
+      "dives" (pg/coalesce (:-> o-data "dives") (:jsonb "[]")) "notes" (pg/coalesce (:->> o-data "notes") "") "visibility" (pg/coalesce (:->> o-data "visibility") "private")
       "photos" (pg/coalesce (:-> o-data "photos") (:jsonb "[]")) "linkedMedia" (pg/coalesce (:-> o-data "linkedMedia") (:jsonb "[]"))))))
 (defn.pg ^{:- [:jsonb]} ret-private-session [:uuid i-user :uuid i-session]
   [:perform (account/ret-account i-user)]
@@ -81,7 +97,8 @@
         (when [o-old :is-null] [:raise :exception :using '[[errcode := "P0002"] [message := "Session unavailable"]]])
         (when (not= (pg/coalesce (:->> (:-> o-old "detail") "visibility") "private") "private")
           [:raise :exception :using '[[errcode := "42501"] [message := "Make the session private before editing"]]])
-        (let [o-next (|| (:-> o-old "detail") (- o-data "beachId" "photos" "linkedMedia"))
+        (let [o-patch (pg/case (pg/jsonb-exists i-values "dives") o-data true (- o-data "dives"))
+              o-next (|| (:-> o-old "detail") (- o-patch "beachId" "photos" "linkedMedia"))
               o-saved (pg/t:update book/DiveSession {:where {:id i-session :owner i-user} :set {:site v-site :detail o-next} :track o-op})
               o-rev (pg/t:get system/Rev {:where {:id (:uuid (:->> o-old "rev_id"))}})
               (:int v-version) (+ (:int (:->> o-rev "index")) 1)
@@ -163,7 +180,7 @@
   ;; cross the public boundary. Recheck this at read time as well as publication.
   (when (or (> (pg/jsonb-array-length (pg/coalesce (:-> (:-> i-row "detail") "photos") (:jsonb "[]"))) 0)
             (> (pg/jsonb-array-length (pg/coalesce (:-> (:-> i-row "detail") "linkedMedia") (:jsonb "[]"))) 0)) (return nil))
-  (return (-/private-session-row i-row)))
+  (return (- (-/private-session-row i-row) "dives")))
 (defn.pg ^{:- [:jsonb]} ret-visible-session [:uuid i-viewer :uuid i-session]
   (when [i-viewer :is-not-null] [:perform (account/ret-account i-viewer)])
   (let [o-row (pg/t:get book/DiveSession {:where {:id i-session} :returning #{:*/standard :detail}})]
@@ -184,7 +201,7 @@
       [:for o-row :in :select (pg/jsonb-array-elements (:-> o-page "sessions"))
        (loop []
          (when (and (== (pg/jsonb-array-length (:-> o-row "photos")) 0) (== (pg/jsonb-array-length (:-> o-row "linkedMedia")) 0))
-           (:= o-result (|| o-result (pg/jsonb-build-array o-row)))))]
+           (:= o-result (|| o-result (pg/jsonb-build-array (- o-row "dives"))))))]
       (return (|| o-page (pg/jsonb-build-object "sessions" o-result))))))
 (def PROFILE-POSTS-SQL
   "SELECT coalesce(jsonb_agg(row ORDER BY created DESC,id),'[]'::jsonb) FROM (SELECT p.id,p.time_created created,jsonb_build_object('id',p.id,'beach_id',p.site_id,'beach_name',s.name,'url',p.url,'platform',p.platform,'status',p.status,'public_consent',p.public_consent) row FROM finfolk.\"SocialPost\" p JOIN finfolk.\"Site\" s ON s.id=p.site_id JOIN finfolk.\"User\" u ON u.id=p.owner_id WHERE p.owner_id=($1->>'owner')::uuid AND NOT u.deleted AND (($1->>'private')::boolean OR (p.status='approved' AND p.public_consent AND coalesce(u.profile->'featuredPosts','[]'::jsonb)?p.id::text)) ORDER BY p.time_created DESC,p.id LIMIT 100) p")
@@ -199,12 +216,12 @@
 (defn.pg ^{:- [:jsonb]} ret-visible-profile [:uuid i-viewer :uuid i-target]
   (when [i-viewer :is-not-null] [:perform (account/ret-account i-viewer)])
   (let [(:uuid v-target) (pg/coalesce i-target i-viewer)
-        o-user (pg/t:get users/User {:where {:id v-target :deleted false} :returning #{:id :profile}})]
+        o-user (pg/t:get users/User {:where {:id v-target :deleted false} :returning #{:id :profile :handle}})]
     (when [v-target :is-null] [:raise :exception :using '[[errcode := "22023"] [message := "Choose a profile"]]])
     (when (or [o-user :is-null] (and [i-viewer :is-not-null] (access/is-user-blocked i-viewer v-target)))
       [:raise :exception :using '[[errcode := "P0002"] [message := "Profile unavailable"]]])
     (when (== v-target i-viewer)
-      (return (|| (:-> o-user "profile") (pg/jsonb-build-object "id" v-target "uid" v-target))))
+      (return (|| (:-> o-user "profile") (pg/jsonb-build-object "id" v-target "uid" v-target "handle" (pg/coalesce (:->> o-user "handle") (|| "diver-" (#{"replace"} (:text v-target) "-" "")))))))
     (let [o-profile (:-> o-user "profile")
           (:boolean v-open) (pg/coalesce (== (:-> o-profile "open") (:jsonb "true")) false)
           (:boolean v-details) v-open]
@@ -212,7 +229,7 @@
         (let [(:boolean v-connected) (pg/t:exists users/UserConnection
                                       {:where {:user (least i-viewer v-target) :target (greatest i-viewer v-target) :status "accepted"}})]
           (when v-connected (:= v-details true))))
-      (let [o-basic (pg/jsonb-build-object "id" v-target "uid" v-target "displayName" (pg/coalesce (:->> o-profile "displayName") "Diver")
+      (let [o-basic (pg/jsonb-build-object "id" v-target "uid" v-target "handle" (pg/coalesce (:->> o-user "handle") (|| "diver-" (#{"replace"} (:text v-target) "-" ""))) "displayName" (pg/coalesce (:->> o-profile "displayName") "Diver")
                                          "open" v-open "restricted" (not v-details))]
         (when (not v-details) (return o-basic))
         (when (pg/jsonb-exists o-profile "featuredLogs")

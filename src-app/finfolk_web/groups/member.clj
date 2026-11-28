@@ -4,9 +4,9 @@
 
 (def OPERATIONS
  (contracts/annotate
- {"platformStatus" {"cache" false "auth" true "admin" true "domain" "admin" "name" "platformStatus" "transport" "action" "write" false}
- "buddyRead" {"name" "buddyRead" "auth" true "write" false "cache" false "transport" "action" "domain" "buddies"}
+ {"buddyRead" {"name" "buddyRead" "auth" true "write" false "cache" false "transport" "action" "domain" "buddies"}
  "buddyAction" {"name" "buddyAction" "retrySafe" true "auth" true "write" true "cache" false "transport" "action" "domain" "buddies"}
+ "platformStatus" {"cache" false "auth" true "admin" true "domain" "admin" "name" "platformStatus" "transport" "action" "write" false}
  "deleteAccount" {"auth" true
  "domain" "member"
  "name" "deleteAccount"
@@ -25,6 +25,7 @@
  "name" "myCheckins"
  "transport" "action"
  "write" false}
+ "profileSetup" {"auth" true "domain" "member" "name" "profileSetup" "transport" "action" "write" true}
  "preferences" {"auth" true
  "domain" "member"
  "name" "preferences"

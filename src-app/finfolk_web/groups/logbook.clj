@@ -9,6 +9,7 @@
    "sessionPlanning" {"auth" true "domain" "logbook" "name" "sessionPlanning" "transport" "action" "write" true}
    "publicSession" {"auth" false "domain" "logbook" "name" "publicSession" "transport" "action" "write" false}
    "publicSessions" {"auth" false "domain" "logbook" "name" "publicSessions" "transport" "action" "write" false}
+   "publicProfileByHandle" {"auth" false "domain" "member" "name" "publicProfileByHandle" "transport" "action" "write" false}
    "publicProfile" {"auth" false "domain" "member" "name" "publicProfile" "transport" "action" "write" false}
    "mediaInbox" {"auth" true "domain" "logbook" "name" "mediaInbox" "transport" "action" "write" false}
  "updateImportedMedia" {"auth" true "domain" "logbook" "name" "updateImportedMedia" "transport" "action" "write" true}

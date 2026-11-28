@@ -18,4 +18,9 @@
 "directoryAdminSave" {"name" "directoryAdminSave" "path" "/v1/admin/directory/save" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}
 "directoryClaimReview" {"name" "directoryClaimReview" "path" "/v1/admin/directory/claim-review" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}
 "directoryDiscover" {"name" "directoryDiscover" "path" "/v1/admin/directory/discover" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}
-"directoryReportResolve" {"name" "directoryReportResolve" "path" "/v1/admin/directory/report-resolve" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}}))
+"directoryReportResolve" {"name" "directoryReportResolve" "path" "/v1/admin/directory/report-resolve" "method" "POST" "transport" "rest" "auth" true "admin" true "write" true "domain" "directoryAdmin"}
+"publicPageInstagram" {"name" "publicPageInstagram" "transport" "rest" "method" "GET" "path" "/v1/directory/:id/instagram" "auth" false "admin" false "write" false "domain" "directoryPublic"}
+"pageInstagramManage" {"name" "pageInstagramManage" "transport" "rest" "method" "GET" "path" "/v1/me/directory/:id/instagram" "auth" true "admin" false "write" false "domain" "directoryOwner"}
+"pageInstagramSave" {"name" "pageInstagramSave" "transport" "rest" "method" "POST" "path" "/v1/me/directory/instagram/save" "auth" true "admin" false "write" true "domain" "directoryOwner"}
+"pageInstagramRefresh" {"name" "pageInstagramRefresh" "transport" "rest" "method" "POST" "path" "/v1/me/directory/instagram/refresh" "auth" true "admin" false "write" true "domain" "directoryOwner"}
+"pageInstagramReview" {"name" "pageInstagramReview" "transport" "rest" "method" "POST" "path" "/v1/me/directory/instagram/review" "auth" true "admin" false "write" true "domain" "directoryOwner"}}))

@@ -58,7 +58,7 @@ export function createNativeAccount({assertFeature,query, transaction, supabaseU
     catch{await createNativeRPC(query)('record_account_deletion_failure',[identity.id]).catch(()=>{});return Response.json({error:'Your FinFolk data was removed; sign-in cleanup is pending.',code:'account_deletion_pending',dataDeleted:true},{status:503,headers:{'Cache-Control':'no-store'}});}
    }
    if(spec.effect==='platform-status')result=await collectPlatformStatus(result,{expectedRelease});
-   if(input.operation==='me')result={...result,verified:identity.verified};
+   if(input.operation==='me')result={...result,verified:identity.verified,...(request.headers.get('X-FinFolk-Profile-Setup')==='1'?{profileSuggestions:identity.profileSuggestions}:{})};
    stage='response';
    validate(spec.result,result,'result');
    return Response.json(result,{headers:{'Cache-Control':'no-store'}});
@@ -76,7 +76,15 @@ export function createNativeAccount({assertFeature,query, transaction, supabaseU
  };
 }
 
-export async function nativeAccountSites(query){
- try{return Response.json(await createNativeRPC(query)('ret_account_sites',[]),{headers:{'Cache-Control':'no-store'}});}
+export async function nativeAccountSites(query,request,operation='ret_account_sites'){
+ try{
+  const data=await createNativeRPC(query)(operation,[]),body=JSON.stringify(data);
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(body));
+  const etag='"'+Array.from(new Uint8Array(digest),v=>v.toString(16).padStart(2,'0')).join('')+'"';
+  const headers={'Cache-Control':'public, max-age=0, must-revalidate','ETag':etag};
+  const tags=request?.headers.get('If-None-Match')?.split(',').map(x=>x.trim().replace(/^W\//,''))||[];
+  if(tags.includes(etag)||tags.includes('*'))return new Response(null,{status:304,headers});
+  return new Response(body,{headers:{...headers,'Content-Type':'application/json'}});
+ }
  catch{return Response.json({error:'Dive sites unavailable.'},{status:503,headers:{'Cache-Control':'no-store'}});}
 }

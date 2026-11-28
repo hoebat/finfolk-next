@@ -50,6 +50,7 @@
     " discovery_run finfolk.\"DirectoryRun\"; candidate jsonb; inserted_count integer; target_page finfolk.\"DirectoryListing\"; l finfolk.\"DirectoryListing\"; req finfolk.\"AccessRequest\"; ident uuid; inv finfolk.\"AccessInviteExternal\"; tok text; doc jsonb; ctx jsonb; result jsonb; off integer; rev integer;"
     "BEGIN"
     " IF jsonb_typeof(v) IS DISTINCT FROM 'object' THEN RAISE EXCEPTION 'Invalid request' USING ERRCODE='22023'; END IF;"
+    " IF op LIKE 'instagram-%' THEN RETURN finfolk_rpc.directory_instagram_operation(op,v);END IF;"
     " IF op='public-list' THEN"
     " off:=greatest(0,least(100000,coalesce((v->>'offset')::integer,0)));"
     " SELECT jsonb_build_object('listings',coalesce(jsonb_agg(p ORDER BY n) FILTER(WHERE n<=20),'[]'::jsonb),"

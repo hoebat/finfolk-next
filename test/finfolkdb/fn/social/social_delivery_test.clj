@@ -21,7 +21,10 @@
              [finfolkdb.fn.social.social-events :as events]
              [finfolkdb.fn.social.social-actions :as actions]
              [finfolkdb.fn.social.social-connections :as connections]
+             [finfolkdb.fn.social.social-interop :as interop]
              [finfolkdb.fn.social.social-delivery :as sends]
+             [finfolkdb.fn.social.social-retention :as retention]
+             [finfolkdb.fn.social.social-operator :as operator]
              [finfolkdb.fn.social.social-messaging :as legacy]
              [finfolkdb.fn.social.social-manage :as social]
              [finfolkdb.fn.user.user-manage :as fixture-user]
@@ -528,3 +531,111 @@
     (:state (outbox previous)) => "pending"
     (some? (:body-ciphertext (outbox previous))) => true
     (pg/t:count workflow/SocialConnectionProof {:where {:inbox (:inbox other)}}) => 1))
+
+
+(fact "retention-001: command text clears without destroying a pending reply or deduplication fingerprint"
+  (let [fx (inbox) event (queue! fx "/ping")
+        original (pg/t:get workflow/SocialEvent {:where {:id event}})
+        message (:message-id original)]
+    (:body (pg/t:get messaging/MessagingMessage {:where {:id message}})) => "/ping"
+    (retention/scrub-social-content (:application fx) (:inbox fx) (op))
+    (:body (pg/t:get messaging/MessagingMessage {:where {:id message}})) => ""
+    (:fingerprint (pg/t:get workflow/SocialEvent {:where {:id event}})) => (:fingerprint original)
+    (:body (outbox event)) => "Pong."
+    (let [work (claim fx)]
+      (complete fx work "accepted" "retention-reply" nil)
+      (retention/scrub-social-content (:application fx) (:inbox fx) (op))
+      (:body (outbox event)) => ""
+      (:provider-message-id (outbox event)) => "retention-reply")))
+
+(fact "retention-002: thirty-day cleanup is scoped and removes old terminal work only"
+  (let [fx (inbox) other (inbox) event (queue! fx "/ping") kept (queue! other "/ping") work (claim fx)]
+    (complete fx work "accepted" "old-reply" nil)
+    (pg/t:update workflow/SocialEvent {:where {:id event} :set {:time-created 1} :track (op)})
+    (:purged (retention/purge-social-diagnostics (:application fx) (:inbox fx) (op))) => 1
+    (pg/t:get workflow/SocialEvent {:where {:id event}}) => nil
+    (some? (pg/t:get workflow/SocialEvent {:where {:id kept}})) => true))
+
+
+(fact "operator-001: public activation requires real current-generation acceptance"
+  (let [fx (inbox)]
+    (pg/t:update messaging/MessagingAccount {:where {:id (:inbox fx)} :set {:mode "disabled"}})
+    (operator/activate-social-inbox (:application fx) (:inbox fx) 1 "live" "[]") => (throws)
+    (:mode (pg/t:get messaging/MessagingAccount {:where {:id (:inbox fx)}})) => "disabled"
+    (:generation (operator/ret-social-operator-health (:application fx) (:inbox fx))) => 1
+    (operator/record-social-acceptance (:application fx) (:inbox fx) 1 (uuid) (uuid) (uuid) (uuid) (uuid) "{}" (op)) => (throws)))
+
+(fact "dispatch-001: a code needs fresh scoped eligibility and current authority after lookup"
+  (let [fx (inbox) event (issue! fx "FRESH456") work (claim fx)
+        proof (:verification work)
+        evidence {:provider (:provider proof) :namespace (:namespace proof) :externalId (:external-id proof) :eligible true}]
+    (:provider proof) => "mock"
+    (sends/confirm-social-delivery (:application fx) (:inbox fx) (:id work) (:lease work) "{}") => false
+    (sends/confirm-social-delivery (:application fx) (:inbox fx) (:id work) (:lease work) (json/write (assoc evidence :eligible false))) => false
+    (sends/confirm-social-delivery (:application fx) (:inbox fx) (:id work) (:lease work) (json/write evidence)) => true
+    (sends/confirm-social-delivery (:application fx) (:inbox fx) (:id work) (:lease work) (json/write (assoc evidence :externalId "another"))) => false
+    (pg/t:update messaging/MessagingAccount {:where {:id (:inbox fx)} :set {:generation 2}})
+    (sends/confirm-social-delivery (:application fx) (:inbox fx) (:id work) (:lease work) (json/write evidence)) => false))
+
+(fact "dispatch-002: public help skips identity lookup but still checks pause and send lease"
+  (let [fx (inbox) event (queue! fx "/help") work (claim fx)]
+    (:verification work) => nil
+    (sends/confirm-social-delivery (:application fx) (:inbox fx) (:id work) (:lease work) "{}") => true
+    (sends/confirm-social-delivery (:application fx) (:inbox fx) (:id work) (uuid) "{}") => false
+    (pg/t:update messaging/MessagingAccount {:where {:id (:inbox fx)} :set {:mode "disabled"}})
+    (sends/confirm-social-delivery (:application fx) (:inbox fx) (:id work) (:lease work) "{}") => false))
+
+
+(fact "bootstrap-001: privileged brand setup is idempotent and starts paused"
+  (let [application (uuid) inbox-id (uuid) owner (member!)]
+    (operator/bootstrap-social-inbox application inbox-id owner (op)) => (throws)
+    (pg/t:update users/User {:where {:id owner} :set {:email-verified true}})
+    (:inbox-id (operator/bootstrap-social-inbox application inbox-id owner (op))) => inbox-id
+    (:inbox-id (operator/bootstrap-social-inbox application inbox-id owner (op))) => inbox-id
+    (:mode (pg/t:get messaging/MessagingAccount {:where {:id inbox-id}})) => "disabled"))
+
+
+(fact "rollout-001: pilot and public activation fence queued receipts while retaining tested acceptance"
+  (let [fx (inbox) owner (member!)]
+    (pg/t:update messaging/MessagingAccount
+      {:where {:id (:inbox fx)} :set {:mode "disabled" :credential-ciphertext "mock-credential"
+        :checks (json/write {:provider "mock" :accountId (:inbox fx) :authorized true :subscribed true :nonExpiring true})}})
+    (let [paused (queue! fx "/ping")]
+      (:generation (operator/activate-social-inbox (:application fx) (:inbox fx) 1 "pilot" "[\"sender\",\"nonfollower\",\"denied\"]")) => 2
+      (:status (events/process-social-event (:application fx) (:inbox fx) (op))) => "expired"
+      (outbox paused) => nil)
+    (let [ping (queue! fx "/ping") help (queue! fx "/help")
+          nonfollower (queue! fx "/help" "message" {:senderId "nonfollower" :conversationId "nonfollower"})
+          linked (issue! fx "ROLLOUT1")
+          denied (queue! fx "/connect" "message" {:senderId "denied" :conversationId "denied"})
+          work (actions/claim-social-action (:application fx) (:inbox fx) (op))
+          request (:request work)]
+      (action-complete fx work {:provider (:provider request) :namespace (:namespace request) :externalId (:external-id request) :eligible false})
+      (loop [] (when-let [reply (claim fx)] (complete fx reply "accepted" (str "mock-" (uuid)) nil) (recur)))
+      (connections/redeem-social-connection (:application fx) (:inbox fx) owner "ROLLOUT1" (op))
+      (:accepted (operator/record-social-acceptance (:application fx) (:inbox fx) 2 ping help nonfollower linked denied
+                    "{\"visibleReplies\":true,\"nonFollowerHelp\":true,\"nonFollowerLinkDenied\":true,\"linkUnlinkRelink\":true}" (op))) => true
+      (let [now (* (System/currentTimeMillis) 1000)
+            queued (events/receive-social-event (:application fx) (:inbox fx)
+                     (json/write {:channel "message" :senderId "outside-pilot" :conversationId "outside-pilot" :messageId (uuid) :body "/help" :sentAt now :deadline (+ now 3600000000)}) (op))]
+        (:generation (operator/activate-social-inbox (:application fx) (:inbox fx) 2 "live" "[]")) => 3
+        (:status (events/process-social-event (:application fx) (:inbox fx) (op))) => "expired"
+        (outbox (:id queued)) => nil
+        (:generation (operator/activate-social-inbox (:application fx) (:inbox fx) 3 "live" "[]")) => 3
+        (let [old (events/receive-social-event (:application fx) (:inbox fx)
+                    (json/write {:channel "message" :senderId "late-retry" :conversationId "late-retry" :messageId (uuid) :body "/ping" :sentAt (- now 60000000) :deadline (+ now 3600000000)}) (op))]
+          (:status (events/process-social-event (:application fx) (:inbox fx) (op))) => "expired"
+          (outbox (:id old)) => nil)))))
+
+
+(fact "handle-001: Instagram linking records only the scoped provider-verified handle"
+  (let [fx (inbox) owner (member!)]
+    (pg/t:update users/User {:where {:id owner} :set {:email-verified true}})
+    (pg/t:update messaging/MessagingAccount {:where {:id (:inbox fx)} :set {:provider "instagram"}})
+    (issue! fx "HANDLE12")
+    (let [snapshot (interop/prepare-social-redemption (:application fx) (:inbox fx) owner "HANDLE12" (apply str (repeat 64 "a")) (op))
+          wire {:proofId (:proof-id snapshot) :provider (:provider snapshot) :namespace (:namespace snapshot)
+                :externalId (:external-id snapshot) :conversationId (:conversation-id snapshot) :generation (:generation snapshot) :accountGeneration (:account-generation snapshot) :checkedAt (:checked-at snapshot)}
+          proof {:provider (:provider snapshot) :namespace (:namespace snapshot) :externalId (:external-id snapshot) :eligible true :handle "reef.diver"}]
+      (some? (interop/complete-social-redemption (:application fx) (:inbox fx) owner "HANDLE12" (json/write wire) (json/write proof) (op))) => true
+      (:handle (interop/ret-social-member-connection (:application fx) (:inbox fx) owner)) => "reef.diver")))

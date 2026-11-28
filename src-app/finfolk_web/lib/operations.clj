@@ -6,6 +6,7 @@
             [finfolk-web.groups.events :as events]
             [finfolk-web.groups.community :as community]
             [finfolk-web.groups.instagram :as instagram]
+            [finfolk-web.groups.tiktok :as tiktok]
             [finfolk-web.groups.invitations :as invitations]
             [finfolk-web.groups.logbook :as logbook]
             [finfolk-web.groups.member :as member]
@@ -14,7 +15,7 @@
             [finfolk-web.groups.sites :as sites]
             [finfolk-web.groups.site-notes :as site-notes]))
 
-(def DEFINITIONS (merge finnies/OPERATIONS events/OPERATIONS directory/OPERATIONS admin/OPERATIONS community/OPERATIONS instagram/OPERATIONS invitations/OPERATIONS logbook/OPERATIONS member/OPERATIONS posts/OPERATIONS trips/OPERATIONS sites/OPERATIONS site-notes/OPERATIONS))
+(def DEFINITIONS (merge finnies/OPERATIONS events/OPERATIONS directory/OPERATIONS admin/OPERATIONS community/OPERATIONS instagram/OPERATIONS tiktok/OPERATIONS invitations/OPERATIONS logbook/OPERATIONS member/OPERATIONS posts/OPERATIONS trips/OPERATIONS sites/OPERATIONS site-notes/OPERATIONS))
 (l/script :js)
 (def.js operations (@! DEFINITIONS))
 (defn.js operation [name]
@@ -39,6 +40,7 @@
    "logbook" ["community" "trips" "member" "instagram"]
    "posts" ["member"]
    "instagram" ["posts" "member" "admin" "logbook"]
+   "tiktok" ["member" "admin"]
    "admin" ["instagram" "posts" "member"] "invitations" ["member"]})
 (defn.js affectedDomains [spec]
   (return (Array.from (new Set (. [(. spec ["domain"])] (concat (or (. -/RELATED [(. spec ["domain"])]) [])))))))

@@ -28,6 +28,7 @@
              "inboxId" i-inbox
              "provider" (:->> o-inbox "provider")
              "accountId" (:->> o-inbox "account_id")
+             "capability" (:->> o-inbox "provider_scope")
              "namespace"
              (:text (pg/jsonb-build-array (:->> o-inbox "provider") i-application i-inbox))))))
 
@@ -80,6 +81,7 @@
       (return nil))
     (return (pg/jsonb-build-object "proofId" (pg/id o-proof) "provider" (:->> o-inbox "provider")
              "namespace" (:->> o-account "namespace") "externalId" (:->> o-account "external_id")
+             "conversationId" (:->> (:-> o-event "payload") "conversationId")
              "generation" (:-> o-inbox "generation") "accountGeneration" (:-> o-account "generation")))))
 
 (defn.pg ret-social-redemption-replay

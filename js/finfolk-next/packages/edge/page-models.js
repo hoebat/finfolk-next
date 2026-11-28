@@ -631,6 +631,7 @@ export var pages = {
         "payload-pick":{
           "profile":[
             "displayName",
+            "handle",
             "bio",
             "instagram",
             "tiktok",
@@ -892,6 +893,17 @@ export var pages = {
     ],
     "effects":["landing"],
     "adapters":["homeDestination","landing-effects"]
+  },
+  "public-profile":{
+    "routes":["/u/[id]"],
+    "area":"public",
+    "models":{
+      "profile":{
+        "operation":"publicProfileByHandle",
+        "bindings":{"handle":"id"}
+      }
+    },
+    "actions":{}
   },
   "event-editor":{
     "routes":["/events/new"],

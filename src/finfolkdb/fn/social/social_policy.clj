@@ -77,8 +77,10 @@
                   (not (-/social-member-allowed o-inbox (:uuid (:->> o-command "owner_id")))))
           (return "member_restricted"))))
     (when [(:->> (:-> o-command "result") "postId") :is-not-null]
+      ;; Repeated at claim and final confirmation. The delivery login has
+      ;; read-only publication access; FOR SHARE would require UPDATE rights.
       (let [o-post (pg/t:get posts/SocialPost
-                     {:where {:id (:uuid (:->> (:-> o-command "result") "postId"))} :for [:share]})
+                     {:where {:id (:uuid (:->> (:-> o-command "result") "postId"))}})
             o-viewer (pg/t:get accounts/SocialConnection
                        {:where {:account (:uuid (:->> o-event "account_id")) :status "active"}})]
         (when (or [o-post :is-null]

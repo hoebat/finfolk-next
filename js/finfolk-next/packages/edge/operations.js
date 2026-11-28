@@ -467,6 +467,52 @@ export var operations = {
     },
     "write":false
   },
+  "tiktokCommentsAuthorize":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokCommentsAuthorize",
+    "path":"/v1/messaging/connections/finfolk-tiktok-comments/authorization",
+    "transport":"rest",
+    "write":true
+  },
+  "tiktokMemberDisconnect":{
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokMemberDisconnect",
+    "path":"/v1/me/tiktok/disconnect",
+    "transport":"rest",
+    "write":true
+  },
+  "pageInstagramReview":{
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "method":"POST",
+    "auth":true,
+    "admin":false,
+    "path":"/v1/me/directory/instagram/review",
+    "name":"pageInstagramReview",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_instagram_review",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "post":{"type":"string","format":"uuid"},
+        "state":{"type":"string","enum":["pending","published","hidden"]}
+      },
+      "required":["id","post","state"]
+    },
+    "write":true
+  },
   "directoryReport":{
     "transport":"rest",
     "result-shape":{"type":"object","additionalProperties":false},
@@ -630,6 +676,16 @@ export var operations = {
       "required":["id"]
     },
     "write":false
+  },
+  "tiktokOperatorPause":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokOperatorPause",
+    "path":"/v1/messaging/connections/finfolk-tiktok/pause",
+    "transport":"rest",
+    "write":true
   },
   "instagramHidePost":{
     "auth":true,
@@ -894,6 +950,19 @@ export var operations = {
                 "type":"array",
                 "items":{"type":"object","additionalProperties":true}
               },
+              "dives":{
+                "type":"array",
+                "maxItems":500,
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+                    "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+                    "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+                  }
+                }
+              },
               "maxDepthMetres":{"type":["number","null"]},
               "point":{"type":["array","null"],"items":{"type":"number"}},
               "visibility":{"type":"string","enum":["private","public"]}
@@ -904,6 +973,16 @@ export var operations = {
         "more":{"type":"boolean"}
       }
     }
+  },
+  "tiktokCommentsPause":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokCommentsPause",
+    "path":"/v1/messaging/connections/finfolk-tiktok-comments/pause",
+    "transport":"rest",
+    "write":true
   },
   "deleteSession":{
     "auth":true,
@@ -1225,6 +1304,38 @@ export var operations = {
     "transport":"rest",
     "write":true
   },
+  "pageInstagramSave":{
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer"}
+      },
+      "required":["id","revision"]
+    },
+    "method":"POST",
+    "auth":true,
+    "admin":false,
+    "path":"/v1/me/directory/instagram/save",
+    "name":"pageInstagramSave",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_instagram_save",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "handle":{"type":"string"},
+        "enabled":{"type":"boolean"},
+        "publicEnabled":{"type":"boolean"},
+        "expected":{"type":"integer"}
+      },
+      "required":["id","handle","enabled","publicEnabled","expected"]
+    },
+    "write":true
+  },
   "siteCatalog":{
     "transport":"rest",
     "result-shape":{
@@ -1397,6 +1508,118 @@ export var operations = {
     "request-shape":{"type":"object","additionalProperties":false},
     "write":false
   },
+  "publicProfileByHandle":{
+    "auth":false,
+    "domain":"member",
+    "name":"publicProfileByHandle",
+    "transport":"action",
+    "write":false,
+    "native-rpc":"ret_profile_by_handle",
+    "request-shape":{
+      "type":"object",
+      "properties":{"handle":{"type":"string","minLength":3,"maxLength":40}},
+      "required":["handle"],
+      "additionalProperties":false
+    },
+    "result-shape":{
+      "type":["object","null"],
+      "additionalProperties":false,
+      "required":["id","uid","displayName","open","restricted"],
+      "properties":{
+        "open":{"type":"boolean"},
+        "availability":{"type":"array","items":{"type":"string"}},
+        "displayName":{"type":"string"},
+        "uid":{"type":"string","format":"uuid"},
+        "portrait":{"type":"string"},
+        "experience":{"type":"string"},
+        "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "tiktok":{"type":"string"},
+        "restricted":{"type":"boolean"},
+        "bio":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "handle":{"type":"string"},
+        "instagram":{"type":"string"},
+        "sessions":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":[
+              "id",
+              "ownerId",
+              "beachId",
+              "date",
+              "locationName",
+              "notes",
+              "point",
+              "durationMinutes",
+              "maxDepthMetres",
+              "visibility",
+              "photos",
+              "linkedMedia"
+            ],
+            "properties":{
+              "durationMinutes":{"type":["number","null"]},
+              "date":{"type":"string","format":"date"},
+              "beachId":{"type":"string"},
+              "ownerId":{"type":"string","format":"uuid"},
+              "locationName":{"type":"string"},
+              "photos":{"type":"array","items":{"type":"string"}},
+              "id":{"type":"string","format":"uuid"},
+              "notes":{"type":"string"},
+              "linkedMedia":{
+                "type":"array",
+                "items":{"type":"object","additionalProperties":true}
+              },
+              "dives":{
+                "type":"array",
+                "maxItems":500,
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+                    "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+                    "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+                  }
+                }
+              },
+              "maxDepthMetres":{"type":["number","null"]},
+              "point":{"type":["array","null"],"items":{"type":"number"}},
+              "visibility":{"type":"string","enum":["public"]}
+            }
+          }
+        },
+        "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "posts":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":[
+              "id",
+              "beach_id",
+              "beach_name",
+              "url",
+              "platform",
+              "status",
+              "public_consent"
+            ],
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "beach_id":{"type":"string","format":"uuid"},
+              "beach_name":{"type":"string"},
+              "url":{"type":"string"},
+              "platform":{"type":"string"},
+              "status":{"type":"string"},
+              "public_consent":{"type":"boolean"}
+            }
+          }
+        },
+        "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+      }
+    }
+  },
   "instagramSuppressSource":{
     "admin":true,
     "auth":true,
@@ -1435,6 +1658,15 @@ export var operations = {
       "required":["site","id","revision","withdrawn"]
     },
     "write":true
+  },
+  "tiktokAccount":{
+    "auth":true,
+    "domain":"tiktok",
+    "method":"GET",
+    "name":"tiktokAccount",
+    "path":"/v1/me/tiktok",
+    "transport":"rest",
+    "write":false
   },
   "eventInviteRetry":{
     "transport":"rest",
@@ -1665,6 +1897,17 @@ export var operations = {
             ]
           }
         },
+        "profileSetup":{
+          "type":"object",
+          "additionalProperties":false,
+          "required":["version","step","status","nameConfirmed"],
+          "properties":{
+            "version":{"type":"integer","enum":[1]},
+            "step":{"type":"integer","minimum":0,"maximum":3},
+            "status":{"type":"string","enum":["pending","deferred","completed"]},
+            "nameConfirmed":{"type":"boolean"}
+          }
+        },
         "displayName":{"type":"string"},
         "uid":{"type":"string","format":"uuid"},
         "portrait":{"type":"string"},
@@ -1687,6 +1930,12 @@ export var operations = {
         "tiktok":{"type":"string"},
         "bio":{"type":"string"},
         "id":{"type":"string","format":"uuid"},
+        "handle":{
+          "type":"string",
+          "minLength":3,
+          "maxLength":40,
+          "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+        },
         "instagram":{"type":"string"},
         "activities":{
           "type":"array",
@@ -1746,6 +1995,7 @@ export var operations = {
         "restricted":{"type":"boolean"},
         "bio":{"type":"string"},
         "id":{"type":"string","format":"uuid"},
+        "handle":{"type":"string"},
         "instagram":{"type":"string"},
         "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
         "posts":{
@@ -1786,6 +2036,16 @@ export var operations = {
     "path":"/v1/messaging/connections/finfolk-instagram/authorization",
     "transport":"rest",
     "write":true
+  },
+  "tiktokOperatorStatus":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"GET",
+    "name":"tiktokOperatorStatus",
+    "path":"/v1/messaging/connections/finfolk-tiktok/status",
+    "transport":"rest",
+    "write":false
   },
   "postStatus":{
     "auth":true,
@@ -1838,6 +2098,15 @@ export var operations = {
       },
       "required":["id","state"]
     },
+    "write":true
+  },
+  "tiktokCodeConnect":{
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokCodeConnect",
+    "path":"/v1/me/tiktok/connect",
+    "transport":"rest",
     "write":true
   },
   "siteNoteVote":{
@@ -2028,7 +2297,20 @@ export var operations = {
             "notes":{"type":"string"},
             "point":{"type":["array","null"],"items":{"type":"number"}},
             "durationMinutes":{"type":["number","null"]},
-            "maxDepthMetres":{"type":["number","null"]}
+            "maxDepthMetres":{"type":["number","null"]},
+            "dives":{
+              "type":"array",
+              "maxItems":500,
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+                  "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+                  "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+                }
+              }
+            }
           }
         }
       },
@@ -2041,6 +2323,16 @@ export var operations = {
       "required":["id"],
       "additionalProperties":false
     }
+  },
+  "pageInstagramPause":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"POST",
+    "name":"pageInstagramPause",
+    "path":"/v1/messaging/connections/finfolk-instagram/page-collection-pause",
+    "transport":"rest",
+    "write":true
   },
   "instagramClaimStatus":{
     "auth":true,
@@ -2604,6 +2896,16 @@ export var operations = {
     "request-shape":{"type":"object","additionalProperties":false},
     "write":false
   },
+  "tiktokCommentsDisconnect":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokCommentsDisconnect",
+    "path":"/v1/messaging/connections/finfolk-tiktok-comments/disconnect",
+    "transport":"rest",
+    "write":true
+  },
   "publicInstagram":{
     "auth":false,
     "domain":"instagram",
@@ -2652,6 +2954,29 @@ export var operations = {
     "path":"/v1/admin/messaging/instagram",
     "transport":"rest",
     "write":false
+  },
+  "pageInstagramRefresh":{
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"]
+    },
+    "method":"POST",
+    "auth":true,
+    "admin":false,
+    "path":"/v1/me/directory/instagram/refresh",
+    "name":"pageInstagramRefresh",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_instagram_refresh",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "write":true
   },
   "blocks":{
     "auth":true,
@@ -2785,6 +3110,16 @@ export var operations = {
     "domain":"instagram",
     "name":"instagramSharing",
     "transport":"action",
+    "write":true
+  },
+  "tiktokOperatorAuthorize":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokOperatorAuthorize",
+    "path":"/v1/messaging/connections/finfolk-tiktok/authorization",
+    "transport":"rest",
     "write":true
   },
   "instagramReconcile":{
@@ -2985,6 +3320,19 @@ export var operations = {
                 "type":"array",
                 "items":{"type":"object","additionalProperties":true}
               },
+              "dives":{
+                "type":"array",
+                "maxItems":500,
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+                    "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+                    "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+                  }
+                }
+              },
               "maxDepthMetres":{"type":["number","null"]},
               "point":{"type":["array","null"],"items":{"type":"number"}},
               "visibility":{"type":"string","enum":["public"]}
@@ -3022,6 +3370,16 @@ export var operations = {
     },
     "write":true
   },
+  "pageInstagramConnect":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"POST",
+    "name":"pageInstagramConnect",
+    "path":"/v1/messaging/connections/finfolk-instagram/page-collection-save",
+    "transport":"rest",
+    "write":true
+  },
   "tripDives":{
     "auth":true,
     "domain":"trips",
@@ -3056,6 +3414,16 @@ export var operations = {
     "method":"GET",
     "name":"messagingEvent",
     "path":"/v1/admin/messaging/events/:id",
+    "transport":"rest",
+    "write":false
+  },
+  "pageInstagramConnection":{
+    "admin":true,
+    "auth":true,
+    "domain":"admin",
+    "method":"GET",
+    "name":"pageInstagramConnection",
+    "path":"/v1/messaging/connections/finfolk-instagram/page-collection",
     "transport":"rest",
     "write":false
   },
@@ -3363,6 +3731,16 @@ export var operations = {
     },
     "write":true
   },
+  "tiktokOperatorDisconnect":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokOperatorDisconnect",
+    "path":"/v1/messaging/connections/finfolk-tiktok/disconnect",
+    "transport":"rest",
+    "write":true
+  },
   "community":{
     "auth":true,
     "domain":"community",
@@ -3375,6 +3753,7 @@ export var operations = {
       "properties":{
         "mode":{"type":"string","enum":["discover"]},
         "seed":{"type":"string"},
+        "q":{"type":"string","maxLength":80},
         "beachId":{"type":["string","null"]},
         "availability":{"type":"string"},
         "experience":{"type":"string"},
@@ -3418,6 +3797,7 @@ export var operations = {
               "bio":{"type":"string"},
               "recent":{"type":"boolean"},
               "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
               "instagram":{"type":"string"},
               "connection":{"type":["string","null"]}
             }
@@ -3462,6 +3842,16 @@ export var operations = {
       "required":["id"]
     },
     "write":true
+  },
+  "tiktokCommentsEvent":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"GET",
+    "name":"tiktokCommentsEvent",
+    "path":"/v1/messaging/connections/finfolk-tiktok-comments/events/:id",
+    "transport":"rest",
+    "write":false
   },
   "siteSubmissionWithdraw":{
     "transport":"rest",
@@ -3670,6 +4060,16 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "tiktokOperatorAcceptance":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokOperatorAcceptance",
+    "path":"/v1/messaging/connections/finfolk-tiktok/acceptance",
+    "transport":"rest",
+    "write":true
+  },
   "publicPosts":{
     "auth":false,
     "domain":"posts",
@@ -3677,6 +4077,95 @@ export var operations = {
     "name":"publicPosts",
     "path":"/community/posts",
     "transport":"rest",
+    "write":false
+  },
+  "publicPageInstagram":{
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "accounts":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "lastChecked":{"type":["number","null"]},
+              "revision":{"type":"integer"},
+              "lastError":{"type":"string"},
+              "status":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
+              "lastSuccess":{"type":["number","null"]},
+              "enabled":{"type":"boolean"},
+              "publicEnabled":{"type":"boolean"}
+            },
+            "required":[
+              "id",
+              "handle",
+              "enabled",
+              "publicEnabled",
+              "status",
+              "revision",
+              "lastChecked",
+              "lastSuccess",
+              "lastError"
+            ]
+          }
+        },
+        "handles":{"type":"array","items":{"type":"string"}},
+        "items":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "caption":{"type":"string"},
+              "publishedAt":{"type":"integer"},
+              "permalink":{"type":"string"},
+              "state":{"type":"string"},
+              "mediaType":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
+              "sourceId":{"type":"string","format":"uuid"},
+              "capturedAt":{"type":"integer"}
+            },
+            "required":[
+              "id",
+              "sourceId",
+              "handle",
+              "caption",
+              "permalink",
+              "mediaType",
+              "publishedAt",
+              "capturedAt",
+              "state"
+            ]
+          }
+        },
+        "next":{"type":["string","null"]}
+      },
+      "required":["accounts","handles","items","next"]
+    },
+    "method":"GET",
+    "auth":false,
+    "admin":false,
+    "path":"/v1/directory/:id/instagram",
+    "name":"publicPageInstagram",
+    "domain":"directoryPublic",
+    "native-rpc":"native_directory_instagram_public",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "after":{"type":["string","null"]},
+        "limit":{"type":"integer"},
+        "q":{"type":"string"}
+      },
+      "required":["id"]
+    },
     "write":false
   },
   "messagingSettingsSave":{
@@ -3714,6 +4203,154 @@ export var operations = {
       "required":["source","target"]
     },
     "write":true
+  },
+  "profileSetup":{
+    "auth":true,
+    "domain":"member",
+    "name":"profileSetup",
+    "transport":"action",
+    "write":true,
+    "native-rpc":"save_profile_setup",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "required":["profile","step","status"],
+      "properties":{
+        "profile":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "open":{"type":"boolean"},
+            "availability":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":[
+                  "weekday mornings",
+                  "weekday afternoons",
+                  "weekend mornings",
+                  "weekend afternoons"
+                ]
+              }
+            },
+            "displayName":{"type":"string"},
+            "portrait":{"type":"string"},
+            "experience":{
+              "type":"string",
+              "enum":["","new","comfortable","experienced"]
+            },
+            "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "sharing":{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "visits":{"type":"boolean"},
+                "months":{"type":"boolean"},
+                "dives":{"type":"boolean"},
+                "time":{"type":"boolean"},
+                "depth":{"type":"boolean"}
+              }
+            },
+            "tiktok":{"type":"string"},
+            "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
+            "instagram":{"type":"string"},
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "depthGoal":{"type":["number","null"]},
+            "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+          }
+        },
+        "step":{"type":"integer","minimum":0,"maximum":3},
+        "status":{"type":"string","enum":["pending","deferred","completed"]}
+      }
+    },
+    "result-shape":{
+      "type":"object",
+      "required":["id","profile"],
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "profile":{
+          "type":"object",
+          "additionalProperties":true,
+          "properties":{
+            "open":{"type":"boolean"},
+            "availability":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":[
+                  "weekday mornings",
+                  "weekday afternoons",
+                  "weekend mornings",
+                  "weekend afternoons"
+                ]
+              }
+            },
+            "profileSetup":{
+              "type":"object",
+              "additionalProperties":false,
+              "required":["version","step","status","nameConfirmed"],
+              "properties":{
+                "version":{"type":"integer","enum":[1]},
+                "step":{"type":"integer","minimum":0,"maximum":3},
+                "status":{"type":"string","enum":["pending","deferred","completed"]},
+                "nameConfirmed":{"type":"boolean"}
+              }
+            },
+            "displayName":{"type":"string"},
+            "portrait":{"type":"string"},
+            "experience":{
+              "type":"string",
+              "enum":["","new","comfortable","experienced"]
+            },
+            "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "sharing":{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "visits":{"type":"boolean"},
+                "months":{"type":"boolean"},
+                "dives":{"type":"boolean"},
+                "time":{"type":"boolean"},
+                "depth":{"type":"boolean"}
+              }
+            },
+            "tiktok":{"type":"string"},
+            "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
+            "instagram":{"type":"string"},
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "depthGoal":{"type":["number","null"]},
+            "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+          }
+        }
+      }
+    }
   },
   "tripList":{
     "auth":true,
@@ -3796,6 +4433,16 @@ export var operations = {
     "domain":"posts",
     "name":"reviewPosts",
     "transport":"action",
+    "write":false
+  },
+  "tiktokOperatorEvent":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"GET",
+    "name":"tiktokOperatorEvent",
+    "path":"/v1/messaging/connections/finfolk-tiktok/events/:id",
+    "transport":"rest",
     "write":false
   },
   "publicDirectory":{
@@ -3941,6 +4588,19 @@ export var operations = {
           "type":"array",
           "items":{"type":"object","additionalProperties":true}
         },
+        "dives":{
+          "type":"array",
+          "maxItems":500,
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+              "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+              "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+            }
+          }
+        },
         "maxDepthMetres":{"type":["number","null"]},
         "point":{"type":["array","null"],"items":{"type":"number"}},
         "visibility":{"type":"string","enum":["public"]}
@@ -4052,6 +4712,19 @@ export var operations = {
         "linkedMedia":{
           "type":"array",
           "items":{"type":"object","additionalProperties":true}
+        },
+        "dives":{
+          "type":"array",
+          "maxItems":500,
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+              "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+              "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+            }
+          }
         },
         "maxDepthMetres":{"type":["number","null"]},
         "point":{"type":["array","null"],"items":{"type":"number"}},
@@ -4266,6 +4939,26 @@ export var operations = {
         }
       }
     }
+  },
+  "tiktokCommentsActivate":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokCommentsActivate",
+    "path":"/v1/messaging/connections/finfolk-tiktok-comments/activation",
+    "transport":"rest",
+    "write":true
+  },
+  "tiktokOperatorActivate":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokOperatorActivate",
+    "path":"/v1/messaging/connections/finfolk-tiktok/activation",
+    "transport":"rest",
+    "write":true
   },
   "instagramDiscoveryRetry":{
     "admin":true,
@@ -4694,6 +5387,16 @@ export var operations = {
     },
     "write":true
   },
+  "tiktokCommentsStatus":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"GET",
+    "name":"tiktokCommentsStatus",
+    "path":"/v1/messaging/connections/finfolk-tiktok-comments/status",
+    "transport":"rest",
+    "write":false
+  },
   "directoryOwnerSave":{
     "transport":"rest",
     "result-shape":{
@@ -4751,6 +5454,16 @@ export var operations = {
     "transport":"action",
     "write":false
   },
+  "tiktokCommentsAcceptance":{
+    "admin":true,
+    "auth":true,
+    "domain":"tiktok",
+    "method":"POST",
+    "name":"tiktokCommentsAcceptance",
+    "path":"/v1/messaging/connections/finfolk-tiktok-comments/acceptance",
+    "transport":"rest",
+    "write":true
+  },
   "me":{
     "native-rpc":"ensure_account",
     "request-shape":{"type":"object","properties":{},"additionalProperties":false},
@@ -4777,6 +5490,17 @@ export var operations = {
                 ]
               }
             },
+            "profileSetup":{
+              "type":"object",
+              "additionalProperties":false,
+              "required":["version","step","status","nameConfirmed"],
+              "properties":{
+                "version":{"type":"integer","enum":[1]},
+                "step":{"type":"integer","minimum":0,"maximum":3},
+                "status":{"type":"string","enum":["pending","deferred","completed"]},
+                "nameConfirmed":{"type":"boolean"}
+              }
+            },
             "displayName":{"type":"string"},
             "portrait":{"type":"string"},
             "experience":{
@@ -4797,6 +5521,12 @@ export var operations = {
             },
             "tiktok":{"type":"string"},
             "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
             "instagram":{"type":"string"},
             "activities":{
               "type":"array",
@@ -4810,7 +5540,19 @@ export var operations = {
             "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
           }
         },
-        "verified":{"type":"boolean"}
+        "verified":{"type":"boolean"},
+        "profileSuggestions":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "name":{"type":"string"},
+            "photo":{"type":"string"},
+            "provider":{
+              "type":"string",
+              "enum":["google","github","facebook","email"]
+            }
+          }
+        }
       }
     },
     "auth":true,
@@ -4881,6 +5623,17 @@ export var operations = {
                 ]
               }
             },
+            "profileSetup":{
+              "type":"object",
+              "additionalProperties":false,
+              "required":["version","step","status","nameConfirmed"],
+              "properties":{
+                "version":{"type":"integer","enum":[1]},
+                "step":{"type":"integer","minimum":0,"maximum":3},
+                "status":{"type":"string","enum":["pending","deferred","completed"]},
+                "nameConfirmed":{"type":"boolean"}
+              }
+            },
             "displayName":{"type":"string"},
             "portrait":{"type":"string"},
             "experience":{
@@ -4901,6 +5654,12 @@ export var operations = {
             },
             "tiktok":{"type":"string"},
             "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
             "instagram":{"type":"string"},
             "activities":{
               "type":"array",
@@ -4938,6 +5697,95 @@ export var operations = {
     "name":"instagramRemoveAllPosts",
     "transport":"action",
     "write":true
+  },
+  "pageInstagramManage":{
+    "transport":"rest",
+    "result-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "accounts":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "lastChecked":{"type":["number","null"]},
+              "revision":{"type":"integer"},
+              "lastError":{"type":"string"},
+              "status":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
+              "lastSuccess":{"type":["number","null"]},
+              "enabled":{"type":"boolean"},
+              "publicEnabled":{"type":"boolean"}
+            },
+            "required":[
+              "id",
+              "handle",
+              "enabled",
+              "publicEnabled",
+              "status",
+              "revision",
+              "lastChecked",
+              "lastSuccess",
+              "lastError"
+            ]
+          }
+        },
+        "handles":{"type":"array","items":{"type":"string"}},
+        "items":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "caption":{"type":"string"},
+              "publishedAt":{"type":"integer"},
+              "permalink":{"type":"string"},
+              "state":{"type":"string"},
+              "mediaType":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
+              "sourceId":{"type":"string","format":"uuid"},
+              "capturedAt":{"type":"integer"}
+            },
+            "required":[
+              "id",
+              "sourceId",
+              "handle",
+              "caption",
+              "permalink",
+              "mediaType",
+              "publishedAt",
+              "capturedAt",
+              "state"
+            ]
+          }
+        },
+        "next":{"type":["string","null"]}
+      },
+      "required":["accounts","handles","items","next"]
+    },
+    "method":"GET",
+    "auth":true,
+    "admin":false,
+    "path":"/v1/me/directory/:id/instagram",
+    "name":"pageInstagramManage",
+    "domain":"directoryOwner",
+    "native-rpc":"native_directory_instagram_manage",
+    "request-shape":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "after":{"type":["string","null"]},
+        "limit":{"type":"integer"},
+        "q":{"type":"string"}
+      },
+      "required":["id"]
+    },
+    "write":false
   },
   "instagramCommandConfirm":{
     "auth":true,
@@ -5095,6 +5943,12 @@ export var operations = {
             },
             "tiktok":{"type":"string"},
             "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
             "instagram":{"type":"string"},
             "activities":{
               "type":"array",
@@ -5129,6 +5983,17 @@ export var operations = {
             ]
           }
         },
+        "profileSetup":{
+          "type":"object",
+          "additionalProperties":false,
+          "required":["version","step","status","nameConfirmed"],
+          "properties":{
+            "version":{"type":"integer","enum":[1]},
+            "step":{"type":"integer","minimum":0,"maximum":3},
+            "status":{"type":"string","enum":["pending","deferred","completed"]},
+            "nameConfirmed":{"type":"boolean"}
+          }
+        },
         "displayName":{"type":"string"},
         "portrait":{"type":"string"},
         "experience":{
@@ -5149,6 +6014,12 @@ export var operations = {
         },
         "tiktok":{"type":"string"},
         "bio":{"type":"string"},
+        "handle":{
+          "type":"string",
+          "minLength":3,
+          "maxLength":40,
+          "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+        },
         "instagram":{"type":"string"},
         "activities":{
           "type":"array",
@@ -5196,6 +6067,7 @@ export var RELATED = {
   "directoryAdmin":["directoryPublic","directoryOwner"],
   "logbook":["community","trips","member","instagram"],
   "instagram":["posts","member","admin","logbook"],
+  "tiktok":["member","admin"],
   "posts":["member"],
   "invitations":["member"],
   "community":["member","logbook","posts","trips"],

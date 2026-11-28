@@ -27,7 +27,8 @@ export async function createSocialRuntime({db, application, inbox, provider, cry
     async redeemVerified(member,code,ipHash,adapter) {
       const snapshot=await invoke('prepare_social_redemption',[member,code,ipHash],member);
       if(!snapshot||snapshot.error||snapshot.replayed)return snapshot;
-      const evidence=await adapter.verifyAccount({provider:snapshot.provider,namespace:snapshot.namespace,externalId:snapshot.externalId},{includeHandle:true});
+      const evidence=await adapter.verifyAccount({provider:snapshot.provider,namespace:snapshot.namespace,externalId:snapshot.externalId,
+        conversationId:snapshot.conversationId},{includeHandle:true});
       return invoke('complete_social_redemption',[member,code,snapshot,evidence],member);
     },
     disconnect: (member, connection, version) => invoke('disconnect_social_connection',
@@ -70,7 +71,7 @@ export async function createSocialRuntime({db, application, inbox, provider, cry
       let result;
       try {
         result = await adapter.send({idempotencyKey: work.id, provider: work.provider,
-          accountId: work.accountId, destination: work.destination, body, deadline: work.deadline});
+          accountId: work.accountId, destination: work.destination, body, deadline: work.deadline,generation:work.generation});
         if (!result || !['accepted', 'retry', 'failed', 'uncertain'].includes(result.status) ||
             result.status === 'accepted' && (typeof result.messageId !== 'string' || !result.messageId))
           result = {status: 'uncertain'};

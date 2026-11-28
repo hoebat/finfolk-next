@@ -16,17 +16,34 @@
              [finfolkdb.fn.user.user-manage :as manage]]
    :static {:application ["finfolk-entity"] :all {:schema ["finfolk_rpc"]}}})
 
+(defn.pg ^{:- [:text]} profile-handle [:uuid i-user :text i-handle]
+  (return (pg/coalesce i-handle (|| "diver-" (#{"replace"} (:text i-user) "-" "")))))
+
+(defn.pg ^{:- [:text]} validate-profile-handle [:uuid i-user :text i-handle]
+  (let [(:text v-handle) (pg/lower (pg/btrim (pg/coalesce i-handle "")))]
+    (when (not (#{"regexp_like"} v-handle "^[a-z0-9][a-z0-9_-]{1,38}[a-z0-9]$"))
+      [:raise :exception :using '[[errcode := "22023"] [message := "Use 3–40 letters, numbers, underscores or hyphens, starting and ending with a letter or number."]]])
+    (when (or (pg/jsonb-exists (:jsonb "[\"admin\",\"finfolk\",\"support\",\"moderator\",\"system\"]") v-handle)
+              (and (#{"regexp_like"} v-handle "^diver-[0-9a-f]{32}$") (not= v-handle (-/profile-handle i-user nil))))
+      [:raise :exception :using '[[errcode := "22023"] [message := "That handle is reserved. Choose another."]]])
+    [:perform (#{"pg_advisory_xact_lock"} (#{"hashtextextended"} (|| "profile-handle:" v-handle) 0))]
+    (let [(:boolean v-taken) (pg/t:exists users/User {:where {:handle v-handle :id [:neq i-user]}})]
+      (when v-taken
+        [:raise :exception :using '[[errcode := "22023"] [message := "That handle is already taken. Choose another."]]]))
+    (return v-handle)))
+
 (defn.pg ^{:- [:jsonb]} ret-account [:uuid i-user]
-  (let [o-user (pg/t:get users/User {:where {:id i-user :deleted false} :returning #{:id :profile}})]
+  (let [o-user (pg/t:get users/User {:where {:id i-user :deleted false} :returning #{:id :profile :handle}})]
     (when [o-user :is-null] [:raise-exception "Account unavailable"])
-    (return (pg/jsonb-build-object "id" i-user "profile" (:-> o-user "profile")))))
+    (return (pg/jsonb-build-object "id" i-user "profile" (|| (:-> o-user "profile") (pg/jsonb-build-object "handle" (pg/coalesce (:->> o-user "handle") (|| "diver-" (#{"replace"} (:text i-user) "-" "")))))))))
 
 (defn.pg ^{:- [:jsonb]} ensure-account [:uuid i-user]
   (when [i-user :is-null] [:raise-exception "Authenticated identity required"])
   [:perform (#{"pg_advisory_xact_lock"} (#{"hashtextextended"} (:text i-user) 0))]
   (let [(:boolean v-exists) (pg/t:exists users/User {:where {:id i-user}})]
     (when (not v-exists)
-      [:perform (manage/insert-user i-user (pg/jsonb-build-object "displayName" "Diver")
+      [:perform (manage/insert-user i-user (pg/jsonb-build-object "displayName" "" "open" false "sharing" (:jsonb "{}")
+                          "profileSetup" (pg/jsonb-build-object "version" 1 "step" 0 "status" "pending" "nameConfirmed" false))
                         (system/op-fn "account-create" i-user (:jsonb "{}")))]))
   (return (-/ret-account i-user)))
 
@@ -36,6 +53,14 @@
   (let [o-updated (pg/t:update users/User
                    {:where {:id i-user :deleted false}
                     :set {:email-verified (pg/coalesce i-verified false)}})])
+  ;; Legacy placeholders enter setup without overwriting their profile or privacy.
+  (let [o-account (-/ret-account i-user) o-profile (:-> o-account "profile")]
+    (when (and (not (pg/jsonb-exists o-profile "profileSetup"))
+               (or (== (pg/btrim (pg/coalesce (:->> o-profile "displayName") "")) "")
+                   (== (:->> o-profile "displayName") "Diver")))
+      (let [o-updated (pg/t:update users/User {:where {:id i-user :deleted false}
+        :set {:profile (|| (- o-profile "handle") (pg/jsonb-build-object "profileSetup"
+          (pg/jsonb-build-object "version" 1 "step" 0 "status" "pending" "nameConfirmed" false)))}})])))
   (return (pg/jsonb-build-object "ok" true)))
 
 (defn.pg ^{:- [:jsonb]} account-list
@@ -107,23 +132,24 @@
   (let [o-account (-/ret-account i-user)
         o-old (:-> o-account "profile")
         o-input nil o-sharing nil o-result nil
-        (:text v-key) nil (:text v-name) nil (:text v-bio) nil
+        (:text v-key) nil (:text v-name) nil (:text v-bio) nil (:text v-handle) nil
         (:jsonb o-depth) nil (:jsonb o-beaches) nil
         o-user (pg/t:get users/User {:where {:id i-user}})]
     (when (or [i-profile :is-null] (not= (pg/jsonb-typeof i-profile) "object"))
       [:raise :exception :using '[[errcode := "22023"] [message := "Invalid profile"]]])
     [:for v-key :in :select (pg/jsonb-object-keys i-profile)
      (loop []
-       (when (not (pg/jsonb-exists (:jsonb "[\"displayName\",\"bio\",\"instagram\",\"tiktok\",\"open\",\"sharing\",\"beaches\",\"activities\",\"availability\",\"experience\",\"depthGoal\",\"portrait\",\"featuredLogs\",\"featuredPosts\"]") v-key))
+       (when (not (pg/jsonb-exists (:jsonb "[\"displayName\",\"handle\",\"bio\",\"instagram\",\"tiktok\",\"open\",\"sharing\",\"beaches\",\"activities\",\"availability\",\"experience\",\"depthGoal\",\"portrait\",\"featuredLogs\",\"featuredPosts\"]") v-key))
          [:raise :exception :using '[[errcode := "22023"] [message := "Unknown profile field"]]]))]
     (:= o-input (|| o-old i-profile))
-    (:= v-name (pg/btrim (pg/coalesce (:->> o-input "displayName") "Diver")))
-    (when (== v-name "") (:= v-name "Diver"))
+    (:= v-name (pg/btrim (pg/coalesce (:->> o-input "displayName") "")))
+    (when (and (pg/jsonb-exists i-profile "displayName") (== v-name ""))
+      [:raise :exception :using '[[errcode := "22023"] [message := "Enter a display name"]]])
     (:= v-bio (pg/btrim (pg/coalesce (:->> o-input "bio") "")))
     (when (or (> (pg/length v-name) 80) (> (pg/length v-bio) 500)
               (and (pg/jsonb-exists o-input "open") (not= (pg/jsonb-typeof (:-> o-input "open")) "boolean")))
       [:raise :exception :using '[[errcode := "22023"] [message := "Invalid profile text or visibility"]]])
-    (when (and (== (:-> o-input "open") (:jsonb "true")) (not (pg/coalesce i-verified false)))
+    (when (and (== (:-> i-profile "open") (:jsonb "true")) (not (pg/coalesce i-verified false)))
       [:raise :exception :using '[[errcode := "42501"] [message := "Verify your email before appearing in discovery"]]])
     (:= o-sharing (pg/coalesce (:-> o-input "sharing") (:jsonb "{}")))
     (when (not= (pg/jsonb-typeof o-sharing) "object")
@@ -167,19 +193,44 @@
       (:= o-result (|| o-result (pg/jsonb-build-object "featuredLogs" (-/account-featured i-user "featuredLogs" (:-> i-profile "featuredLogs"))))))
     (when (pg/jsonb-exists i-profile "featuredPosts")
       (:= o-result (|| o-result (pg/jsonb-build-object "featuredPosts" (-/account-featured i-user "featuredPosts" (:-> i-profile "featuredPosts"))))))
+    (:= v-handle (-/validate-profile-handle i-user (pg/coalesce (:->> o-input "handle") (-/profile-handle i-user (:->> o-user "handle")))))
+    (:= o-result (- o-result "handle"))
     (let [o-op (system/op-fn "account-preferences" i-user (:jsonb "{}"))
           o-updated (pg/t:update users/User {:where {:id i-user :deleted false}
-                       :set {:profile o-result :time-updated (pg/time-us)}})
+                       :set {:profile o-result :handle v-handle :time-updated (pg/time-us)}})
           o-rev (pg/t:update system/Rev {:where {:id (:uuid (:->> o-user "rev_id"))}
-                       :set {:current o-result :index (+ 1 #{"index"})} :track o-op})
+                       :set {:current (|| o-result (pg/jsonb-build-object "handle" v-handle)) :index (+ 1 #{"index"})} :track o-op})
           o-history (pg/t:insert system/RevLog
                       {:class-table "User" :class-context "Global"
                        :rev (:uuid (:->> o-user "rev_id"))
-                       :version (:int (:->> (:-> o-rev 0) "index")) :deltas o-result} {:track o-op})
+                       :version (:int (:->> (:-> o-rev 0) "index")) :deltas (|| o-result (pg/jsonb-build-object "handle" v-handle))} {:track o-op})
           o-log (pg/t:insert system/AuditLog
                   {:class-table "User" :class-context "Global" :audit (:uuid (:->> o-user "audit_id"))
                    :entry (pg/jsonb-build-object "event" "preferences")} {:track o-op})]
-      (return o-result))))
+      (return (|| o-result (pg/jsonb-build-object "handle" v-handle))))))
+
+(defn.pg ^{:- [:jsonb]} save-profile-setup [:uuid i-user :jsonb i-values :boolean i-verified]
+  [:perform (#{"pg_advisory_xact_lock"} (#{"hashtextextended"} (:text i-user) 0))]
+  (let [(:int v-step) (:int (:->> i-values "step"))
+        (:text v-status) (:->> i-values "status")
+        o-patch (:-> i-values "profile")
+        o-before (-/ret-account i-user)
+        o-setup (:-> (:-> o-before "profile") "profileSetup")
+        (:boolean v-confirmed) (pg/coalesce (== (:-> o-setup "nameConfirmed") (:jsonb "true")) false)]
+    (when (or [v-step :is-null] (< v-step 0) (> v-step 3)
+              [v-status :is-null] (not (pg/jsonb-exists (:jsonb "[\"pending\",\"deferred\",\"completed\"]") v-status)))
+      [:raise :exception :using '[[errcode := "22023"] [message := "Invalid setup progress"]]])
+    (when (pg/jsonb-exists o-patch "displayName") (:= v-confirmed true))
+    (when (and (or (> v-step 0) (== v-status "completed")) (not v-confirmed))
+      [:raise :exception :using '[[errcode := "22023"] [message := "Confirm your name first"]]])
+    (let [o-profile (-/save-account-preferences i-user o-patch i-verified)]
+      (when (and (== v-status "completed") (== (pg/btrim (pg/coalesce (:->> o-profile "displayName") "")) ""))
+        [:raise :exception :using '[[errcode := "22023"] [message := "Confirm your name first"]]])
+      (let [o-updated (pg/t:update users/User {:where {:id i-user :deleted false}
+        :set {:profile (|| (- o-profile "handle") (pg/jsonb-build-object "profileSetup"
+          (pg/jsonb-build-object "version" 1 "step" v-step "status" v-status "nameConfirmed" v-confirmed)))
+              :time-updated (pg/time-us)}})]))
+    (return (-/ret-account i-user))))
 
 (defn.pg ^{:- [:boolean]} lock-account-pair [:uuid i-user :uuid i-target]
   (when (or [i-target :is-null] (== i-user i-target))
@@ -316,7 +367,7 @@
             (:->> o-ref "table") (:->> o-ref "column")) :into o-found :using i-user]
          (:= o-streams (|| o-streams o-found))))]
     (let [o-marked (pg/t:update users/User {:where {:id i-user}
-                        :set {:deleted true :time-updated (pg/time-us) :deletion-state "pending_auth" :email-verified false :profile (:jsonb "{}") :invite-eligible false}})])
+                        :set {:deleted true :handle nil :time-updated (pg/time-us) :deletion-state "pending_auth" :email-verified false :profile (:jsonb "{}") :invite-eligible false}})])
     ;; Delivery always locks event -> invitation -> outbox. Keep that order
     ;; while deleting an organiser or a requester so in-flight workers can finish.
     [:execute "SELECT e.id FROM finfolk.\"Event\" e WHERE e.id IN(SELECT d.event_id FROM finfolk.\"EventInviteDelivery\" d WHERE d.requester_id=$1) OR e.listing_id IN(SELECT p.id FROM finfolk.\"DirectoryListing\" p JOIN finfolk.\"AccessRole\" a ON a.class_table='DirectoryListing' AND a.class_context='Global' AND a.access_id=p.access_id WHERE a.member_id=$1 AND a.level='owner' AND a.is_active) ORDER BY e.id FOR UPDATE" :using i-user]

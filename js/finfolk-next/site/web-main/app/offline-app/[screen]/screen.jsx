@@ -19,7 +19,7 @@ export default function OfflineDocument({screen}){
  // server's real route before client navigation or account actions resume.
  useEffect(()=>{document.documentElement.dataset.finfolkOffline='true';const path=location.pathname,reconnect=()=>location.reload(),traverse=event=>{if(location.pathname===path){event.stopImmediatePropagation();window.dispatchEvent(new CustomEvent('finfolk:offline-navigation',{detail:{traversal:true}}));}};window.addEventListener('online',reconnect);window.addEventListener('popstate',traverse,true);return()=>{delete document.documentElement.dataset.finfolkOffline;window.removeEventListener('online',reconnect);window.removeEventListener('popstate',traverse,true);};},[]);
  if(screen==='home')return <>{definition('home').styles.map(name=><link key={name} rel="stylesheet" href={'/'+name+'.css'}/>)}<Landing/></>;
- if(['directory','listing','events','event','event-editor','event-invitation','page-invitation','people','profile','profile-edit','member'].includes(screen))return <OfflineDocumentContext.Provider value={true}><CommunityDocument screen={screen}/></OfflineDocumentContext.Provider>;
+ if(['public-profile','directory','listing','events','event','event-editor','event-invitation','page-invitation','people','profile','profile-edit','member'].includes(screen))return <OfflineDocumentContext.Provider value={true}><CommunityDocument screen={screen}/></OfflineDocumentContext.Provider>;
  return <OfflineDocumentContext.Provider value={true}><AtlasLayout><AtlasDocument screen={screen}/></AtlasLayout></OfflineDocumentContext.Provider>;
 }
 function AtlasDocument({screen}){

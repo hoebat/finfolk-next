@@ -403,6 +403,31 @@ export var operations = {
     "action":"public-detail",
     "actor":"server"
   },
+  "pageInstagramReview":{
+    "rpc":"native_directory_instagram_review",
+    "request":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "post":{"type":"string","format":"uuid"},
+        "state":{"type":"string","enum":["pending","published","hidden"]}
+      },
+      "required":["id","post","state"]
+    },
+    "arguments":["$actor","$verified","$values"],
+    "public":false,
+    "write":true,
+    "result":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "not_found":"Page unavailable.",
+    "action":"instagram-review",
+    "actor":"server"
+  },
   "directoryReport":{
     "rpc":"native_directory_report",
     "request":{
@@ -756,6 +781,19 @@ export var operations = {
                 "type":"array",
                 "items":{"type":"object","additionalProperties":true}
               },
+              "dives":{
+                "type":"array",
+                "maxItems":500,
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+                    "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+                    "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+                  }
+                }
+              },
               "maxDepthMetres":{"type":["number","null"]},
               "point":{"type":["array","null"],"items":{"type":"number"}},
               "visibility":{"type":"string","enum":["private","public"]}
@@ -974,6 +1012,36 @@ export var operations = {
     },
     "write":true
   },
+  "pageInstagramSave":{
+    "rpc":"native_directory_instagram_save",
+    "request":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "handle":{"type":"string"},
+        "enabled":{"type":"boolean"},
+        "publicEnabled":{"type":"boolean"},
+        "expected":{"type":"integer"}
+      },
+      "required":["id","handle","enabled","publicEnabled","expected"]
+    },
+    "arguments":["$actor","$verified","$values"],
+    "public":false,
+    "write":true,
+    "result":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "revision":{"type":"integer"}
+      },
+      "required":["id","revision"]
+    },
+    "not_found":"Page unavailable.",
+    "action":"instagram-save",
+    "actor":"server"
+  },
   "siteCatalog":{
     "rpc":"native_public_site_catalog",
     "arguments":[],
@@ -1143,6 +1211,117 @@ export var operations = {
     "write":false,
     "public":true,
     "not_found":"Dive site unavailable."
+  },
+  "publicProfileByHandle":{
+    "rpc":"ret_profile_by_handle",
+    "arguments":["handle"],
+    "actor":"server",
+    "request":{
+      "type":"object",
+      "properties":{"handle":{"type":"string","minLength":3,"maxLength":40}},
+      "required":["handle"],
+      "additionalProperties":false
+    },
+    "result":{
+      "type":["object","null"],
+      "additionalProperties":false,
+      "required":["id","uid","displayName","open","restricted"],
+      "properties":{
+        "open":{"type":"boolean"},
+        "availability":{"type":"array","items":{"type":"string"}},
+        "displayName":{"type":"string"},
+        "uid":{"type":"string","format":"uuid"},
+        "portrait":{"type":"string"},
+        "experience":{"type":"string"},
+        "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "tiktok":{"type":"string"},
+        "restricted":{"type":"boolean"},
+        "bio":{"type":"string"},
+        "id":{"type":"string","format":"uuid"},
+        "handle":{"type":"string"},
+        "instagram":{"type":"string"},
+        "sessions":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":[
+              "id",
+              "ownerId",
+              "beachId",
+              "date",
+              "locationName",
+              "notes",
+              "point",
+              "durationMinutes",
+              "maxDepthMetres",
+              "visibility",
+              "photos",
+              "linkedMedia"
+            ],
+            "properties":{
+              "durationMinutes":{"type":["number","null"]},
+              "date":{"type":"string","format":"date"},
+              "beachId":{"type":"string"},
+              "ownerId":{"type":"string","format":"uuid"},
+              "locationName":{"type":"string"},
+              "photos":{"type":"array","items":{"type":"string"}},
+              "id":{"type":"string","format":"uuid"},
+              "notes":{"type":"string"},
+              "linkedMedia":{
+                "type":"array",
+                "items":{"type":"object","additionalProperties":true}
+              },
+              "dives":{
+                "type":"array",
+                "maxItems":500,
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+                    "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+                    "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+                  }
+                }
+              },
+              "maxDepthMetres":{"type":["number","null"]},
+              "point":{"type":["array","null"],"items":{"type":"number"}},
+              "visibility":{"type":"string","enum":["public"]}
+            }
+          }
+        },
+        "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+        "posts":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "required":[
+              "id",
+              "beach_id",
+              "beach_name",
+              "url",
+              "platform",
+              "status",
+              "public_consent"
+            ],
+            "properties":{
+              "id":{"type":"string","format":"uuid"},
+              "beach_id":{"type":"string","format":"uuid"},
+              "beach_name":{"type":"string"},
+              "url":{"type":"string"},
+              "platform":{"type":"string"},
+              "status":{"type":"string"},
+              "public_consent":{"type":"boolean"}
+            }
+          }
+        },
+        "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+      }
+    },
+    "write":false,
+    "public":true
   },
   "siteNoteWithdraw":{
     "rpc":"native_notes_withdraw",
@@ -1371,6 +1550,17 @@ export var operations = {
             ]
           }
         },
+        "profileSetup":{
+          "type":"object",
+          "additionalProperties":false,
+          "required":["version","step","status","nameConfirmed"],
+          "properties":{
+            "version":{"type":"integer","enum":[1]},
+            "step":{"type":"integer","minimum":0,"maximum":3},
+            "status":{"type":"string","enum":["pending","deferred","completed"]},
+            "nameConfirmed":{"type":"boolean"}
+          }
+        },
         "displayName":{"type":"string"},
         "uid":{"type":"string","format":"uuid"},
         "portrait":{"type":"string"},
@@ -1393,6 +1583,12 @@ export var operations = {
         "tiktok":{"type":"string"},
         "bio":{"type":"string"},
         "id":{"type":"string","format":"uuid"},
+        "handle":{
+          "type":"string",
+          "minLength":3,
+          "maxLength":40,
+          "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+        },
         "instagram":{"type":"string"},
         "activities":{
           "type":"array",
@@ -1435,6 +1631,7 @@ export var operations = {
         "restricted":{"type":"boolean"},
         "bio":{"type":"string"},
         "id":{"type":"string","format":"uuid"},
+        "handle":{"type":"string"},
         "instagram":{"type":"string"},
         "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
         "posts":{
@@ -1674,7 +1871,20 @@ export var operations = {
             "notes":{"type":"string"},
             "point":{"type":["array","null"],"items":{"type":"number"}},
             "durationMinutes":{"type":["number","null"]},
-            "maxDepthMetres":{"type":["number","null"]}
+            "maxDepthMetres":{"type":["number","null"]},
+            "dives":{
+              "type":"array",
+              "maxItems":500,
+              "items":{
+                "type":"object",
+                "additionalProperties":false,
+                "properties":{
+                  "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+                  "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+                  "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+                }
+              }
+            }
           }
         }
       },
@@ -2246,6 +2456,27 @@ export var operations = {
     },
     "write":true
   },
+  "pageInstagramRefresh":{
+    "rpc":"native_directory_instagram_refresh",
+    "request":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"id":{"type":"string","format":"uuid"}},
+      "required":["id"]
+    },
+    "arguments":["$actor","$verified","$values"],
+    "public":false,
+    "write":true,
+    "result":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{"ok":{"type":"boolean"}},
+      "required":["ok"]
+    },
+    "not_found":"Page unavailable.",
+    "action":"instagram-refresh",
+    "actor":"server"
+  },
   "blocks":{
     "rpc":"ret_account_blocks",
     "arguments":["$actor"],
@@ -2418,6 +2649,19 @@ export var operations = {
               "linkedMedia":{
                 "type":"array",
                 "items":{"type":"object","additionalProperties":true}
+              },
+              "dives":{
+                "type":"array",
+                "maxItems":500,
+                "items":{
+                  "type":"object",
+                  "additionalProperties":false,
+                  "properties":{
+                    "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+                    "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+                    "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+                  }
+                }
               },
               "maxDepthMetres":{"type":["number","null"]},
               "point":{"type":["array","null"],"items":{"type":"number"}},
@@ -2762,6 +3006,7 @@ export var operations = {
       "properties":{
         "mode":{"type":"string","enum":["discover"]},
         "seed":{"type":"string"},
+        "q":{"type":"string","maxLength":80},
         "beachId":{"type":["string","null"]},
         "availability":{"type":"string"},
         "experience":{"type":"string"},
@@ -2805,6 +3050,7 @@ export var operations = {
               "bio":{"type":"string"},
               "recent":{"type":"boolean"},
               "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
               "instagram":{"type":"string"},
               "connection":{"type":["string","null"]}
             }
@@ -3002,6 +3248,93 @@ export var operations = {
     "action":"accept",
     "actor":"server"
   },
+  "publicPageInstagram":{
+    "rpc":"native_directory_instagram_public",
+    "request":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "after":{"type":["string","null"]},
+        "limit":{"type":"integer"},
+        "q":{"type":"string"}
+      },
+      "required":["id"]
+    },
+    "arguments":["$actor","$verified","$values"],
+    "public":true,
+    "write":false,
+    "result":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "accounts":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "lastChecked":{"type":["number","null"]},
+              "revision":{"type":"integer"},
+              "lastError":{"type":"string"},
+              "status":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
+              "lastSuccess":{"type":["number","null"]},
+              "enabled":{"type":"boolean"},
+              "publicEnabled":{"type":"boolean"}
+            },
+            "required":[
+              "id",
+              "handle",
+              "enabled",
+              "publicEnabled",
+              "status",
+              "revision",
+              "lastChecked",
+              "lastSuccess",
+              "lastError"
+            ]
+          }
+        },
+        "handles":{"type":"array","items":{"type":"string"}},
+        "items":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "caption":{"type":"string"},
+              "publishedAt":{"type":"integer"},
+              "permalink":{"type":"string"},
+              "state":{"type":"string"},
+              "mediaType":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
+              "sourceId":{"type":"string","format":"uuid"},
+              "capturedAt":{"type":"integer"}
+            },
+            "required":[
+              "id",
+              "sourceId",
+              "handle",
+              "caption",
+              "permalink",
+              "mediaType",
+              "publishedAt",
+              "capturedAt",
+              "state"
+            ]
+          }
+        },
+        "next":{"type":["string","null"]}
+      },
+      "required":["accounts","handles","items","next"]
+    },
+    "not_found":"Page unavailable.",
+    "action":"instagram-public",
+    "actor":"server"
+  },
   "directoryMerge":{
     "rpc":"native_directory_merge",
     "request":{
@@ -3025,6 +3358,152 @@ export var operations = {
     "not_found":"Page unavailable.",
     "action":"merge",
     "actor":"server"
+  },
+  "profileSetup":{
+    "rpc":"save_profile_setup",
+    "arguments":["$actor","$values","$verified"],
+    "actor":"server",
+    "request":{
+      "type":"object",
+      "additionalProperties":false,
+      "required":["profile","step","status"],
+      "properties":{
+        "profile":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "open":{"type":"boolean"},
+            "availability":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":[
+                  "weekday mornings",
+                  "weekday afternoons",
+                  "weekend mornings",
+                  "weekend afternoons"
+                ]
+              }
+            },
+            "displayName":{"type":"string"},
+            "portrait":{"type":"string"},
+            "experience":{
+              "type":"string",
+              "enum":["","new","comfortable","experienced"]
+            },
+            "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "sharing":{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "visits":{"type":"boolean"},
+                "months":{"type":"boolean"},
+                "dives":{"type":"boolean"},
+                "time":{"type":"boolean"},
+                "depth":{"type":"boolean"}
+              }
+            },
+            "tiktok":{"type":"string"},
+            "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
+            "instagram":{"type":"string"},
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "depthGoal":{"type":["number","null"]},
+            "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+          }
+        },
+        "step":{"type":"integer","minimum":0,"maximum":3},
+        "status":{"type":"string","enum":["pending","deferred","completed"]}
+      }
+    },
+    "result":{
+      "type":"object",
+      "required":["id","profile"],
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "profile":{
+          "type":"object",
+          "additionalProperties":true,
+          "properties":{
+            "open":{"type":"boolean"},
+            "availability":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":[
+                  "weekday mornings",
+                  "weekday afternoons",
+                  "weekend mornings",
+                  "weekend afternoons"
+                ]
+              }
+            },
+            "profileSetup":{
+              "type":"object",
+              "additionalProperties":false,
+              "required":["version","step","status","nameConfirmed"],
+              "properties":{
+                "version":{"type":"integer","enum":[1]},
+                "step":{"type":"integer","minimum":0,"maximum":3},
+                "status":{"type":"string","enum":["pending","deferred","completed"]},
+                "nameConfirmed":{"type":"boolean"}
+              }
+            },
+            "displayName":{"type":"string"},
+            "portrait":{"type":"string"},
+            "experience":{
+              "type":"string",
+              "enum":["","new","comfortable","experienced"]
+            },
+            "beaches":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "sharing":{
+              "type":"object",
+              "additionalProperties":false,
+              "properties":{
+                "visits":{"type":"boolean"},
+                "months":{"type":"boolean"},
+                "dives":{"type":"boolean"},
+                "time":{"type":"boolean"},
+                "depth":{"type":"boolean"}
+              }
+            },
+            "tiktok":{"type":"string"},
+            "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
+            "instagram":{"type":"string"},
+            "activities":{
+              "type":"array",
+              "items":{
+                "type":"string",
+                "enum":["freediving","ocean-swimming","spearfishing"]
+              }
+            },
+            "depthGoal":{"type":["number","null"]},
+            "featuredLogs":{"type":"array","items":{"type":"string","format":"uuid"}},
+            "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
+          }
+        }
+      }
+    },
+    "write":true
   },
   "directoryCreate":{
     "rpc":"native_directory_owner_create",
@@ -3202,6 +3681,19 @@ export var operations = {
           "type":"array",
           "items":{"type":"object","additionalProperties":true}
         },
+        "dives":{
+          "type":"array",
+          "maxItems":500,
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+              "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+              "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+            }
+          }
+        },
         "maxDepthMetres":{"type":["number","null"]},
         "point":{"type":["array","null"],"items":{"type":"number"}},
         "visibility":{"type":"string","enum":["public"]}
@@ -3270,6 +3762,19 @@ export var operations = {
         "linkedMedia":{
           "type":"array",
           "items":{"type":"object","additionalProperties":true}
+        },
+        "dives":{
+          "type":"array",
+          "maxItems":500,
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "durationSeconds":{"type":["number","null"],"minimum":0,"maximum":3600},
+              "depthMetres":{"type":["number","null"],"minimum":0,"maximum":300},
+              "restSeconds":{"type":["number","null"],"minimum":0,"maximum":86400}
+            }
+          }
         },
         "maxDepthMetres":{"type":["number","null"]},
         "point":{"type":["array","null"],"items":{"type":"number"}},
@@ -3898,6 +4403,17 @@ export var operations = {
                 ]
               }
             },
+            "profileSetup":{
+              "type":"object",
+              "additionalProperties":false,
+              "required":["version","step","status","nameConfirmed"],
+              "properties":{
+                "version":{"type":"integer","enum":[1]},
+                "step":{"type":"integer","minimum":0,"maximum":3},
+                "status":{"type":"string","enum":["pending","deferred","completed"]},
+                "nameConfirmed":{"type":"boolean"}
+              }
+            },
             "displayName":{"type":"string"},
             "portrait":{"type":"string"},
             "experience":{
@@ -3918,6 +4434,12 @@ export var operations = {
             },
             "tiktok":{"type":"string"},
             "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
             "instagram":{"type":"string"},
             "activities":{
               "type":"array",
@@ -3931,7 +4453,19 @@ export var operations = {
             "featuredPosts":{"type":"array","items":{"type":"string","format":"uuid"}}
           }
         },
-        "verified":{"type":"boolean"}
+        "verified":{"type":"boolean"},
+        "profileSuggestions":{
+          "type":"object",
+          "additionalProperties":false,
+          "properties":{
+            "name":{"type":"string"},
+            "photo":{"type":"string"},
+            "provider":{
+              "type":"string",
+              "enum":["google","github","facebook","email"]
+            }
+          }
+        }
       }
     },
     "write":false
@@ -3978,6 +4512,17 @@ export var operations = {
                 ]
               }
             },
+            "profileSetup":{
+              "type":"object",
+              "additionalProperties":false,
+              "required":["version","step","status","nameConfirmed"],
+              "properties":{
+                "version":{"type":"integer","enum":[1]},
+                "step":{"type":"integer","minimum":0,"maximum":3},
+                "status":{"type":"string","enum":["pending","deferred","completed"]},
+                "nameConfirmed":{"type":"boolean"}
+              }
+            },
             "displayName":{"type":"string"},
             "portrait":{"type":"string"},
             "experience":{
@@ -3998,6 +4543,12 @@ export var operations = {
             },
             "tiktok":{"type":"string"},
             "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
             "instagram":{"type":"string"},
             "activities":{
               "type":"array",
@@ -4029,6 +4580,93 @@ export var operations = {
       }
     },
     "write":false
+  },
+  "pageInstagramManage":{
+    "rpc":"native_directory_instagram_manage",
+    "request":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "id":{"type":"string","format":"uuid"},
+        "after":{"type":["string","null"]},
+        "limit":{"type":"integer"},
+        "q":{"type":"string"}
+      },
+      "required":["id"]
+    },
+    "arguments":["$actor","$verified","$values"],
+    "public":false,
+    "write":false,
+    "result":{
+      "type":"object",
+      "additionalProperties":false,
+      "properties":{
+        "accounts":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "lastChecked":{"type":["number","null"]},
+              "revision":{"type":"integer"},
+              "lastError":{"type":"string"},
+              "status":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
+              "lastSuccess":{"type":["number","null"]},
+              "enabled":{"type":"boolean"},
+              "publicEnabled":{"type":"boolean"}
+            },
+            "required":[
+              "id",
+              "handle",
+              "enabled",
+              "publicEnabled",
+              "status",
+              "revision",
+              "lastChecked",
+              "lastSuccess",
+              "lastError"
+            ]
+          }
+        },
+        "handles":{"type":"array","items":{"type":"string"}},
+        "items":{
+          "type":"array",
+          "items":{
+            "type":"object",
+            "additionalProperties":false,
+            "properties":{
+              "caption":{"type":"string"},
+              "publishedAt":{"type":"integer"},
+              "permalink":{"type":"string"},
+              "state":{"type":"string"},
+              "mediaType":{"type":"string"},
+              "id":{"type":"string","format":"uuid"},
+              "handle":{"type":"string"},
+              "sourceId":{"type":"string","format":"uuid"},
+              "capturedAt":{"type":"integer"}
+            },
+            "required":[
+              "id",
+              "sourceId",
+              "handle",
+              "caption",
+              "permalink",
+              "mediaType",
+              "publishedAt",
+              "capturedAt",
+              "state"
+            ]
+          }
+        },
+        "next":{"type":["string","null"]}
+      },
+      "required":["accounts","handles","items","next"]
+    },
+    "not_found":"Page unavailable.",
+    "action":"instagram-manage",
+    "actor":"server"
   },
   "unblock":{
     "rpc":"set_account_block",
@@ -4141,6 +4779,12 @@ export var operations = {
             },
             "tiktok":{"type":"string"},
             "bio":{"type":"string"},
+            "handle":{
+              "type":"string",
+              "minLength":3,
+              "maxLength":40,
+              "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+            },
             "instagram":{"type":"string"},
             "activities":{
               "type":"array",
@@ -4175,6 +4819,17 @@ export var operations = {
             ]
           }
         },
+        "profileSetup":{
+          "type":"object",
+          "additionalProperties":false,
+          "required":["version","step","status","nameConfirmed"],
+          "properties":{
+            "version":{"type":"integer","enum":[1]},
+            "step":{"type":"integer","minimum":0,"maximum":3},
+            "status":{"type":"string","enum":["pending","deferred","completed"]},
+            "nameConfirmed":{"type":"boolean"}
+          }
+        },
         "displayName":{"type":"string"},
         "portrait":{"type":"string"},
         "experience":{
@@ -4195,6 +4850,12 @@ export var operations = {
         },
         "tiktok":{"type":"string"},
         "bio":{"type":"string"},
+        "handle":{
+          "type":"string",
+          "minLength":3,
+          "maxLength":40,
+          "pattern":"^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"
+        },
         "instagram":{"type":"string"},
         "activities":{
           "type":"array",

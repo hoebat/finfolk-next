@@ -28,6 +28,7 @@
              [finfolkdb.fn.site.site-catalog :as native-sites]
              [finfolkdb.fn.site.site-review :as native-site-review]
              [finfolkdb.common.type-social-post :as post]
+             [finfolkdb.common.type-page-instagram :as page-instagram]
              [finfolkdb.common.type-media-import :as media]
              [finfolkdb.common.type-user-report :as report]
              [finfolkdb.fn.user.user-manage-logbook :as logbook]

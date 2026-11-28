@@ -66,3 +66,9 @@
  "path" "/v1/admin/messaging/instagram"
  "transport" "rest"
  "write" true}})
+
+(def OPERATIONS (merge OPERATIONS
+ {"pageInstagramConnection" {"admin" true "auth" true "domain" "admin" "method" "GET" "name" "pageInstagramConnection" "path" "/v1/messaging/connections/finfolk-instagram/page-collection" "transport" "rest" "write" false}
+"pageInstagramConnect" {"admin" true "auth" true "domain" "admin" "method" "POST" "name" "pageInstagramConnect" "path" "/v1/messaging/connections/finfolk-instagram/page-collection-save" "transport" "rest" "write" true}
+"pageInstagramPause" {"admin" true "auth" true "domain" "admin" "method" "POST" "name" "pageInstagramPause" "path" "/v1/messaging/connections/finfolk-instagram/page-collection-pause" "transport" "rest" "write" true}
+}))

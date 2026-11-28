@@ -192,6 +192,9 @@ export async function run(ctx,name,values,options){
     }
     result = output;
     if(!spec["write"] && (revision == entry["revision"])){
+      if(name == "siteCatalog"){
+        ctx["catalogChecked"] = true;
+      }
       if(spec["cache"] != false){
         ctx["storage"]["put"](entry["key"],result,spec);
       }
@@ -297,6 +300,18 @@ export function call(ctx,name,values,options){
   let spec = registry.operation(name);
   if(ctx["closed"]){
     return Promise.reject(new Error("Account context closed."));
+  }
+  if((name == "siteCatalog") && (ctx["actor"] == "public") && !options["revalidate"]){
+    let saved = ctx["storage"]["get"](name + ":" + stableKey(values));
+    if(saved && saved["data"]){
+      if(!ctx["catalogChecked"]){
+        ctx["catalogChecked"] = true;
+        call(ctx,name,values,{"revalidate":true}).catch(function (){
+          null;
+        });
+      }
+      return Promise.resolve(saved["data"]);
+    }
   }
   if(!spec["write"]){
     let key = name + ":" + stableKey(values);

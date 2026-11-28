@@ -13,7 +13,7 @@
 (def STRING {:type "string"})
 (def PROFILE-PATCH
   {:type "object" :additionalProperties false
-   :properties {:displayName STRING :bio STRING :instagram STRING :tiktok STRING
+   :properties {:handle {:type "string" :minLength 3 :maxLength 40 :pattern "^[A-Za-z0-9][A-Za-z0-9_-]{1,38}[A-Za-z0-9]$"} :displayName STRING :bio STRING :instagram STRING :tiktok STRING
                 :portrait STRING :featuredLogs {:type "array" :items UUID} :featuredPosts {:type "array" :items UUID}
                 :open {:type "boolean"}
                 :sharing {:type "object" :additionalProperties false
@@ -25,7 +25,13 @@
                 :depthGoal {:type ["number" "null"]}}})
 ;; Preference writes validate portraits and published-item ownership in the DB.
 ;; Returned private profiles may additionally contain server-owned fields.
-(def PROFILE (assoc PROFILE-PATCH :additionalProperties true))
+(def PROFILE (-> PROFILE-PATCH (assoc :additionalProperties true)
+  (assoc-in [:properties :profileSetup]
+    {:type "object" :additionalProperties false :required ["version" "step" "status" "nameConfirmed"]
+     :properties {:version {:type "integer" :enum [1]}
+                  :step {:type "integer" :minimum 0 :maximum 3}
+                  :status {:type "string" :enum ["pending" "deferred" "completed"]}
+                  :nameConfirmed {:type "boolean"}}})))
 (def ACCOUNT
   {:type "object" :required ["id" "profile"] :additionalProperties false
    :properties {:id UUID :profile PROFILE}})
@@ -38,7 +44,11 @@
   {:type "object" :additionalProperties false :required ["date" "locationName"]
    :properties {:date {:type "string" :format "date"} :locationName STRING :beachId STRING :notes STRING
                 :point {:type ["array" "null"] :items {:type "number"}}
-                :durationMinutes {:type ["number" "null"]} :maxDepthMetres {:type ["number" "null"]}}})
+                :durationMinutes {:type ["number" "null"]} :maxDepthMetres {:type ["number" "null"]}
+                :dives {:type "array" :maxItems 500 :items {:type "object" :additionalProperties false
+                  :properties {:durationSeconds {:type ["number" "null"] :minimum 0 :maximum 3600}
+                               :depthMetres {:type ["number" "null"] :minimum 0 :maximum 300}
+                               :restSeconds {:type ["number" "null"] :minimum 0 :maximum 86400}}}}}})
 (def SESSION
   {:type "object" :additionalProperties false
    :required ["id" "ownerId" "beachId" "date" "locationName" "notes" "point" "durationMinutes" "maxDepthMetres" "visibility" "photos" "linkedMedia"]
@@ -52,7 +62,7 @@
    :properties {:id UUID :beach_id UUID :beach_name STRING :url STRING :platform STRING :status STRING :public_consent {:type "boolean"}}})
 (def PUBLIC-PROFILE
   {:type "object" :additionalProperties false :required ["id" "uid" "displayName" "open" "restricted"]
-   :properties {:id UUID :uid UUID :displayName STRING :open {:type "boolean"} :restricted {:type "boolean"}
+   :properties {:id UUID :uid UUID :handle STRING :displayName STRING :open {:type "boolean"} :restricted {:type "boolean"}
                 :bio STRING :instagram STRING :tiktok STRING :portrait STRING
                 :featuredLogs {:type "array" :items UUID} :featuredPosts {:type "array" :items UUID}
                 :posts {:type "array" :items PROFILE-POST}
@@ -63,7 +73,7 @@
 (def PUBLIC-PERSON
   {:type "object" :additionalProperties false
    :required ["id" "displayName" "open" "bio" "instagram" "tiktok" "portrait" "availability" "experience" "beaches" "regular" "recent" "connection"]
-   :properties {:id UUID :displayName STRING :open {:type "boolean"} :bio STRING :instagram STRING :tiktok STRING
+   :properties {:id UUID :handle STRING :displayName STRING :open {:type "boolean"} :bio STRING :instagram STRING :tiktok STRING
                 :portrait STRING :availability {:type "array" :items STRING} :experience STRING
                 :beaches {:type "array" :items UUID} :regular {:type "boolean"} :recent {:type "boolean"}
                 :connection {:type ["string" "null"]}}})
@@ -80,7 +90,8 @@
                 :failures {:type "array" :items {:type "object" :additionalProperties false :required ["id" "source" "code" "observed"] :properties {:id UUID :source STRING :code STRING :observed {:type "number"}}}}
                 :services {:type "array" :items {:type "object" :additionalProperties false :required ["name" "state"] :properties {:name STRING :state {:type "string" :enum ["healthy" "unavailable" "unknown" "disabled" "degraded"]} :detail STRING :latencyMs {:type "number"}}}}}})
 (def OPERATIONS
-  (merge (buddy-contracts/operations operation UUID EMPTY) directory/OPERATIONS events/OPERATIONS notes/OPERATIONS sites/OPERATIONS site-review/OPERATIONS
+  (merge directory/OPERATIONS events/OPERATIONS notes/OPERATIONS sites/OPERATIONS site-review/OPERATIONS
+  (buddy-contracts/operations operation UUID EMPTY)
   {"platformStatus" (assoc (operation "ret_platform_status" ["$actor" "$verified"] EMPTY PLATFORM-STATUS false) :effect "platform-status")
    "publicTrips" (assoc (operation "ret_public_trips" ["$values"]
                     {:type "object" :additionalProperties false :properties {:beachId UUID :ownerId UUID}}
@@ -131,6 +142,9 @@
    "publicProfile" (assoc (operation "ret_public_profile" ["target"]
                   {:type "object" :properties {:target UUID} :required ["target"] :additionalProperties false}
                   PUBLIC-PROFILE false) :public true)
+   "publicProfileByHandle" (assoc (operation "ret_profile_by_handle" ["handle"]
+                  {:type "object" :properties {:handle {:type "string" :minLength 3 :maxLength 40}} :required ["handle"] :additionalProperties false}
+                  (-> PUBLIC-PROFILE (assoc :type ["object" "null"]) (assoc-in [:properties :sessions] {:type "array" :items PUBLIC-SESSION})) false) :public true)
    "checkin" (operation "record_community_checkin" ["$actor" "beachId" "$verified"]
                {:type "object" :properties {:beachId UUID} :required ["beachId"] :additionalProperties false}
                {:type "object" :properties {:day STRING :count {:type "integer"} :selfReported {:type "boolean"}}
@@ -142,7 +156,7 @@
                {:type "array" :items {:type "object" :properties {:beach_id UUID :day STRING :name STRING}
                                      :required ["beach_id" "day" "name"] :additionalProperties false}} false)
    "community" (operation "discover_community_people" ["$actor" "$values"]
-               {:type "object" :properties {:mode {:type "string" :enum ["discover"]} :seed STRING
+               {:type "object" :properties {:mode {:type "string" :enum ["discover"]} :seed STRING :q {:type "string" :maxLength 80}
                  :beachId {:type ["string" "null"]} :availability STRING :experience STRING :cursor {:type ["string" "null"]}}
                 :required ["mode" "seed"] :additionalProperties false}
                {:type "object" :properties {:people {:type "array" :items PUBLIC-PERSON}
@@ -151,7 +165,13 @@
    "deleteAccount" (assoc (operation "erase_account" ["$actor"]
                      {:type "object" :properties {:password STRING} :required ["password"] :additionalProperties false} OK true) :effect "delete-auth-user")
    "me" (operation "ensure_account" ["$actor"] EMPTY
-          (-> ACCOUNT (update :required conj "verified") (assoc-in [:properties :verified] {:type "boolean"})) false)
+          (-> ACCOUNT (update :required conj "verified") (assoc-in [:properties :verified] {:type "boolean"})
+              (assoc-in [:properties :profileSuggestions] {:type "object" :additionalProperties false
+                :properties {:name STRING :photo STRING :provider {:type "string" :enum ["google" "github" "facebook" "email"]}}})) false)
+   "profileSetup" (operation "save_profile_setup" ["$actor" "$values" "$verified"]
+                    {:type "object" :additionalProperties false :required ["profile" "step" "status"]
+                     :properties {:profile PROFILE-PATCH :step {:type "integer" :minimum 0 :maximum 3}
+                                  :status {:type "string" :enum ["pending" "deferred" "completed"]}}} ACCOUNT true)
    "preferences" (operation "save_account_preferences" ["$actor" "profile" "$verified"]
                    {:type "object" :properties {:profile PROFILE-PATCH} :required ["profile"] :additionalProperties false} PROFILE true)
    "connections" (operation "ret_account_connections" ["$actor"] EMPTY {:type "array" :items RELATION} false)

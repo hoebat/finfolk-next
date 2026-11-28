@@ -50,7 +50,7 @@ export function createTikTokMessagingTransport({messaging,accountId,clientKey,ap
   async send(message){
    if(message.provider!=='tiktok'||message.accountId!==accountId||!identifier(message.conversationId)||
       typeof message.body!=='string'||message.body.length>2000)return {status:'failed'};
-   if(message.deadline&&Date.parse(message.deadline)<=now())return {status:'retry',retryAfter:1};
+   if(message.deadline!=null&&(!Number.isFinite(Date.parse(message.deadline))||Date.parse(message.deadline)<=now()))return {status:'failed'};
    let token;
    try{token=await loadAccessToken({generation:message.generation});}catch{return {status:'retry',retryAfter:60};} // No send was attempted.
    if(typeof token!=='string'||!token)return {status:'failed'};

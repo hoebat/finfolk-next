@@ -125,13 +125,15 @@
                    "id" (pg/id o-claimed)
                    "lease" v-lease
                    "deadline" (:-> o-claimed "deadline")
+                   "generation" (:-> o-claimed "generation")
                    "provider" (:->> o-inbox "provider")
                    "accountId" (:->> o-inbox "account_id")
                    "verification" (pg/case (== (:->> o-claimed "reply_kind") "connect_code")
                      (pg/jsonb-build-object "provider" (:->> o-inbox "provider")
                        "namespace" (:text (pg/jsonb-build-array (:->> o-inbox "provider") i-application i-inbox))
-                       "externalId" (:->> o-claimed "recipient")) true nil)
-                   "destination" (pg/jsonb-build-object "channel" (:->> o-claimed "channel")
+                       "externalId" (:->> o-claimed "recipient")
+                       "conversationId" (:->> o-claimed "thread")) true nil)
+                   "destination" (|| (pg/jsonb-build-object "channel" (:->> o-claimed "channel")
                                                         "recipientId" (:->> o-claimed "recipient")
                                                         "conversationId"
                                                         (pg/case (== (:->> o-claimed "channel")
@@ -139,6 +141,11 @@
                                                           (:->> o-claimed "thread") true
                                                           nil)
                                                         "commentId" (:->> o-claimed "comment"))
+                                     (pg/case (== (:->> o-claimed "channel") "message") (:jsonb "{}")
+                                       true (pg/jsonb-build-object
+                                             "mediaId" (:->> (:-> o-event "payload") "mediaId")
+                                             "commentOrigin" (:->> (:-> o-event "payload") "commentOrigin")
+                                             "bodyHash" (:->> (:-> o-event "payload") "bodyHash"))))
                    "payload" (pg/jsonb-build-object "body" (:->> o-claimed "body")
                                                     "ciphertext" (:->> o-claimed "body_ciphertext")
                                                     "cipherContext" (:-> o-claimed "cipher_context")

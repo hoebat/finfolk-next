@@ -7,6 +7,7 @@
             [std.json :as json]
             [finfolkdb.schema.entity-catalog :as catalog]
             [finfolkdb.schema.directory :as directory]
+            [finfolkdb.schema.page-instagram :as page-instagram]
             [finfolkdb.schema.events :as events]
             [finfolkdb.schema.event-delivery :as delivery]
             [finfolkdb.schema.site-catalog :as sites]
@@ -29,12 +30,14 @@
      "\n"
      content
      "\n"
-     directory/SQL
+     page-instagram/SQL
+     "\n" directory/SQL
      "\n" events/SQL "\n" delivery/SQL "\n" sites/SQL "\n" site-review/SQL
      "\nREVOKE ALL ON ALL TABLES IN SCHEMA finfolk FROM PUBLIC;\n"
      "REVOKE ALL ON ALL FUNCTIONS IN SCHEMA finfolk,finfolk_rpc FROM PUBLIC;\n"
      "GRANT USAGE ON SCHEMA finfolk,finfolk_rpc TO finfolk_api;\n"
      (directory/grants-sql)
+     (page-instagram/grants-sql)
      "COMMIT;\n")))
 
 (defn -main

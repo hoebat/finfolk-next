@@ -19,7 +19,7 @@
  ), sessions AS (SELECT count(*)::int dives,
  sum(CASE WHEN jsonb_typeof(detail->'durationMinutes')='number' THEN (detail->>'durationMinutes')::numeric END) minutes,
  array_agg((detail->>'maxDepthMetres')::numeric ORDER BY (detail->>'maxDepthMetres')::numeric) FILTER(WHERE jsonb_typeof(detail->'maxDepthMetres')='number') depths
- FROM finfolk.\"DiveSession\" CROSS JOIN p WHERE owner_id=p.target AND site_id=p.site)
+ FROM finfolk.\"DiveSession\" CROSS JOIN p WHERE owner_id=p.target AND site_id=p.site AND coalesce(detail->'plan'->>'state','completed')='completed')
  SELECT jsonb_build_object('viewerCount',viewer_count,'visits',owner_count,'months',months,'dives',dives,'minutes',minutes,'typicalDepth',depths[cardinality(depths)/2+1]) FROM visits CROSS JOIN sessions" \newline \space))
 
 (defn.pg ^{:- [:jsonb]} ret-profile-statistics [:uuid i-user :uuid i-target :uuid i-site]
@@ -57,3 +57,16 @@
     (return (pg/jsonb-build-object "profile" o-public "level" v-level "stats" o-stats
               "progress" (least (@! contracts/REGULAR-DAYS) (:int (:->> o-counts "viewerCount"))) "sharingClosed" (not (pg/coalesce v-open false))
               "expiresWithActivity" (not v-connected)))))
+
+(defn.pg ^{:- [:jsonb]} ret-profile-by-handle [:text i-handle]
+  (let [(:text v-handle) (pg/lower (pg/btrim (pg/coalesce i-handle "")))
+        o-user nil o-profile nil o-sessions (:jsonb "[]")]
+    (when (not (#{"regexp_like"} v-handle "^[a-z0-9][a-z0-9_-]{1,38}[a-z0-9]$")) (return nil))
+    (if (#{"regexp_like"} v-handle "^diver-[0-9a-f]{32}$")
+      (let [o-default (pg/t:get users/User {:where {:id (:uuid (#{"substring"} v-handle 7)) :deleted false} :returning #{:id :handle}})] (:= o-user o-default))
+      (let [o-custom (pg/t:get users/User {:where {:handle v-handle :deleted false} :returning #{:id :handle}})] (:= o-user o-custom)))
+    (when (or [o-user :is-null] (not= v-handle (account/profile-handle (:uuid (:->> o-user "id")) (:->> o-user "handle")))) (return nil))
+    (:= o-profile (logbook/ret-public-profile (:uuid (:->> o-user "id"))))
+    (when (not (pg/coalesce (:boolean (:->> o-profile "restricted")) true))
+      (:= o-sessions (:-> (logbook/ret-public-sessions (pg/jsonb-build-object "owner" (:->> o-user "id") "publicOnly" true)) "sessions")))
+    (return (|| o-profile (pg/jsonb-build-object "sessions" o-sessions)))))

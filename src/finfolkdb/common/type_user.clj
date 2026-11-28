@@ -32,7 +32,8 @@
                         :access :none
                         :addons [:rev :audit :activity]})}
   User
-  [:profile         {:type :jsonb :required true
+  [:handle          {:type :text :sql {:unique ["public_handle"]}}
+   :profile         {:type :jsonb :required true
                      :sql {:default "{}"}}
    :deleted         {:type :boolean :required true
                      :sql {:default false}}
@@ -43,7 +44,11 @@
    :joined-at       {:type :long :required true
                      :sql {:default (pg/time-us)}}
    :time-updated    {:type :long :required true
-                     :sql {:default (pg/time-us)}}])
+                     :sql {:default (pg/time-us)}}]
+  {:constraints {:canonical-public-handle
+    (or [#{"handle"} :is-null]
+        (and (== #{"handle"} (pg/lower #{"handle"}))
+             (#{"regexp_like"} #{"handle"} "^[a-z0-9][a-z0-9_-]{1,38}[a-z0-9]$")))}})
 
 ;;
 ;; User Relationships

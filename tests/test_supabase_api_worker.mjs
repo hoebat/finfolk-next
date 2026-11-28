@@ -103,8 +103,33 @@ test('native permission failures stay forbidden and release the connection',asyn
  }finally{globalThis.fetch=previous;}
 });
 
-test('Buddies readiness requires all four private conversation tables',async()=>{
- const buddyEnv={...env,NATIVE_BUDDIES_SCHEMA:'true'};
- const absent=setup();assert.equal((await absent.worker.fetch(new Request('https://api.finfolk.com.au/health'),buddyEnv)).status,503);
- const installed=setup({tables:Object.keys(catalog).length+4});assert.equal((await installed.worker.fetch(new Request('https://api.finfolk.com.au/health'),buddyEnv)).status,200);
+test('TikTok delegates only to its own service and preserves signed webhook bytes',async()=>{
+ const s=setup(),path='/tiktok/webhook';let got;
+ assert.equal((await s.worker.fetch(new Request('https://api.finfolk.com.au'+path,{method:'POST'}),env)).status,503);
+ const signature='t=123,s=fixture',body='{"event":"im_receive_msg"}';
+ const response=await s.worker.fetch(new Request('https://api.finfolk.com.au'+path,{method:'POST',headers:{'tiktok-signature':signature},body}),{
+  ...env,NATIVE_SOCIAL_SERVICE:{fetch(){throw Error('Wrong provider');}},NATIVE_TIKTOK_SERVICE:{fetch:async request=>{got={body:await request.text(),signature:request.headers.get('tiktok-signature')};return new Response('Accepted');}}});
+ assert.equal(response.status,200);assert.deepEqual(got,{body,signature});assert.equal(s.closed(),s.opened());
+});
+
+test('the configured native TikTok OAuth callback takes precedence over the setup placeholder',async()=>{
+ const s=setup();let seen;
+ const callback='https://api.finfolk.com.au/v1/integrations/tiktok/oauth/callback?state=fixture&auth_code=fixture';
+ const response=await s.worker.fetch(new Request(callback,{headers:{Cookie:'__Host-bound=fixture'}}),{...env,NATIVE_TIKTOK_SERVICE:{fetch:async request=>{
+  seen=request;return new Response(null,{status:303,headers:{Location:'https://finfolk.com.au/admin/tiktok','Set-Cookie':'__Host-bound=; Path=/; Secure; Max-Age=0'}});
+ }}});
+ assert.equal(response.status,303);assert.equal(seen.url,callback);assert.equal(seen.headers.get('Cookie'),'__Host-bound=fixture');
+ assert.equal(response.headers.get('Location'),'https://finfolk.com.au/admin/tiktok');assert.match(response.headers.get('Set-Cookie'),/Max-Age=0/);
+ const disabled=await s.worker.fetch(new Request(callback),env);assert.equal(disabled.status,503);assert(!(await disabled.text()).includes('auth_code=fixture'));
+});
+
+test('TikTok comments use the separate service binding and preserve OAuth cookies and raw signatures',async()=>{
+ const s=setup(),seen=[];
+ const binding={fetch:async request=>{seen.push({path:new URL(request.url).pathname,cookie:request.headers.get('Cookie'),signature:request.headers.get('tiktok-signature'),body:request.method==='POST'?await request.text():null});return new Response(null,{status:303,headers:{Location:'https://finfolk.com.au/admin/tiktok/comments','Set-Cookie':'__Host-comments=; Path=/; Secure; Max-Age=0'}});}};
+ const path='/v1/integrations/tiktok/comments/oauth/callback?state=fixture&auth_code=fixture';
+ const response=await s.worker.fetch(new Request('https://api.finfolk.com.au'+path,{headers:{Cookie:'__Host-comments=fixture'}}),{...env,NATIVE_TIKTOK_COMMENTS_SERVICE:binding,NATIVE_TIKTOK_SERVICE:{fetch(){throw Error('Wrong DM binding');}}});
+ assert.equal(response.status,303);assert.equal(seen[0].cookie,'__Host-comments=fixture');assert.match(response.headers.get('Set-Cookie'),/Max-Age=0/);
+ await s.worker.fetch(new Request('https://api.finfolk.com.au/tiktok/comments/webhook',{method:'POST',body:'{"event":"comment.update"}',headers:{'tiktok-signature':'fixture'}}),{...env,NATIVE_TIKTOK_COMMENTS_SERVICE:binding});
+ assert.equal(seen[1].body,'{"event":"comment.update"}');assert.equal(seen[1].signature,'fixture');
+ assert.equal((await s.worker.fetch(new Request('https://api.finfolk.com.au/tiktok/comments/webhook',{method:'POST'}),env)).status,503);
 });

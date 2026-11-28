@@ -15,7 +15,7 @@
 (fact "the registry retains every owning group declaration without collisions"
   (let [groups [finfolk-web.groups.events/OPERATIONS finfolk-web.groups.directory/OPERATIONS
                 finfolk-web.groups.admin/OPERATIONS finfolk-web.groups.community/OPERATIONS
-                finfolk-web.groups.instagram/OPERATIONS finfolk-web.groups.invitations/OPERATIONS
+                finfolk-web.groups.instagram/OPERATIONS finfolk-web.groups.tiktok/OPERATIONS finfolk-web.groups.invitations/OPERATIONS
                 finfolk-web.groups.logbook/OPERATIONS finfolk-web.groups.member/OPERATIONS
                 finfolk-web.groups.posts/OPERATIONS finfolk-web.groups.trips/OPERATIONS
                 finfolk-web.groups.sites/OPERATIONS finfolk-web.groups.finnies/OPERATIONS

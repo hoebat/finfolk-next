@@ -73,7 +73,7 @@ try {
  assert.equal((await api.fetch(new Request('http://local.test/v1/native/account'))).status,503);
  assert.equal(routed.status,200);assert.equal((await routed.json()).id,users[0].id);
  const first=await(await account(request(users[0].access_token))).json();
- assert.deepEqual(first,{id:users[0].id,profile:{displayName:'Diver'},verified:true});
+ assert.deepEqual(first,{id:users[0].id,profile:{displayName:'',open:false,sharing:{},profileSetup:{version:1,step:0,status:'pending',nameConfirmed:false}},verified:true,profileSuggestions:{provider:'email'}});
  assert.deepEqual(await(await account(request(users[0].access_token))).json(),first);
  const concurrent=await Promise.all(Array.from({length:3},()=>account(request(users[1].access_token))));
  assert.ok(concurrent.every(response=>response.status===200));
@@ -85,6 +85,9 @@ try {
   return account(new Request('http://local.test/account',{method:'POST',headers:{Authorization:'Bearer '+user.access_token,'Content-Type':'application/json'},body:JSON.stringify({operation,values})}));
  }
  async function publicOperation(operation,values={},token){return account(new Request('http://local.test/account',{method:'POST',headers:{'Content-Type':'application/json',...(token?{Authorization:'Bearer '+token}:{})},body:JSON.stringify({operation,values})}));}
+ const setup=await operation(users[0],'profileSetup',{profile:{displayName:'Native chosen name'},step:1,status:'pending'});assert.equal(setup.status,200);assert.equal((await setup.json()).profile.profileSetup.nameConfirmed,true);
+ const otherBefore=await(await operation(users[1],'me')).json();assert.equal(otherBefore.profile.displayName,'');
+ const deferred=await operation(users[0],'profileSetup',{profile:{},step:1,status:'deferred'});assert.equal(deferred.status,200);assert.equal((await(await operation(users[0],'me')).json()).profile.profileSetup.status,'deferred');
  const initialStatus=await(await operation(users[0],'postStatus')).json();assert.equal(initialStatus.admin,false,'User-editable Auth metadata must not grant application roles');assert.equal(initialStatus.enabled,false);
  await db.query('INSERT INTO finfolk."UserRole"(user_id,role) VALUES($1,$2)',[users[0].id,'admin']);
  assert.equal((await(await operation(users[0],'postStatus')).json()).admin,true);

@@ -47,3 +47,15 @@
    "pageInviteRedeem" (op "invite-redeem" (object {:token S} ["token"]) ID true)
    "pageInviteRevoke" (op "invite-revoke" (object {:id U :invite U} ["id" "invite"]) E true)
    "pageAdminRemove" (op "admin-remove" (object {:id U :user U} ["id" "user"]) E true)})
+
+(def NULL-N {:type ["number" "null"]})
+(def IG-SOURCE (object {:id U :handle S :enabled B :publicEnabled B :status S :revision N :lastChecked NULL-N :lastSuccess NULL-N :lastError S} ["id" "handle" "enabled" "publicEnabled" "status" "revision" "lastChecked" "lastSuccess" "lastError"]))
+(def IG-POST (object {:id U :sourceId U :handle S :caption S :permalink S :mediaType S :publishedAt N :capturedAt N :state S} ["id" "sourceId" "handle" "caption" "permalink" "mediaType" "publishedAt" "capturedAt" "state"]))
+(def IG-FEED (object {:accounts (array-of IG-SOURCE) :handles (array-of S) :items (array-of IG-POST) :next {:type ["string" "null"]}} ["accounts" "handles" "items" "next"]))
+(def IG-QUERY (object {:id U :after {:type ["string" "null"]} :limit N :q S} ["id"]))
+(def OPERATIONS (merge OPERATIONS
+ {"publicPageInstagram" (op "instagram-public" IG-QUERY IG-FEED false true)
+  "pageInstagramManage" (op "instagram-manage" IG-QUERY IG-FEED false)
+  "pageInstagramSave" (op "instagram-save" (object {:id U :handle S :enabled B :publicEnabled B :expected N} ["id" "handle" "enabled" "publicEnabled" "expected"]) (object {:id U :revision N} ["id" "revision"]) true)
+  "pageInstagramRefresh" (op "instagram-refresh" ID (object {:ok B} ["ok"]) true)
+  "pageInstagramReview" (op "instagram-review" (object {:id U :post U :state {:type "string" :enum ["pending" "published" "hidden"]}} ["id" "post" "state"]) ID true)}))

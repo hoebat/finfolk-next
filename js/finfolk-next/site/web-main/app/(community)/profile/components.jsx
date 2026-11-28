@@ -1,10 +1,15 @@
 'use client';
-import {useState} from 'react';
+import {useLayoutEffect,useState} from 'react';
+import {portraitBlob,validPortrait} from '../../../lib/portrait-source.js';
 import {useFeatureFlags} from '../../feature-flags.jsx';
 import {pageActions} from '../../../lib/page-models.js';
 import {socialURL} from '../../../src/profile-model.js';
 export function standardPortrait(id){let hash=2166136261;for(const c of String(id||'')){hash^=c.charCodeAt(0);hash=Math.imul(hash,16777619);}return '/demo-'+['alex','maya','kai'][(hash>>>0)%3]+'.webp';}
-export function Portrait({member}){const fallback=standardPortrait(member.id||member.displayName),valid=typeof member.portrait==='string'&&member.portrait.length<=65558&&/^data:image\/(webp|jpeg);base64,[A-Za-z0-9+/]+=*$/.test(member.portrait);return <div className="person-portrait"><img src={valid?member.portrait:fallback} alt={valid?'Profile portrait for '+member.displayName:'Default illustrated profile avatar'} width={900} height={1125} loading="lazy" onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src=fallback;}}/></div>}
+export function Portrait({member}){
+ const fallback=standardPortrait(member.id||member.displayName),valid=validPortrait(member.portrait),[source,setSource]=useState(null);
+ useLayoutEffect(()=>{if(!valid){setSource(null);return;}let url;try{url=URL.createObjectURL(portraitBlob(member.portrait));setSource(url);}catch{setSource(fallback);}return()=>{if(url)URL.revokeObjectURL(url)};},[member.portrait,valid,fallback]);
+ return <div className="person-portrait">{valid&&!source?<span className="portrait-loading" aria-label="Loading portrait"/>:<img src={valid?source:fallback} alt={valid?'Profile portrait for '+member.displayName:'Default illustrated profile avatar'} width={900} height={1125} loading="lazy" onError={e=>{e.currentTarget.onerror=null;e.currentTarget.src=fallback;}}/>}</div>;
+}
 export function Socials({member}){return <div className="profile-socials">{['instagram','tiktok'].map(platform=>{const url=socialURL(member[platform],platform);return url?<a key={platform} href={url} target="_blank" rel="noopener noreferrer">{platform==='instagram'?'Instagram':'TikTok'} ↗</a>:null;})}</div>}
 export function Heading({eyebrow,title,children}){return <div className="profile-heading-row"><div><p className="profile-eyebrow">{eyebrow}</p><h1>{title}</h1><p className="profile-lede">{children}</p></div></div>}
 export function Guest(){return <section className="profile-guest"><img className="brand-wordmark" src="/finfolk-wordmark.svg" width={280} alt="FinFolk"/><h2>Your FinFolk profile.</h2><p>Sign in to edit your profile, share published logs and manage your connections.</p><a className="profile-action" href="/account">Sign in or create an account ↗</a></section>}

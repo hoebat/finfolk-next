@@ -11,6 +11,7 @@
    :config (local/config)
    :require [[postgres.core :as pg]
              [finfolkdb.common.type-system-base :as system]
+             [finfolkdb.common.type-user :as users]
              [finfolkdb.common.type-messaging-base :as messaging]
              [finfolkdb.common.type-messaging-delivery :as delivery]
              [finfolkdb.common.type-social-workflow :as workflow]
@@ -18,6 +19,7 @@
              [finfolkdb.fn.social.social-events :as events]
              [finfolkdb.fn.user.user-manage :as fixture-user]
              [finfolkdb.fn.social.social-connections :as connections]
+             [finfolkdb.fn.social.social-interop :as interop]
              [finfolkdb.fn.social.social-actions :as actions]]})
 (fact:global {:setup [(local/prepare!) (l/rt:restart) (l/rt:teardown :postgres)
                       (l/rt:setup :postgres)]
@@ -394,3 +396,21 @@
         {:where {:id (:id action)} :set {:account (:account-id foreign-event)} :track (op)}))
     =>
     "23503"))
+
+
+(fact "redemption-http-001: preflight requires verified identity and fences provider evidence"
+  (let [fx (inbox) member (member!) event (connect! fx) work (prepare! fx)]
+    (pg/t:update users/User {:where {:id member} :set {:email-verified true}})
+    (complete fx work "success" (material "FRESH123"))
+    (let [snapshot (interop/prepare-social-redemption (:application fx) (:inbox fx) member "FRESH123" (token-hash "ip") (op))
+          wire {:proofId (:proof-id snapshot) :provider (:provider snapshot) :namespace (:namespace snapshot)
+                :externalId (:external-id snapshot) :conversationId (:conversation-id snapshot) :generation (:generation snapshot)
+                :accountGeneration (:account-generation snapshot) :checkedAt (:checked-at snapshot)}
+          proof {:provider (:provider snapshot) :namespace (:namespace snapshot) :externalId (:external-id snapshot) :eligible false}]
+      (some? snapshot) => true
+      (:conversation-id snapshot) => "thread"
+      (interop/complete-social-redemption (:application fx) (:inbox fx) member "FRESH123" (json/write (assoc wire :conversationId "foreign-thread")) (json/write (assoc proof :eligible true)) (op)) => nil
+      (interop/complete-social-redemption (:application fx) (:inbox fx) member "FRESH123" (json/write wire) (json/write proof) (op)) => nil
+      (some? (interop/complete-social-redemption (:application fx) (:inbox fx) member "FRESH123" (json/write wire) (json/write (assoc proof :eligible true)) (op))) => true
+      (:replayed (interop/complete-social-redemption (:application fx) (:inbox fx) member "FRESH123" (json/write wire) (json/write (assoc proof :eligible true)) (op))) => true
+      (:replayed (interop/prepare-social-redemption (:application fx) (:inbox fx) member "FRESH123" (token-hash "ip") (op))) => true)))

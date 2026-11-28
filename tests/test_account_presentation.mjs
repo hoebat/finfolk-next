@@ -1,0 +1,16 @@
+import assert from 'node:assert/strict';
+import {createAccountPresentation} from '../js/finfolk-next/site/web-main/lib/account-presentation.js';
+import {portraitBlob} from '../js/finfolk-next/site/web-main/lib/portrait-source.js';
+const values=new Map(),storage={getItem:key=>values.get(key)||null,setItem:(key,value)=>values.set(key,value),removeItem:key=>values.delete(key)};
+let now=1000,updates=0;const create=()=>createAccountPresentation({storage:()=>storage,now:()=>now}),store=create();store.subscribe(()=>updates++);
+assert.equal(store.getServerSnapshot(),null);assert.equal(store.getSnapshot(),null);
+store.save('alice',{displayName:'Alice',portrait:'',bio:'PRIVATE BIO',email:'PRIVATE EMAIL',sharing:{visits:true}});
+assert.deepEqual(Object.keys(store.getSnapshot()).sort(),['actor','at','displayName','portrait']);assert(!JSON.stringify([...values]).includes('PRIVATE'));
+assert.equal(create().getSnapshot().displayName,'Alice','A full document reload restores presentation without an account request');
+store.save('alice',{displayName:'Alice',portrait:''});assert.equal(updates,1,'Identical live snapshots do not trigger render/write loops');
+store.save('bob',{displayName:'Bob',portrait:''});store.clear('alice');assert.equal(store.getSnapshot().actor,'bob','A late sign-out from another actor cannot clear Bob');
+store.clear('bob');assert.equal(create().getSnapshot(),null);
+store.save('alice',{displayName:'Alice',portrait:''});now+=8*86400000;assert.equal(create().getSnapshot(),null,'Expired presentation must not survive indefinitely');
+const blocked=createAccountPresentation({storage(){throw Error('Storage unavailable')}});assert.doesNotThrow(()=>{blocked.getSnapshot();blocked.save('alice',{displayName:'Alice'});blocked.clear()});
+const blob=portraitBlob('data:image/jpeg;base64,/9j/2Q==');assert.equal(blob.type,'image/jpeg');assert.deepEqual([...new Uint8Array(await blob.arrayBuffer())],[255,216,255,217]);assert.equal(portraitBlob('data:image/svg+xml;base64,PHN2Zz4='),null);assert.equal(portraitBlob('/demo-alex.webp'),null);
+console.log('ACCOUNT_PRESENTATION_PASS: reload restoration, metadata-only cache, stable snapshots, actor-scoped clearing, expiry, blocked storage and compact portrait bytes.');

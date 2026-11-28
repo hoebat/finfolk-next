@@ -13,26 +13,26 @@ export function createSupabaseWorker({openDatabase=database}={}) {
   const reviewedPreview=origin===env.FINFOLK_PREVIEW_ORIGIN&&/^https:\/\/[a-f0-9]{24}--finfolk\.netlify\.app$/.test(origin||'');
   if(origin&&!origins.has(origin)&&!reviewedPreview)return Response.json({error:'Origin not allowed'},{status:403});
   const headers={'Cache-Control':'private, no-store',Vary:'Origin',...(origin?{'Access-Control-Allow-Origin':origin,'Access-Control-Allow-Credentials':'true'}:{}),
-   'Access-Control-Allow-Headers':'Authorization, Content-Type, Idempotency-Key','Access-Control-Allow-Methods':'GET, POST, OPTIONS'};
+   'Access-Control-Allow-Headers':'Authorization, Content-Type, Idempotency-Key, X-FinFolk-Profile-Setup, If-None-Match','Access-Control-Allow-Methods':'GET, POST, OPTIONS'};
   if(request.method==='OPTIONS')return new Response(null,{status:204,headers});
   if(['GET','HEAD'].includes(request.method)){
    const publication=publicPage(new URL(request.url).pathname);
-   if(publication)return new Response(request.method==='HEAD'?null:publication.body,{status:publication.status,headers:new Headers([...publication.headers,...new Headers(headers)])});
+   const nativeTikTokCallback=new URL(request.url).pathname==='/v1/integrations/tiktok/oauth/callback'&&env.NATIVE_TIKTOK_SERVICE?.fetch;
+   if(publication&&!nativeTikTokCallback)return new Response(request.method==='HEAD'?null:publication.body,{status:publication.status,headers:new Headers([...publication.headers,...new Headers(headers)])});
   }
   let db;
   try{
    if(env.ENVIRONMENT!=='production'||env.SUPABASE_URL!=='https://supabase.finfolk.com.au'||
       !env.SUPABASE_PUBLISHABLE_KEY||!env.SUPABASE_DB?.connectionString||!/^[a-f0-9]{64}$/.test(env.NATIVE_SCHEMA_SHA||''))
     throw Error('Native backend configuration is incomplete');
-   const requiredTables=[...Object.keys(catalog),...(env.NATIVE_BUDDIES_SCHEMA==='true'?['BuddyConversation','BuddyMembership','BuddyMessage','BuddyRead']:[])];
    db=openDatabase(env.SUPABASE_DB.connectionString);
    const check=(await db.query(`SELECT current_database() AS database,
     (SELECT count(*)::int FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace WHERE n.nspname='finfolk' AND c.relkind IN ('r','p') AND c.relname=ANY($2::text[])) AS tables,
-    EXISTS(SELECT 1 FROM finfolk."DatabaseRelease" WHERE key=$1 AND manifest->>'schema_sha'=$1) AS installed`,[env.NATIVE_SCHEMA_SHA,requiredTables]))[0];
-   if(check?.database!=='postgres'||check.tables!==requiredTables.length||check.installed!==true)
+    EXISTS(SELECT 1 FROM finfolk."DatabaseRelease" WHERE key=$1 AND manifest->>'schema_sha'=$1) AS installed`,[env.NATIVE_SCHEMA_SHA,Object.keys(catalog)]))[0];
+   if(check?.database!=='postgres'||check.tables!==Object.keys(catalog).length||check.installed!==true)
     throw Error('Native database release mismatch');
    const app=new Hono();
-   app.use('*',async(c,next)=>{for(const [key,value]of Object.entries(headers))c.header(key,value);await next();});
+   app.use('*',async(c,next)=>{for(const [key,value]of Object.entries(headers))if(!(key==='Cache-Control'&&c.req.method==='GET'&&['/v1/native/sites/catalog','/v1/sites/catalog'].includes(c.req.path)))c.header(key,value);c.header('Access-Control-Expose-Headers','ETag');await next();});
    for(const path of ['/instagram/webhook','/v1/messaging/webhooks/finfolk-instagram','/v1/me/instagram','/v1/me/instagram/connect','/v1/me/instagram/disconnect','/v1/messaging/connections/finfolk-instagram/*','/v1/integrations/instagram/oauth/callback'])
     app.all(path,async c=>{
      if(!env.NATIVE_SOCIAL_SERVICE?.fetch)return c.json({error:'Instagram connection unavailable',code:'social_unavailable'},503);
@@ -40,12 +40,26 @@ export function createSupabaseWorker({openDatabase=database}={}) {
      for(const [key,value]of Object.entries(headers))forwarded.set(key,value);
      return new Response(response.body,{status:response.status,statusText:response.statusText,headers:forwarded});
     });
+   for(const path of ['/tiktok/webhook','/v1/messaging/webhooks/finfolk-tiktok','/v1/me/tiktok','/v1/me/tiktok/connect','/v1/me/tiktok/disconnect','/v1/messaging/connections/finfolk-tiktok/*','/v1/integrations/tiktok/oauth/callback'])
+    app.all(path,async c=>{
+     if(!env.NATIVE_TIKTOK_SERVICE?.fetch)return c.json({error:'TikTok connection unavailable',code:'social_unavailable'},503);
+     const response=await env.NATIVE_TIKTOK_SERVICE.fetch(c.req.raw),forwarded=new Headers(response.headers);
+     for(const [key,value]of Object.entries(headers))forwarded.set(key,value);
+     return new Response(response.body,{status:response.status,statusText:response.statusText,headers:forwarded});
+    });
+   for(const path of ['/tiktok/comments/webhook','/v1/messaging/connections/finfolk-tiktok-comments/*','/v1/integrations/tiktok/comments/oauth/callback'])
+    app.all(path,async c=>{
+     if(!env.NATIVE_TIKTOK_COMMENTS_SERVICE?.fetch)return c.json({error:'TikTok comments unavailable',code:'social_unavailable'},503);
+     const response=await env.NATIVE_TIKTOK_COMMENTS_SERVICE.fetch(c.req.raw),forwarded=new Headers(response.headers);
+     for(const [key,value]of Object.entries(headers))forwarded.set(key,value);
+     return new Response(response.body,{status:response.status,statusText:response.statusText,headers:forwarded});
+    });
    const flags=registerFeatureFlags(app,{db,verify:async()=>{throw Error('Supabase identity required');}});
    app.get('/health',c=>c.json({ready:true,service:'FinFolk API',databaseProvider:'supabase',schemaSha:env.NATIVE_SCHEMA_SHA}));
-   app.get('/v1/native/sites/catalog',c=>nativeAccountSites(db.query));
+   app.get('/v1/native/sites/catalog',c=>nativeAccountSites(db.query,c.req.raw));
    // Stable public URLs also serve the map's initial, anonymous bootstrap.
    // Both routes use the same native Clojure functions as the account client.
-   app.get('/v1/sites/catalog',async c=>c.json(await createNativeRPC(db.query)('native_public_site_catalog',[])));
+   app.get('/v1/sites/catalog',c=>nativeAccountSites(db.query,c.req.raw,'native_public_site_catalog'));
    app.get('/v1/discover/popular',async c=>c.json(await createNativeRPC(db.query)('native_public_popular',[])));
    app.all('/v1/native/account',c=>createNativeAccount({
     assertFeature:(operation,request)=>flags.assertNative(operation,request,env),
