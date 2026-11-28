@@ -1,4 +1,4 @@
-import {checkFanOut} from './fixtures/fan-out-navigation.mjs';
+import {checkFanOut,checkActionFan} from './fixtures/fan-out-navigation.mjs';
 import assert from 'node:assert/strict';
 import {readdir,readFile,mkdir,writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -48,9 +48,10 @@ try{
    await expect(menu.getByRole('radio')).toHaveCount(0);await expect(menu.getByRole('link',{name:'Settings',exact:true})).toHaveCount(0);
    await page.keyboard.press('Escape');await expect(menu).toBeHidden();await expect(toggle).toBeFocused();
    const avatar=host.getByRole('button',{name:'Open account menu',exact:true});await avatar.click();await expect(menu.getByRole('link',{name:guest?'Sign in':'Settings',exact:true})).toBeVisible();
+   await checkActionFan(page,host,'account','.ff-avatar-toggle');
    for(const label of ['View profile','Complete profile','Platform status','How FinFolk works'])await expect(menu.getByText(label,{exact:true})).toHaveCount(0);
    await page.keyboard.press('Escape');await expect(avatar).toBeFocused();
-   const context=host.getByRole('button',{name:'Open page options',exact:true});await context.click();const group=menu.getByRole('radio',{name:'Night Swim',exact:true});await group.check();await expect(group).toBeChecked();await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
+   const context=host.getByRole('button',{name:'Open page options',exact:true});await context.click();await checkActionFan(page,host,'context','.ff-context-toggle');await menu.getByRole('button',{name:'Appearance',exact:true}).click();const group=menu.getByRole('radio',{name:'Night Swim',exact:true});await group.check();await expect(group).toBeChecked();await checkActionFan(page,host,'themes','.ff-context-toggle');await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
    await page.keyboard.press('Escape');await expect(menu).toBeHidden();await expect(context).toBeFocused();
    if(['/','/map','/account/settings','/community','/admin','/navigation-fixture-not-found'].includes(path))await page.screenshot({path:resolve(out,'screen-'+(guest?'guest-':'member-')+(path==='/'?'home':path.slice(1).replaceAll('/','-'))+'.png')});

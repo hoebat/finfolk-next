@@ -66,3 +66,29 @@ nav.ff-primary-nav.ff-mobile-destinations{display:none!important}
  .ff-fan-destinations .ff-nav-item{animation:ff-fan-out .22s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--fan-delay)}
  @keyframes ff-fan-out{from{opacity:0;transform:translate(0,0) scale(.5)}to{opacity:1;transform:translate(var(--fan-x),var(--fan-y)) scale(1)}}
 }
+/* Avatar and context actions use the same fan, rooted at their own controls. */
+@media(max-width:900px){
+ :root[data-theme] .ff-mobile-navigation nav.ff-layered-menu[data-fan=true]{bottom:0!important;width:min(288px,calc(100vw - 32px));height:260px;max-height:none;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;pointer-events:none;animation:none}
+ .ff-floating-controls nav[data-fan=true]>.ff-menu-heading{display:none}
+ .ff-floating-controls:has(nav[data-fan=true]) :is(.ff-account-widget,.ff-primary-fab){position:relative;z-index:2}
+ .ff-floating-controls nav[data-fan-origin=account]{--fan-origin-right:118px}
+ .ff-floating-controls nav[data-fan-origin=context]{--fan-origin-right:66px}
+ :root[data-theme] .ff-floating-controls nav[data-fan=true] .ff-action-fan{box-sizing:border-box;position:absolute;inset:auto var(--fan-origin-right) 4px auto;display:block;width:48px;height:48px;min-height:48px;margin:0;padding:0;border:0;overflow:visible;pointer-events:none}
+ :root[data-theme] .ff-floating-controls nav[data-fan=true] .ff-fan-action{box-sizing:border-box;position:absolute;inset:0;display:flex;align-items:center;justify-content:center;width:48px;min-width:48px;height:48px;min-height:48px;margin:0;padding:12px;border:1px solid var(--account-line);border-radius:50%;background:var(--account-surface);color:var(--account-ink);box-shadow:0 4px 16px #0002;text-decoration:none;transform:translate(var(--fan-x),var(--fan-y));pointer-events:auto;cursor:pointer}
+ .ff-floating-controls nav[data-fan=true] .ff-fan-action>svg{width:22px;height:22px;flex:none}
+ :root[data-theme] .ff-floating-controls nav[data-fan=true] .ff-fan-action>.ff-fan-caption{position:absolute;top:50%;left:50%;width:max-content;max-width:84px;margin:0;padding:4px 7px;border:1px solid var(--account-line);border-radius:8px;background:var(--account-surface);color:var(--account-ink)!important;box-shadow:0 2px 8px #0001;font:600 11px/14px Avenir,Arial,sans-serif;white-space:nowrap;transform:translate(calc(-50% + var(--fan-label-x)),calc(-50% + var(--fan-label-y)))}
+ :root[data-theme] .ff-floating-controls .ff-fan-action:focus-visible,:root[data-theme] .ff-floating-controls .ff-fan-action:has(:focus-visible){outline:2px solid var(--account-accent);outline-offset:2px}
+ :root[data-theme] .ff-floating-controls .ff-fan-action:disabled{opacity:.6;cursor:wait}
+ :root[data-theme] .ff-floating-controls .ff-fan-back{position:absolute;right:calc(var(--fan-origin-right) + 2px);bottom:72px;display:flex;align-items:center;justify-content:center;box-sizing:border-box;width:44px;min-height:44px;height:44px;padding:11px;border:1px solid var(--account-line);border-radius:50%;background:var(--account-surface)!important;color:var(--account-ink)!important;pointer-events:auto;cursor:pointer}
+ .ff-fan-back svg{width:20px;height:20px}
+ :root[data-theme] nav[data-fan=true] .ff-theme-fan{position:static;margin:0;padding:0;border:0}
+ .ff-theme-fan legend{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+ :root[data-theme] .ff-floating-controls .ff-theme-fan .ff-menu-theme-swatch{position:absolute;inset:4px;width:38px;height:38px;border-radius:50%}
+ :root[data-theme] .ff-floating-controls .ff-theme-fan .ff-menu-theme-check{position:absolute;inset:14px auto auto 14px;box-sizing:content-box;width:16px;height:16px;padding:1px;border-radius:50%;background:var(--account-surface);color:var(--account-ink)}
+ :root[data-theme] .ff-floating-controls .ff-theme-fan .ff-fan-action:has(:checked){border-color:var(--account-ink);box-shadow:0 0 0 2px var(--account-ink)}
+ :root[data-theme] .ff-floating-controls nav[data-fan=true]>.ff-menu-error,
+ :root[data-theme] .ff-floating-controls nav[data-fan=true] .ff-theme-fan>.ff-menu-theme-feedback:not(.ff-visually-hidden){position:fixed;top:calc(16px + env(safe-area-inset-top));bottom:auto;left:16px;right:16px;max-width:none;padding:10px;border-radius:10px;background:var(--account-surface);pointer-events:auto}
+}
+@media(max-width:900px) and (prefers-reduced-motion:no-preference){.ff-floating-controls .ff-action-fan>.ff-fan-action{animation:ff-fan-out .22s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--fan-delay)}}
+
+@media(max-width:900px){:root[data-theme] .ff-floating-controls nav[data-fan=true] .ff-fan-action:is(:hover,:active){transform:translate(var(--fan-x),var(--fan-y))!important}}
