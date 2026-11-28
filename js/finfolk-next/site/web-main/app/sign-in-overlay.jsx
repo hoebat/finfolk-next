@@ -5,6 +5,7 @@ import {useSession} from '../lib/use-session.js';
 import GuestAccount from './(atlas)/account/guest.jsx';
 import {accountReturnDestination} from './(atlas)/account/routing.js';
 import './sign-in-overlay.css';
+import {observeSignInRequests} from '../lib/sign-in-request.js';
 const RETURN_KEY='finfolk:sign-in-return';
 export default function SignInOverlay(){
  const session=useSession(),router=useRouter(),path=usePathname(),query=useSearchParams(),[active,setActive]=useState(null),opener=useRef(null);
@@ -16,7 +17,8 @@ export default function SignInOverlay(){
   setActive({creating:url.searchParams.get('mode')==='create'||url.searchParams.get('signin')==='create',target:accountReturnDestination(url.searchParams.get('returnTo'))||accountReturnDestination(current.pathname+current.search+current.hash)||'/map',query:!!url.searchParams.get('signin')});
  }
  function close(){sessionStorage.removeItem(RETURN_KEY);const previous=opener.current;setActive(null);if(queryMode){const url=new URL(location.href);url.searchParams.delete('signin');url.searchParams.delete('returnTo');router.replace(url.pathname+url.search+url.hash,{scroll:false});}requestAnimationFrame(()=>{const target=previous?.element?.isConnected?previous.element:previous?.owner?.isConnected?previous.owner.querySelector('.ff-avatar-toggle'):null;target?.focus();});}
- useEffect(()=>{const click=event=>{if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||session.user)return;const anchor=event.target.closest?.('a[href]');if(!anchor||anchor.download||anchor.target&&anchor.target!=='_self')return;const url=new URL(anchor.href,location.href);if(url.origin!==location.origin||url.pathname!=='/account'||url.searchParams.has('token')||url.hash)return;event.preventDefault();event.stopPropagation();open(url,anchor);};document.addEventListener('click',click,true);return()=>document.removeEventListener('click',click,true);},[session.user]);
+ useEffect(()=>{const click=event=>{if(event.defaultPrevented||event.button!==0||event.metaKey||event.ctrlKey||event.shiftKey||event.altKey||session.user)return;const anchor=event.target.closest?.('a[href]');if(!anchor||anchor.hasAttribute('data-signin-direct')||anchor.download||anchor.target&&anchor.target!=='_self')return;const url=new URL(anchor.href,location.href);if(url.origin!==location.origin||url.pathname!=='/account'||url.searchParams.has('token')||url.hash)return;event.preventDefault();event.stopPropagation();open(url,anchor);};document.addEventListener('click',click,true);return()=>document.removeEventListener('click',click,true);},[session.user]);
+ useEffect(()=>observeSignInRequests(({href,element})=>{if(!session.user)open(new URL(href,location.href),element);}),[session.user]);
  useEffect(()=>{if(queryMode&&!session.user&&!session.user?.recovery)open(new URL(location.href),document.activeElement);},[queryMode,path,session.user?.uid]);
  useEffect(()=>{if(!session.user||session.user.recovery)return;if(active){const target=active.target;close();if(target!==location.pathname+location.search+location.hash)router.replace(target,{scroll:false});return;}if(path==='/account'){let saved;try{saved=JSON.parse(sessionStorage.getItem(RETURN_KEY));sessionStorage.removeItem(RETURN_KEY);}catch{}if(saved&&Date.now()-saved.at<30*60*1000){const target=accountReturnDestination(saved.target);if(target)router.replace(target);}}},[session.user?.uid,session.user?.recovery,active,path]);
  useEffect(()=>{if(active&&!queryMode)close();},[path,query.toString()]);

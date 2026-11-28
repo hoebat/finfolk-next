@@ -2,6 +2,7 @@
 import './account-widget.css';
 import './mobile-navigation.css';
 import {fanPosition} from './fan-position.js';
+import {requestSignIn} from '../lib/sign-in-request.js';
 import {accountPresentation,requestedPresentationActor} from '../lib/account-presentation.js';
 import BuddyBadge from './buddy-badge.jsx';
 import ThemeSettings from './(atlas)/account/theme-settings.jsx';
@@ -57,7 +58,7 @@ export function UtilityMenu({session,accountLabel,menuPlacement='above',idPrefix
  const accountActions=signedIn?[{label:'Settings',icon:'settings',href:'/account/settings',onClick:close},...(adminRecord?.data?.admin?[{label:'Superadmin',icon:'pages',href:'/admin/businesses',onClick:close}]:[]),{label:signingOut?'Logging out…':'Log out',icon:'logout',onClick:logout,disabled:signingOut}]:restoring?[{label:'Loading…',icon:'you',disabled:true}]:[{label:'Sign in',icon:'you',href:'/account',onClick:close}];
  const directSignIn=!signedIn&&!restoring,AccountTrigger=directSignIn?'a':'button';
  const accountControls=(<div className="ff-account-widget" aria-busy={restoring||undefined}>
-   <AccountTrigger type={directSignIn?undefined:"button"} href={directSignIn?"/account":undefined} className={'ff-account-profile ff-avatar-toggle'+(signedIn?' ff-account-mobile-link':' ff-signin')} disabled={directSignIn?undefined:!interactive||floating&&restoring} aria-label={directSignIn?'Sign in':pane==='account'?'Close account menu':'Open account menu'} aria-haspopup={directSignIn?'dialog':undefined} aria-expanded={directSignIn?undefined:pane==='account'} aria-controls={directSignIn?undefined:panelId} onClick={directSignIn?close:event=>activate('account',event)} onContextMenu={directSignIn?undefined:event=>{event.preventDefault();activate('context',event);}}>
+   <AccountTrigger type={directSignIn?undefined:"button"} href={directSignIn?"/account":undefined} data-signin-direct={directSignIn?true:undefined} className={'ff-account-profile ff-avatar-toggle'+(signedIn?' ff-account-mobile-link':' ff-signin')} disabled={directSignIn?undefined:!interactive||floating&&restoring} aria-label={directSignIn?'Sign in':pane==='account'?'Close account menu':'Open account menu'} aria-haspopup={directSignIn?'dialog':undefined} aria-expanded={directSignIn?undefined:pane==='account'} aria-controls={directSignIn?undefined:panelId} onClick={directSignIn?event=>{event.preventDefault();requestSignIn('/account',event.currentTarget);close();}:event=>activate('account',event)} onContextMenu={directSignIn?undefined:event=>{event.preventDefault();activate('context',event);}}>
     {portrait}{floating&&<span className="ff-branch-caption">{directSignIn?'Sign in':'Account'}</span>}<span className="ff-account-copy"><strong>{directSignIn?'Sign in':accountLabel||member?.displayName||(restoring?'Loading account…':signedIn?'Your account':'Sign in')}</strong></span>
    </AccountTrigger>
    <button type="button" className="ff-context-toggle" disabled={!interactive} aria-label={contextOpen?'Close page options':'Open page options'} aria-expanded={contextOpen} aria-controls={panelId} onClick={event=>activate('context',event)}><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>{floating&&<span className="ff-branch-caption">Page options</span>}</button>
