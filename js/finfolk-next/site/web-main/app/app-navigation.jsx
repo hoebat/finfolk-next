@@ -47,7 +47,7 @@ export function UtilityMenu({session,accountLabel,menuPlacement='above',idPrefix
   const focus=()=>items()[0]?.focus(),observer=new MutationObserver(()=>{if(items().length){focus();observer.disconnect();}});
   if(items().length)focus();else observer.observe(panel,{childList:true,subtree:true});
   const dismiss=event=>{if(!host.current?.contains(event.target))setPane(null);};
-  const key=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setPane(null);(opener.current||toggle.current)?.focus();}else if(!event.target.matches('input[type=radio]')&&['ArrowUp','ArrowDown'].includes(event.key)){const links=items(),index=links.indexOf(document.activeElement);if(index>=0){event.preventDefault();links[(index+(event.key==='ArrowDown'?1:-1)+links.length)%links.length]?.focus();}}};
+  const key=event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setPane(null);(opener.current||toggle.current)?.focus();}else if((floating||!event.target.matches('input[type=radio]'))&&['ArrowUp','ArrowDown'].includes(event.key)){const radio=event.target.matches('input[type=radio]'),links=radio?[...panel.querySelectorAll('input[type=radio]')]:items(),index=links.indexOf(document.activeElement);if(index>=0){event.preventDefault();const next=links[(index+(event.key===(floating?'ArrowUp':'ArrowDown')?1:-1)+links.length)%links.length];next?.focus();if(radio)next?.click();}}};
   document.addEventListener('keydown',key,true);document.addEventListener('pointerdown',dismiss);document.addEventListener('focusin',dismiss);
   return()=>{observer.disconnect();document.removeEventListener('keydown',key,true);document.removeEventListener('pointerdown',dismiss);document.removeEventListener('focusin',dismiss);};
  },[pane]);
@@ -55,25 +55,27 @@ export function UtilityMenu({session,accountLabel,menuPlacement='above',idPrefix
  const portrait=member?<Portrait member={{...member,id:identityId,displayName:member.displayName||'Account'}}/>:<NavigationIcon name="you"/>;
  const panelId=idPrefix+'-panel',title=pane==='primary'?'Navigation':pane==='account'?'Your account':pane==='themes'?'Appearance':pane==='page'?'On this page':'Page options';
  const accountActions=signedIn?[{label:'Settings',icon:'settings',href:'/account/settings',onClick:close},...(adminRecord?.data?.admin?[{label:'Superadmin',icon:'pages',href:'/admin/businesses',onClick:close}]:[]),{label:signingOut?'Logging out…':'Log out',icon:'logout',onClick:logout,disabled:signingOut}]:restoring?[{label:'Loading…',icon:'you',disabled:true}]:[{label:'Sign in',icon:'you',href:'/account',onClick:close}];
- return <div className={'ff-utility-menu ff-navigation-controls'+(floating?' ff-floating-controls':'')+(!showIdentity?' ff-guest-account':'')+(restoring?' ff-account-restoring':'')} data-pane={pane||'closed'} ref={host}>
-  <div className="ff-account-widget" aria-busy={restoring||undefined}>
+ const accountControls=(<div className="ff-account-widget" aria-busy={restoring||undefined}>
    <button type="button" className={'ff-account-profile ff-avatar-toggle'+(signedIn?' ff-account-mobile-link':' ff-signin')} disabled={!interactive} aria-label={pane==='account'?'Close account menu':'Open account menu'} aria-expanded={pane==='account'} aria-controls={panelId} onClick={event=>activate('account',event)} onContextMenu={event=>{event.preventDefault();activate('context',event);}}>
     {portrait}{floating&&<span className="ff-branch-caption">Account</span>}<span className="ff-account-copy"><strong>{accountLabel||member?.displayName||(restoring?'Loading account…':signedIn?'Your account':'Sign in')}</strong></span>
    </button>
    <button type="button" className="ff-context-toggle" disabled={!interactive} aria-label={contextOpen?'Close page options':'Open page options'} aria-expanded={contextOpen} aria-controls={panelId} onClick={event=>activate('context',event)}><svg viewBox="0 0 24 24" aria-hidden="true" fill="currentColor"><circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/></svg>{floating&&<span className="ff-branch-caption">Page options</span>}</button>
-  </div>
+  </div>);
+ return <div className={'ff-utility-menu ff-navigation-controls'+(floating?' ff-floating-controls':'')+(!showIdentity?' ff-guest-account':'')+(restoring?' ff-account-restoring':'')} data-pane={pane||'closed'} ref={host}>
+  {!floating&&accountControls}
   {floating&&<button ref={toggle} type="button" id={idPrefix+'-toggle'} className="ff-menu-toggle ff-primary-fab" disabled={!interactive} aria-label={open?'Close menu':'Open menu'} aria-expanded={open} aria-controls={panelId} onClick={event=>{opener.current=event.currentTarget;setPane(current=>current?null:'primary');}}><svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"><path d={open?'m6 6 12 12M18 6 6 18':'M4 6h16M4 12h16M4 18h16'}/></svg></button>}
   <nav id={panelId} className={'ff-menu-panel ff-layered-menu ff-pane-'+(pane||'closed')} data-placement={menuPlacement} data-fan={floating&&open?'true':undefined} data-fan-origin={pane==='account'?'account':pane==='primary'?'primary':'context'} aria-label={title} hidden={!open}>
    <div className="ff-menu-heading"><span className="ff-menu-eyebrow">{title}</span><button type="button" className="ff-panel-close" aria-label="Close navigation panel" onClick={()=>{close();opener.current?.focus();}}>×</button></div>
-   {pane==='primary'&&<PrimaryNavigation className="ff-mobile-destinations ff-fan-destinations" session={session} onNavigate={close} fanOut/>}
+   {floating&&<div className="ff-stack-items" hidden={pane!=='primary'}><PrimaryNavigation className="ff-mobile-destinations ff-fan-destinations" session={session} onNavigate={close} fanOut/>{accountControls}</div>}
    {pane==='account'&&(floating?<FanActions kind="account" actions={accountActions}/>:<>
     <div className="ff-menu-identity">{portrait}<div><strong>{member?.displayName||(restoring?'Restoring your account…':signedIn?'Your account':'Make it your coast')}</strong><span>{restoring?'Your menu is ready while your account loads.':signedIn?'Account & preferences':'Sign in to save places and sessions.'}</span></div></div>
     <div className="ff-menu-actions">{signedIn?<><a href="/account/settings" onClick={close}><NavigationIcon name="settings"/><span>Settings</span><span aria-hidden="true">↗</span></a>{adminRecord?.data?.admin&&<a href="/admin/businesses" onClick={close}><NavigationIcon name="pages"/><span>Superadmin</span><span aria-hidden="true">↗</span></a>}<button type="button" disabled={signingOut} onClick={logout}><span>{signingOut?'Logging out…':'Log out'}</span><span aria-hidden="true">↗</span></button></>:!restoring&&<a href="/account" onClick={close}><span>Sign in</span><span aria-hidden="true">↗</span></a>}</div>
    </>)}
-   {floating&&['account','context'].includes(pane)&&<FanBack label="Back to main menu" onClick={()=>setPane('primary')}/>}
+   
    {pane==='context'&&(floating?<FanActions kind="context" actions={[...(pageLinks.length?[{label:'This page',icon:'pages',onClick:()=>setPane('page')}]:[]),{label:'Appearance',icon:'appearance',onClick:()=>setPane('themes')}]}/>:<><ContextNavigation session={session} onNavigate={close}/><ThemeSettings compact/></>)}
    {floating&&pane==='page'&&<><FanActions kind="context" actions={pageLinks.map(([label,href,icon])=>({label,href,icon,onClick:close}))}/><FanBack onClick={()=>setPane('context')}/></>}
    {floating&&pane==='themes'&&<><ThemeSettings compact fanOut/><FanBack onClick={()=>setPane('context')}/></>}
+   {floating&&['account','context'].includes(pane)&&<FanBack label="Back to main menu" onClick={()=>setPane('primary')}/>}
    {error&&pane==='account'&&<p className="ff-menu-error" role="status">{error}</p>}
   </nav>
  </div>;
