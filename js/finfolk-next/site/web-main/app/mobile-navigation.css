@@ -1,33 +1,53 @@
-/* One shared mobile menu across route groups, standalone screens and offline
-   templates. Desktop rails and the desktop landing header retain their layout. */
+/* Primary navigation, account actions and page options have separate surfaces. */
 .ff-mobile-navigation{display:none}
-.ff-mobile-signin,.ff-menu-hamburger{display:none}
 nav.ff-primary-nav.ff-mobile-destinations{display:none!important}
-:root[data-theme] nav.ff-menu-panel>.ff-mobile-signin{display:none!important}
+:root[data-theme] .ff-navigation-controls .ff-account-widget>.ff-avatar-toggle{display:flex!important;flex:1;min-width:0;max-width:none;width:auto;height:auto;min-height:0;border:0;background:transparent;color:inherit;cursor:pointer;font:inherit;text-align:left}
+:root[data-theme] .ff-navigation-controls .ff-context-toggle{display:flex;align-items:center;justify-content:center;flex:0 0 38px;width:38px;min-width:38px;padding:8px;border:0;border-left:1px solid var(--account-line);border-radius:0 17px 17px 0;background:transparent;color:inherit;cursor:pointer}
+.ff-context-toggle svg{width:22px;height:22px}
+:root[data-theme] .ff-navigation-controls :is(.ff-avatar-toggle,.ff-context-toggle,.ff-primary-fab):focus-visible{outline:3px solid var(--account-accent);outline-offset:4px}
+:root[data-theme] .ff-navigation-controls nav.ff-layered-menu{box-sizing:border-box;display:grid;gap:4px;position:absolute;right:0;bottom:calc(100% + 12px);width:304px;max-width:calc(100vw - 32px);max-height:calc(100dvh - 112px);padding:10px;border:1px solid var(--account-line);border-radius:22px;background:var(--account-surface);color:var(--account-ink);box-shadow:0 14px 48px #0002;overflow:auto;overscroll-behavior:contain}
+:root[data-theme] .ff-navigation-controls nav.ff-layered-menu[data-placement=below]{bottom:auto;top:calc(100% + 12px)}
+:root[data-theme] .ff-navigation-controls nav.ff-layered-menu[hidden]{display:none!important}
+.ff-menu-heading{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 4px 4px 12px;min-height:32px}
+.ff-menu-eyebrow{margin:0;font:600 10px/1.4 Avenir,Arial,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--account-muted)}
+:root[data-theme] .ff-panel-close{display:flex;align-items:center;justify-content:center;width:32px;height:32px;min-height:32px;padding:0;border:0;border-radius:50%;background:transparent;color:var(--account-muted);font:400 23px/1 Arial,sans-serif;cursor:pointer}
+:root[data-theme] .ff-panel-close:hover{background:var(--account-bg);color:var(--account-ink)}
+.ff-menu-identity{display:flex;align-items:center;gap:12px;padding:10px 12px 18px;margin-bottom:4px;border-bottom:1px solid var(--account-line)}
+.ff-menu-identity>.person-portrait,.ff-menu-identity>svg{width:42px;height:42px;flex:0 0 42px;margin:0;border-radius:50%;overflow:hidden}
+.ff-menu-identity>div:not(.person-portrait){display:grid;gap:5px;min-width:0}
+.ff-menu-identity strong{font:600 15px/1.35 Avenir,Arial,sans-serif;overflow-wrap:anywhere}
+.ff-menu-identity span{font:400 11px/1.5 Avenir,Arial,sans-serif;color:var(--account-muted)}
+:root[data-theme] .ff-menu-actions{display:grid;gap:3px}
+:root[data-theme] .ff-menu-actions>:is(a,button){box-sizing:border-box;display:flex;align-items:center;gap:12px;width:100%;min-height:46px;padding:12px;border:0;border-radius:12px;background:transparent;color:var(--account-ink)!important;font:600 13px/20px Avenir,Arial,sans-serif;text-align:left;text-decoration:none;cursor:pointer}
+.ff-menu-actions>:is(a,button)>svg{width:20px;height:20px;flex:none}
+.ff-menu-actions>:is(a,button)>span:last-child[aria-hidden]{margin-left:auto;color:var(--account-muted);font-size:16px}
+:root[data-theme] .ff-menu-actions>:is(a,button):hover{background:color-mix(in srgb,var(--account-ink) 7%,var(--account-surface))}
+:root[data-theme] .ff-layered-menu :is(a,button):focus-visible{outline:2px solid var(--account-accent);outline-offset:-2px}
+.ff-context-section>.ff-menu-eyebrow{padding:8px 12px}
+:root[data-theme] nav.ff-layered-menu .ff-menu-themes{margin:6px 0 0;padding:12px 0 0;border-bottom:0}
 @media(max-width:900px){
  .ff-mobile-navigation{display:contents}
  :root[data-theme] :is(.app-rail,.profile-rail)>:is(nav.ff-primary-nav,.ff-utility-menu),:root[data-theme] .landing-account{display:none!important}
- :root[data-theme] .ff-mobile-navigation>.ff-utility-menu{position:fixed!important;top:auto!important;left:auto!important;right:calc(16px + env(safe-area-inset-right))!important;bottom:calc(16px + env(safe-area-inset-bottom))!important;display:block!important;width:56px!important;min-width:56px;max-width:56px;z-index:70!important}
- :root[data-theme] .ff-mobile-navigation .ff-account-widget{width:56px;min-width:56px;max-width:56px;height:56px;min-height:56px;max-height:56px;border:0;border-radius:50%;background:var(--account-ink);color:var(--account-bg);box-shadow:0 4px 20px #0003,inset 0 0 0 1px color-mix(in srgb,var(--account-bg) 15%,transparent)}
- :root[data-theme] .ff-mobile-navigation .ff-account-widget>.ff-account-profile{display:none!important}
- :root[data-theme] .ff-mobile-navigation .ff-account-widget .ff-menu-toggle{display:flex;align-items:center;justify-content:center;flex:0 0 56px;width:56px;min-width:56px;max-width:56px;height:56px;padding:15px;border:0;border-radius:50%;background:transparent!important;color:inherit!important}
- :root[data-theme] .ff-mobile-navigation .ff-menu-toggle svg{width:24px;height:24px}
- :root[data-theme] .ff-mobile-navigation .ff-menu-chevron{display:none}
- :root[data-theme] .ff-mobile-navigation .ff-menu-hamburger{display:block}
- :root[data-theme] .ff-mobile-navigation>.ff-utility-menu nav.ff-menu-panel{display:grid;gap:4px;padding:8px;border:1px solid var(--account-line);border-radius:18px;background:var(--account-surface);color:var(--account-ink);position:absolute!important;top:auto!important;bottom:calc(100% + 12px)!important;left:auto!important;right:0!important;box-sizing:border-box;width:min(320px,calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));max-height:calc(100dvh - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;box-shadow:0 12px 40px #0003}
- :root[data-theme] .ff-mobile-navigation nav.ff-menu-panel[hidden]{display:none!important}
- :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations{display:flex!important;position:static;inset:auto;transform:none;width:100%;height:auto;min-height:0;margin:0 0 6px;padding:0 0 8px!important;border:0;border-bottom:1px solid var(--account-line);border-radius:0;background:transparent;box-shadow:none;flex-direction:column;gap:2px}
- :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item{box-sizing:border-box;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;width:100%;min-height:48px;padding:12px 14px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--account-ink);text-decoration:none;text-align:left;font:600 14px/20px Avenir,'Helvetica Neue',Arial,sans-serif}
- :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item svg{display:block;width:22px;height:22px;flex:none}
- :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item[aria-current=page]{background:var(--account-ink);color:var(--account-bg)}
- :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item:not([aria-current=page]):hover{background:color-mix(in srgb,var(--account-ink) 9%,var(--account-surface))}
- :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item:focus-visible{outline:2px solid var(--account-accent);outline-offset:-3px}
- :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item small{margin-left:auto}
- :root[data-theme] .ff-mobile-navigation>.ff-utility-menu nav.ff-menu-panel>.ff-mobile-signin:not([hidden]){display:flex!important}
+ :root[data-theme] .ff-mobile-navigation>.ff-floating-controls{position:fixed!important;top:auto!important;left:auto!important;right:calc(16px + env(safe-area-inset-right))!important;bottom:calc(16px + env(safe-area-inset-bottom))!important;display:flex!important;align-items:center;gap:12px;width:auto!important;min-width:0;max-width:none;z-index:70!important;background:transparent;border:0;box-shadow:none}
+ :root[data-theme] .ff-floating-controls .ff-account-widget{display:flex!important;align-items:center;gap:8px;width:auto!important;min-width:0!important;max-width:none!important;height:44px!important;min-height:44px;max-height:44px;border:0;border-radius:0;background:transparent!important;box-shadow:none;color:var(--account-ink)}
+ :root[data-theme] .ff-floating-controls .ff-account-widget>:is(.ff-avatar-toggle,.ff-context-toggle){box-sizing:border-box;display:flex!important;align-items:center;justify-content:center;flex:0 0 44px;width:44px!important;min-width:44px!important;max-width:44px!important;height:44px!important;min-height:44px;max-height:44px;padding:9px;border:1px solid var(--account-line)!important;border-radius:50%!important;background:var(--account-surface)!important;color:var(--account-ink)!important;box-shadow:0 3px 14px #0001}
+ :root[data-theme] .ff-floating-controls .ff-avatar-toggle:has(.person-portrait){padding:3px}
+ :root[data-theme] .ff-floating-controls .ff-avatar-toggle .person-portrait{width:36px;height:36px;flex:0 0 36px;margin:0;border-radius:50%;overflow:hidden}
+ .ff-floating-controls .ff-avatar-toggle>.ff-account-copy{display:none}
+ :root[data-theme] .ff-floating-controls .ff-avatar-toggle>svg{display:block;width:22px;height:22px;flex:none}
+ :root[data-theme] .ff-floating-controls .ff-primary-fab{box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex:0 0 56px;width:56px;min-width:56px;max-width:56px;height:56px;min-height:56px;padding:15px;border:0;border-radius:50%;background:var(--account-ink)!important;color:var(--account-bg)!important;box-shadow:0 4px 20px #0003;cursor:pointer}
+ .ff-primary-fab svg{width:24px;height:24px;flex:none}
+ :root[data-theme] .ff-floating-controls [aria-expanded=true]:not(.ff-primary-fab){border-color:var(--account-ink)!important;box-shadow:0 0 0 2px var(--account-bg),0 0 0 3px var(--account-ink)}
+ :root[data-theme] .ff-mobile-navigation nav.ff-layered-menu{top:auto!important;bottom:calc(100% + 12px)!important;right:0!important;left:auto!important;width:min(304px,calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));max-height:calc(100dvh - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom))}
+ :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations{display:flex!important;position:static;inset:auto;transform:none;flex-direction:column;gap:4px;box-sizing:border-box;width:100%;height:auto;min-height:0;margin:0;padding:0!important;border:0;border-radius:0;background:transparent;box-shadow:none}
+ :root[data-theme] .ff-mobile-navigation nav.ff-mobile-destinations .ff-nav-item{box-sizing:border-box;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:14px;width:100%;min-height:52px;padding:13px 14px;border:0;border-radius:14px;background:transparent;color:var(--account-ink);text-decoration:none;text-align:left;font:600 15px/22px Avenir,'Helvetica Neue',Arial,sans-serif}
+ :root[data-theme] .ff-mobile-navigation nav.ff-mobile-destinations .ff-nav-item svg{display:block;width:22px;height:22px;flex:none}
+ :root[data-theme] .ff-mobile-navigation nav.ff-mobile-destinations .ff-nav-item[aria-current=page]{background:var(--account-ink)!important;color:var(--account-bg)!important}
+ :root[data-theme] .ff-mobile-navigation nav.ff-mobile-destinations .ff-nav-item:not([aria-current=page]):hover{background:color-mix(in srgb,var(--account-ink) 7%,var(--account-surface))}
+ :root[data-theme] .ff-mobile-navigation nav.ff-mobile-destinations .ff-nav-item small{margin-left:auto}
  :root[data-theme] body:is(.finfolk-app-navigation,:has(>.app-rail)){--nav-height:0px}
  :root[data-theme] .next-community.profile-demo{padding-bottom:0}
- :root[data-theme] .next-community .profile-footer{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
- :root[data-theme] .finfolk-app-navigation :is(.logbook-page,.discover-page){padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+ :root[data-theme] .next-community .profile-footer,:root[data-theme] .finfolk-app-navigation :is(.logbook-page,.discover-page),:root[data-theme] :is(.finfolk-landing .landing-footer,.ff-section-hub,.ff-auth-page){padding-bottom:calc(88px + env(safe-area-inset-bottom))}
  :root[data-theme] .fm-explore .fm-result-content{padding-bottom:80px}
- :root[data-theme] :is(.finfolk-landing .landing-footer,.ff-section-hub,.ff-auth-page){padding-bottom:calc(88px + env(safe-area-inset-bottom))}
 }
+@media(prefers-reduced-motion:no-preference){.ff-floating-controls .ff-layered-menu:not([hidden]){animation:ff-menu-enter .16s ease-out;transform-origin:bottom right}@keyframes ff-menu-enter{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}}

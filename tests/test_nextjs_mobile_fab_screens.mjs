@@ -44,9 +44,14 @@ try{
    await expect(nav.getByRole('link',{name:'Events',exact:true})).toHaveCount(0);
    const box=await menu.boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=390&&box.y+box.height<=b.y-8,'Menu fits and opens above the FAB');
    for(const icon of await nav.locator('svg').all()){const r=await icon.boundingBox();assert.equal(r.width,22);assert.equal(r.height,22,'Icons retain their size without route-specific styles');}
-   const group=menu.getByRole('radio',{name:'Night Swim',exact:true});await group.check();await expect(group).toBeChecked();await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
-   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
+   await expect(menu.getByRole('radio')).toHaveCount(0);await expect(menu.getByRole('link',{name:'Settings',exact:true})).toHaveCount(0);
    await page.keyboard.press('Escape');await expect(menu).toBeHidden();await expect(toggle).toBeFocused();
+   const avatar=host.getByRole('button',{name:'Open account menu',exact:true});await avatar.click();await expect(menu.getByRole('link',{name:guest?'Sign in':'Settings',exact:true})).toBeVisible();
+   for(const label of ['View profile','Complete profile','Platform status','How FinFolk works'])await expect(menu.getByText(label,{exact:true})).toHaveCount(0);
+   await page.keyboard.press('Escape');await expect(avatar).toBeFocused();
+   const context=host.getByRole('button',{name:'Open page options',exact:true});await context.click();const group=menu.getByRole('radio',{name:'Night Swim',exact:true});await group.check();await expect(group).toBeChecked();await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
+   await page.keyboard.press('Escape');await expect(menu).toBeHidden();await expect(context).toBeFocused();
    if(['/','/map','/account/settings','/community','/admin','/navigation-fixture-not-found'].includes(path))await page.screenshot({path:resolve(out,'screen-'+(guest?'guest-':'member-')+(path==='/'?'home':path.slice(1).replaceAll('/','-'))+'.png')});
    page.off('pageerror',capture);assert.deepEqual(errors,[],path);results.push({path,guest,passed:true});
   }
