@@ -51,3 +51,10 @@ assert.equal(searchBeachRows(searchCatalog,'cote')[0].sourceId,'accent');
 assert.deepEqual(searchBeachRows(searchCatalog,'   '),[]);
 assert.deepEqual(searchBeachRows(undefined,'Beach'),[]);
 assert.equal(filterMapRows(mapRows(searchCatalog,[],[],{includeUnmapped:true}),{query:'old cove'}).length,1,'Submitted results use the same alias matching as suggestions');
+
+const {searchMapRows}=await import('../js/finfolk-next/site/web-main/app/(atlas)/atlas/explore-model.js');
+const businessSearchRows=mapRows(searchCatalog,[{id:'business-only',name:'Côte Freediving',state:'WA',country:'Australia',locality:'Unknown',category:'School'}],[],{includeUnmapped:true});
+assert.equal(searchMapRows(businessSearchRows,'cote freediving')[0].id,'business:business-only');
+assert.equal(searchMapRows(businessSearchRows,'Western Australia').filter(row=>row.kind==='business').length,1);
+assert.equal(searchMapRows(businessSearchRows,'School')[0].reference,'Location not mapped');
+assert.equal(searchMapRows(businessSearchRows,'School')[0].point,undefined);

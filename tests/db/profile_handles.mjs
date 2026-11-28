@@ -9,6 +9,9 @@ const save=async(id,profile)=>(await db.query('SELECT finfolk_rpc.save_account_p
 const read=async handle=>(await db.query('SELECT finfolk_rpc.ret_profile_by_handle($1) value',[handle])).rows[0].value;
 try{
  await installEntities(db);await db.query(await readFile('resources/finfolkdb/account-grants.sql','utf8'));
+ // The trusted runtime membership is provisioned outside database publication.
+ // Make that test-login setup explicit on a fresh CI cluster.
+ await db.query('GRANT finfolk_account TO CURRENT_USER WITH SET TRUE');
  const alice=await user(db,ids.alice,{displayName:'Alice',open:true}),bob=await user(db,ids.bob,{displayName:'Bob',open:false});
  assert.match(alice.profile.handle,/^diver-[0-9a-f]{32}$/);assert.notEqual(alice.profile.handle,bob.profile.handle);
  assert.equal((await read(alice.profile.handle)).id,ids.alice);
