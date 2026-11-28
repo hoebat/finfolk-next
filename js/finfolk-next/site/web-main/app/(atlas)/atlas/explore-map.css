@@ -147,3 +147,12 @@
 .fm-map-region{background:var(--account-surface)}
 
 :root[data-theme=navy] .fm-explore .fm-geography:is([data-level=state],[data-level=region]){background:var(--account-accent);color:var(--account-bg);border-color:var(--account-accent)}
+
+/* Keep map credits at the lower left, clear of the global menu. */
+.fm-explore .maplibregl-ctrl-bottom-left{left:env(safe-area-inset-left);right:0}
+.fm-explore .maplibregl-ctrl-bottom-left .maplibregl-ctrl-attrib{max-width:calc(100% - 20px);text-align:left}
+.fm-explore[data-panel=closed] .maplibregl-ctrl-bottom-left{bottom:env(safe-area-inset-bottom)}
+@media(max-width:900px){
+ .fm-explore .maplibregl-ctrl-bottom-left{right:calc(88px + env(safe-area-inset-right))}
+ .fm-explore[data-panel=closed] .fm-map-status{bottom:calc(96px + env(safe-area-inset-bottom))}
+}

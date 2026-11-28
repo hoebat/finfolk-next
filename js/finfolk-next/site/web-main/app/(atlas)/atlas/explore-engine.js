@@ -16,7 +16,8 @@ export async function createExploreMap(container,{rows=[],onSelect,onViewport,on
  const imported=await import('maplibre-gl'),lib=imported.default||imported;
  registerDepthRaster(lib,mapPalette);
  let camera;try{const stored=JSON.parse(sessionStorage.getItem('finfolk:explore-camera'));if(validPoint(stored?.center)&&Number.isFinite(stored.zoom)&&stored.zoom>=3&&stored.zoom<=18)camera=stored;}catch{}
- const map=new lib.Map({container,style:DATASET_PROVIDER_BASE+'openfreemap/styles/liberty',center:camera?.center||[134,-27],zoom:camera?.zoom||3.6,minZoom:3,maxZoom:18,dragRotate:false,pitchWithRotate:false,renderWorldCopies:false,attributionControl:true});
+ const map=new lib.Map({container,style:DATASET_PROVIDER_BASE+'openfreemap/styles/liberty',center:camera?.center||[134,-27],zoom:camera?.zoom||3.6,minZoom:3,maxZoom:18,dragRotate:false,pitchWithRotate:false,renderWorldCopies:false,attributionControl:false});
+ map.addControl(new lib.AttributionControl(),'bottom-left');
  let ready=false,alive=true,latestRows=rows,highlight=null,appearance='coast',contours=null,coastMask=null,contourVisibility={survey:true,regional:true};
  const siteTooltip=new lib.Popup({closeButton:false,closeOnClick:false,focusAfterOpen:false,offset:24,maxWidth:'260px',className:'fm-site-tooltip'});
  const tooltipDOMID='ff-map-tooltip-'+ ++tooltipSequence;let tooltipID=null,tooltipTrigger=null;
