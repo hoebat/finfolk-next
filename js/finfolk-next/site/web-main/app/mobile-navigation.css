@@ -1,0 +1,33 @@
+/* One shared mobile menu across route groups, standalone screens and offline
+   templates. Desktop rails and the desktop landing header retain their layout. */
+.ff-mobile-navigation{display:none}
+.ff-mobile-signin,.ff-menu-hamburger{display:none}
+nav.ff-primary-nav.ff-mobile-destinations{display:none!important}
+:root[data-theme] nav.ff-menu-panel>.ff-mobile-signin{display:none!important}
+@media(max-width:900px){
+ .ff-mobile-navigation{display:contents}
+ :root[data-theme] :is(.app-rail,.profile-rail)>:is(nav.ff-primary-nav,.ff-utility-menu),:root[data-theme] .landing-account{display:none!important}
+ :root[data-theme] .ff-mobile-navigation>.ff-utility-menu{position:fixed!important;top:auto!important;left:auto!important;right:calc(16px + env(safe-area-inset-right))!important;bottom:calc(16px + env(safe-area-inset-bottom))!important;display:block!important;width:56px!important;min-width:56px;max-width:56px;z-index:70!important}
+ :root[data-theme] .ff-mobile-navigation .ff-account-widget{width:56px;min-width:56px;max-width:56px;height:56px;min-height:56px;max-height:56px;border:0;border-radius:50%;background:var(--account-ink);color:var(--account-bg);box-shadow:0 4px 20px #0003,inset 0 0 0 1px color-mix(in srgb,var(--account-bg) 15%,transparent)}
+ :root[data-theme] .ff-mobile-navigation .ff-account-widget>.ff-account-profile{display:none!important}
+ :root[data-theme] .ff-mobile-navigation .ff-account-widget .ff-menu-toggle{display:flex;align-items:center;justify-content:center;flex:0 0 56px;width:56px;min-width:56px;max-width:56px;height:56px;padding:15px;border:0;border-radius:50%;background:transparent!important;color:inherit!important}
+ :root[data-theme] .ff-mobile-navigation .ff-menu-toggle svg{width:24px;height:24px}
+ :root[data-theme] .ff-mobile-navigation .ff-menu-chevron{display:none}
+ :root[data-theme] .ff-mobile-navigation .ff-menu-hamburger{display:block}
+ :root[data-theme] .ff-mobile-navigation>.ff-utility-menu nav.ff-menu-panel{display:grid;gap:4px;padding:8px;border:1px solid var(--account-line);border-radius:18px;background:var(--account-surface);color:var(--account-ink);position:absolute!important;top:auto!important;bottom:calc(100% + 12px)!important;left:auto!important;right:0!important;box-sizing:border-box;width:min(320px,calc(100vw - 32px - env(safe-area-inset-left) - env(safe-area-inset-right)));max-height:calc(100dvh - 112px - env(safe-area-inset-top) - env(safe-area-inset-bottom));overflow:auto;overscroll-behavior:contain;box-shadow:0 12px 40px #0003}
+ :root[data-theme] .ff-mobile-navigation nav.ff-menu-panel[hidden]{display:none!important}
+ :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations{display:flex!important;position:static;inset:auto;transform:none;width:100%;height:auto;min-height:0;margin:0 0 6px;padding:0 0 8px!important;border:0;border-bottom:1px solid var(--account-line);border-radius:0;background:transparent;box-shadow:none;flex-direction:column;gap:2px}
+ :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item{box-sizing:border-box;display:flex;flex-direction:row;align-items:center;justify-content:flex-start;gap:12px;width:100%;min-height:48px;padding:12px 14px;border-radius:10px;border:1px solid transparent;background:transparent;color:var(--account-ink);text-decoration:none;text-align:left;font:600 14px/20px Avenir,'Helvetica Neue',Arial,sans-serif}
+ :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item svg{display:block;width:22px;height:22px;flex:none}
+ :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item[aria-current=page]{background:var(--account-ink);color:var(--account-bg)}
+ :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item:not([aria-current=page]):hover{background:color-mix(in srgb,var(--account-ink) 9%,var(--account-surface))}
+ :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item:focus-visible{outline:2px solid var(--account-accent);outline-offset:-3px}
+ :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-mobile-destinations .ff-nav-item small{margin-left:auto}
+ :root[data-theme] .ff-mobile-navigation>.ff-utility-menu nav.ff-menu-panel>.ff-mobile-signin:not([hidden]){display:flex!important}
+ :root[data-theme] body:is(.finfolk-app-navigation,:has(>.app-rail)){--nav-height:0px}
+ :root[data-theme] .next-community.profile-demo{padding-bottom:0}
+ :root[data-theme] .next-community .profile-footer{padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+ :root[data-theme] .finfolk-app-navigation :is(.logbook-page,.discover-page){padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+ :root[data-theme] .fm-explore .fm-result-content{padding-bottom:80px}
+ :root[data-theme] :is(.finfolk-landing .landing-footer,.ff-section-hub,.ff-auth-page){padding-bottom:calc(88px + env(safe-area-inset-bottom))}
+}

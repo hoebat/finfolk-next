@@ -21,7 +21,7 @@ export default function Settings({session,sites,account,retry}){
  const current=groups.flatMap(group=>group.items).find(item=>item.id===category),home=!category;
  const title=home?'Settings':category==='profile'?'Edit profile':category==='messaging'?'Messaging administration':current?.title||'Settings unavailable';
  const href=item=>item.id==='connections'?(flags.buddies?'/buddies':'/account/privacy#social-buddies'):'/account/settings/'+item.id;
- useEffect(()=>{document.getElementById('settings-title')?.focus();},[category]);
+ useEffect(()=>{if(!document.activeElement?.closest('.ff-utility-menu'))document.getElementById('settings-title')?.focus();},[category]);
  const loading=session.status==='loading'||session.user&&(!account||account.loading),error=session.error||account?.error;
  return <div className={'ff-settings'+(home?' settings-home':' settings-detail')+(legacy?' settings-standalone':'')}>
   <header className="settings-heading">{!home&&<a className="settings-back" href={category==='profile'?'/profile':category==='messaging'?'/admin':'/account/settings'}><span aria-hidden="true">←</span> Back to {category==='profile'?'Profile':category==='messaging'?'administration':'Settings'}</a>}<h1 id="settings-title" tabIndex={-1}>{title}</h1><p>{home?'Your preferences, privacy and account, all in one place.':category==='profile'?'Your identity and life in the water.':current?.description}</p></header>

@@ -133,6 +133,9 @@ jobs:
           node scripts/check_frontend_release.mjs "https://${DEPLOY_ID}--finfolk.netlify.app" | tee .cache/frontend-preview-check.json
           node tests/test_frontend_header.mjs "https://${DEPLOY_ID}--finfolk.netlify.app"
           NEXTJS_TEST_URL="https://${DEPLOY_ID}--finfolk.netlify.app" node tests/test_nextjs_mobile_account_navigation.mjs
+          NEXTJS_TEST_URL="https://${DEPLOY_ID}--finfolk.netlify.app" node tests/test_nextjs_mobile_fab_screens.mjs
+          NEXTJS_TEST_URL="https://${DEPLOY_ID}--finfolk.netlify.app" node tests/test_nextjs_mobile_fab_restore.mjs
+          NEXTJS_TEST_URL="https://${DEPLOY_ID}--finfolk.netlify.app" node tests/test_nextjs_mobile_fab_offline.mjs
       - name: Require main still points to this release
         env:
           GITHUB_TOKEN: ${{ github.token }}
@@ -148,6 +151,9 @@ jobs:
           node scripts/check_frontend_release.mjs https://finfolk.com.au | tee .cache/frontend-production-check.json
           node tests/test_frontend_header.mjs https://finfolk.com.au
           NEXTJS_TEST_URL=https://finfolk.com.au node tests/test_nextjs_mobile_account_navigation.mjs
+          NEXTJS_TEST_URL=https://finfolk.com.au node tests/test_nextjs_mobile_fab_screens.mjs
+          NEXTJS_TEST_URL=https://finfolk.com.au node tests/test_nextjs_mobile_fab_restore.mjs
+          NEXTJS_TEST_URL=https://finfolk.com.au node tests/test_nextjs_mobile_fab_offline.mjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

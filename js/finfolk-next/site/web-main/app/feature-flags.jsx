@@ -6,7 +6,7 @@ import {featureSnapshot,resetFeatureFlags,setFeatureFlags,featureForRoute} from 
 const Context=createContext({flags:{},ready:false});
 export function useFeatureFlags(){return useContext(Context);}
 export function Feature({name,children}){const {flags}=useFeatureFlags();return flags[name]===true?children:null;}
-export default function FeatureFlags({children}){
+export default function FeatureFlags({children,navigation}){
  const segments=useSelectedLayoutSegments(),section=segments?.find(segment=>!segment.startsWith('('));
  const session=useSession(),path=usePathname(),actor=session.user?.uid||null,epoch=useRef(0);
  const [record,setRecord]=useState(()=>({actor:null,client:null,...featureSnapshot()}));
@@ -31,5 +31,5 @@ export default function FeatureFlags({children}){
  },[actor,session.client,session.status]);
  // Match the rendered route tree first: an unmatched URL must retain its 404.
  const value=scoped?record:{flags:{},ready:false},flag=['buddies','shop','events','practice'].includes(section)?featureForRoute(path||''):null;
- return <Context.Provider value={value}>{flag&&value.flags[flag]!==true?<main className="ff-section-hub"><h1>{value.ready?'Feature unavailable':'Loading…'}</h1>{value.ready&&<a href="/">Back to FinFolk</a>}</main>:children}</Context.Provider>;
+ return <Context.Provider value={value}>{navigation}{flag&&value.flags[flag]!==true?<main className="ff-section-hub"><h1>{value.ready?'Feature unavailable':'Loading…'}</h1>{value.ready&&<a href="/">Back to FinFolk</a>}</main>:children}</Context.Provider>;
 }
