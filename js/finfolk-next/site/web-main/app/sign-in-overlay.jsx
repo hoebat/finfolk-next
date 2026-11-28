@@ -10,7 +10,7 @@ export default function SignInOverlay(){
  const session=useSession(),router=useRouter(),path=usePathname(),query=useSearchParams(),[active,setActive]=useState(null),opener=useRef(null);
  const queryMode=query.get('signin');
  function open(url,element){
-  opener.current=element?.closest?.('.ff-menu-panel')?.parentElement?.querySelector('[aria-expanded="true"]')||element;
+  opener.current=element?.closest?.('.ff-floating-controls')?.querySelector('.ff-primary-fab')||element?.closest?.('.ff-menu-panel')?.parentElement?.querySelector('[aria-expanded="true"]')||element;
   const current=new URL(location.href);current.searchParams.delete('signin');current.searchParams.delete('returnTo');
   setActive({creating:url.searchParams.get('mode')==='create'||url.searchParams.get('signin')==='create',target:accountReturnDestination(url.searchParams.get('returnTo'))||accountReturnDestination(current.pathname+current.search+current.hash)||'/map',query:!!url.searchParams.get('signin')});
  }

@@ -1,3 +1,4 @@
+import {openMenuBranch,checkMenuFocus,checkSingleFab} from './fixtures/fan-out-navigation.mjs';
 import {checkFanOut,checkActionFan} from './fixtures/fan-out-navigation.mjs';
 import assert from 'node:assert/strict';
 import {readdir,readFile,mkdir,writeFile} from 'node:fs/promises';
@@ -37,7 +38,7 @@ try{
    // Standalone account routes can open their sign-in dialog. Check navigation
    // after dismissing the modal, when the background becomes interactive again.
    for(let i=0;i<2;i++){const dialog=page.locator('dialog[open]').first();if(await dialog.isVisible()){await page.keyboard.press('Escape');await expect(dialog).toBeHidden();}}
-   await expect(toggle).toBeVisible();assert.equal(await page.getByRole('button',{name:'Open menu',exact:true}).count(),1,'Exactly one visible menu entry point');
+   await checkSingleFab(host);await expect(toggle).toBeVisible();assert.equal(await page.getByRole('button',{name:'Open menu',exact:true}).count(),1,'Exactly one visible menu entry point');
    const b=await toggle.boundingBox();assert.equal(b.width,56);assert.equal(b.height,56);assert.equal(b.x,318);assert.equal(b.y,772,'Same lower-right position on every route');
    assert.equal(await page.getByRole('navigation',{name:'Main navigation',exact:true}).count(),0,'No bottom bar remains');
    await toggle.click();const menu=host.locator('#mobile-menu-panel');await expect(menu).toBeVisible();
@@ -47,13 +48,13 @@ try{
    for(const icon of await nav.locator('svg').all()){const r=await icon.boundingBox();assert.equal(r.width,22);assert.equal(r.height,22,'Icons retain their size without route-specific styles');}
    await expect(menu.getByRole('radio')).toHaveCount(0);await expect(menu.getByRole('link',{name:'Settings',exact:true})).toHaveCount(0);
    await page.keyboard.press('Escape');await expect(menu).toBeHidden();await expect(toggle).toBeFocused();
-   const avatar=host.getByRole('button',{name:'Open account menu',exact:true});await avatar.click();await expect(menu.getByRole('link',{name:guest?'Sign in':'Settings',exact:true})).toBeVisible();
+   const avatar=host.getByRole('button',{name:'Open account menu',exact:true});await openMenuBranch(host,'Open account menu');await expect(menu.getByRole('link',{name:guest?'Sign in':'Settings',exact:true})).toBeVisible();
    await checkActionFan(page,host,'account','.ff-avatar-toggle');
    for(const label of ['View profile','Complete profile','Platform status','How FinFolk works'])await expect(menu.getByText(label,{exact:true})).toHaveCount(0);
-   await page.keyboard.press('Escape');await expect(avatar).toBeFocused();
-   const context=host.getByRole('button',{name:'Open page options',exact:true});await context.click();await checkActionFan(page,host,'context','.ff-context-toggle');await menu.getByRole('button',{name:'Appearance',exact:true}).click();const group=menu.getByRole('radio',{name:'Night Swim',exact:true});await group.check();await expect(group).toBeChecked();await checkActionFan(page,host,'themes','.ff-context-toggle');await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
+   await page.keyboard.press('Escape');await checkMenuFocus(host,'Open account menu');
+   const context=host.getByRole('button',{name:'Open page options',exact:true});await openMenuBranch(host,'Open page options');await checkActionFan(page,host,'context','.ff-context-toggle');await menu.getByRole('button',{name:'Appearance',exact:true}).click();const group=menu.getByRole('radio',{name:'Night Swim',exact:true});await group.check();await expect(group).toBeChecked();await checkActionFan(page,host,'themes','.ff-context-toggle');await expect(page.locator('html')).toHaveAttribute('data-theme','navy');
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,'No horizontal overflow');
-   await page.keyboard.press('Escape');await expect(menu).toBeHidden();await expect(context).toBeFocused();
+   await page.keyboard.press('Escape');await expect(menu).toBeHidden();await checkMenuFocus(host,'Open page options');
    if(['/','/map','/account/settings','/community','/admin','/navigation-fixture-not-found'].includes(path))await page.screenshot({path:resolve(out,'screen-'+(guest?'guest-':'member-')+(path==='/'?'home':path.slice(1).replaceAll('/','-'))+'.png')});
    page.off('pageerror',capture);assert.deepEqual(errors,[],path);results.push({path,guest,passed:true});
   }

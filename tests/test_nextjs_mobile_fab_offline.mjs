@@ -1,3 +1,4 @@
+import {openMenuBranch,checkMenuFocus,checkSingleFab} from './fixtures/fan-out-navigation.mjs';
 import {checkFanOut} from './fixtures/fan-out-navigation.mjs';
 import assert from 'node:assert/strict';
 import {mkdir,writeFile} from 'node:fs/promises';
@@ -19,7 +20,7 @@ try{
   if(path.startsWith('/account'))await page.getByRole('button',{name:'Close sign in',exact:true}).click();
   const dialog=page.locator('dialog[open]').first();if(await dialog.isVisible()){await page.keyboard.press('Escape');await expect(dialog).toBeHidden();}
   await toggle.click();const menu=host.locator('#mobile-menu-panel');await expect(menu).toBeVisible();await expect(menu.getByRole('link',{name:'Explore',exact:true})).toBeVisible();await expect(menu.getByRole('link',{name:'Community',exact:true})).toBeVisible();const b=await host.locator('.ff-menu-toggle').boundingBox();assert.equal(b.x,318);assert.equal(b.y,772);await checkFanOut(page,host);
-  await page.keyboard.press('Escape');await host.getByRole('button',{name:'Open page options',exact:true}).click();await menu.getByRole('button',{name:'Appearance',exact:true}).click();const theme=menu.getByRole('radio',{name:'Night Swim',exact:true});await theme.check();await expect(theme).toBeChecked();await expect(page.locator('html')).toHaveAttribute('data-theme','navy');await page.keyboard.press('Escape');await expect(host.getByRole('button',{name:'Open page options',exact:true})).toBeFocused();assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
+  await page.keyboard.press('Escape');await openMenuBranch(host,'Open page options');await menu.getByRole('button',{name:'Appearance',exact:true}).click();const theme=menu.getByRole('radio',{name:'Night Swim',exact:true});await theme.check();await expect(theme).toBeChecked();await expect(page.locator('html')).toHaveAttribute('data-theme','navy');await page.keyboard.press('Escape');await checkMenuFocus(host,'Open page options');assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
   cases.push(path);await page.close();
  }
  await writeFile(out+'/offline-consistency.json',JSON.stringify({passed:true,url:base,routes:cases.length,httpCacheCleared:true,networkOffline:true,serviceWorkerDocuments:true,sameFloatingMenu:true,localThemeChoices:true,keyboardFocus:true,paths:cases},null,2));console.log('MOBILE_FAB_OFFLINE_PASS: '+cases.length+' offline routes, empty HTTP cache, shared FAB and working theme controls.');
