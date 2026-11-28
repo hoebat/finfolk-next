@@ -31,6 +31,13 @@ export async function createSocialRuntime({db, application, inbox, provider, cry
         conversationId:snapshot.conversationId},{includeHandle:true});
       return invoke('complete_social_redemption',[member,code,snapshot,evidence],member);
     },
+    async claimPageVerified(member,id,code,ipHash,adapter) {
+      const snapshot=await invoke('prepare_social_page_claim',[member,id,code,ipHash],member);
+      if(!snapshot||snapshot.error)return snapshot;
+      const evidence=await adapter.verifyAccount({provider:snapshot.provider,namespace:snapshot.namespace,externalId:snapshot.externalId,
+        conversationId:snapshot.conversationId},{includeHandle:true});
+      return invoke('complete_social_page_claim',[member,id,code,snapshot,evidence],member);
+    },
     disconnect: (member, connection, version) => invoke('disconnect_social_connection',
       [member, connection, version, null], member),
     async performNextAction(adapter) {

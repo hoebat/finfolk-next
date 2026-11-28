@@ -19,7 +19,7 @@
                "models" {"listing" (seed/read-model "publicDirectoryDetail" {"id" "id"})
                          "events" (seed/read-model "publicEvents" {"page" "id"})
                          "mine" (assoc (seed/read-model "directoryMine") "when" [["actor"]])}
-               "actions" {"claim" (seed/action "directoryClaim" {"id" "id"})
+               "actions" {"claim" (seed/action "directoryInstagramClaim" {"id" "id"})
                           "report" (seed/action "directoryReport" {"id" "id"})}}
    "pages" {"routes" ["/pages"] "area" "member"
              "models" {"mine" (seed/read-model "directoryMine")}

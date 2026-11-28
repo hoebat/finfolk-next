@@ -848,7 +848,7 @@ export var pages = {
       "mine":{"operation":"directoryMine","bindings":{},"when":[["actor"]]}
     },
     "actions":{
-      "claim":{"operation":"directoryClaim","bindings":{"id":"id"}},
+      "claim":{"operation":"directoryInstagramClaim","bindings":{"id":"id"}},
       "report":{"operation":"directoryReport","bindings":{"id":"id"}}
     }
   },

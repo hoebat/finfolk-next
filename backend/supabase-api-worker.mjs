@@ -33,7 +33,7 @@ export function createSupabaseWorker({openDatabase=database}={}) {
     throw Error('Native database release mismatch');
    const app=new Hono();
    app.use('*',async(c,next)=>{for(const [key,value]of Object.entries(headers))if(!(key==='Cache-Control'&&c.req.method==='GET'&&['/v1/native/sites/catalog','/v1/sites/catalog'].includes(c.req.path)))c.header(key,value);c.header('Access-Control-Expose-Headers','ETag');await next();});
-   for(const path of ['/instagram/webhook','/v1/messaging/webhooks/finfolk-instagram','/v1/me/instagram','/v1/me/instagram/connect','/v1/me/instagram/disconnect','/v1/messaging/connections/finfolk-instagram/*','/v1/integrations/instagram/oauth/callback'])
+   for(const path of ['/instagram/webhook','/v1/messaging/webhooks/finfolk-instagram','/v1/me/instagram','/v1/me/instagram/connect','/v1/me/instagram/claim','/v1/me/instagram/disconnect','/v1/messaging/connections/finfolk-instagram/*','/v1/integrations/instagram/oauth/callback'])
     app.all(path,async c=>{
      if(!env.NATIVE_SOCIAL_SERVICE?.fetch)return c.json({error:'Instagram connection unavailable',code:'social_unavailable'},503);
      const response=await env.NATIVE_SOCIAL_SERVICE.fetch(c.req.raw),forwarded=new Headers(response.headers);

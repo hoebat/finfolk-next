@@ -8,7 +8,7 @@
    "SocialEvent" "SocialRateLimit"])
 
 (def FUNCTIONS
-  (concat ["activate_social_comments" "record_social_comment_acceptance" "lock_social_member" "ret_social_operator_event" "ret_social_operator_health" "record_social_acceptance" "activate_social_inbox" "scrub_social_content" "purge_social_diagnostics" "ret_social_redemption_replay" "ret_social_member_connection" "ret_social_redemption_proof" "prepare_social_redemption" "complete_social_redemption" "new_social_operation" "ret_social_adapter_scope" "social_delivery_result"
+  (concat ["ret_social_page_claim_proof" "prepare_social_page_claim" "complete_social_page_claim" "activate_social_comments" "record_social_comment_acceptance" "lock_social_member" "ret_social_operator_event" "ret_social_operator_health" "record_social_acceptance" "activate_social_inbox" "scrub_social_content" "purge_social_diagnostics" "ret_social_redemption_replay" "ret_social_member_connection" "ret_social_redemption_proof" "prepare_social_redemption" "complete_social_redemption" "new_social_operation" "ret_social_adapter_scope" "social_delivery_result"
            "record_social_delivery_audit" "social_delivery_policy_error" "claim_social_delivery"
            "confirm_social_delivery" "complete_social_delivery" "reconcile_social_work" "social_member_allowed"
            "social_rollout_error" "social_work_policy_error" "expire_social_action"]
@@ -38,6 +38,10 @@
                            "MessagingMessage" "MessagingReceipt" "MessagingAudit" "MessagingOutbox"
                            "MessagingAccount"])))
    " TO finfolk_social;\n"
+   "DO $$ BEGIN IF to_regclass('finfolk.\"DirectoryListing\"') IS NOT NULL THEN\n"
+   "GRANT SELECT ON finfolk.\"DirectoryListing\",finfolk.\"AccessRole\" TO finfolk_social;\n"
+   "GRANT UPDATE(id) ON finfolk.\"DirectoryListing\" TO finfolk_social;\n"
+   "GRANT INSERT,UPDATE ON finfolk.\"AccessRole\" TO finfolk_social;\nEND IF; END $$;\n"
    "GRANT DELETE ON finfolk.\"SocialRateLimit\",finfolk.\"Audit\",finfolk.\"SocialAction\",finfolk.\"SocialCommand\",finfolk.\"SocialConnectionProof\",finfolk.\"SocialEvent\",finfolk.\"MessagingOutbox\",finfolk.\"MessagingMessage\",finfolk.\"MessagingAudit\" TO finfolk_social;\n"
    "GRANT SELECT ON finfolk.\"MessagingAccount\",finfolk.\"User\",finfolk.\"UserBlock\",finfolk.\"SocialPost\" TO finfolk_social;\n"
    "GRANT EXECUTE ON FUNCTION finfolk.as_jsonb(jsonb),finfolk.as_bounded_text(text,integer,integer),finfolk.as_bounded_integer(integer,integer,integer),finfolk.op_fn(text,uuid,jsonb),finfolk.is_user_active(uuid),finfolk.is_user_blocked(uuid,uuid),finfolk.as_iso_time(bigint),finfolk_rpc.receive_message(uuid,uuid,jsonb),finfolk_rpc.ret_messaging_account(uuid,uuid),finfolk_rpc.record_messaging_audit(uuid,uuid,text,uuid),finfolk_rpc.ret_social_post_public(uuid,uuid) TO finfolk_social;\n"
@@ -45,4 +49,4 @@
    (str/join "," (map #(str "'" % "'") FUNCTIONS))
    ") LOOP EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO finfolk_social',f.signature); END LOOP; END $$;\n"
    "-- Grant finfolk_social only to a dedicated trusted server login.\nCOMMIT;\n"
-   (clojure.string/replace (page-instagram/grants-sql) "finfolk_page_instagram" "finfolk_social")))
+   (str "DO $page$ BEGIN IF to_regclass('finfolk.\"PageInstagramSource\"') IS NOT NULL THEN\n" (-> (page-instagram/grants-sql) (clojure.string/replace "finfolk_page_instagram" "finfolk_social") (clojure.string/replace "BEGIN;" "") (clojure.string/replace "COMMIT;" "")) "\nEND IF; END $page$;\n")))

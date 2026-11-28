@@ -168,8 +168,9 @@
                         {:where {:id (:uuid (:->> o-action "account_id"))}})
             o-event (pg/t:get workflow/SocialEvent
                       {:where {:id (:uuid (:->> o-action "event_id"))}})
+            o-purpose-command (pg/t:get workflow/SocialCommand {:where {:id (:uuid (:->> o-action "command_id"))}})
             (:uuid v-lease) (pg/uuid-generate-v4)]
-        (when (or (not (pg/jsonb-exists (:-> o-inbox "enabled_commands") "connect"))
+        (when (or (not (pg/jsonb-exists (:-> o-inbox "enabled_commands") (:->> o-purpose-command "command")))
                   (<= (:bigint (:->> o-action "deadline")) (pg/time-us))
                   (not= (:integer (:->> o-action "generation"))
                         (:integer (:->> o-inbox "generation")))
@@ -210,8 +211,8 @@
                        "conversationId" (:->> (:-> o-event "payload") "conversationId")
                        "codeLength" 8
                        "alphabet" "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-                       "prefix" "Your FinFolk connection code: "
-                       "suffix" ". Enter it in your FinFolk account within 10 minutes."))))))))
+                       "prefix" (pg/case (== (:->> o-purpose-command "command") "claim") "Your FinFolk business claim code: " true "Your FinFolk connection code: ")
+                       "suffix" (pg/case (== (:->> o-purpose-command "command") "claim") ". Sign in at finfolk.com.au/directory, open your business page and enter this claim code within 10 minutes." true ". Enter it in your FinFolk account within 10 minutes.")))))))))
 
 (defn.pg complete-social-action
   [:uuid i-application :uuid i-inbox :uuid i-action :uuid i-lease :text i-outcome :jsonb i-result
@@ -223,6 +224,7 @@
                     {:where {:id (:uuid (:->> o-initial "account_id"))} :for [:update]})
         o-action (pg/t:get workflow/SocialAction
                    {:where {:id i-action :inbox i-inbox} :for [:update]})
+        o-purpose-command (pg/t:get workflow/SocialCommand {:where {:id (:uuid (:->> o-initial "command_id"))}})
         o-result (seed/as-jsonb i-result)]
     (when [o-inbox :is-null]
       [:raise-exception "Social inbox outside application scope"])
@@ -233,7 +235,7 @@
               (<= (:bigint (:->> o-action "lease_until")) (pg/time-us))
               (<= (:bigint (:->> o-action "deadline")) (pg/time-us))
               (== (:->> o-inbox "mode") "disabled")
-              (not (pg/jsonb-exists (:-> o-inbox "enabled_commands") "connect"))
+              (not (pg/jsonb-exists (:-> o-inbox "enabled_commands") (:->> o-purpose-command "command")))
               (not= (:integer (:->> o-action "generation")) (:integer (:->> o-inbox "generation")))
               (not= (:integer (:->> o-action "account_generation"))
                     (:integer (:->> o-account "generation"))))
@@ -278,7 +280,7 @@
             [:perform
              (-/finish-social-command-reply
               v-command
-              "Unable to verify your social account. Try /connect again later."
+              (pg/case (== (:->> o-purpose-command "command") "claim") "Unable to verify your Instagram account. Try /claim again later." true "Unable to verify your social account. Try /connect again later.")
               nil
               nil
               (:jsonb "{\"error\":\"external_effect_failed\"}")
@@ -304,7 +306,7 @@
               [:perform
                (-/finish-social-command-reply v-command
                                               (pg/case (== (:->> o-inbox "provider") "instagram")
-                                                "Follow @finfolk.com.au, then send /connect again to receive your connection code."
+                                                (pg/case (== (:->> o-purpose-command "command") "claim") "Follow @finfolk.com.au, then send /claim again to receive your business claim code." true "Follow @finfolk.com.au, then send /connect again to receive your connection code.")
                                                 true "This social account is not eligible to connect.")
                                               nil
                                               nil
@@ -337,6 +339,7 @@
                            :event (pg/id o-event)
                            :inbox i-inbox
                            :kind "message"
+                           :provider-data (pg/jsonb-build-object "purpose" (:->> o-purpose-command "command"))
                            :token-hash v-hash
                            :generation (:integer (:->> o-account "generation"))
                            :status "verified"

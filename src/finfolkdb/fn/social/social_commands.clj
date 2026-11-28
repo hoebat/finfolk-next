@@ -12,7 +12,7 @@
   []
   (return
    (:jsonb
-    "{\"help\":{\"public\":true},\"ping\":{\"public\":true},\"site\":{\"public\":true},\"privacy\":{\"public\":true},\"status\":{\"public\":true},\"connect\":{\"public\":true,\"privateChannel\":true},\"disconnect\":{\"member\":true,\"privateChannel\":true},\"whoami\":{\"member\":true,\"privateChannel\":true,\"mockOnly\":true}}")))
+    "{\"help\":{\"public\":true},\"ping\":{\"public\":true},\"site\":{\"public\":true},\"privacy\":{\"public\":true},\"status\":{\"public\":true},\"claim\":{\"public\":true,\"privateChannel\":true,\"instagramOnly\":true},\"connect\":{\"public\":true,\"privateChannel\":true},\"disconnect\":{\"member\":true,\"privateChannel\":true},\"whoami\":{\"member\":true,\"privateChannel\":true,\"mockOnly\":true}}")))
 
 (defn.pg ^{:props [:immutable :parallel-safe]}
   parse-social-command
@@ -50,9 +50,6 @@
     (:= v-args (pg/btrim (pg/regexp-replace v-text "^/[A-Za-z]+" "")))
     (when (== v-name "menu")
       (:= v-name "help"))
-    (when (== v-name "claim")
-      (return
-       (pg/jsonb-build-object "command" "help" "guidance" "claim_retired" "args" (:jsonb "{}"))))
     (when (not (pg/jsonb-exists o-registry v-name))
       (return
        (pg/jsonb-build-object "command" "help" "error" "unknown_command" "args" (:jsonb "{}"))))
@@ -92,7 +89,8 @@
                   (or (== i-channel "message")
                       (not (pg/coalesce (:boolean (:->> o-policy "privateChannel")) false)))
                   (or (== i-provider "mock")
-                      (not (pg/coalesce (:boolean (:->> o-policy "mockOnly")) false))))
+                      (not (pg/coalesce (:boolean (:->> o-policy "mockOnly")) false)))
+                  (or (not (pg/coalesce (:boolean (:->> o-policy "instagramOnly")) false)) (== i-provider "instagram") (== i-provider "mock")))
          (:= v-help (#{"concat"} v-help (#{"chr"} 10) "/" v-name))))]
     (return (pg/jsonb-build-object "reply" v-help))))
 
@@ -110,10 +108,6 @@
        (pg/jsonb-build-object
         "reply"
         "For account commands, send a DM to @finfolk.com.au. Connection codes and personal details are never posted in comments.")))
-    (when (== v-guidance "claim_retired")
-      (return (pg/jsonb-build-object
-               "reply"
-               "/claim is retired. Send /connect in a DM to link your FinFolk account.")))
     (when [(:->> i-parsed "error") :is-not-null]
       (return (pg/jsonb-build-object
                "reply"
@@ -137,7 +131,7 @@
         (return
          (pg/jsonb-build-object
           "reply"
-          "Send /connect in a DM, then enter the private code in your signed-in FinFolk account. Connecting never enables public sharing automatically.")))
+          "Send /connect in a DM, then enter the private code in your signed-in FinFolk account. Use /claim in a DM for a business page ownership code. Enter that code on the matching FinFolk business page. Connecting never enables public sharing automatically.")))
       (when (== v-topic "diagnostics")
         (return (pg/jsonb-build-object "reply" "Send /ping to check that FinFolk is responding.")))
       (return (-/social-command-help i-channel i-provider i-enabled)))

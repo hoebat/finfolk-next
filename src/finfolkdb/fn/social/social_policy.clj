@@ -56,7 +56,7 @@
     (when (and (== v-name "whoami") (not= (:->> o-inbox "provider") "mock"))
       (return "mock_only"))
     (when (and (== (:->> o-event "channel") "message")
-               (or (== v-name "connect") (== v-name "status") (== v-name "whoami")))
+               (or (== v-name "claim") (== v-name "connect") (== v-name "status") (== v-name "whoami")))
       (let [o-account (pg/t:get accounts/SocialAccount
                         {:where {:id (:uuid (:->> o-event "account_id"))}})]
         (when (not= (:integer (:->> o-event "account_generation"))

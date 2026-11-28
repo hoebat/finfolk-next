@@ -76,6 +76,7 @@ export function socialRequestAllowed(path,method){
     "^/v1/messaging/connections/finfolk-instagram/events/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$",
     "i"
   ).test(path))) || ((method == "POST") && [
+    "/v1/me/instagram/claim",
     "/v1/me/instagram/connect",
     "/v1/me/instagram/disconnect",
     "/v1/messaging/connections/finfolk-instagram/authorization",

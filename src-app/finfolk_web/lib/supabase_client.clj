@@ -36,7 +36,7 @@
     (and (== method "GET") (or (== path "/v1/me/instagram")
       (== path "/v1/messaging/connections/finfolk-instagram/status")
       (. (new RegExp "^/v1/messaging/connections/finfolk-instagram/events/[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$" "i") (test path))))
-    (and (== method "POST") (. ["/v1/me/instagram/connect" "/v1/me/instagram/disconnect"
+    (and (== method "POST") (. ["/v1/me/instagram/claim" "/v1/me/instagram/connect" "/v1/me/instagram/disconnect"
       "/v1/messaging/connections/finfolk-instagram/authorization" "/v1/messaging/connections/finfolk-instagram/activation"
       "/v1/messaging/connections/finfolk-instagram/pause" "/v1/messaging/connections/finfolk-instagram/disconnect"
       "/v1/messaging/connections/finfolk-instagram/acceptance"] (includes path))))))

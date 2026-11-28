@@ -26,7 +26,7 @@
                      :track o-op})
         o-commands (pg/t:select workflow/SocialCommand
                      {:where {:account i-account
-                              :command [:in '("connect" "disconnect" "status" "whoami")]}})
+                              :command [:in '("connect" "claim" "disconnect" "status" "whoami")]}})
         o-command nil]
     [:for o-command :in :select (pg/jsonb-array-elements (pg/coalesce o-commands (:jsonb "[]")))
      (loop []
@@ -74,6 +74,7 @@
                     {:where {:token-hash v-hash :kind "message"}})
           o-event (pg/t:get workflow/SocialEvent {:where {:id (:uuid (:->> o-proof "event_id"))}})]
       (when (or [o-proof :is-null]
+                (not= (pg/coalesce (:->> (:-> o-proof "provider_data") "purpose") "connect") "connect")
                 [o-event :is-null]
                 (not= (:uuid (:->> o-event "inbox_id")) i-inbox)
                 (not= (:integer (:->> o-event "generation")) (:integer (:->> o-inbox "generation")))

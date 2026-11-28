@@ -83,7 +83,7 @@
     ;; Acceptance remains labelled with the generation actually tested.
     (let [o-commands (pg/t:update messaging/MessagingAccount {:where {:id i-inbox}
                        :set {:generation v-next
-                             :enabled-commands (:jsonb "[\"help\",\"ping\",\"site\",\"privacy\",\"connect\",\"status\",\"disconnect\"]")
+                             :enabled-commands (pg/case (== (:->> o-inbox "provider") "instagram") (:jsonb "[\"help\",\"ping\",\"site\",\"privacy\",\"connect\",\"claim\",\"status\",\"disconnect\"]") true (:jsonb "[\"help\",\"ping\",\"site\",\"privacy\",\"connect\",\"status\",\"disconnect\"]"))
                              :checks (|| (:-> o-inbox "checks")
                                (pg/jsonb-build-object "socialActivation"
                                  (pg/jsonb-build-object "generation" v-next "acceptedGeneration" i-generation

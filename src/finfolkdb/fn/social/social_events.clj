@@ -228,7 +228,7 @@
           (let [o-ignored (pg/t:update workflow/SocialEvent
                             {:where {:id v-event} :set {:status "completed"} :track o-op})]
             (return (pg/jsonb-build-object "id" v-event "status" "ignored"))))
-        (when (or (== v-name "connect")
+        (when (or (== v-name "claim") (== v-name "connect")
                   (and (== v-name "status") (== v-channel "message"))
                   (== v-name "whoami")
                   (== v-name "disconnect"))
@@ -261,7 +261,9 @@
                                                        (:-> o-inbox "enabled_commands"))]
             (:= v-reply (:->> o-public "reply"))
             (when [v-reply :is-null]
-              (cond (not (pg/jsonb-exists (:-> o-inbox "enabled_commands") v-name))
+              (cond (and (== v-name "claim") (not (or (== (:->> o-inbox "provider") "instagram") (== (:->> o-inbox "provider") "mock"))))
+                    (do (:= v-status "rejected") (:= v-state "rejected") (:= o-result (pg/jsonb-build-object "error" "instagram_only")))
+                    (not (pg/jsonb-exists (:-> o-inbox "enabled_commands") v-name))
                     (do (:= v-status "rejected")
                         (:= v-state "rejected")
                         (:= o-result (pg/jsonb-build-object "error" "command_disabled")))
@@ -271,11 +273,11 @@
                         (:= o-result (pg/jsonb-build-object "error" "mock_only")))
                     (and (== v-name "connect") [o-connection :is-not-null])
                     (:= v-reply "This social account is already connected to FinFolk.")
-                    (and (== v-name "connect")
+                    (and (or (== v-name "connect") (== v-name "claim"))
                          (not (-/reserve-social-rate (:->> o-inbox "provider")
                                                      v-identity-namespace
                                                      (:->> o-payload "senderId")
-                                                     "connect" 3600
+                                                     v-name 3600
                                                      3 o-op)))
                     (do (:= v-state "limited")
                         (:= v-status "rejected")
@@ -339,7 +341,7 @@
                                :reply v-reply}
                               {:track o-op})]
           (:= o-command o-new-command))
-        (when (and (== v-state "waiting") (== v-name "connect"))
+        (when (and (== v-state "waiting") (or (== v-name "connect") (== v-name "claim")))
           (let [(:uuid v-action)
                 (actions/enqueue-social-action (pg/id o-command) "verify-account" o-op)]
             nil))

@@ -43,7 +43,9 @@
   (:command (commands/parse-social-command "mention" "/ping @finfolk.com.au")) => "ping"
   (:command (commands/parse-social-command "owned" "/help")) => "help"
   (:command (commands/parse-social-command "mention" "/ping")) => "none"
-  (:guidance (commands/parse-social-command "message" "/claim secret")) => "claim_retired"
+  (:error (commands/parse-social-command "message" "/claim secret")) => "unexpected_arguments"
+  (:command (commands/parse-social-command "message" "/claim")) => "claim"
+  (:guidance (commands/parse-social-command "mention" "@finfolk.com.au /claim")) => "use_dm"
   (:error (commands/parse-social-command "message" "/cancel")) => "unknown_command"
   (select-keys (commands/parse-social-command "mention" "/connect PRIVATE-CODE @finfolk.com.au")
                [:command :guidance :args])

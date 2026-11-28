@@ -1,0 +1,12 @@
+import assert from 'node:assert/strict';import {chromium,expect} from '@playwright/test';import batch from '../config/directory-businesses-australia.json' with{type:'json'};
+const base='http://127.0.0.1:3010',row=batch.records[0],browser=await chromium.launch();
+try{for(const width of [390,1440]){const page=await browser.newPage({viewport:{width,height:1000},serviceWorkers:'block'}),calls=[],errors=[];let claimed=false;page.on('pageerror',e=>errors.push(e.message));
+ await page.route('**/api/preview/operation',async route=>{const body=route.request().postDataJSON();calls.push(body);
+  if(body.operation==='directoryInstagramClaim'){const values=body.values.body||body.values;assert.equal(values.id,row.id);if(values.code!=='CLAIM123')return route.fulfill({status:409,json:{error:'Claim code does not match this business.'}});claimed=true;return route.fulfill({json:{claimed:true,id:row.id}})}
+  if(body.operation==='directoryMine')return route.fulfill({json:{admin:false,listings:claimed?[{id:row.id,owner_id:'alice',role:'owner',status:'published',revision:1,document:row.document}]:[],claims:[]}});
+  return route.continue();
+ });
+ await page.goto(base+'/directory/'+row.id+'?previewActor=alice');await page.getByRole('button',{name:'Claim this page',exact:true}).click();await expect(page.getByText('/claim',{exact:true})).toBeVisible();await expect(page.getByLabel('Business claim code')).toBeVisible();
+ await page.getByLabel('Business claim code').fill('BADCODE1');await page.getByRole('button',{name:'Verify and claim business',exact:true}).click();await expect(page.getByText('Claim code does not match this business.')).toBeVisible();await expect(page.getByRole('link',{name:'Manage page',exact:true})).toHaveCount(0);
+ await page.getByLabel('Business claim code').fill('claim123');await expect(page.getByLabel('Business claim code')).toHaveValue('CLAIM123');await page.getByRole('button',{name:'Verify and claim business',exact:true}).click();await expect(page.getByRole('link',{name:'Manage page',exact:true})).toBeVisible();await expect(page.getByRole('button',{name:'Claim this page',exact:true})).toHaveCount(0);assert(!calls.some(c=>c.operation==='directoryClaim'));assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);assert.deepEqual(errors,[]);await page.close();
+}console.log('PAGE_CLAIM_UI_PASS: desktop/mobile /claim instructions, code entry, rejected code, uppercasing, ownership refresh and Manage page; no manual challenges or real ownership writes.');}finally{await browser.close()}

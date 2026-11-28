@@ -140,6 +140,7 @@
               [o-account :is-null]
               [o-proof :is-null]
               (not= (:->> o-proof "status") "verified")
+              (not= (pg/coalesce (:->> (:-> o-proof "provider_data") "purpose") "connect") "connect")
               [i-token-hash :is-null]
               (not= (:->> o-proof "token_hash") i-token-hash)
               (not= (pg/coalesce (:->> o-proof "nonce_hash") "") (pg/coalesce i-nonce-hash ""))

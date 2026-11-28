@@ -6928,7 +6928,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".connect_social_account(
       FOR UPDATE)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_proof;
     v_version := uuid_generate_v4();
-    IF NOT "finfolk".is_user_active(i_user) OR o_account IS NULL OR o_proof IS NULL OR ((o_proof ->> 'status') != 'verified') OR i_token_hash IS NULL OR ((o_proof ->> 'token_hash') != i_token_hash) OR (coalesce(o_proof ->> 'nonce_hash','') != coalesce(i_nonce_hash,'')) OR (coalesce(o_proof ->> 'flow_key','') != coalesce(i_flow_key,'')) OR ((o_proof ->> 'expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_proof ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) OR (o_proof ->> 'user_id' IS NOT NULL AND ((o_proof ->> 'user_id')::UUID != i_user)) THEN
+    IF NOT "finfolk".is_user_active(i_user) OR o_account IS NULL OR o_proof IS NULL OR ((o_proof ->> 'status') != 'verified') OR (coalesce((o_proof -> 'provider_data') ->> 'purpose','connect') != 'connect') OR i_token_hash IS NULL OR ((o_proof ->> 'token_hash') != i_token_hash) OR (coalesce(o_proof ->> 'nonce_hash','') != coalesce(i_nonce_hash,'')) OR (coalesce(o_proof ->> 'flow_key','') != coalesce(i_flow_key,'')) OR ((o_proof ->> 'expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_proof ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) OR (o_proof ->> 'user_id' IS NOT NULL AND ((o_proof ->> 'user_id')::UUID != i_user)) THEN
       RETURN null;
     END IF;
     IF (jsonb_typeof(i_capabilities) != 'array') OR (jsonb_typeof(i_scopes) != 'array') OR (i_access_expires IS NOT NULL AND (i_access_expires <= (1000000 * extract(epoch FROM now()))::BIGINT)) OR (i_refresh_expires IS NOT NULL AND (i_refresh_expires <= (1000000 * extract(epoch FROM now()))::BIGINT)) THEN
@@ -8631,6 +8631,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_social_action(
       DECLARE
         o_account JSONB;
         o_event JSONB;
+        o_purpose_command JSONB;
         v_lease UUID;
       BEGIN
         WITH j_ret AS (  
@@ -8680,8 +8681,46 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_social_action(
           WHERE "id" = (o_action ->> 'event_id')::UUID
           LIMIT 1)
         SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "event_id",
+            "inbox_id",
+            "generation",
+            "account_id",
+            "key",
+            "context",
+            "external_actor_id",
+            "external_media_id",
+            "owner_id",
+            "connection_id",
+            "identity_version",
+            "command",
+            "args",
+            "source_url",
+            "comment_at",
+            "received_at",
+            "state",
+            "result",
+            "site_id",
+            "visit_day",
+            "reply",
+            "send_state",
+            "external_reply_id",
+            "send_started_at",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."SocialCommand"
+          WHERE "id" = (o_action ->> 'command_id')::UUID
+          LIMIT 1)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_purpose_command;
         v_lease := uuid_generate_v4();
-        IF NOT jsonb_exists(o_inbox -> 'enabled_commands','connect') OR ((o_action ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_action ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_action ->> 'account_generation')::INTEGER != (o_account ->> 'generation')::INTEGER) OR (((o_inbox ->> 'mode') = 'pilot') AND NOT jsonb_exists(
+        IF NOT jsonb_exists(
+          o_inbox -> 'enabled_commands',
+          o_purpose_command ->> 'command'
+        ) OR ((o_action ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_action ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_action ->> 'account_generation')::INTEGER != (o_account ->> 'generation')::INTEGER) OR (((o_inbox ->> 'mode') = 'pilot') AND NOT jsonb_exists(
           o_inbox -> 'pilot_sender_ids',
           (o_event -> 'payload') ->> 'senderId'
         )) THEN
@@ -8747,24 +8786,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".claim_social_action(
             o_action -> 'generation',
             'accountGeneration',
             o_action -> 'account_generation'
-          ),'request',jsonb_build_object(
-            'provider',
-            o_account ->> 'provider',
-            'namespace',
-            o_account ->> 'namespace',
-            'externalId',
-            o_account ->> 'external_id',
-            'conversationId',
-            (o_event -> 'payload') ->> 'conversationId',
-            'codeLength',
-            8,
-            'alphabet',
-            'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-            'prefix',
-            'Your FinFolk connection code: ',
-            'suffix',
-            '. Enter it in your FinFolk account within 10 minutes.'
-          ));
+          ),'request',jsonb_build_object('provider',o_account ->> 'provider','namespace',o_account ->> 'namespace','externalId',o_account ->> 'external_id','conversationId',(o_event -> 'payload') ->> 'conversationId','codeLength',8,'alphabet','ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789','prefix',CASE WHEN (o_purpose_command ->> 'command') = 'claim' THEN 'Your FinFolk business claim code: '
+          WHEN true THEN 'Your FinFolk connection code: '
+          END,'suffix',CASE WHEN (o_purpose_command ->> 'command') = 'claim' THEN '. Sign in at finfolk.com.au/directory, open your business page and enter this claim code within 10 minutes.'
+          WHEN true THEN '. Enter it in your FinFolk account within 10 minutes.'
+          END));
         END;
       END;
     END;
@@ -8788,6 +8814,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_action(
     o_action JSONB;
     o_inbox JSONB;
     o_initial JSONB;
+    o_purpose_command JSONB;
     o_result JSONB;
   BEGIN
     WITH j_ret AS (  
@@ -8908,11 +8935,49 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_action(
       LIMIT 1
       FOR UPDATE)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_action;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "event_id",
+        "inbox_id",
+        "generation",
+        "account_id",
+        "key",
+        "context",
+        "external_actor_id",
+        "external_media_id",
+        "owner_id",
+        "connection_id",
+        "identity_version",
+        "command",
+        "args",
+        "source_url",
+        "comment_at",
+        "received_at",
+        "state",
+        "result",
+        "site_id",
+        "visit_day",
+        "reply",
+        "send_state",
+        "external_reply_id",
+        "send_started_at",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialCommand"
+      WHERE "id" = (o_initial ->> 'command_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_purpose_command;
     o_result := "finfolk".as_jsonb(i_result);
     IF o_inbox is null  THEN
       RAISE EXCEPTION 'Social inbox outside application scope';
     END IF;
-    IF o_action IS NULL OR i_lease IS NULL OR ((o_action ->> 'state') != 'running') OR ((o_action ->> 'lease')::UUID != i_lease) OR ((o_action ->> 'lease_until')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_action ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_inbox ->> 'mode') = 'disabled') OR NOT jsonb_exists(o_inbox -> 'enabled_commands','connect') OR ((o_action ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_action ->> 'account_generation')::INTEGER != (o_account ->> 'generation')::INTEGER) THEN
+    IF o_action IS NULL OR i_lease IS NULL OR ((o_action ->> 'state') != 'running') OR ((o_action ->> 'lease')::UUID != i_lease) OR ((o_action ->> 'lease_until')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_action ->> 'deadline')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_inbox ->> 'mode') = 'disabled') OR NOT jsonb_exists(
+      o_inbox -> 'enabled_commands',
+      o_purpose_command ->> 'command'
+    ) OR ((o_action ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_action ->> 'account_generation')::INTEGER != (o_account ->> 'generation')::INTEGER) THEN
       RETURN null;
     END IF;
     DECLARE
@@ -9023,14 +9088,9 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_action(
           WHEN true THEN 'failed'
           END,o_op);
           IF NOT v_retry THEN
-            PERFORM "finfolk_rpc".finish_social_command_reply(
-              v_command,
-              'Unable to verify your social account. Try /connect again later.',
-              null,
-              null,
-              ('{"error":"external_effect_failed"}')::JSONB,
-              o_op
-            );
+            PERFORM "finfolk_rpc".finish_social_command_reply(v_command,CASE WHEN (o_purpose_command ->> 'command') = 'claim' THEN 'Unable to verify your Instagram account. Try /claim again later.'
+          WHEN true THEN 'Unable to verify your social account. Try /connect again later.'
+          END,null,null,('{"error":"external_effect_failed"}')::JSONB,o_op);
           END IF;
           RETURN jsonb_build_object('id',i_action,'status',CASE WHEN v_retry THEN 'pending'
           WHEN true THEN 'failed'
@@ -9049,7 +9109,9 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_action(
             null;
       END;
         ELSE
-          PERFORM "finfolk_rpc".finish_social_command_reply(v_command,CASE WHEN (o_inbox ->> 'provider') = 'instagram' THEN 'Follow @finfolk.com.au, then send /connect again to receive your connection code.'
+          PERFORM "finfolk_rpc".finish_social_command_reply(v_command,CASE WHEN (o_inbox ->> 'provider') = 'instagram' THEN CASE WHEN (o_purpose_command ->> 'command') = 'claim' THEN 'Follow @finfolk.com.au, then send /claim again to receive your business claim code.'
+      WHEN true THEN 'Follow @finfolk.com.au, then send /connect again to receive your connection code.'
+      END
       WHEN true THEN 'This social account is not eligible to connect.'
       END,null,null,('{"error":"account_ineligible"}')::JSONB,o_op);
         END IF;
@@ -9113,6 +9175,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_action(
                 "status",
                 "expires_at",
                 "verified_at",
+                "provider_data",
                 "op_created",
                 "op_updated",
                 "time_created",
@@ -9127,6 +9190,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_action(
                 ('verified')::"finfolk"."EnumSocialProofStatus",
                 ((1000000 * extract(epoch FROM now()))::BIGINT + 600000000)::BIGINT,
                 (1000000 * extract(epoch FROM now()))::BIGINT,
+                (jsonb_build_object('purpose',o_purpose_command ->> 'command'))::JSONB,
                 (o_op ->> 'id')::UUID,
                 (o_op ->> 'id')::UUID,
                 (o_op ->> 'time')::BIGINT,
@@ -12485,7 +12549,7 @@ CREATE TABLE IF NOT EXISTS "finfolk"."FinnieEntry" (
 -- finfolkdb.fn.social.social-commands/social-command-registry 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".social_command_registry() RETURNS JSONB AS $$
 BEGIN
-  RETURN ('{"help":{"public":true},"ping":{"public":true},"site":{"public":true},"privacy":{"public":true},"status":{"public":true},"connect":{"public":true,"privateChannel":true},"disconnect":{"member":true,"privateChannel":true},"whoami":{"member":true,"privateChannel":true,"mockOnly":true}}')::JSONB;
+  RETURN ('{"help":{"public":true},"ping":{"public":true},"site":{"public":true},"privacy":{"public":true},"status":{"public":true},"claim":{"public":true,"privateChannel":true,"instagramOnly":true},"connect":{"public":true,"privateChannel":true},"disconnect":{"member":true,"privateChannel":true},"whoami":{"member":true,"privateChannel":true,"mockOnly":true}}')::JSONB;
 END;
 $$ LANGUAGE 'plpgsql' IMMUTABLE PARALLEL SAFE;
 
@@ -12540,9 +12604,6 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".parse_social_command(
     v_args := btrim(regexp_replace(v_text,'^/[A-Za-z]+',''));
     IF v_name = 'menu' THEN
       v_name := 'help';
-    END IF;
-    IF v_name = 'claim' THEN
-      RETURN jsonb_build_object('command','help','guidance','claim_retired','args',('{}')::JSONB);
     END IF;
     IF NOT jsonb_exists(o_registry,v_name) THEN
       RETURN jsonb_build_object('command','help','error','unknown_command','args',('{}')::JSONB);
@@ -12609,7 +12670,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".social_command_help(
     END IF;
     FOR v_name IN SELECT jsonb_array_elements_text(i_enabled) LOOP
       o_policy := (o_registry -> v_name);
-      IF o_policy IS NOT NULL AND ((i_channel = 'message') OR NOT coalesce((o_policy ->> 'privateChannel')::BOOLEAN,false)) AND ((i_provider = 'mock') OR NOT coalesce((o_policy ->> 'mockOnly')::BOOLEAN,false)) THEN
+      IF o_policy IS NOT NULL AND ((i_channel = 'message') OR NOT coalesce((o_policy ->> 'privateChannel')::BOOLEAN,false)) AND ((i_provider = 'mock') OR NOT coalesce((o_policy ->> 'mockOnly')::BOOLEAN,false)) AND (NOT coalesce((o_policy ->> 'instagramOnly')::BOOLEAN,false) OR (i_provider = 'instagram') OR (i_provider = 'mock')) THEN
         v_help := "concat"(v_help,"chr"(10),'/',v_name);
       END IF;
     END LOOP;
@@ -12641,12 +12702,6 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".social_public_reply(
       RETURN jsonb_build_object(
         'reply',
         'For account commands, send a DM to @finfolk.com.au. Connection codes and personal details are never posted in comments.'
-      );
-    END IF;
-    IF v_guidance = 'claim_retired' THEN
-      RETURN jsonb_build_object(
-        'reply',
-        '/claim is retired. Send /connect in a DM to link your FinFolk account.'
       );
     END IF;
     IF i_parsed ->> 'error' is not null  THEN
@@ -12683,7 +12738,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".social_public_reply(
       IF v_topic = 'account' THEN
         RETURN jsonb_build_object(
           'reply',
-          'Send /connect in a DM, then enter the private code in your signed-in FinFolk account. Connecting never enables public sharing automatically.'
+          'Send /connect in a DM, then enter the private code in your signed-in FinFolk account. Use /claim in a DM for a business page ownership code. Enter that code on the matching FinFolk business page. Connecting never enables public sharing automatically.'
         );
       END IF;
       IF v_topic = 'diagnostics' THEN
@@ -13480,7 +13535,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".social_work_policy_error(
     IF (v_name = 'whoami') AND ((o_inbox ->> 'provider') != 'mock') THEN
       RETURN 'mock_only';
     END IF;
-    IF ((o_event ->> 'channel') = 'message') AND ((v_name = 'connect') OR (v_name = 'status') OR (v_name = 'whoami')) THEN
+    IF ((o_event ->> 'channel') = 'message') AND ((v_name = 'claim') OR (v_name = 'connect') OR (v_name = 'status') OR (v_name = 'whoami')) THEN
       DECLARE
       o_account JSONB;
     BEGIN
@@ -13943,7 +13998,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".invalidate_social_personal_work(
         "time_updated"
       FROM "finfolk"."SocialCommand"
       WHERE "account_id" = i_account
-      AND "command" IN ('connect','disconnect','status','whoami'))
+      AND "command" IN ('connect','claim','disconnect','status','whoami'))
     SELECT jsonb_agg(j_ret) FROM j_ret INTO o_commands;
     o_command := null;
     FOR o_command IN SELECT jsonb_array_elements(coalesce(o_commands,('[]')::JSONB)) LOOP
@@ -14227,7 +14282,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".redeem_social_connection(
         WHERE "id" = (o_proof ->> 'event_id')::UUID
         LIMIT 1)
       SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
-      IF o_proof IS NULL OR o_event IS NULL OR ((o_event ->> 'inbox_id')::UUID != i_inbox) OR ((o_event ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_proof ->> 'status') != 'verified') OR (((o_inbox ->> 'mode') = 'pilot') AND NOT jsonb_exists(
+      IF o_proof IS NULL OR (coalesce((o_proof -> 'provider_data') ->> 'purpose','connect') != 'connect') OR o_event IS NULL OR ((o_event ->> 'inbox_id')::UUID != i_inbox) OR ((o_event ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_proof ->> 'status') != 'verified') OR (((o_inbox ->> 'mode') = 'pilot') AND NOT jsonb_exists(
         o_inbox -> 'pilot_sender_ids',
         (o_event -> 'payload') ->> 'senderId'
       )) THEN
@@ -15032,7 +15087,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".process_social_event(
             RETURN jsonb_build_object('id',v_event,'status','ignored');
         END;
         END IF;
-        IF (v_name = 'connect') OR ((v_name = 'status') AND (v_channel = 'message')) OR (v_name = 'whoami') OR (v_name = 'disconnect') THEN
+        IF (v_name = 'claim') OR (v_name = 'connect') OR ((v_name = 'status') AND (v_channel = 'message')) OR (v_name = 'whoami') OR (v_name = 'disconnect') THEN
           DECLARE
           o_account JSONB;
             o_current JSONB;
@@ -15155,7 +15210,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".process_social_event(
             );
             v_reply := (o_public ->> 'reply');
             IF v_reply is null  THEN
-              IF NOT jsonb_exists(o_inbox -> 'enabled_commands',v_name) THEN
+              IF (v_name = 'claim') AND NOT (((o_inbox ->> 'provider') = 'instagram') OR ((o_inbox ->> 'provider') = 'mock')) THEN
+                v_status := 'rejected';
+                v_state := 'rejected';
+                o_result := jsonb_build_object('error','instagram_only');
+              ELSIF NOT jsonb_exists(o_inbox -> 'enabled_commands',v_name) THEN
                 v_status := 'rejected';
                 v_state := 'rejected';
                 o_result := jsonb_build_object('error','command_disabled');
@@ -15165,11 +15224,11 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".process_social_event(
                 o_result := jsonb_build_object('error','mock_only');
               ELSIF (v_name = 'connect') AND o_connection IS NOT NULL THEN
                 v_reply := 'This social account is already connected to FinFolk.';
-              ELSIF (v_name = 'connect') AND NOT "finfolk_rpc".reserve_social_rate(
+              ELSIF ((v_name = 'connect') OR (v_name = 'claim')) AND NOT "finfolk_rpc".reserve_social_rate(
                 o_inbox ->> 'provider',
                 v_identity_namespace,
                 o_payload ->> 'senderId',
-                'connect',
+                v_name,
                 3600,
                 3,
                 o_op
@@ -15328,7 +15387,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".process_social_event(
           SELECT to_jsonb(j_ret) FROM j_ret INTO o_new_command;
           o_command := o_new_command;
         END;
-        IF (v_state = 'waiting') AND (v_name = 'connect') THEN
+        IF (v_state = 'waiting') AND ((v_name = 'connect') OR (v_name = 'claim')) THEN
           DECLARE
           v_action UUID;
         BEGIN
@@ -16601,7 +16660,9 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".activate_social_inbox(
     BEGIN
       WITH j_ret AS (  
         UPDATE "finfolk"."MessagingAccount" SET
-          "enabled_commands" = ('["help","ping","site","privacy","connect","status","disconnect"]')::JSONB,
+          "enabled_commands" = (CASE WHEN (o_inbox ->> 'provider') = 'instagram' THEN ('["help","ping","site","privacy","connect","claim","status","disconnect"]')::JSONB
+        WHEN true THEN ('["help","ping","site","privacy","connect","status","disconnect"]')::JSONB
+        END)::JSONB,
           "generation" = (v_next)::INTEGER,
           "checks" = ((o_inbox -> 'checks') || jsonb_build_object('socialActivation',jsonb_build_object(
           'generation',
@@ -19210,7 +19271,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_social_redemption_proof(
       WHERE "id" = (o_proof ->> 'account_id')::UUID
       LIMIT 1)
     SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
-    IF o_inbox IS NULL OR NOT v_user OR o_proof IS NULL OR o_event IS NULL OR ((o_inbox ->> 'mode') = 'disabled') OR (length(coalesce(i_code,'')) > 100) OR ((o_proof ->> 'expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_event ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_proof ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) THEN
+    IF o_inbox IS NULL OR NOT v_user OR o_proof IS NULL OR o_event IS NULL OR (coalesce((o_proof -> 'provider_data') ->> 'purpose','connect') != 'connect') OR ((o_inbox ->> 'mode') = 'disabled') OR (length(coalesce(i_code,'')) > 100) OR ((o_proof ->> 'expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_event ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_proof ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) THEN
       RETURN null;
     END IF;
     RETURN jsonb_build_object(
@@ -19521,7 +19582,7 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_redemption(
     IF o_replay IS NOT NULL AND ((o_replay ->> 'proofId') = (i_snapshot ->> 'proofId')) THEN
       RETURN o_replay;
     END IF;
-    IF o_inbox IS NULL OR o_current IS NULL OR v_checked IS NULL OR (v_checked > (1000000 * extract(epoch FROM now()))::BIGINT) OR (v_checked < ((1000000 * extract(epoch FROM now()))::BIGINT - 30000000)) OR (o_current != (i_snapshot - 'checkedAt')) OR (coalesce(i_evidence -> 'eligible',('false')::JSONB) != ('true')::JSONB) OR ((i_evidence ->> 'provider') != (o_current ->> 'provider')) OR ((i_evidence ->> 'namespace') != (o_current ->> 'namespace')) OR ((i_evidence ->> 'externalId') != (o_current ->> 'externalId')) THEN
+    IF o_inbox IS NULL OR o_current IS NULL OR v_checked IS NULL OR (v_checked > (1000000 * extract(epoch FROM now()))::BIGINT) OR (v_checked < ((1000000 * extract(epoch FROM now()))::BIGINT - 30000000)) OR (o_current != (i_snapshot - 'checkedAt')) OR (coalesce(i_evidence -> 'eligible',('false')::JSONB) != ('true')::JSONB) OR (coalesce(i_evidence ->> 'provider','') != (o_current ->> 'provider')) OR (coalesce(i_evidence ->> 'namespace','') != (o_current ->> 'namespace')) OR (coalesce(i_evidence ->> 'externalId','') != (o_current ->> 'externalId')) THEN
       RETURN null;
     END IF;
     DECLARE
@@ -19594,6 +19655,623 @@ CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_redemption(
     END;
     END IF;
     RETURN "finfolk_rpc".redeem_social_connection(i_application,i_inbox,i_user,i_code,o_op);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-interop/ret-social-page-claim-proof 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".ret_social_page_claim_proof(
+  i_application UUID,
+  i_inbox UUID,
+  i_user UUID,
+  i_code TEXT
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_account JSONB;
+    o_event JSONB;
+    o_inbox JSONB;
+    o_proof JSONB;
+    v_code TEXT;
+    v_hash TEXT;
+    v_user BOOLEAN;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    v_user := "finfolk_rpc".lock_social_member(i_user);
+    v_code := upper(regexp_replace(coalesce(i_code,''),'[[:space:]-]','','g'));
+    v_hash := "encode"("digest"(v_code,'sha256'),'hex');
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "user_id",
+        "connection_id",
+        "event_id",
+        "inbox_id",
+        "receipt_id",
+        "kind",
+        "token_hash",
+        "nonce_hash",
+        "flow_key",
+        "generation",
+        "status",
+        "expires_at",
+        "verified_at",
+        "consumed_at",
+        "consumed_version",
+        "error",
+        "provider_data",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnectionProof"
+      WHERE "token_hash" = v_hash
+      AND "kind" = ('message')::"finfolk"."EnumSocialProofKind"
+      AND "status" = ('verified')::"finfolk"."EnumSocialProofStatus"
+      AND "inbox_id" = i_inbox
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_proof;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "key",
+        "account_id",
+        "inbox_id",
+        "message_id",
+        "channel",
+        "generation",
+        "account_generation",
+        "content_cleared",
+        "fingerprint",
+        "sent_at",
+        "deadline",
+        "payload",
+        "status",
+        "attempts",
+        "error",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialEvent"
+      WHERE "id" = (o_proof ->> 'event_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_event;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = (o_proof ->> 'account_id')::UUID
+      LIMIT 1)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_account;
+    IF o_inbox IS NULL OR NOT v_user OR o_proof IS NULL OR o_event IS NULL OR (coalesce((o_proof -> 'provider_data') ->> 'purpose','connect') != 'claim') OR ((o_inbox ->> 'mode') = 'disabled') OR ((o_inbox ->> 'provider') != 'instagram') OR ((o_event ->> 'channel') != 'message') OR NOT jsonb_exists(o_inbox -> 'enabled_commands','claim') OR "finfolk_rpc".social_rollout_error(o_inbox,o_event) IS NOT NULL OR (length(coalesce(i_code,'')) > 100) OR ((o_proof ->> 'expires_at')::BIGINT <= (1000000 * extract(epoch FROM now()))::BIGINT) OR ((o_event ->> 'generation')::INTEGER != (o_inbox ->> 'generation')::INTEGER) OR ((o_proof ->> 'generation')::INTEGER != (o_account ->> 'generation')::INTEGER) THEN
+      RETURN null;
+    END IF;
+    RETURN jsonb_build_object(
+      'proofId',
+      (o_proof ->> 'id')::UUID,
+      'provider',
+      o_inbox ->> 'provider',
+      'namespace',
+      o_account ->> 'namespace',
+      'externalId',
+      o_account ->> 'external_id',
+      'conversationId',
+      (o_event -> 'payload') ->> 'conversationId',
+      'generation',
+      o_inbox -> 'generation',
+      'accountGeneration',
+      o_account -> 'generation'
+    );
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-interop/prepare-social-page-claim 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".prepare_social_page_claim(
+  i_application UUID,
+  i_inbox UUID,
+  i_user UUID,
+  i_listing UUID,
+  i_code TEXT,
+  i_ip_hash TEXT,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_inbox JSONB;
+    v_namespace TEXT;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    v_namespace := (jsonb_build_array(i_application,i_inbox))::TEXT;
+    IF o_inbox IS NULL OR NOT "finfolk_rpc".social_member_allowed(o_inbox,i_user) THEN
+      RETURN null;
+    END IF;
+    IF i_ip_hash IS NULL OR NOT "regexp_like"(i_ip_hash,'^[a-f0-9]{64}$') THEN
+      RAISE EXCEPTION 'Trusted client IP hash required';
+    END IF;
+    DECLARE
+      v_ip BOOLEAN;
+      v_member BOOLEAN;
+    BEGIN
+      v_member := "finfolk_rpc".reserve_social_rate(
+        o_inbox ->> 'provider',
+        v_namespace,
+        (i_user)::TEXT,
+        'redeem-member',
+        900,
+        10,
+        o_op
+      );
+      v_ip := "finfolk_rpc".reserve_social_rate(
+        o_inbox ->> 'provider',
+        v_namespace,
+        i_ip_hash,
+        'redeem-ip',
+        900,
+        10,
+        o_op
+      );
+      IF NOT v_member OR NOT v_ip THEN
+        RETURN jsonb_build_object('error','rate_limited');
+      END IF;
+    END;
+    DECLARE
+      o_listing JSONB;
+      o_proof JSONB;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "status",
+          "reviewed_at",
+          "outreach",
+          "notes",
+          "social_id",
+          "access_id",
+          "audit_id",
+          "rev_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."DirectoryListing"
+        WHERE "id" = i_listing
+        AND "status" = ('published')::"finfolk"."EnumDirectoryListingStatus"
+        LIMIT 1)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_listing;
+      o_proof := "finfolk_rpc".ret_social_page_claim_proof(i_application,i_inbox,i_user,i_code);
+      IF o_listing IS NULL OR o_proof IS NULL THEN
+        RETURN null;
+      END IF;
+      RETURN o_proof || jsonb_build_object(
+        'listingId',
+        i_listing,
+        'checkedAt',
+        (1000000 * extract(epoch FROM now()))::BIGINT
+      );
+    END;
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
+-- finfolkdb.fn.social.social-interop/complete-social-page-claim 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".complete_social_page_claim(
+  i_application UUID,
+  i_inbox UUID,
+  i_user UUID,
+  i_listing UUID,
+  i_code TEXT,
+  i_snapshot JSONB,
+  i_evidence JSONB,
+  o_op JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_current JSONB;
+    o_inbox JSONB;
+    o_initial JSONB;
+    o_locked_account JSONB;
+    o_proof JSONB;
+    v_checked BIGINT;
+    v_handle TEXT;
+  BEGIN
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "social_account_id",
+        "key",
+        "application_id",
+        "provider",
+        "account_id",
+        "username",
+        "credential_ciphertext",
+        "token_expires_at",
+        "credential_lease",
+        "credential_lease_until",
+        "mode",
+        "enabled_commands",
+        "pilot_sender_ids",
+        "generation",
+        "checks",
+        "last_webhook_at",
+        "last_command_at",
+        "last_reply_at",
+        "time_updated",
+        "backoff_until",
+        "action_checkpoint",
+        "delivery_checkpoint",
+        "event_checkpoint",
+        "proof_checkpoint",
+        "provider_scope"
+      FROM "finfolk"."MessagingAccount"
+      WHERE "id" = i_inbox AND "application_id" = i_application
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_inbox;
+    o_initial := "finfolk_rpc".ret_social_page_claim_proof(i_application,i_inbox,i_user,i_code);
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "account_id",
+        "user_id",
+        "connection_id",
+        "event_id",
+        "inbox_id",
+        "receipt_id",
+        "kind",
+        "token_hash",
+        "nonce_hash",
+        "flow_key",
+        "generation",
+        "status",
+        "expires_at",
+        "verified_at",
+        "consumed_at",
+        "consumed_version",
+        "error",
+        "provider_data",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialConnectionProof"
+      WHERE "id" = (o_initial ->> 'proofId')::UUID
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_proof;
+    WITH j_ret AS (  
+      SELECT
+        "id",
+        "provider",
+        "namespace",
+        "external_id",
+        "handle",
+        "display_name",
+        "generation",
+        "provider_data",
+        "audit_id",
+        "op_created",
+        "op_updated",
+        "time_created",
+        "time_updated"
+      FROM "finfolk"."SocialAccount"
+      WHERE "id" = (o_proof ->> 'account_id')::UUID
+      LIMIT 1
+      FOR UPDATE)
+    SELECT to_jsonb(j_ret) FROM j_ret INTO o_locked_account;
+    o_current := "finfolk_rpc".ret_social_page_claim_proof(i_application,i_inbox,i_user,i_code);
+    v_checked := (i_snapshot ->> 'checkedAt')::BIGINT;
+    v_handle := lower(coalesce(i_evidence ->> 'handle',''));
+    IF o_inbox IS NULL OR o_current IS NULL OR v_checked IS NULL OR NOT "finfolk_rpc".social_member_allowed(o_inbox,i_user) OR (v_checked > (1000000 * extract(epoch FROM now()))::BIGINT) OR (v_checked < ((1000000 * extract(epoch FROM now()))::BIGINT - 30000000)) OR ((i_listing)::TEXT != coalesce(i_snapshot ->> 'listingId','')) OR (o_current != ((i_snapshot - 'checkedAt') - 'listingId')) OR (coalesce(i_evidence -> 'eligible',('false')::JSONB) != ('true')::JSONB) OR (coalesce(i_evidence ->> 'provider','') != (o_current ->> 'provider')) OR (coalesce(i_evidence ->> 'namespace','') != (o_current ->> 'namespace')) OR (coalesce(i_evidence ->> 'externalId','') != (o_current ->> 'externalId')) OR NOT "regexp_like"(v_handle,'^[a-z0-9._]{1,30}$') THEN
+      RETURN null;
+    END IF;
+    DECLARE
+      o_listing JSONB;
+      v_owned BOOLEAN;
+    BEGIN
+      WITH j_ret AS (  
+        SELECT
+          "id",
+          "status",
+          "reviewed_at",
+          "outreach",
+          "notes",
+          "detail",
+          "social_id",
+          "access_id",
+          "audit_id",
+          "rev_id",
+          "op_created",
+          "op_updated",
+          "time_created",
+          "time_updated"
+        FROM "finfolk"."DirectoryListing"
+        WHERE "id" = i_listing
+        AND "status" = ('published')::"finfolk"."EnumDirectoryListingStatus"
+        LIMIT 1
+        FOR UPDATE)
+      SELECT to_jsonb(j_ret) FROM j_ret INTO o_listing;
+      SELECT exists(SELECT 1 FROM "finfolk"."AccessRole"
+      WHERE "class_table" = ('DirectoryListing')::"finfolk"."EnumClassType"
+      AND "class_context" = ('Global')::"finfolk"."EnumClassType"
+      AND "access_id" = (o_listing ->> 'access_id')::UUID
+      AND "level" = ('owner')::"finfolk"."EnumAccessRoleLevel"
+      AND "is_active" = true) INTO v_owned;
+      IF o_listing IS NULL OR NOT coalesce(jsonb_exists(
+        (o_listing -> 'detail') -> 'socials',
+        "concat"('instagram:',v_handle)
+      ),false) OR v_owned THEN
+        RETURN null;
+      END IF;
+      DECLARE
+        o_existing JSONB;
+        o_ownership JSONB;
+      BEGIN
+        o_ownership := jsonb_build_object(
+          'provider',
+          'instagram',
+          'applicationId',
+          i_application,
+          'inboxId',
+          i_inbox,
+          'socialAccountId',
+          o_proof -> 'account_id',
+          'externalId',
+          o_current ->> 'externalId',
+          'handle',
+          v_handle,
+          'proofId',
+          (o_proof ->> 'id')::UUID,
+          'verifiedAt',
+          (1000000 * extract(epoch FROM now()))::BIGINT
+        );
+        WITH j_ret AS (  
+          SELECT
+            "id",
+            "is_active",
+            "is_public",
+            "access_id",
+            "member_id",
+            "from_id",
+            "level",
+            "scope",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated"
+          FROM "finfolk"."AccessRole"
+          WHERE "class_table" = ('DirectoryListing')::"finfolk"."EnumClassType"
+          AND "class_context" = ('Global')::"finfolk"."EnumClassType"
+          AND "access_id" = (o_listing ->> 'access_id')::UUID
+          AND "member_id" = i_user
+          LIMIT 1
+          FOR UPDATE)
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_existing;
+        IF o_existing is not null  THEN
+          DECLARE
+          o_role JSONB;
+        BEGIN
+          WITH j_ret AS (  
+              UPDATE "finfolk"."AccessRole" SET
+                "is_active" = (true)::BOOLEAN,
+                "from_id" = (i_user)::UUID,
+                "level" = ('owner')::"finfolk"."EnumAccessRoleLevel",
+                "scope" = (o_ownership)::JSONB,
+                "op_updated" = (o_op ->> 'id')::UUID,
+                "time_updated" = (o_op ->> 'time')::BIGINT
+              WHERE "class_table" = ('DirectoryListing')::"finfolk"."EnumClassType"
+              AND "class_context" = ('Global')::"finfolk"."EnumClassType"
+              AND "id" = (o_existing ->> 'id')::UUID
+              RETURNING
+                "id",
+                "is_active",
+                "is_public",
+                "access_id",
+                "member_id",
+                "from_id",
+                "level",
+                "scope",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated")
+            SELECT jsonb_agg(j_ret) FROM j_ret INTO o_role;
+            null;
+        END;
+        ELSE
+          DECLARE
+          o_role JSONB;
+        BEGIN
+          WITH j_ret AS (  
+              INSERT INTO "finfolk"."AccessRole" (
+                "class_table",
+                "class_context",
+                "access_id",
+                "member_id",
+                "from_id",
+                "level",
+                "scope",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated"
+              ) VALUES (
+                ('DirectoryListing')::"finfolk"."EnumClassType",
+                ('Global')::"finfolk"."EnumClassType",
+                (o_listing ->> 'access_id')::UUID,
+                (i_user)::UUID,
+                (i_user)::UUID,
+                ('owner')::"finfolk"."EnumAccessRoleLevel",
+                (o_ownership)::JSONB,
+                (o_op ->> 'id')::UUID,
+                (o_op ->> 'id')::UUID,
+                (o_op ->> 'time')::BIGINT,
+                (o_op ->> 'time')::BIGINT
+              ) RETURNING
+                "id",
+                "is_active",
+                "is_public",
+                "access_id",
+                "member_id",
+                "from_id",
+                "level",
+                "scope",
+                "op_created",
+                "op_updated",
+                "time_created",
+                "time_updated")
+            SELECT to_jsonb(j_ret) FROM j_ret INTO o_role;
+            null;
+        END;
+        END IF;
+      END;
+      DECLARE
+        o_audit JSONB;
+        o_destroyed JSONB;
+      BEGIN
+        WITH j_ret AS (  
+          INSERT INTO "finfolk"."AuditLog" (
+            "class_table",
+            "class_context",
+            "audit_id",
+            "entry",
+            "op_created",
+            "time_created"
+          ) VALUES (
+            ('DirectoryListing')::"finfolk"."EnumClassType",
+            ('Global')::"finfolk"."EnumClassType",
+            (o_listing ->> 'audit_id')::UUID,
+            "finfolk".as_jsonb((jsonb_build_object(
+            'event',
+            'instagram-claim',
+            'applicationId',
+            i_application,
+            'inboxId',
+            i_inbox,
+            'socialAccountId',
+            o_proof -> 'account_id',
+            'proofId',
+            (o_proof ->> 'id')::UUID,
+            'externalId',
+            o_current ->> 'externalId',
+            'handle',
+            v_handle,
+            'owner',
+            i_user
+          ))::JSONB),
+            (o_op ->> 'id')::UUID,
+            (o_op ->> 'time')::BIGINT
+          ) RETURNING "id","audit_id","op_created","time_created")
+        SELECT to_jsonb(j_ret) FROM j_ret INTO o_audit;
+        WITH j_ret AS (  
+          DELETE FROM "finfolk"."SocialConnectionProof" WHERE "id" = (o_proof ->> 'id')::UUID
+          RETURNING
+            "id",
+            "account_id",
+            "user_id",
+            "connection_id",
+            "event_id",
+            "inbox_id",
+            "receipt_id",
+            "kind",
+            "token_hash",
+            "nonce_hash",
+            "flow_key",
+            "generation",
+            "status",
+            "expires_at",
+            "verified_at",
+            "consumed_at",
+            "consumed_version",
+            "error",
+            "provider_data",
+            "op_created",
+            "op_updated",
+            "time_created",
+            "time_updated")
+        SELECT jsonb_agg(j_ret) FROM j_ret INTO o_destroyed;
+        RETURN jsonb_build_object('claimed',true,'id',i_listing);
+      END;
+    END;
   END;
 
 $$ LANGUAGE 'plpgsql';

@@ -1,5 +1,15 @@
 // Generated from finfolk-web.lib.operations; do not edit.
 export var operations = {
+  "directoryInstagramClaim":{
+    "name":"directoryInstagramClaim",
+    "path":"/v1/me/instagram/claim",
+    "method":"POST",
+    "transport":"rest",
+    "auth":true,
+    "admin":false,
+    "write":true,
+    "domain":"directoryOwner"
+  },
   "directoryReportResolve":{
     "transport":"rest",
     "result-shape":{"type":"object","additionalProperties":false},

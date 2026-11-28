@@ -88,7 +88,7 @@ export function createNativeSocialWorker({openDatabase=database,fetcher=fetch,pr
   return {
     async fetch(request,env) {
       const path=new URL(request.url).pathname;
-      const member=[memberPrefix,memberPrefix+'/connect',memberPrefix+'/disconnect'].includes(path);
+      const member=[memberPrefix,memberPrefix+'/connect',memberPrefix+'/disconnect',...(provider==='instagram'?[memberPrefix+'/claim']:[])].includes(path);
       const operator=path.startsWith(connectionPrefix)||path===callbackPath;
       if(!member&&!operator&&![webhookPath,'/v1/messaging/webhooks/finfolk-'+provider].includes(path))return new Response('',{status:404});
       const authenticate=request=>verifiedIdentity({supabaseUrl:env.SUPABASE_URL,publishableKey:env.SUPABASE_PUBLISHABLE_KEY},request.headers.get('Authorization'));

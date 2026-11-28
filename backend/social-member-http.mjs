@@ -5,13 +5,14 @@ import {readLimited} from './messaging-http.mjs';
 // Payloads never select application, inbox, actor or provider identity.
 export function createSocialMemberHTTP({runtime,adapter,authenticate,allowedOrigins,trustedIP,provider='instagram'}) {
   if(!['instagram','tiktok'].includes(provider))throw Error('Unsupported member connection provider');
+  const uuid=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
   const prefix='/v1/me/'+provider,label=provider==='tiktok'?'TikTok':'Instagram';
   const origins=new Set(allowedOrigins);
   const json=(body,status=200)=>Response.json(body,{status,headers:{'Cache-Control':'private, no-store'}});
   return async request=>{
     try {
       const path=new URL(request.url).pathname;
-      if(![prefix,prefix+'/connect',prefix+'/disconnect'].includes(path))return json({error:'Not found'},404);
+      if(![prefix,prefix+'/connect',prefix+'/disconnect',...(provider==='instagram'?[prefix+'/claim']:[])].includes(path))return json({error:'Not found'},404);
       const status=path===prefix;
       if(request.method!==(status?'GET':'POST'))return json({error:'Method not allowed'},405);
       if(!status&&!origins.has(request.headers.get('Origin')))return json({error:'Origin not allowed'},403);
@@ -22,9 +23,17 @@ export function createSocialMemberHTTP({runtime,adapter,authenticate,allowedOrig
       let input;
       try {input=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await readLimited(request,4096)));}
       catch(error){return json({error:'Invalid request'},error.status===413?413:400);}
-      const fields=path.endsWith('/connect')?['code']:['connectionId','identityVersion'];
+      const claim=path.endsWith('/claim');const fields=claim?['id','code']:path.endsWith('/connect')?['code']:['connectionId','identityVersion'];
       if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(key=>!fields.includes(key))||
         fields.some(key=>typeof input[key]!=='string'||input[key].length>100))return json({error:'Invalid request'},400);
+      if(claim){
+        if(!uuid.test(input.id))return json({error:'Invalid page'},400);
+        const ip=trustedIP(request);if(!ip)return json({error:'Client verification unavailable'},503);
+        const result=await runtime.claimPageVerified(identity.id,input.id,input.code,createHash('sha256').update(ip).digest('hex'),adapter);
+        if(result?.error==='rate_limited')return json({error:'Too many attempts. Try again in 15 minutes.'},429);
+        if(!result)return json({error:'Claim code unavailable, expired or does not match this page. Send /claim from the business’s listed Instagram account.'},409);
+        return json(result);
+      }
       if(path.endsWith('/connect')){
         const ip=trustedIP(request);
         if(!ip)return json({error:'Client verification unavailable'},503);
@@ -33,7 +42,6 @@ export function createSocialMemberHTTP({runtime,adapter,authenticate,allowedOrig
         if(!result)return json({error:provider==='instagram'?'Code unavailable. Follow @finfolk.com.au and send /connect again.':'Code unavailable. Follow FinFolk on TikTok and send /connect again.'},409);
         return json(await runtime.memberStatus(identity.id));
       }
-      const uuid=/^[a-f0-9]{8}(?:-[a-f0-9]{4}){3}-[a-f0-9]{12}$/i;
       if(!uuid.test(input.connectionId)||!uuid.test(input.identityVersion))return json({error:'Invalid request'},400);
       if(!await runtime.disconnect(identity.id,input.connectionId,input.identityVersion))return json({error:'Connection changed. Reload first.'},409);
       return json({connected:false});
