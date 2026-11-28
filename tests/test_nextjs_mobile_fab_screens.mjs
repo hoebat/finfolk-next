@@ -34,7 +34,7 @@ try{
    await expect(host.locator('.ff-account-widget').locator(guest?'.ff-signin':'.ff-account-mobile-link')).toHaveCount(1);
    if(['/account','/account/checkin'].includes(path)&&!guest)await page.getByRole('button',{name:'Close session form',exact:true}).click();
    if(!guest&&destination.startsWith('/account/settings'))await expect(page.locator('#settings-title')).toBeFocused();
-   if(guest&&destination.startsWith('/account'))await page.getByRole('button',{name:'Close sign in',exact:true}).click();
+   if(guest&&destination.startsWith('/account')){await page.getByRole('button',{name:'Close sign in',exact:true}).click();await page.waitForURL(u=>!u.searchParams.has('signin'));}
    // Standalone account routes can open their sign-in dialog. Check navigation
    // after dismissing the modal, when the background becomes interactive again.
    for(let i=0;i<2;i++){const dialog=page.locator('dialog[open]').first();if(await dialog.isVisible()){await page.keyboard.press('Escape');await expect(dialog).toBeHidden();}}
