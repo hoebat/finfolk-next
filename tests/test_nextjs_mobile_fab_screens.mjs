@@ -8,28 +8,31 @@ import {mockAccount} from './fixtures/nextjs-account.mjs';
 const base=process.env.NEXTJS_TEST_URL||'http://127.0.0.1:3347',url=new URL(base);
 assert(['localhost','127.0.0.1'].includes(url.hostname)||url.protocol==='https:'&&(url.hostname==='finfolk.com.au'||/^[a-f0-9]{24}--finfolk\.netlify\.app$/.test(url.hostname)));
 const app=process.env.FAB_APP_SOURCE||fileURLToPath(new URL('../js/finfolk-next/site/web-main/app',import.meta.url));
-const uuid='11111111-1111-4111-8111-111111111111',paths=[];
+const uuid='11111111-1111-4111-8111-111111111111',paths=[],aliases=new Map();
 for(const file of await readdir(app,{recursive:true})){
  if(!file.endsWith('page.jsx')||file.startsWith('offline-app/'))continue;
  const parts=file.split('/').slice(0,-1).filter(x=>!x.startsWith('('));
- paths.push('/'+parts.map((x,i)=>x==='[id]'?parts[i-1]==='u'?'navigation-fixture':uuid:x).join('/'));
+ const path='/'+parts.map((x,i)=>x==='[id]'?parts[i-1]==='u'?'navigation-fixture':uuid:x).join('/');paths.push(path);
+ const redirect=(await readFile(resolve(app,file),'utf8')).match(/redirect\(['"]([^'"]+)['"]\)/);if(redirect)aliases.set(path,redirect[1]);
 }
+aliases.set('/pages','/directory?manage=1');aliases.set('/profiles','/people');
 const all=[...new Set([...paths,'/navigation-fixture-not-found'])].sort();
 const out=process.env.FAB_REPORT_DIR||'.cache/mobile-fab-release';await mkdir(out,{recursive:true});const results=[];
 const browser=await chromium.launch();
 try{
- for(const guest of [false,true]){
+ await Promise.all([false,true].map(async guest=>{
   const page=await browser.newPage({viewport:{width:390,height:844},serviceWorkers:'block',reducedMotion:'reduce'});page.setDefaultTimeout(30000);await mockAccount(page,base);await page.route('**/v1/features',r=>r.fulfill({json:{flags:{},revision:1}}));
   if(guest)await page.addInitScript(()=>sessionStorage.setItem('fixture:guest','yes'));
   for(const path of all){
    console.log('Checking '+(guest?'guest ':'member ')+path);
    const errors=[];const capture=e=>errors.push(e.message);page.on('pageerror',capture);
    await page.goto(base+path,{waitUntil:'domcontentloaded'});
+   const destination=aliases.get(path)||path;if(aliases.has(path)){const target=new URL(destination,base);await page.waitForURL(u=>u.pathname===target.pathname||guest&&target.pathname.startsWith('/account')&&u.pathname==='/map'&&u.searchParams.has('signin'));}
    const host=page.locator('.ff-mobile-navigation'),toggle=host.getByRole('button',{name:'Open menu',exact:true});
    await expect(host.locator('.ff-account-widget').locator(guest?'.ff-signin':'.ff-account-mobile-link')).toHaveCount(1);
    if(['/account','/account/checkin'].includes(path)&&!guest)await page.getByRole('button',{name:'Close session form',exact:true}).click();
-   if(!guest&&(path==='/account/privacy'||path.startsWith('/account/settings')))await expect(page.locator('#settings-title')).toBeFocused();
-   if(guest&&path.startsWith('/account'))await page.getByRole('button',{name:'Close sign in',exact:true}).click();
+   if(!guest&&destination.startsWith('/account/settings'))await expect(page.locator('#settings-title')).toBeFocused();
+   if(guest&&destination.startsWith('/account'))await page.getByRole('button',{name:'Close sign in',exact:true}).click();
    // Standalone account routes can open their sign-in dialog. Check navigation
    // after dismissing the modal, when the background becomes interactive again.
    for(let i=0;i<2;i++){const dialog=page.locator('dialog[open]').first();if(await dialog.isVisible()){await page.keyboard.press('Escape');await expect(dialog).toBeHidden();}}
@@ -48,7 +51,7 @@ try{
    page.off('pageerror',capture);assert.deepEqual(errors,[],path);results.push({path,guest,passed:true});
   }
   await page.close();
- }
+ }));
  await writeFile(resolve(out,'screen-consistency.json'),JSON.stringify({passed:true,url:base,routes:all.length,cases:results.length,guestAndMember:true,consistentPosition:true,singleEntryPoint:true,themeSelection:true,keyboardFocus:true,results},null,2));
  console.log('MOBILE_FAB_SCREENS_PASS: '+results.length+' checks across '+all.length+' routes/templates, guest and member, one FAB, icons, themes, viewport and keyboard focus.');
 }finally{await browser.close();}
