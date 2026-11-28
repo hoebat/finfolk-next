@@ -132,3 +132,17 @@ export function friendlyError(error) {
     return "Choose a stronger password with at least 8 characters.";
   return error.message || "Something went wrong. Please try again.";
 }
+
+// Match the native public_session_detail projection. Keep previews free of
+// private import fields and link only to original posts on provider hosts.
+export function publicSessionMedia(items = []) {
+  return (Array.isArray(items) ? items : []).flatMap(item => {
+    if (!item || typeof item.url !== 'string') return [];
+    const url = item.url.split(/[?#]/, 1)[0], platform = item.platform;
+    const pattern = platform === 'instagram'
+      ? /^https:\/\/(www\.)?instagram\.com\/(p|reel|tv)\/[A-Za-z0-9_-]+\/?$/
+      : platform === 'tiktok' ? /^https:\/\/(www\.)?tiktok\.com\/@[A-Za-z0-9._]+\/video\/[0-9]+\/?$/ : null;
+    if (!pattern || url.length > 2048 || /[\u0000-\u0020\u007f]/.test(url) || !pattern.test(url)) return [];
+    return [{id: String(item.id ?? url), platform, url, kind: platform === 'tiktok' || url.includes('/reel/') ? 'video' : 'post'}];
+  });
+}

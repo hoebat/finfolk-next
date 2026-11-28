@@ -1,5 +1,5 @@
 (ns finfolkdb.fn.user.user-logbook
-  "Native private logbook operations. Publishing and provider media have separate gates."
+  "Owned logbook writes and explicit public session projections."
   (:require [lang.core :as l]))
 (l/script :postgres
   {:require [[postgres.core :as pg]
@@ -159,10 +159,7 @@
     (when (and (== i-visibility "public") (not= (pg/coalesce (:->> (:-> (:-> o-old "detail") "plan") "state") "completed") "completed")) [:raise-exception "Finish the session before publishing"])
     (when (== i-visibility "public")
       (when (not (pg/coalesce i-verified false))
-        [:raise :exception :using '[[errcode := "42501"] [message := "Verify your email before publishing"]]])
-      (when (or (> (pg/jsonb-array-length (pg/coalesce (:-> (:-> o-old "detail") "photos") (:jsonb "[]"))) 0)
-                (> (pg/jsonb-array-length (pg/coalesce (:-> (:-> o-old "detail") "linkedMedia") (:jsonb "[]"))) 0))
-        [:raise :exception :using '[[errcode := "42501"] [message := "Media publishing requires ownership verification"]]]))
+        [:raise :exception :using '[[errcode := "42501"] [message := "Verify your email before publishing"]]]))
     (when (not= (pg/coalesce (:->> (:-> o-old "detail") "visibility") "private") i-visibility)
       (let [o-op (system/op-fn "session-visibility" i-user (pg/jsonb-build-object "visibility" i-visibility))
             o-next (|| (:-> o-old "detail") (pg/jsonb-build-object "visibility" i-visibility))
@@ -173,14 +170,25 @@
             o-history (pg/t:insert system/RevLog {:class-table "DiveSession" :class-context "Global" :rev (:uuid (:->> o-old "rev_id")) :version v-version :deltas o-next} {:track o-op})
             o-audit (pg/t:insert system/AuditLog {:class-table "DiveSession" :class-context "Global" :audit (:uuid (:->> o-old "audit_id")) :entry (pg/jsonb-build-object "event" "visibility" "visibility" i-visibility)} {:track o-op})]))
     (return (pg/jsonb-build-object "visibility" i-visibility))))
+(defn.pg ^{:- [:jsonb]} public-session-detail [:jsonb i-session]
+  ;; Publication consents to attached original post links, never inbox metadata,
+  ;; provider credentials, individual dives or legacy private photo objects.
+  (let [o-links (:jsonb "[]") o-link nil]
+    [:for o-link :in :select (pg/jsonb-array-elements (pg/case (== (pg/jsonb-typeof (:-> i-session "linkedMedia")) "array") (:-> i-session "linkedMedia") true (:jsonb "[]")))
+     (loop []
+       (let [(:text v-url) (#{"split_part"} (#{"split_part"} (pg/coalesce (:->> o-link "url") "") "?" 1) "#" 1)
+             (:text v-platform) (:->> o-link "platform")]
+         (when (and (<= (pg/length v-url) 2048) (not (#{"regexp_like"} v-url "[[:space:][:cntrl:]]"))
+                    (or (and (== v-platform "instagram") (#{"regexp_like"} v-url "^https://(www[.])?instagram[.]com/(p|reel|tv)/[A-Za-z0-9_-]+/?$"))
+                        (and (== v-platform "tiktok") (#{"regexp_like"} v-url "^https://(www[.])?tiktok[.]com/@[A-Za-z0-9._]+/video/[0-9]+/?$"))))
+           (:= o-links (|| o-links (pg/jsonb-build-array
+             (pg/jsonb-build-object "id" (pg/coalesce (:->> o-link "id") v-url) "platform" v-platform "url" v-url
+               "kind" (pg/case (or (== v-platform "tiktok") (#{"regexp_like"} v-url "/reel/")) "video" true "post"))))))))]
+    (return (|| (- i-session "dives") (pg/jsonb-build-object "photos" (:jsonb "[]") "linkedMedia" o-links)))))
 (defn.pg ^{:- [:jsonb]} public-session-row [:jsonb i-row]
   (when (or [i-row :is-null] (not= (pg/coalesce (:->> (:-> i-row "detail") "visibility") "private") "public")
             (not (access/is-user-active (:uuid (:->> i-row "owner_id"))))) (return nil))
-  ;; Until provider ownership adapters are enabled, only media-free sessions can
-  ;; cross the public boundary. Recheck this at read time as well as publication.
-  (when (or (> (pg/jsonb-array-length (pg/coalesce (:-> (:-> i-row "detail") "photos") (:jsonb "[]"))) 0)
-            (> (pg/jsonb-array-length (pg/coalesce (:-> (:-> i-row "detail") "linkedMedia") (:jsonb "[]"))) 0)) (return nil))
-  (return (- (-/private-session-row i-row) "dives")))
+  (return (-/public-session-detail (-/private-session-row i-row))))
 (defn.pg ^{:- [:jsonb]} ret-visible-session [:uuid i-viewer :uuid i-session]
   (when [i-viewer :is-not-null] [:perform (account/ret-account i-viewer)])
   (let [o-row (pg/t:get book/DiveSession {:where {:id i-session} :returning #{:*/standard :detail}})]
@@ -200,8 +208,7 @@
     (let [o-page (-/ret-private-sessions v-owner (|| i-query (pg/jsonb-build-object "owner" v-owner "publicOnly" true)))]
       [:for o-row :in :select (pg/jsonb-array-elements (:-> o-page "sessions"))
        (loop []
-         (when (and (== (pg/jsonb-array-length (:-> o-row "photos")) 0) (== (pg/jsonb-array-length (:-> o-row "linkedMedia")) 0))
-           (:= o-result (|| o-result (pg/jsonb-build-array (- o-row "dives"))))))]
+         (:= o-result (|| o-result (pg/jsonb-build-array (-/public-session-detail o-row)))))]
       (return (|| o-page (pg/jsonb-build-object "sessions" o-result))))))
 (def PROFILE-POSTS-SQL
   "SELECT coalesce(jsonb_agg(row ORDER BY created DESC,id),'[]'::jsonb) FROM (SELECT p.id,p.time_created created,jsonb_build_object('id',p.id,'beach_id',p.site_id,'beach_name',s.name,'url',p.url,'platform',p.platform,'status',p.status,'public_consent',p.public_consent) row FROM finfolk.\"SocialPost\" p JOIN finfolk.\"Site\" s ON s.id=p.site_id JOIN finfolk.\"User\" u ON u.id=p.owner_id WHERE p.owner_id=($1->>'owner')::uuid AND NOT u.deleted AND (($1->>'private')::boolean OR (p.status='approved' AND p.public_consent AND coalesce(u.profile->'featuredPosts','[]'::jsonb)?p.id::text)) ORDER BY p.time_created DESC,p.id LIMIT 100) p")

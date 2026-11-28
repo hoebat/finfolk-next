@@ -11990,14 +11990,6 @@ BEGIN
           message = 'Verify your email before publishing'
         ;
       END IF;
-      IF (jsonb_array_length(coalesce((o_old -> 'detail') -> 'photos',('[]')::JSONB)) > 0) OR (jsonb_array_length(
-        coalesce((o_old -> 'detail') -> 'linkedMedia',('[]')::JSONB)
-      ) > 0) THEN
-        RAISE EXCEPTION USING
-          errcode = '42501',
-          message = 'Media publishing requires ownership verification'
-        ;
-      END IF;
     END IF;
     IF coalesce((o_old -> 'detail') ->> 'visibility','private') != i_visibility THEN
       DECLARE
@@ -12088,6 +12080,44 @@ BEGIN
 END;
 $$ LANGUAGE 'plpgsql';
 
+-- finfolkdb.fn.user.user-logbook/public-session-detail 
+CREATE OR REPLACE FUNCTION "finfolk_rpc".public_session_detail(
+  i_session JSONB
+) RETURNS JSONB AS $$
+
+  DECLARE
+    o_link JSONB;
+    o_links JSONB;
+  BEGIN
+    o_links := ('[]')::JSONB;
+    o_link := null;
+    FOR o_link IN SELECT jsonb_array_elements(CASE WHEN jsonb_typeof(i_session -> 'linkedMedia') = 'array' THEN i_session -> 'linkedMedia'
+    WHEN true THEN ('[]')::JSONB
+    END) LOOP
+      DECLARE
+        v_platform TEXT;
+        v_url TEXT;
+      BEGIN
+        v_url := "split_part"("split_part"(coalesce(o_link ->> 'url',''),'?',1),'#',1);
+        v_platform := (o_link ->> 'platform');
+        IF (length(v_url) <= 2048) AND NOT "regexp_like"(v_url,'[[:space:][:cntrl:]]') AND (((v_platform = 'instagram') AND "regexp_like"(
+          v_url,
+          '^https://(www[.])?instagram[.]com/(p|reel|tv)/[A-Za-z0-9_-]+/?$'
+        )) OR ((v_platform = 'tiktok') AND "regexp_like"(
+          v_url,
+          '^https://(www[.])?tiktok[.]com/@[A-Za-z0-9._]+/video/[0-9]+/?$'
+        ))) THEN
+          o_links := (o_links || jsonb_build_array(jsonb_build_object('id',coalesce(o_link ->> 'id',v_url),'platform',v_platform,'url',v_url,'kind',CASE WHEN (v_platform = 'tiktok') OR "regexp_like"(v_url,'/reel/') THEN 'video'
+        WHEN true THEN 'post'
+        END)));
+        END IF;
+      END;
+    END LOOP;
+    RETURN (i_session - 'dives') || jsonb_build_object('photos',('[]')::JSONB,'linkedMedia',o_links);
+  END;
+
+$$ LANGUAGE 'plpgsql';
+
 -- finfolkdb.fn.user.user-logbook/public-session-row 
 CREATE OR REPLACE FUNCTION "finfolk_rpc".public_session_row(
   i_row JSONB
@@ -12096,12 +12126,7 @@ BEGIN
   IF i_row IS NULL OR (coalesce((i_row -> 'detail') ->> 'visibility','private') != 'public') OR NOT "finfolk".is_user_active((i_row ->> 'owner_id')::UUID) THEN
     RETURN null;
   END IF;
-  IF (jsonb_array_length(coalesce((i_row -> 'detail') -> 'photos',('[]')::JSONB)) > 0) OR (jsonb_array_length(
-    coalesce((i_row -> 'detail') -> 'linkedMedia',('[]')::JSONB)
-  ) > 0) THEN
-    RETURN null;
-  END IF;
-  RETURN "finfolk_rpc".private_session_row(i_row) - 'dives';
+  RETURN "finfolk_rpc".public_session_detail("finfolk_rpc".private_session_row(i_row));
 END;
 $$ LANGUAGE 'plpgsql';
 
@@ -12181,9 +12206,7 @@ BEGIN
         i_query || jsonb_build_object('owner',v_owner,'publicOnly',true)
       );
       FOR o_row IN SELECT jsonb_array_elements(o_page -> 'sessions') LOOP
-        IF (jsonb_array_length(o_row -> 'photos') = 0) AND (jsonb_array_length(o_row -> 'linkedMedia') = 0) THEN
-          o_result := (o_result || jsonb_build_array(o_row - 'dives'));
-        END IF;
+        o_result := (o_result || jsonb_build_array("finfolk_rpc".public_session_detail(o_row)));
       END LOOP;
       RETURN o_page || jsonb_build_object('sessions',o_result);
     END;

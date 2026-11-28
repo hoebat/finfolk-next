@@ -17,6 +17,9 @@ generate:
 check-generated:
 	node scripts/check_generated.mjs
 test: test-generated-sql
+	node tests/test_native_session_publication.mjs
+	node --test tests/test_native_publication_errors.mjs
+	node tests/test_publication_dialog.mjs
 	node --test tests/test_page_claim_http.mjs
 	node scripts/test_database.mjs --page-claim
 	node tests/test_account_presentation.mjs

@@ -6,6 +6,7 @@ import { socialGallery } from "./media.js";
 import { readResource } from "./activity.js";
 import {
   instagramURL,
+  publicSessionMedia,
   instagramHandle,
   sessionLink,
   profileLink,
@@ -484,7 +485,7 @@ export function installLogbook({
       el("h2", "Publish this session?"),
       el(
         "p",
-        "Everyone with the link or your public profile can see the location, notes and photos below.",
+        "Everyone with the link or your public profile can see the location and notes below.",
       ),
       el("h3", s.locationName),
       el("p", s.date),
@@ -503,12 +504,11 @@ export function installLogbook({
         "primary",
       ),
     );
-    body.append(linkedMedia(s.linkedMedia),el("p","Linked Instagram and TikTok posts above will be visible with this session. Your private import notes stay in your inbox."),actions);
+    body.append(linkedMedia(publicSessionMedia(s.linkedMedia)),el("p","Original Instagram and TikTok post links shown above will be public. Your private import notes and uploaded photos stay private."),actions);
     dialog.append(body);
     root.append(dialog);
     dialog.addEventListener("close", () => dialog.remove());
     dialog.showModal();
-    gallery(s, body, epoch);
   }
   function edit(session = null, beach = null, imported = null) {
     ++epoch;

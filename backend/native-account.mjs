@@ -16,12 +16,13 @@ async function readInput(request){
 export function createNativeAccount({assertFeature,query, transaction, supabaseUrl, publishableKey, serviceRoleKey, adminFetch, expectedRelease, directorySearch, eventDelivery, deliveryKey, invitationOrigin}) {
  if(typeof transaction!=='function')throw Error('Native accounts require a transaction-capable database');
  return async request=>{
-  let requestSpec,stage='input';
+  let requestSpec,operation,stage='input';
   try {
    if(!['GET','POST'].includes(request.method))return Response.json({error:'Method not allowed'},{status:405});
    const input=request.method==='GET'?{operation:'me',values:{}}:await readInput(request);
    if(!input||typeof input!=='object'||Array.isArray(input)||Object.keys(input).some(k=>!['operation','values'].includes(k))||!Object.hasOwn(operations,input.operation))
     throw Object.assign(Error('Unknown account operation'),{status:400});
+   operation=input.operation;
    await assertFeature?.(input.operation,request);
    const spec=operations[input.operation];requestSpec=spec;const values=input.values??{};
    // Public entrypoints are always anonymous, including when a bearer is sent.
@@ -70,7 +71,12 @@ export function createNativeAccount({assertFeature,query, transaction, supabaseU
     ['40001','23505'].includes(error.code)?409:
     ['22003','22023','22007','22008','22P02','23503'].includes(error.code)?400:error.code==='P0002'?404:
     ['P0001','42501'].includes(error.code)?403:503;
-   const message=status===400?'Invalid account request.':status===401?'Sign in first.':status===413?'Request too large.':status===404?(requestSpec?.not_found||'Profile unavailable.'):status===403?'Account operation unavailable.':status===409?'Record changed. Reload before saving.':'Account service unavailable.';
+   const publicationErrors={
+    'Verify your email before publishing':'Verify your email in Account before publishing.',
+    'Finish the session before publishing':'Finish the session before publishing.',
+   };
+   const publicationMessage=operation==='visibility'&&stage==='transaction'&&status===403&&Object.hasOwn(publicationErrors,error.message)?publicationErrors[error.message]:null;
+   const message=publicationMessage||(status===400?'Invalid account request.':status===401?'Sign in first.':status===413?'Request too large.':status===404?(requestSpec?.not_found||'Profile unavailable.'):status===403?'Account operation unavailable.':status===409?'Record changed. Reload before saving.':'Account service unavailable.');
    return Response.json({error:message},{status,headers:{'Cache-Control':'no-store'}});
   }
  };
