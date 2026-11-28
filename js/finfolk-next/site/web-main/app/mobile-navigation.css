@@ -51,3 +51,18 @@ nav.ff-primary-nav.ff-mobile-destinations{display:none!important}
  :root[data-theme] .fm-explore .fm-result-content{padding-bottom:80px}
 }
 @media(prefers-reduced-motion:no-preference){.ff-floating-controls .ff-layered-menu:not([hidden]){animation:ff-menu-enter .16s ease-out;transform-origin:bottom right}@keyframes ff-menu-enter{from{opacity:0;transform:translateY(6px) scale(.98)}to{opacity:1;transform:none}}}
+/* The primary FAB expands into a quarter-circle speed dial. */
+@media(max-width:900px){
+ :root[data-theme] .ff-mobile-navigation nav.ff-layered-menu.ff-pane-primary{bottom:0!important;width:min(288px,calc(100vw - 32px));height:260px;max-height:none;padding:0;border:0;border-radius:0;background:transparent;box-shadow:none;overflow:visible;pointer-events:none;animation:none}
+ .ff-pane-primary>.ff-menu-heading{display:none}
+ .ff-floating-controls:has(.ff-pane-primary) :is(.ff-account-widget,.ff-primary-fab){position:relative;z-index:2}
+ :root[data-theme] .ff-mobile-navigation nav.ff-primary-nav.ff-fan-destinations{position:absolute;inset:auto 4px 4px auto;width:48px;height:48px;min-height:48px;display:block!important;overflow:visible;pointer-events:none}
+ :root[data-theme] .ff-mobile-navigation nav.ff-fan-destinations .ff-nav-item{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;width:48px;min-width:48px;height:48px;min-height:48px;padding:12px;border:1px solid var(--account-line);border-radius:50%;background:var(--account-surface);color:var(--account-ink);box-shadow:0 4px 16px #0002;transform:translate(var(--fan-x),var(--fan-y));pointer-events:auto}
+ :root[data-theme] .ff-mobile-navigation nav.ff-fan-destinations .ff-nav-item>span{position:absolute;top:50%;left:50%;width:max-content;max-width:72px;padding:4px 7px;border:1px solid var(--account-line);border-radius:8px;background:var(--account-surface);color:var(--account-ink)!important;box-shadow:0 2px 8px #0001;font:600 11px/14px Avenir,Arial,sans-serif;white-space:nowrap;transform:translate(calc(-50% + var(--fan-label-x)),calc(-50% + var(--fan-label-y)))}
+ :root[data-theme] .ff-mobile-navigation nav.ff-fan-destinations .ff-nav-item[aria-current=page]>span{border-color:var(--account-ink)}
+ :root[data-theme] .ff-mobile-navigation nav.ff-fan-destinations .ff-nav-item small{position:absolute;top:3px;right:3px;margin:0}
+}
+@media(max-width:900px) and (prefers-reduced-motion:no-preference){
+ .ff-fan-destinations .ff-nav-item{animation:ff-fan-out .22s cubic-bezier(.2,.8,.2,1) both;animation-delay:var(--fan-delay)}
+ @keyframes ff-fan-out{from{opacity:0;transform:translate(0,0) scale(.5)}to{opacity:1;transform:translate(var(--fan-x),var(--fan-y)) scale(1)}}
+}

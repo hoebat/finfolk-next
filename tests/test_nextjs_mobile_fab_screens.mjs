@@ -1,3 +1,4 @@
+import {checkFanOut} from './fixtures/fan-out-navigation.mjs';
 import assert from 'node:assert/strict';
 import {readdir,readFile,mkdir,writeFile} from 'node:fs/promises';
 import {fileURLToPath} from 'node:url';
@@ -42,7 +43,7 @@ try{
    await toggle.click();const menu=host.locator('#mobile-menu-panel');await expect(menu).toBeVisible();
    const nav=menu.getByRole('navigation',{name:'Main navigation',exact:true});await expect(nav.getByRole('link',{name:'Explore',exact:true})).toBeVisible();await expect(nav.getByRole('link',{name:'Community',exact:true})).toBeVisible();
    await expect(nav.getByRole('link',{name:'Events',exact:true})).toHaveCount(0);
-   const box=await menu.boundingBox();assert(box.x>=0&&box.y>=0&&box.x+box.width<=390&&box.y+box.height<=b.y-8,'Menu fits and opens above the FAB');
+   await checkFanOut(page,host);
    for(const icon of await nav.locator('svg').all()){const r=await icon.boundingBox();assert.equal(r.width,22);assert.equal(r.height,22,'Icons retain their size without route-specific styles');}
    await expect(menu.getByRole('radio')).toHaveCount(0);await expect(menu.getByRole('link',{name:'Settings',exact:true})).toHaveCount(0);
    await page.keyboard.press('Escape');await expect(menu).toBeHidden();await expect(toggle).toBeFocused();
